@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum WorkspaceStatus {
+  active
+  suspended
+  archived
+}
+
+model User {
+  id             String        @id @default(cuid()) @map("id")
+  walletAddress  String        @unique @map("wallet_address")
+  displayName    String?       @map("display_name")
+  avatarUrl      String?       @map("avatar_url")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  authSessions   AuthSession[]
+  ownedWorkspaces Workspace[]  @relation("WorkspaceOwner")
+
+  @@map("users")
+}
+
+model AuthNonce {
+  id            String   @id @default(cuid()) @map("id")
+  walletAddress String   @map("wallet_address")
+  nonce         String   @unique @map("nonce")
+  expiresAt     DateTime @map("expires_at")
+  usedAt        DateTime? @map("used_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([walletAddress, expiresAt], map: "auth_nonces_wallet_address_expires_at_idx")
+  @@map("auth_nonces")
+}
+
+model AuthSession {
+  id         String    @id @default(cuid()) @map("id")
+  userId     String    @map("user_id")
+  expiresAt  DateTime  @map("expires_at")
+  userAgent  String?   @map("user_agent")
+  ipHash     String?   @map("ip_hash")
+  revokedAt  DateTime? @map("revoked_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "auth_sessions_user_id_idx")
+  @@index([expiresAt], map: "auth_sessions_expires_at_idx")
+  @@map("auth_sessions")
+}
+
+model Workspace {
+  id          String          @id @default(cuid()) @map("id")
+  ownerUserId String          @map("owner_user_id")
+  name        String          @map("name")
+  slug        String          @unique @map("slug")
+  status      WorkspaceStatus @default(active) @map("status")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  brands      Brand[]
+  ownerUser   User            @relation("WorkspaceOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@index([ownerUserId], map: "workspaces_owner_user_id_idx")
+  @@map("workspaces")
+}
+
+model Brand {
+  id           String    @id @default(cuid()) @map("id")
+  workspaceId  String    @map("workspace_id")
+  name         String    @map("name")
+  slug         String    @map("slug")
+  themeJson    Json      @map("theme_json")
+  customDomain String?   @map("custom_domain")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, slug], map: "brands_workspace_id_slug_key")
+  @@index([workspaceId], map: "brands_workspace_id_idx")
+  @@map("brands")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid()) @map("id")
+  actorType  String   @map("actor_type")
+  actorId    String   @map("actor_id")
+  action     String   @map("action")
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  metadataJson Json   @map("metadata_json")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([actorType, actorId], map: "audit_logs_actor_type_actor_id_idx")
+  @@index([entityType, entityId], map: "audit_logs_entity_type_entity_id_idx")
+  @@index([action], map: "audit_logs_action_idx")
+  @@map("audit_logs")
+}
