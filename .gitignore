@@ -1,0 +1,12 @@
+docs/_local/
+node_modules/
+dist/
+.turbo/
+.next/
+coverage/
+*.tsbuildinfo
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

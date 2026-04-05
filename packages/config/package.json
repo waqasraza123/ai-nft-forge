@@ -1,0 +1,18 @@
+{
+  "name": "@ai-nft-forge/config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./eslint/base": "./eslint/base.mjs",
+    "./prettier/base": "./prettier/base.cjs",
+    "./tsconfig/base": "./tsconfig/base.json",
+    "./tsconfig/node": "./tsconfig/node.json",
+    "./tsconfig/library": "./tsconfig/library.json",
+    "./tsconfig/nextjs": "./tsconfig/nextjs.json"
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings=0",
+    "test": "vitest run --passWithNoTests"
+  }
+}
