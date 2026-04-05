@@ -26,6 +26,10 @@
 - Use GitHub Actions for the initial verify pipeline.
 - Keep Prisma schema files in `packages/database/prisma`, and use `packages/database/prisma.config.ts` plus `@prisma/adapter-pg` for the PostgreSQL client boundary.
 - Keep auth server-verified and session-based: the server issues the nonce, reconstructs the signed message, verifies the signature, and stores the session in the database.
+- Use Docker Compose under `infra/docker` for local PostgreSQL, Redis, and MinIO infrastructure.
+- Keep application processes outside Docker in Phase 1: `apps/web` and `apps/worker` run from workspace scripts, while Compose handles backing services only.
+- Bootstrap MinIO buckets with a dedicated `minio-init` one-shot service so the local object storage boundary is reproducible.
+- Use dedicated non-default host ports for local infrastructure so the Phase 1 stack does not silently connect to an unrelated local PostgreSQL or Redis service.
 
 ## Intentionally Deferred
 

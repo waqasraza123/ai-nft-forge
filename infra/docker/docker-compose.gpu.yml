@@ -1,0 +1,9 @@
+name: ai-nft-forge-gpu
+
+services:
+  gpu-placeholder:
+    image: alpine:3.22
+    profiles:
+      - gpu
+    command:
+      ["sh", "-lc", "echo gpu profile reserved for future generation services"]

@@ -2,7 +2,7 @@
 
 ## Product
 
-AI NFT Forge is planned as a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, and later minting onchain. The repository now contains the Phase 1 monorepo foundation, the web shell, the worker shell, the initial Prisma-backed database package, and the first real auth nonce/session foundation. Uploads, generation, and minting are still not implemented.
+AI NFT Forge is planned as a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, and later minting onchain. The repository now contains the completed Phase 1 foundation: the monorepo spine, the web shell, the worker shell, the Prisma-backed database package, the auth nonce/session foundation, Docker-based local infrastructure, and setup docs. Uploads, generation, and minting are still not implemented.
 
 ## Current Architecture
 
@@ -27,9 +27,12 @@ Current implementation status:
 - `packages/ui` provides reusable page-shell and surface primitives used by the web app.
 - `packages/shared` now centralizes worker env validation, auth request/response schemas, and auth env parsing.
 - `packages/database` now contains the Prisma schema, initial SQL migration, repository helpers, transaction helper, health utility, and PostgreSQL client boundary.
+- `infra/docker/docker-compose.yml` now provides local PostgreSQL, Redis, MinIO, and MinIO bucket bootstrap services.
+- `.env.example` now documents the current local runtime environment shape.
+- `docs/runbooks/local-development.md` and `docs/deployment/service-overview.md` now document boot, verification, and service boundaries.
 - Prisma CLI configuration now lives in `packages/database/prisma.config.ts`, matching Prisma 7 requirements.
 - The runtime database client uses the PostgreSQL driver adapter and is created lazily from `DATABASE_URL`.
-- No Docker Compose stack, upload flow, generation flow, or client wallet UI exists yet.
+- No upload flow, generation flow, or polished client wallet UI exists yet.
 
 The frozen technical direction remains:
 
@@ -74,6 +77,8 @@ The frozen technical direction remains:
 - Phase 1 Commit 3 landed the worker shell, shared env and queue definitions, BullMQ registry, noop processor, worker tests, and the worker health command.
 - Phase 1 Commit 4 landed the Prisma-backed database package, initial auth and workspace schema, migration baseline, repository helpers, transaction helper, and database health utilities.
 - Phase 1 Commit 5 landed the auth nonce/session foundation, auth API routes, shared auth schemas, secure-aware session cookies, tests, and the protected studio shell.
+- Phase 1 Commit 6 landed local Docker infrastructure, `.env.example`, setup and deployment docs, root verification commands, CI hardening, and the final Phase 1 handoff updates.
+- Phase 1 foundation is now complete and green for the current repo scope.
 
 ## Important Decisions
 
@@ -91,24 +96,23 @@ The frozen technical direction remains:
 - `packages/database` owns the Prisma schema, migrations, and thin repository boundary for users, auth nonces, auth sessions, workspaces, brands, and audit logs.
 - Prisma 7 configuration is handled with `prisma.config.ts`, while the runtime client uses `@prisma/adapter-pg`.
 - Wallet authentication now uses a server-issued nonce, a server-reconstructed sign-in message, server-side signature verification, and a database-backed HTTP-only session cookie.
+- Local development now uses Docker Compose under `infra/docker` for PostgreSQL, Redis, MinIO, and bucket bootstrap, while the web app and worker continue to run from workspace scripts.
+- The local Compose stack uses dedicated host ports so Phase 1 services do not collide with unrelated local PostgreSQL or Redis installs.
 - GitHub `origin` is configured and `main` tracks the remote.
 
 ## Deferred / Not Yet Implemented
 
 - Redis and BullMQ jobs
 - Storage integration
-- Docker and local orchestration
 - Base Account integration and polished wallet UI
 - Generation pipeline
 - Contracts, metadata publication, and minting
 - Live storefront data
-- Local setup docs
 
 ## Risks / Watchouts
 
-- The worker shell assumes a reachable Redis instance at runtime, but local infrastructure is still deferred to a later Phase 1 commit.
-- The database package validates and generates cleanly without a live PostgreSQL instance, but real database connectivity smoke remains deferred until local Postgres lands in Phase 1 Commit 6.
-- The auth API and protected studio route depend on `DATABASE_URL` at runtime when a session lookup or nonce write is required. Local infrastructure still lands in Phase 1 Commit 6.
+- The web app and worker are not containerized yet; Phase 1 only containers the backing services needed for local reproducibility.
+- Browser-level smoke coverage is still deferred. Current coverage relies on build validation plus focused unit and integration tests.
 - Planning docs should remain durable; avoid locking in low-level implementation details before the foundation lands.
 - `docs/_local/` must stay local-only and must never hold secrets.
 
@@ -117,10 +121,13 @@ The frozen technical direction remains:
 - `ls -la`
 - `find . -maxdepth 3 -type f | sort`
 - `pnpm install`
-- `pnpm --filter @ai-nft-forge/database prisma:validate`
+- `pnpm format-check`
+- `pnpm prisma:validate`
 - `pnpm lint`
 - `pnpm typecheck`
 - `pnpm test`
 - `pnpm build`
-- `pnpm --filter @ai-nft-forge/worker health`
-- `pnpm format-check`
+- `pnpm worker:health`
+- `pnpm infra:config`
+- `pnpm infra:ps`
+- `DATABASE_URL='postgresql://ai_nft_forge:ai_nft_forge@127.0.0.1:55432/ai_nft_forge?schema=public' pnpm db:migrate:status`

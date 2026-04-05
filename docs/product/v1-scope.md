@@ -11,6 +11,7 @@ Land Phase 1 foundation so the repository can support later upload, generation, 
 - Phase planning
 - Durable route and job planning
 - Durable status model planning
+- Web shell, worker shell, database backbone, auth foundation, and local Docker-backed infrastructure
 
 ## Phase 1 Expected To Land
 
@@ -28,10 +29,9 @@ Land Phase 1 foundation so the repository can support later upload, generation, 
 - Image generation implementation
 - Contract implementation
 - Minting flows
-- Auth implementation
 - Storefront polish implementation
 - CI release automation
 
 ## Exit Condition For This Slice
 
-The repository should carry enough durable context that the next execution slice can start Phase 1 foundation directly from files in the repo.
+The repository should boot as a coherent Phase 1 foundation with local services, shared tooling, auth/session groundwork, and accurate repo memory so Phase 2 can begin on stable infrastructure.

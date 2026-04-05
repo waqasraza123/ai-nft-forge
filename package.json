@@ -9,11 +9,21 @@
   },
   "scripts": {
     "build": "turbo run build",
+    "db:migrate:deploy": "pnpm --filter @ai-nft-forge/database prisma:migrate:deploy",
+    "db:migrate:status": "pnpm --filter @ai-nft-forge/database prisma:migrate:status",
+    "infra:config": "docker compose -f infra/docker/docker-compose.yml config",
+    "infra:down": "docker compose -f infra/docker/docker-compose.yml down --remove-orphans",
+    "infra:logs": "docker compose -f infra/docker/docker-compose.yml logs --tail=100",
+    "infra:ps": "docker compose -f infra/docker/docker-compose.yml ps",
+    "infra:up": "docker compose -f infra/docker/docker-compose.yml up -d",
+    "infra:up:gpu": "docker compose -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.gpu.yml --profile gpu up -d",
     "lint": "turbo run lint",
+    "prisma:validate": "pnpm --filter @ai-nft-forge/database prisma:validate",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "worker:health": "pnpm --filter @ai-nft-forge/worker health",
     "format-check": "prettier --check .",
-    "validate": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+    "validate": "pnpm format-check && pnpm prisma:validate && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm worker:health"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

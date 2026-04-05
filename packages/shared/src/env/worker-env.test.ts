@@ -9,7 +9,7 @@ describe("parseWorkerEnv", () => {
     expect(env.WORKER_SERVICE_NAME).toBe("ai-nft-forge-worker");
     expect(env.LOG_LEVEL).toBe("info");
     expect(env.NOOP_QUEUE_CONCURRENCY).toBe(1);
-    expect(env.REDIS_URL).toBe("redis://127.0.0.1:6379");
+    expect(env.REDIS_URL).toBe("redis://127.0.0.1:56379");
   });
 
   it("parses explicit values", () => {
