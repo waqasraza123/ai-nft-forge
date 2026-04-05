@@ -2,11 +2,11 @@
 
 ## Product
 
-AI NFT Forge is planned as a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, and later minting onchain. The repository now contains the Phase 1 monorepo and tooling foundation, but no product feature implementation yet.
+AI NFT Forge is planned as a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, and later minting onchain. The repository now contains the Phase 1 monorepo and tooling foundation plus the first real web shell, but no upload, generation, auth, database, or minting features yet.
 
 ## Current Architecture
 
-The repository now has a pnpm workspace monorepo with Turbo, TypeScript, ESLint, Prettier, GitHub Actions CI, and placeholder packages under the expected Phase 1 layout:
+The repository now has a pnpm workspace monorepo with Turbo, TypeScript, ESLint, Prettier, GitHub Actions CI, and the expected Phase 1 layout:
 
 - `apps/web`
 - `apps/worker`
@@ -17,7 +17,13 @@ The repository now has a pnpm workspace monorepo with Turbo, TypeScript, ESLint,
 - `packages/contracts`
 - `infra/docker`
 
-Current code is still placeholder-only. No Next.js app shell, worker runtime, Prisma schema, Docker Compose stack, auth flow, or feature logic exists yet.
+Current implementation status:
+
+- `apps/web` is now a real Next.js App Router app with route groups for marketing, studio, public brand collection placeholders, and ops.
+- `apps/web` exposes `GET /api/health`.
+- `packages/ui` now provides reusable page-shell and surface primitives used by the web app.
+- `apps/worker`, `packages/database`, and `packages/shared` are still placeholders pending later Phase 1 commits.
+- No Prisma schema, Docker Compose stack, auth flow, or feature logic exists yet.
 
 The frozen technical direction remains:
 
@@ -58,6 +64,7 @@ The frozen technical direction remains:
 - Durable repo memory system established with `AGENTS.md`, `docs/project-state.md`, and local session memory conventions.
 - Durable planning docs added for product, architecture, routes/jobs, status models, and phased delivery.
 - Phase 1 Commit 1 landed the monorepo foundation, root tooling, placeholder workspace packages, local Git initialization, and CI verification workflow.
+- Phase 1 Commit 2 landed the Next.js web shell, reusable UI primitives, route-group boundaries, placeholder pages, and the web health endpoint.
 
 ## Important Decisions
 
@@ -68,11 +75,12 @@ The frozen technical direction remains:
 - Product positioning remains B2B white-label first with premium storefront quality as a primary differentiator.
 - The monorepo toolchain baseline is pnpm workspaces plus Turbo.
 - Shared repo config lives in `packages/config`.
+- `apps/web` uses Next.js App Router route groups to keep marketing, studio, public, and ops concerns separate from the start.
+- `packages/ui` is the shared UI boundary for reusable shell primitives.
 - Git is now initialized locally, but no remote is configured yet.
 
 ## Deferred / Not Yet Implemented
 
-- Next.js app scaffold
 - Worker runtime scaffold
 - Prisma schema and migrations
 - Redis and BullMQ jobs
@@ -81,12 +89,13 @@ The frozen technical direction remains:
 - Auth flows
 - Generation pipeline
 - Contracts, metadata publication, and minting
-- Storefront implementation
+- Live storefront data
 - Local setup docs
 
 ## Risks / Watchouts
 
-- Placeholder packages are intentionally thin and must be replaced carefully as Commit 2 onward lands real runtime surfaces.
+- `apps/worker`, `packages/database`, and `packages/shared` are still thin placeholders and must be replaced carefully as later Phase 1 commits land.
+- The studio route exists but is not protected until the auth foundation lands.
 - Planning docs should remain durable; avoid locking in low-level implementation details before the foundation lands.
 - `docs/_local/` must stay local-only and must never hold secrets.
 - Push is still blocked until a remote is configured.
