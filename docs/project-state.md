@@ -19,10 +19,12 @@ The repository now has a pnpm workspace monorepo with Turbo, TypeScript, ESLint,
 
 Current implementation status:
 
-- `apps/web` is now a real Next.js App Router app with route groups for marketing, studio, public brand collection placeholders, and ops.
+- `apps/web` is a real Next.js App Router app with route groups for marketing, studio, public brand collection placeholders, and ops.
 - `apps/web` exposes `GET /api/health`.
-- `packages/ui` now provides reusable page-shell and surface primitives used by the web app.
-- `apps/worker`, `packages/database`, and `packages/shared` are still placeholders pending later Phase 1 commits.
+- `apps/worker` is now a real Node.js worker shell with env parsing, Redis connection setup, BullMQ queue registration, a noop processor, graceful shutdown hooks, and a `health` command.
+- `packages/ui` provides reusable page-shell and surface primitives used by the web app.
+- `packages/shared` now centralizes worker env validation and queue names.
+- `packages/database` is still a placeholder pending the Prisma and schema commit.
 - No Prisma schema, Docker Compose stack, auth flow, or feature logic exists yet.
 
 The frozen technical direction remains:
@@ -65,6 +67,7 @@ The frozen technical direction remains:
 - Durable planning docs added for product, architecture, routes/jobs, status models, and phased delivery.
 - Phase 1 Commit 1 landed the monorepo foundation, root tooling, placeholder workspace packages, local Git initialization, and CI verification workflow.
 - Phase 1 Commit 2 landed the Next.js web shell, reusable UI primitives, route-group boundaries, placeholder pages, and the web health endpoint.
+- Phase 1 Commit 3 landed the worker shell, shared env and queue definitions, BullMQ registry, noop processor, worker tests, and the worker health command.
 
 ## Important Decisions
 
@@ -77,11 +80,12 @@ The frozen technical direction remains:
 - Shared repo config lives in `packages/config`.
 - `apps/web` uses Next.js App Router route groups to keep marketing, studio, public, and ops concerns separate from the start.
 - `packages/ui` is the shared UI boundary for reusable shell primitives.
+- `packages/shared` is the shared boundary for worker env parsing and queue name definitions.
+- The worker runtime uses BullMQ with Redis and keeps product job families deferred behind a noop foundation queue.
 - Git is now initialized locally, but no remote is configured yet.
 
 ## Deferred / Not Yet Implemented
 
-- Worker runtime scaffold
 - Prisma schema and migrations
 - Redis and BullMQ jobs
 - Storage integration
@@ -94,8 +98,9 @@ The frozen technical direction remains:
 
 ## Risks / Watchouts
 
-- `apps/worker`, `packages/database`, and `packages/shared` are still thin placeholders and must be replaced carefully as later Phase 1 commits land.
+- `packages/database` is still a thin placeholder and the next Phase 1 commit needs to establish the Prisma-backed data spine cleanly.
 - The studio route exists but is not protected until the auth foundation lands.
+- The worker shell assumes a reachable Redis instance at runtime, but local infrastructure is still deferred to a later Phase 1 commit.
 - Planning docs should remain durable; avoid locking in low-level implementation details before the foundation lands.
 - `docs/_local/` must stay local-only and must never hold secrets.
 - Push is still blocked until a remote is configured.
@@ -109,4 +114,5 @@ The frozen technical direction remains:
 - `pnpm typecheck`
 - `pnpm test`
 - `pnpm build`
+- `pnpm --filter @ai-nft-forge/worker health`
 - `pnpm format-check`
