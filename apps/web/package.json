@@ -12,10 +12,13 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@ai-nft-forge/database": "workspace:*",
+    "@ai-nft-forge/shared": "workspace:*",
     "@ai-nft-forge/ui": "workspace:*",
     "next": "^16.2.2",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "viem": "^2.38.3"
   },
   "devDependencies": {
     "@types/react": "^19.2.14",

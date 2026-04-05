@@ -2,7 +2,7 @@
 
 ## Product
 
-AI NFT Forge is planned as a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, and later minting onchain. The repository now contains the Phase 1 monorepo foundation, the web shell, the worker shell, and the initial Prisma-backed database package. Uploads, generation, auth routes, and minting are still not implemented.
+AI NFT Forge is planned as a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, and later minting onchain. The repository now contains the Phase 1 monorepo foundation, the web shell, the worker shell, the initial Prisma-backed database package, and the first real auth nonce/session foundation. Uploads, generation, and minting are still not implemented.
 
 ## Current Architecture
 
@@ -21,13 +21,15 @@ Current implementation status:
 
 - `apps/web` is a real Next.js App Router app with route groups for marketing, studio, public brand collection placeholders, and ops.
 - `apps/web` exposes `GET /api/health`.
+- `apps/web` now exposes `POST /api/auth/nonce`, `POST /api/auth/verify`, `POST /api/auth/logout`, and `GET /api/auth/session`.
+- `apps/web` now protects `/studio` with server-side session lookup and redirects unauthenticated requests to `/sign-in`.
 - `apps/worker` is now a real Node.js worker shell with env parsing, Redis connection setup, BullMQ queue registration, a noop processor, graceful shutdown hooks, and a `health` command.
 - `packages/ui` provides reusable page-shell and surface primitives used by the web app.
-- `packages/shared` now centralizes worker env validation and queue names.
+- `packages/shared` now centralizes worker env validation, auth request/response schemas, and auth env parsing.
 - `packages/database` now contains the Prisma schema, initial SQL migration, repository helpers, transaction helper, health utility, and PostgreSQL client boundary.
 - Prisma CLI configuration now lives in `packages/database/prisma.config.ts`, matching Prisma 7 requirements.
 - The runtime database client uses the PostgreSQL driver adapter and is created lazily from `DATABASE_URL`.
-- No Docker Compose stack, auth flow, or feature logic exists yet.
+- No Docker Compose stack, upload flow, generation flow, or client wallet UI exists yet.
 
 The frozen technical direction remains:
 
@@ -71,6 +73,7 @@ The frozen technical direction remains:
 - Phase 1 Commit 2 landed the Next.js web shell, reusable UI primitives, route-group boundaries, placeholder pages, and the web health endpoint.
 - Phase 1 Commit 3 landed the worker shell, shared env and queue definitions, BullMQ registry, noop processor, worker tests, and the worker health command.
 - Phase 1 Commit 4 landed the Prisma-backed database package, initial auth and workspace schema, migration baseline, repository helpers, transaction helper, and database health utilities.
+- Phase 1 Commit 5 landed the auth nonce/session foundation, auth API routes, shared auth schemas, secure-aware session cookies, tests, and the protected studio shell.
 
 ## Important Decisions
 
@@ -83,10 +86,11 @@ The frozen technical direction remains:
 - Shared repo config lives in `packages/config`.
 - `apps/web` uses Next.js App Router route groups to keep marketing, studio, public, and ops concerns separate from the start.
 - `packages/ui` is the shared UI boundary for reusable shell primitives.
-- `packages/shared` is the shared boundary for worker env parsing and queue name definitions.
+- `packages/shared` is the shared boundary for auth and worker schemas plus env parsing helpers.
 - The worker runtime uses BullMQ with Redis and keeps product job families deferred behind a noop foundation queue.
 - `packages/database` owns the Prisma schema, migrations, and thin repository boundary for users, auth nonces, auth sessions, workspaces, brands, and audit logs.
 - Prisma 7 configuration is handled with `prisma.config.ts`, while the runtime client uses `@prisma/adapter-pg`.
+- Wallet authentication now uses a server-issued nonce, a server-reconstructed sign-in message, server-side signature verification, and a database-backed HTTP-only session cookie.
 - GitHub `origin` is configured and `main` tracks the remote.
 
 ## Deferred / Not Yet Implemented
@@ -94,7 +98,7 @@ The frozen technical direction remains:
 - Redis and BullMQ jobs
 - Storage integration
 - Docker and local orchestration
-- Auth flows
+- Base Account integration and polished wallet UI
 - Generation pipeline
 - Contracts, metadata publication, and minting
 - Live storefront data
@@ -102,9 +106,9 @@ The frozen technical direction remains:
 
 ## Risks / Watchouts
 
-- The studio route exists but is not protected until the auth foundation lands.
 - The worker shell assumes a reachable Redis instance at runtime, but local infrastructure is still deferred to a later Phase 1 commit.
 - The database package validates and generates cleanly without a live PostgreSQL instance, but real database connectivity smoke remains deferred until local Postgres lands in Phase 1 Commit 6.
+- The auth API and protected studio route depend on `DATABASE_URL` at runtime when a session lookup or nonce write is required. Local infrastructure still lands in Phase 1 Commit 6.
 - Planning docs should remain durable; avoid locking in low-level implementation details before the foundation lands.
 - `docs/_local/` must stay local-only and must never hold secrets.
 

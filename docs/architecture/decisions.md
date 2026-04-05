@@ -25,6 +25,7 @@
 - Keep `packages/config` as the shared boundary for reusable lint, prettier, and package tsconfig presets.
 - Use GitHub Actions for the initial verify pipeline.
 - Keep Prisma schema files in `packages/database/prisma`, and use `packages/database/prisma.config.ts` plus `@prisma/adapter-pg` for the PostgreSQL client boundary.
+- Keep auth server-verified and session-based: the server issues the nonce, reconstructs the signed message, verifies the signature, and stores the session in the database.
 
 ## Intentionally Deferred
 

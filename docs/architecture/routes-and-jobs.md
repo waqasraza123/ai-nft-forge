@@ -1,6 +1,19 @@
 # Routes And Jobs
 
-This document defines durable boundary expectations for the first implementation slices. No routes or jobs exist in the repository yet.
+This document defines durable boundary expectations for the first implementation slices. The repository now has the initial web routes plus auth and health endpoints, but no product jobs exist yet.
+
+## Current Route Surfaces
+
+- `/`
+- `/sign-in`
+- `/studio`
+- `/ops`
+- `/brands/[brandSlug]/collections/[collectionSlug]`
+- `/api/health`
+- `/api/auth/nonce`
+- `/api/auth/verify`
+- `/api/auth/logout`
+- `/api/auth/session`
 
 ## Planned Surface Areas
 
