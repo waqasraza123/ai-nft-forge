@@ -32,15 +32,15 @@ export default function MarketingPage() {
       <SurfaceGrid>
         <SurfaceCard
           body="Later phases plug uploads, generation, curation, publication, and minting into the same durable spine."
-          eyebrow="Phase 1"
+          eyebrow="Current state"
           footer={
             <div className="pill-row">
               <Pill>Monorepo</Pill>
               <Pill>Worker boundary</Pill>
-              <Pill>Auth foundation</Pill>
+              <Pill>Asset intake started</Pill>
             </div>
           }
-          title="Foundation before features"
+          title="Foundation is now carrying the first Phase 2 slice"
         />
         <SurfaceCard
           body="The public surface is intentionally more atmospheric and presentation-led than the studio and ops areas."
@@ -65,14 +65,14 @@ export default function MarketingPage() {
           title="Durable system edges"
         />
         <SurfaceCard
-          body="This shell stays intentionally thin until auth, database, queues, and local infra land in later Phase 1 commits."
+          body="The repo now has foundation, auth, local infra, and the first source asset intake slice."
           eyebrow="Current state"
           span={8}
-          title="The visible shell is now in place"
+          title="The visible shell is moving into product groundwork"
         >
           <div className="metric-list">
             <MetricTile label="Marketing" value="Ready" />
-            <MetricTile label="Studio route" value="Placeholder" />
+            <MetricTile label="Studio assets" value="/studio/assets" />
             <MetricTile label="Health route" value="/api/health" />
           </div>
         </SurfaceCard>

@@ -1,5 +1,5 @@
 export type HealthPayload = {
-  phase: "phase-1";
+  phase: "phase-2";
   service: "web";
   status: "ok";
   timestamp: string;
@@ -7,7 +7,7 @@ export type HealthPayload = {
 
 export function createHealthPayload(): HealthPayload {
   return {
-    phase: "phase-1",
+    phase: "phase-2",
     service: "web",
     status: "ok",
     timestamp: new Date().toISOString()

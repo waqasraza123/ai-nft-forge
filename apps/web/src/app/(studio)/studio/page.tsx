@@ -11,11 +11,11 @@ export default async function StudioPage() {
     <PageShell
       eyebrow="Studio"
       title="Operational shell for curation and release prep"
-      lead="This route is now session-protected. The calmer studio surface is still intentionally thin until upload, generation, and collection workflows land in later phases."
+      lead="This route is session-protected and now includes the first source asset intake slice. Generation, curation, and publication workflows still land in later Phase 2 and Phase 3 steps."
       actions={
         <>
-          <Link className="action-link" href="/api/auth/session">
-            Session endpoint
+          <Link className="action-link" href="/studio/assets">
+            Open assets
           </Link>
           <Link className="inline-link" href="/">
             Back to marketing
@@ -26,26 +26,29 @@ export default async function StudioPage() {
     >
       <SurfaceGrid>
         <SurfaceCard
-          body="Asset review, generation state, collection drafts, and workspace controls land here after the auth and data spine exists."
-          eyebrow="Planned"
-          title="Protected studio workspace"
+          body="Source asset upload intents and upload completion tracking now exist behind the protected studio surface."
+          eyebrow="Current slice"
+          title="Protected source asset intake"
         >
           <div className="pill-row">
             <Pill>{session?.user.walletAddress ?? "Session required"}</Pill>
+            <Link className="inline-link" href="/studio/assets">
+              /studio/assets
+            </Link>
           </div>
         </SurfaceCard>
         <SurfaceCard
-          body="The current session is resolved on the server before this route renders."
+          body="The current session is resolved on the server before this route renders, and protected asset routes use the same session boundary."
           eyebrow="Session"
           title="Server-side access control"
         />
         <SurfaceCard
-          body="No uploads or generation controls exist yet in this phase slice."
+          body="Uploads now have a durable backend contract. Generation and minting remain intentionally deferred."
           eyebrow="Guardrail"
           title="Feature logic stays out"
         >
           <div className="pill-row">
-            <Pill>Uploads deferred</Pill>
+            <Pill>Upload contract landed</Pill>
             <Pill>Generation deferred</Pill>
             <Pill>Minting deferred</Pill>
           </div>

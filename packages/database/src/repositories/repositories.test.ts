@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { createAuthSessionRepository } from "./auth-session-repository.js";
+import { createSourceAssetRepository } from "./source-asset-repository.js";
 import { createUserRepository } from "./user-repository.js";
 
 describe("database repositories", () => {
@@ -57,5 +58,33 @@ describe("database repositories", () => {
       }
     });
     expect(result?.id).toBe("session_1");
+  });
+
+  it("delegates source asset listing through the source asset repository", async () => {
+    const database = {
+      sourceAsset: {
+        create: vi.fn(),
+        findFirst: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "asset_1"
+          }
+        ]),
+        update: vi.fn()
+      }
+    };
+    const repository = createSourceAssetRepository(database as never);
+
+    const result = await repository.listByOwnerUserId("user_1");
+
+    expect(database.sourceAsset.findMany).toHaveBeenCalledWith({
+      orderBy: {
+        createdAt: "desc"
+      },
+      where: {
+        ownerUserId: "user_1"
+      }
+    });
+    expect(result[0]?.id).toBe("asset_1");
   });
 });

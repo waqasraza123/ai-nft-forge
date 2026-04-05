@@ -30,6 +30,9 @@
 - Keep application processes outside Docker in Phase 1: `apps/web` and `apps/worker` run from workspace scripts, while Compose handles backing services only.
 - Bootstrap MinIO buckets with a dedicated `minio-init` one-shot service so the local object storage boundary is reproducible.
 - Use dedicated non-default host ports for local infrastructure so the Phase 1 stack does not silently connect to an unrelated local PostgreSQL or Redis service.
+- Start Phase 2 with source asset intake before generation orchestration.
+- Use server-issued signed `PUT` uploads into the private S3-compatible bucket plus an explicit completion call that verifies object existence before marking an asset uploaded.
+- Keep the first source asset intake slice user-owned because the protected studio shell does not yet expose a workspace-bound upload context.
 
 ## Intentionally Deferred
 

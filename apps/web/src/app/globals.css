@@ -1,6 +1,6 @@
 :root {
-  --font-body: "Manrope", sans-serif;
-  --font-display: "Cormorant Garamond", serif;
+  --font-body: "Avenir Next", "Segoe UI", sans-serif;
+  --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
   --color-bg: #f3efe4;
   --color-bg-strong: #ece4d3;
   --color-surface: rgba(255, 255, 255, 0.72);

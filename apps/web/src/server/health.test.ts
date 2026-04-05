@@ -8,7 +8,7 @@ describe("createHealthPayload", () => {
 
     expect(payload.service).toBe("web");
     expect(payload.status).toBe("ok");
-    expect(payload.phase).toBe("phase-1");
+    expect(payload.phase).toBe("phase-2");
     expect(Number.isNaN(Date.parse(payload.timestamp))).toBe(false);
   });
 });

@@ -15,6 +15,11 @@ export {
   type AuthVerifyRequest
 } from "./auth.js";
 export {
+  parseStorageEnv,
+  storageEnvSchema,
+  type StorageEnv
+} from "./env/storage-env.js";
+export {
   parseWebAuthEnv,
   webAuthEnvSchema,
   type WebAuthEnv
@@ -33,3 +38,25 @@ export {
   queueCatalog,
   type NoopJobPayload
 } from "./queues.js";
+export {
+  sourceAssetCompletionResponseSchema,
+  sourceAssetContentTypeSchema,
+  sourceAssetContentTypeValues,
+  sourceAssetErrorResponseSchema,
+  sourceAssetFileNameSchema,
+  sourceAssetListResponseSchema,
+  sourceAssetStatusSchema,
+  sourceAssetStatusValues,
+  sourceAssetSummarySchema,
+  sourceAssetUploadDescriptorSchema,
+  sourceAssetUploadIntentRequestSchema,
+  sourceAssetUploadIntentResponseSchema,
+  type SourceAssetCompletionResponse,
+  type SourceAssetContentType,
+  type SourceAssetErrorResponse,
+  type SourceAssetListResponse,
+  type SourceAssetStatus,
+  type SourceAssetSummary,
+  type SourceAssetUploadIntentRequest,
+  type SourceAssetUploadIntentResponse
+} from "./source-assets.js";

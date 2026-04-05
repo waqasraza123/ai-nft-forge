@@ -15,6 +15,10 @@ export {
   type BrandRepository
 } from "./brand-repository.js";
 export {
+  createSourceAssetRepository,
+  type SourceAssetRepository
+} from "./source-asset-repository.js";
+export {
   createUserRepository,
   type UserRepository
 } from "./user-repository.js";

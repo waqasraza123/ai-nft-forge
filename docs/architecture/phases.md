@@ -30,4 +30,4 @@ Harden the repository for public release, document setup and operations, and pac
 
 ## Current State
 
-Phase 1 is now implemented at the foundation level. The repo has the monorepo spine, web shell, worker shell, database package, auth/session foundation, local Docker-backed infrastructure, CI verification, and setup docs needed to begin Phase 2 without reworking core boundaries.
+Phase 1 is complete and the first Phase 2 slice is now underway. The repo has the monorepo spine, web shell, worker shell, database package, auth/session foundation, local Docker-backed infrastructure, and now a source asset intake slice with storage-backed upload intents and upload completion tracking.

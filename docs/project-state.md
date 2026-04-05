@@ -2,7 +2,7 @@
 
 ## Product
 
-AI NFT Forge is planned as a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, and later minting onchain. The repository now contains the completed Phase 1 foundation: the monorepo spine, the web shell, the worker shell, the Prisma-backed database package, the auth nonce/session foundation, Docker-based local infrastructure, and setup docs. Uploads, generation, and minting are still not implemented.
+AI NFT Forge is planned as a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, and later minting onchain. The repository now contains the completed Phase 1 foundation plus the first Phase 2 source asset intake slice: storage-backed upload intents, upload completion tracking, and a protected studio assets surface. Generation and minting are still not implemented.
 
 ## Current Architecture
 
@@ -23,16 +23,18 @@ Current implementation status:
 - `apps/web` exposes `GET /api/health`.
 - `apps/web` now exposes `POST /api/auth/nonce`, `POST /api/auth/verify`, `POST /api/auth/logout`, and `GET /api/auth/session`.
 - `apps/web` now protects `/studio` with server-side session lookup and redirects unauthenticated requests to `/sign-in`.
+- `apps/web` now exposes `/studio/assets`, `POST /api/studio/assets/upload-intents`, and `POST /api/studio/assets/[assetId]/complete` for the first source asset intake slice.
 - `apps/worker` is now a real Node.js worker shell with env parsing, Redis connection setup, BullMQ queue registration, a noop processor, graceful shutdown hooks, and a `health` command.
 - `packages/ui` provides reusable page-shell and surface primitives used by the web app.
-- `packages/shared` now centralizes worker env validation, auth request/response schemas, and auth env parsing.
-- `packages/database` now contains the Prisma schema, initial SQL migration, repository helpers, transaction helper, health utility, and PostgreSQL client boundary.
+- `packages/shared` now centralizes worker env validation, auth request/response schemas, storage env parsing, and source asset upload contracts.
+- `packages/database` now contains the Prisma schema, initial SQL migration, repository helpers, transaction helper, PostgreSQL client boundary, and the first `SourceAsset` model plus repository.
 - `infra/docker/docker-compose.yml` now provides local PostgreSQL, Redis, MinIO, and MinIO bucket bootstrap services.
 - `.env.example` now documents the current local runtime environment shape.
 - `docs/runbooks/local-development.md` and `docs/deployment/service-overview.md` now document boot, verification, and service boundaries.
 - Prisma CLI configuration now lives in `packages/database/prisma.config.ts`, matching Prisma 7 requirements.
 - The runtime database client uses the PostgreSQL driver adapter and is created lazily from `DATABASE_URL`.
-- No upload flow, generation flow, or polished client wallet UI exists yet.
+- The first source asset intake slice uses server-issued signed uploads into the private object-storage bucket plus explicit upload completion verification.
+- No generation flow or polished client wallet UI exists yet.
 
 The frozen technical direction remains:
 
@@ -79,6 +81,7 @@ The frozen technical direction remains:
 - Phase 1 Commit 5 landed the auth nonce/session foundation, auth API routes, shared auth schemas, secure-aware session cookies, tests, and the protected studio shell.
 - Phase 1 Commit 6 landed local Docker infrastructure, `.env.example`, setup and deployment docs, root verification commands, CI hardening, and the final Phase 1 handoff updates.
 - Phase 1 foundation is now complete and green for the current repo scope.
+- Phase 2 Commit 1 landed the `SourceAsset` schema, shared storage and source asset contracts, protected upload-intent and upload-complete routes, storage-backed web service logic, and the first `/studio/assets` surface.
 
 ## Important Decisions
 
@@ -98,12 +101,13 @@ The frozen technical direction remains:
 - Wallet authentication now uses a server-issued nonce, a server-reconstructed sign-in message, server-side signature verification, and a database-backed HTTP-only session cookie.
 - Local development now uses Docker Compose under `infra/docker` for PostgreSQL, Redis, MinIO, and bucket bootstrap, while the web app and worker continue to run from workspace scripts.
 - The local Compose stack uses dedicated host ports so Phase 1 services do not collide with unrelated local PostgreSQL or Redis installs.
+- Source asset intake now uses server-issued signed `PUT` uploads into the private bucket plus an explicit completion call that verifies object existence before database state changes to `uploaded`.
+- The first source asset intake slice is user-owned because the studio shell does not yet expose workspace-bound upload context.
 - GitHub `origin` is configured and `main` tracks the remote.
 
 ## Deferred / Not Yet Implemented
 
 - Redis and BullMQ jobs
-- Storage integration
 - Base Account integration and polished wallet UI
 - Generation pipeline
 - Contracts, metadata publication, and minting
@@ -113,6 +117,7 @@ The frozen technical direction remains:
 
 - The web app and worker are not containerized yet; Phase 1 only containers the backing services needed for local reproducibility.
 - Browser-level smoke coverage is still deferred. Current coverage relies on build validation plus focused unit and integration tests.
+- Upload intent creation is real, but there is still no browser upload client in the repo. The current slice exposes server routes and the protected studio assets surface only.
 - Planning docs should remain durable; avoid locking in low-level implementation details before the foundation lands.
 - `docs/_local/` must stay local-only and must never hold secrets.
 

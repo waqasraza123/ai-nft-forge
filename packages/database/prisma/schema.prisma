@@ -12,15 +12,22 @@ enum WorkspaceStatus {
   archived
 }
 
+enum SourceAssetStatus {
+  pending_upload
+  uploaded
+  upload_failed
+}
+
 model User {
-  id             String        @id @default(cuid()) @map("id")
-  walletAddress  String        @unique @map("wallet_address")
-  displayName    String?       @map("display_name")
-  avatarUrl      String?       @map("avatar_url")
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
-  authSessions   AuthSession[]
-  ownedWorkspaces Workspace[]  @relation("WorkspaceOwner")
+  id              String         @id @default(cuid()) @map("id")
+  walletAddress   String         @unique @map("wallet_address")
+  displayName     String?        @map("display_name")
+  avatarUrl       String?        @map("avatar_url")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+  authSessions    AuthSession[]
+  ownedSourceAssets SourceAsset[] @relation("SourceAssetOwner")
+  ownedWorkspaces Workspace[]    @relation("WorkspaceOwner")
 
   @@map("users")
 }
@@ -84,17 +91,35 @@ model Brand {
 }
 
 model AuditLog {
-  id         String   @id @default(cuid()) @map("id")
-  actorType  String   @map("actor_type")
-  actorId    String   @map("actor_id")
-  action     String   @map("action")
-  entityType String   @map("entity_type")
-  entityId   String   @map("entity_id")
-  metadataJson Json   @map("metadata_json")
-  createdAt  DateTime @default(now()) @map("created_at")
+  id           String   @id @default(cuid()) @map("id")
+  actorType    String   @map("actor_type")
+  actorId      String   @map("actor_id")
+  action       String   @map("action")
+  entityType   String   @map("entity_type")
+  entityId     String   @map("entity_id")
+  metadataJson Json     @map("metadata_json")
+  createdAt    DateTime @default(now()) @map("created_at")
 
   @@index([actorType, actorId], map: "audit_logs_actor_type_actor_id_idx")
   @@index([entityType, entityId], map: "audit_logs_entity_type_entity_id_idx")
   @@index([action], map: "audit_logs_action_idx")
   @@map("audit_logs")
+}
+
+model SourceAsset {
+  id              String            @id @default(cuid()) @map("id")
+  ownerUserId     String            @map("owner_user_id")
+  originalFilename String           @map("original_filename")
+  contentType     String            @map("content_type")
+  storageBucket   String            @map("storage_bucket")
+  storageObjectKey String           @unique @map("storage_object_key")
+  byteSize        Int?              @map("byte_size")
+  status          SourceAssetStatus @default(pending_upload) @map("status")
+  uploadedAt      DateTime?         @map("uploaded_at")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  ownerUser       User              @relation("SourceAssetOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@index([ownerUserId, status], map: "source_assets_owner_user_id_status_idx")
+  @@map("source_assets")
 }
