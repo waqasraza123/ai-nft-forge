@@ -1,4 +1,8 @@
-import { Prisma, type GenerationRequest } from "@prisma/client";
+import {
+  Prisma,
+  type GenerationRequest,
+  type GenerationRequestStatus
+} from "@prisma/client";
 
 import type { DatabaseExecutor } from "../client.js";
 
@@ -13,6 +17,51 @@ type CreateQueuedGenerationRequestInput = {
   requestedVariantCount: number;
   sourceAssetId: string;
 };
+
+type RecentGenerationRequestOrder = "createdAtDesc" | "failedAtDesc";
+
+type GenerationRequestWithSourceAssetAndCounts =
+  Prisma.GenerationRequestGetPayload<{
+    include: {
+      _count: {
+        select: {
+          generatedAssets: true;
+        };
+      };
+      sourceAsset: {
+        select: {
+          id: true;
+          originalFilename: true;
+          status: true;
+        };
+      };
+    };
+  }>;
+
+function resolveRecentGenerationOrderBy(orderBy: RecentGenerationRequestOrder) {
+  if (orderBy === "failedAtDesc") {
+    return [
+      {
+        failedAt: "desc" as const
+      },
+      {
+        createdAt: "desc" as const
+      },
+      {
+        id: "desc" as const
+      }
+    ];
+  }
+
+  return [
+    {
+      createdAt: "desc" as const
+    },
+    {
+      id: "desc" as const
+    }
+  ];
+}
 
 export function createGenerationRequestRepository(
   database: GenerationRequestRepositoryDatabase
@@ -101,6 +150,44 @@ export function createGenerationRequestRepository(
           sourceAssetId: {
             in: sourceAssetIds
           }
+        }
+      });
+    },
+
+    listRecentForOwnerUserId(input: {
+      limit: number;
+      orderBy?: RecentGenerationRequestOrder;
+      ownerUserId: string;
+      statuses?: GenerationRequestStatus[];
+    }): Promise<GenerationRequestWithSourceAssetAndCounts[]> {
+      return database.generationRequest.findMany({
+        include: {
+          _count: {
+            select: {
+              generatedAssets: true
+            }
+          },
+          sourceAsset: {
+            select: {
+              id: true,
+              originalFilename: true,
+              status: true
+            }
+          }
+        },
+        orderBy: resolveRecentGenerationOrderBy(
+          input.orderBy ?? "createdAtDesc"
+        ),
+        take: input.limit,
+        where: {
+          ownerUserId: input.ownerUserId,
+          ...(input.statuses && input.statuses.length > 0
+            ? {
+                status: {
+                  in: input.statuses
+                }
+              }
+            : {})
         }
       });
     },

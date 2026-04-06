@@ -1,17 +1,28 @@
 import {
   createObjectStorageClient,
+  deleteStorageObject,
   getStorageConfig,
   getStorageObjectBytes,
   parseGenerationBackendEnv,
   putStorageObject,
-  deleteStorageObject,
   type GenerationBackendEnv
 } from "@ai-nft-forge/shared";
 
 import { createGenerationArtifactProvider } from "../generation/provider-factory.js";
 import { createGenerationBackendService } from "../generation/service.js";
 import { createGenerationBackendServer } from "../http/server.js";
+import {
+  createGenerationBackendHealthSnapshot,
+  createGenerationBackendReadinessSnapshot
+} from "../lib/health.js";
 import { createLogger, type Logger } from "../lib/logger.js";
+import type { GenerationArtifactProvider } from "../generation/provider.js";
+
+export type GenerationBackendRuntime = {
+  env: GenerationBackendEnv;
+  logger: Logger;
+  provider: GenerationArtifactProvider;
+};
 
 export type GenerationBackendApplication = {
   close: () => Promise<void>;
@@ -19,12 +30,10 @@ export type GenerationBackendApplication = {
   logger: Logger;
 };
 
-export async function bootstrapGenerationBackendApplication(
+export async function createGenerationBackendRuntime(
   rawEnvironment: NodeJS.ProcessEnv
-): Promise<GenerationBackendApplication> {
+): Promise<GenerationBackendRuntime> {
   const env = parseGenerationBackendEnv(rawEnvironment);
-  const storageConfig = getStorageConfig(rawEnvironment);
-  const storageClient = createObjectStorageClient(rawEnvironment);
   const logger = createLogger({
     level: env.LOG_LEVEL,
     service: env.GENERATION_BACKEND_SERVICE_NAME
@@ -33,9 +42,23 @@ export async function bootstrapGenerationBackendApplication(
     env,
     logger
   });
-  const generationService = createGenerationBackendService({
+
+  return {
+    env,
     logger,
-    provider,
+    provider
+  };
+}
+
+export async function bootstrapGenerationBackendApplication(
+  rawEnvironment: NodeJS.ProcessEnv
+): Promise<GenerationBackendApplication> {
+  const runtime = await createGenerationBackendRuntime(rawEnvironment);
+  const storageConfig = getStorageConfig(rawEnvironment);
+  const storageClient = createObjectStorageClient(rawEnvironment);
+  const generationService = createGenerationBackendService({
+    logger: runtime.logger,
+    provider: runtime.provider,
     storage: {
       deleteObject: (input) =>
         deleteStorageObject({
@@ -66,20 +89,32 @@ export async function bootstrapGenerationBackendApplication(
     targetBucketName: storageConfig.S3_BUCKET_PRIVATE
   });
   const server = createGenerationBackendServer({
-    ...(env.GENERATION_BACKEND_AUTH_TOKEN
+    ...(runtime.env.GENERATION_BACKEND_AUTH_TOKEN
       ? {
-          authToken: env.GENERATION_BACKEND_AUTH_TOKEN
+          authToken: runtime.env.GENERATION_BACKEND_AUTH_TOKEN
         }
       : {}),
     generationService,
-    logger
+    healthReporter: {
+      createHealthSnapshot: () =>
+        createGenerationBackendHealthSnapshot({
+          provider: runtime.provider,
+          rawEnvironment
+        }),
+      createReadinessSnapshot: () =>
+        createGenerationBackendReadinessSnapshot({
+          provider: runtime.provider,
+          rawEnvironment
+        })
+    },
+    logger: runtime.logger
   });
 
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);
     server.listen(
-      env.GENERATION_BACKEND_PORT,
-      env.GENERATION_BACKEND_BIND_HOST,
+      runtime.env.GENERATION_BACKEND_PORT,
+      runtime.env.GENERATION_BACKEND_BIND_HOST,
       () => {
         server.off("error", reject);
         resolve();
@@ -87,10 +122,10 @@ export async function bootstrapGenerationBackendApplication(
     );
   });
 
-  logger.info("Generation backend application bootstrapped", {
-    bindHost: env.GENERATION_BACKEND_BIND_HOST,
-    port: env.GENERATION_BACKEND_PORT,
-    providerKind: env.GENERATION_BACKEND_PROVIDER_KIND
+  runtime.logger.info("Generation backend application bootstrapped", {
+    bindHost: runtime.env.GENERATION_BACKEND_BIND_HOST,
+    port: runtime.env.GENERATION_BACKEND_PORT,
+    providerKind: runtime.env.GENERATION_BACKEND_PROVIDER_KIND
   });
 
   let isClosed = false;
@@ -114,12 +149,12 @@ export async function bootstrapGenerationBackendApplication(
     });
     storageClient.destroy();
 
-    logger.info("Generation backend application stopped");
+    runtime.logger.info("Generation backend application stopped");
   };
 
   return {
     close,
-    env,
-    logger
+    env: runtime.env,
+    logger: runtime.logger
   };
 }

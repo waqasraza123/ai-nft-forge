@@ -19,6 +19,7 @@ This document defines durable boundary expectations for the first implementation
 - `/api/studio/assets/upload-intents`
 - `/api/studio/assets/[assetId]/complete`
 - `/api/studio/generations`
+- `/api/studio/generations/[generationRequestId]/retry`
 - `/api/studio/generated-assets/[generatedAssetId]/download-intent`
 
 ## Planned Surface Areas

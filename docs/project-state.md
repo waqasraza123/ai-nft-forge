@@ -2,7 +2,7 @@
 
 ## Product
 
-AI NFT Forge is planned as a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, and later minting onchain. The repository now contains the completed Phase 1 foundation plus the first seven Phase 2 slices: storage-backed source asset intake, queue-backed generation orchestration, durable generated-output persistence, the first external-backend plus protected-download boundary, the first interactive browser workflow for upload, dispatch, polling, and retrieval, a concrete standalone generation backend service behind the worker HTTP contract, and the first model-backed ComfyUI provider inside that backend. Minting is still not implemented.
+AI NFT Forge is planned as a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, and later minting onchain. The repository now contains the completed Phase 1 foundation plus the first ten Phase 2 slices: storage-backed source asset intake, queue-backed generation orchestration, durable generated-output persistence, the first external-backend plus protected-download boundary, the first interactive browser workflow for upload, dispatch, polling, and retrieval, a concrete standalone generation backend service behind the worker HTTP contract, the first model-backed ComfyUI provider inside that backend, provider-aware ops diagnostics plus backend readiness checks around that real model path, richer studio-visible generation metadata plus explicit failed-request retry ergonomics, and authenticated ops queue depth plus owner-scoped generation activity and retry controls. Minting is still not implemented.
 
 ## Current Architecture
 
@@ -24,22 +24,24 @@ Current implementation status:
 - `apps/web` exposes `GET /api/health`.
 - `apps/web` now exposes `POST /api/auth/nonce`, `POST /api/auth/verify`, `POST /api/auth/logout`, and `GET /api/auth/session`.
 - `apps/web` now protects `/studio` with server-side session lookup and redirects unauthenticated requests to `/sign-in`.
-- `apps/web` now exposes an interactive `/studio/assets` browser workflow plus `GET /api/studio/assets`, `POST /api/studio/assets/upload-intents`, `POST /api/studio/assets/[assetId]/complete`, `POST /api/studio/generations`, and `POST /api/studio/generated-assets/[generatedAssetId]/download-intent` for source asset intake, generation dispatch, polling, and protected generated-output retrieval.
+- `apps/web` now exposes an interactive `/studio/assets` browser workflow plus `GET /api/studio/assets`, `POST /api/studio/assets/upload-intents`, `POST /api/studio/assets/[assetId]/complete`, `POST /api/studio/generations`, `POST /api/studio/generations/[generationRequestId]/retry`, and `POST /api/studio/generated-assets/[generatedAssetId]/download-intent` for source asset intake, generation dispatch, retry, polling, and protected generated-output retrieval.
 - `apps/worker` is now a real Node.js worker shell with env parsing, PostgreSQL, Redis, and object-storage connection setup, BullMQ queue registration, generation request processing, selectable generation adapters (`storage_copy` or `http_backend`), a noop processor, graceful shutdown hooks, and a `health` command.
-- `apps/generation-backend` is now a real Node.js service that implements the worker HTTP generation contract, validates bearer auth when configured, reads source objects from private storage, writes generated outputs back to private storage, exposes `GET /health`, cleans up partial outputs on failure, and supports either a deterministic transform provider or a ComfyUI-backed model provider behind the same contract.
+- `apps/generation-backend` is now a real Node.js service that implements the worker HTTP generation contract, validates bearer auth when configured, reads source objects from private storage, writes generated outputs back to private storage, exposes `GET /health` plus provider-aware `GET /ready`, cleans up partial outputs on failure, and supports either a deterministic transform provider or a ComfyUI-backed model provider behind the same contract.
 - `packages/ui` provides reusable page-shell and surface primitives used by the web app.
-- `packages/shared` now centralizes worker env validation, auth request/response schemas, storage env parsing, reusable object-storage helpers, source asset upload contracts, generation request contracts, generated asset contracts, and queue payload definitions.
+- `packages/shared` now centralizes worker env validation, auth request/response schemas, storage env parsing, reusable object-storage helpers, source asset upload contracts, generation request contracts, generation-backend health/readiness contracts, generated asset contracts, and queue payload definitions.
 - `packages/database` now contains the Prisma schema, initial SQL migration, repository helpers, transaction helper, PostgreSQL client boundary, and the first `SourceAsset`, `GenerationRequest`, and `GeneratedAsset` models and repositories.
 - `infra/docker/docker-compose.yml` now provides local PostgreSQL, Redis, MinIO, and MinIO bucket bootstrap services.
-- `.env.example` now documents the current local runtime environment shape.
+- `.env.example` now documents the current local runtime environment shape, including generation-backend readiness timeout tuning.
 - `docs/runbooks/local-development.md` and `docs/deployment/service-overview.md` now document boot, verification, and service boundaries.
 - Prisma CLI configuration now lives in `packages/database/prisma.config.ts`, matching Prisma 7 requirements.
 - The runtime database client uses the PostgreSQL driver adapter and is created lazily from `DATABASE_URL`.
 - The first source asset intake slice uses server-issued signed uploads into the private object-storage bucket plus explicit upload completion verification.
 - The generation pipeline now uses persisted `GenerationRequest` and `GeneratedAsset` records, dispatches BullMQ jobs from the web app, and lets the worker either materialize generated outputs internally or validate artifacts produced by an external HTTP backend before transactionally marking requests succeeded.
 - Generated outputs now have a protected owner-scoped download-intent contract that issues short-lived signed storage URLs after database ownership and object existence checks.
-- The first operator-facing browser client now drives the full upload, generation dispatch, polling, and retrieval workflow from `/studio/assets` while keeping large object transfers on signed storage URLs and long-running work in the worker.
-- No model-backed image generation service or polished client wallet UI exists yet.
+- The first operator-facing browser client now drives the full upload, generation dispatch, retry, polling, and retrieval workflow from `/studio/assets` while keeping large object transfers on signed storage URLs and long-running work in the worker.
+- The studio asset surface now exposes richer latest-generation metadata, including pipeline, queue job, timestamps, failure code/message, and output-group result details for the latest request.
+- The ops route now surfaces live web health plus generation-backend liveness/readiness snapshots, and for authenticated operators it also exposes generation queue depth, owner-scoped recent active/failed generation activity, and owner-scoped retry controls.
+- No polished client wallet UI exists yet.
 
 The frozen technical direction remains:
 
@@ -92,6 +94,9 @@ The frozen technical direction remains:
 - Phase 2 Commit 5 landed the first interactive studio asset client with multi-file upload, explicit upload verification, per-asset generation dispatch controls, active-job polling, and generated-output download actions.
 - Phase 2 Commit 6 landed the standalone generation backend service, shared backend env and storage primitives, real transformed output rendering, backend health reporting, and local runtime wiring for worker-to-backend generation.
 - Phase 2 Commit 7 landed the first provider-based model backend inside `apps/generation-backend`, including ComfyUI upload/prompt/history/view orchestration, workflow templating and validation, provider-aware error handling, and deterministic fallback preservation.
+- Phase 2 Commit 8 landed provider-aware generation-backend readiness checks, shared health/readiness contracts, readiness CLI support, and a live `/ops` diagnostics surface for web and backend runtime status.
+- Phase 2 Commit 9 landed explicit retry support for failed generation requests plus richer studio-visible latest-generation metadata and result surfacing.
+- Phase 2 Commit 10 landed authenticated ops queue diagnostics, owner-scoped recent generation activity surfacing, and owner-scoped retry controls on `/ops`.
 
 ## Important Decisions
 
@@ -118,6 +123,10 @@ The frozen technical direction remains:
 - The first browser workflow should orchestrate control-plane actions only: request signed upload and download intents, confirm uploads explicitly, dispatch generation jobs, and poll read models without moving long-running work or private object bytes through the Next.js server.
 - The first concrete generation backend should remain standalone behind the existing HTTP contract so the deterministic transformation implementation can later be replaced by a model-backed service without reopening worker, web, or database boundaries.
 - Keep the standalone generation backend provider-based so deterministic rendering remains a safe default while ComfyUI and future model backends can be introduced without reopening the worker or web contracts.
+- The standalone generation backend should expose separate liveness and readiness diagnostics, with readiness delegated to the active provider so ComfyUI reachability failures surface before operator-driven generation attempts.
+- The web ops surface should consume generation-backend diagnostics from the configured backend URL rather than duplicating backend state inside the web app.
+- Retry ergonomics should preserve the failed request's pipeline and requested variant count by default so operators can quickly rerun the same job without re-entering parameters.
+- Deeper ops controls should stay authenticated and owner-scoped until workspace-level operator roles exist; the public `/ops` surface should stay limited to coarse runtime diagnostics.
 - GitHub `origin` is configured and `main` tracks the remote.
 
 ## Deferred / Not Yet Implemented
@@ -131,6 +140,8 @@ The frozen technical direction remains:
 - The web app and worker are not containerized yet; Phase 1 only containers the backing services needed for local reproducibility.
 - The browser workflow is now real, but browser-level smoke coverage is still deferred. Current coverage relies on build validation, focused unit tests, and API/service tests rather than end-to-end automation.
 - The repository now ships a ComfyUI-backed generation path, but production deployments still need a separately operated ComfyUI instance, model files, and GPU capacity planning.
+- The ops surface now exposes backend liveness/readiness plus authenticated queue depth and owner-scoped retry controls, but historical runtime metrics, alerts, and cross-user/workspace controls are still deferred.
+- The studio surface still only shows the latest generation per asset; full generation history and operator-side comparison tools remain deferred.
 - Planning docs should remain durable; avoid locking in low-level implementation details before the foundation lands.
 - `docs/_local/` must stay local-only and must never hold secrets.
 
@@ -147,6 +158,7 @@ The frozen technical direction remains:
 - `pnpm build`
 - `pnpm worker:health`
 - `pnpm generation-backend:health`
+- `pnpm generation-backend:ready`
 - `pnpm infra:config`
 - `pnpm infra:ps`
 - `DATABASE_URL='postgresql://ai_nft_forge:ai_nft_forge@127.0.0.1:55432/ai_nft_forge?schema=public' pnpm db:migrate:status`

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { generationBackendProviderKinds } from "./env/generation-backend-env.js";
 import { generatedAssetSummarySchema } from "./generated-assets.js";
 
 export const generationPipelineKeyValues = ["collectible-portrait-v1"] as const;
@@ -95,10 +96,55 @@ export const generationBackendErrorResponseSchema = z.object({
   })
 });
 
+const generationBackendProviderModeValues = [
+  "deterministic_transform",
+  "remote_comfyui"
+] as const;
+
+const generationBackendWorkflowSourceValues = [
+  "embedded_default",
+  "file"
+] as const;
+
+export const generationBackendProviderConfigurationSchema = z.object({
+  baseUrl: z.string().url().nullable(),
+  checkpointName: z.string().min(1).nullable(),
+  kind: z.enum(generationBackendProviderKinds),
+  mode: z.enum(generationBackendProviderModeValues),
+  workflowSource: z.enum(generationBackendWorkflowSourceValues).nullable()
+});
+
+export const generationBackendReadinessProbeSchema = z.object({
+  checkedAt: z.string().min(1),
+  latencyMs: z.number().int().nonnegative().nullable(),
+  message: z.string().min(1),
+  status: z.enum(["not_ready", "ready"])
+});
+
+export const generationBackendHealthResponseSchema = z.object({
+  bindHost: z.string().min(1),
+  port: z.number().int().positive(),
+  provider: generationBackendProviderConfigurationSchema,
+  readinessTimeoutMs: z.number().int().positive(),
+  service: z.string().min(1),
+  status: z.literal("ok"),
+  uptimeSeconds: z.number().nonnegative()
+});
+
+export const generationBackendReadinessResponseSchema = z.object({
+  provider: generationBackendProviderConfigurationSchema,
+  probe: generationBackendReadinessProbeSchema,
+  service: z.string().min(1),
+  status: z.enum(["not_ready", "ready"]),
+  uptimeSeconds: z.number().nonnegative()
+});
+
 export const generationErrorResponseSchema = z.object({
   error: z.object({
     code: z.enum([
       "ACTIVE_GENERATION_EXISTS",
+      "GENERATION_NOT_FOUND",
+      "GENERATION_NOT_RETRYABLE",
       "GENERATION_QUEUE_ERROR",
       "INTERNAL_SERVER_ERROR",
       "INVALID_REQUEST",
@@ -137,6 +183,18 @@ export type GenerationBackendResponse = z.infer<
 >;
 export type GenerationBackendErrorResponse = z.infer<
   typeof generationBackendErrorResponseSchema
+>;
+export type GenerationBackendHealthResponse = z.infer<
+  typeof generationBackendHealthResponseSchema
+>;
+export type GenerationBackendProviderConfiguration = z.infer<
+  typeof generationBackendProviderConfigurationSchema
+>;
+export type GenerationBackendReadinessProbe = z.infer<
+  typeof generationBackendReadinessProbeSchema
+>;
+export type GenerationBackendReadinessResponse = z.infer<
+  typeof generationBackendReadinessResponseSchema
 >;
 export type GenerationErrorResponse = z.infer<
   typeof generationErrorResponseSchema

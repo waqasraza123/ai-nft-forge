@@ -50,10 +50,14 @@ export async function createGenerationArtifactProvider(input: {
         negativePrompt: input.env.COMFYUI_NEGATIVE_PROMPT,
         pollIntervalMs: input.env.COMFYUI_POLL_INTERVAL_MS,
         positivePrompt: input.env.COMFYUI_POSITIVE_PROMPT,
+        readinessTimeoutMs: input.env.GENERATION_BACKEND_READINESS_TIMEOUT_MS,
         samplerName: input.env.COMFYUI_SAMPLER_NAME,
         scheduler: input.env.COMFYUI_SCHEDULER,
         steps: input.env.COMFYUI_STEPS,
         timeoutMs: input.env.COMFYUI_TIMEOUT_MS,
+        workflowSource: input.env.COMFYUI_WORKFLOW_PATH
+          ? "file"
+          : "embedded_default",
         workflowTemplate
       });
     }

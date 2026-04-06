@@ -134,10 +134,12 @@ describe("createComfyUiProvider", () => {
       negativePrompt: "bad anatomy",
       pollIntervalMs: 1,
       positivePrompt: "premium portrait",
+      readinessTimeoutMs: 2000,
       samplerName: "euler",
       scheduler: "normal",
       steps: 30,
       timeoutMs: 5000,
+      workflowSource: "embedded_default",
       workflowTemplate: createDefaultComfyWorkflowTemplate()
     });
 
@@ -232,10 +234,12 @@ describe("createComfyUiProvider", () => {
       negativePrompt: "bad anatomy",
       pollIntervalMs: 1,
       positivePrompt: "premium portrait",
+      readinessTimeoutMs: 2000,
       samplerName: "euler",
       scheduler: "normal",
       steps: 30,
       timeoutMs: 5,
+      workflowSource: "embedded_default",
       workflowTemplate: createDefaultComfyWorkflowTemplate()
     });
 
@@ -265,5 +269,58 @@ describe("createComfyUiProvider", () => {
         }
       })
     ).rejects.toThrow("ComfyUI generation timed out");
+  });
+
+  it("reports readiness when the ComfyUI API responds to the probe", async () => {
+    const provider = createComfyUiProvider({
+      baseUrl: "http://127.0.0.1:8188",
+      checkpointName: "flux.safetensors",
+      cfgScale: 7,
+      denoise: 0.42,
+      fetchFn: vi.fn<typeof fetch>().mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            devices: [],
+            system: {
+              hostname: "gpu-worker"
+            }
+          }),
+          {
+            headers: {
+              "content-type": "application/json"
+            },
+            status: 200
+          }
+        )
+      ),
+      logger: {
+        debug: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn()
+      },
+      negativePrompt: "bad anatomy",
+      pollIntervalMs: 1,
+      positivePrompt: "premium portrait",
+      readinessTimeoutMs: 2000,
+      samplerName: "euler",
+      scheduler: "normal",
+      steps: 30,
+      timeoutMs: 5000,
+      workflowSource: "embedded_default",
+      workflowTemplate: createDefaultComfyWorkflowTemplate()
+    });
+
+    await expect(provider.checkReadiness()).resolves.toMatchObject({
+      message: "ComfyUI API responded to the readiness probe.",
+      status: "ready"
+    });
+    expect(provider.describeConfiguration()).toMatchObject({
+      baseUrl: "http://127.0.0.1:8188",
+      checkpointName: "flux.safetensors",
+      kind: "comfyui",
+      mode: "remote_comfyui",
+      workflowSource: "embedded_default"
+    });
   });
 });

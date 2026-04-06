@@ -32,10 +32,12 @@ type ComfyUiProviderDependencies = {
   negativePrompt: string;
   pollIntervalMs: number;
   positivePrompt: string;
+  readinessTimeoutMs: number;
   samplerName: string;
   scheduler: string;
   steps: number;
   timeoutMs: number;
+  workflowSource: "embedded_default" | "file";
   workflowTemplate: ComfyWorkflowTemplate;
 };
 
@@ -445,6 +447,83 @@ export function createComfyUiProvider(
   }
 
   return {
+    async checkReadiness() {
+      const startedAt = Date.now();
+
+      try {
+        const response = await fetchWithTimeout({
+          fetchFn,
+          headers: {
+            ...requestHeaders,
+            Accept: "application/json"
+          },
+          method: "GET",
+          request: createAbsoluteUrl(dependencies.baseUrl, "/system_stats"),
+          timeoutMs: dependencies.readinessTimeoutMs
+        });
+        const responseBody = await response.text();
+        const latencyMs = Date.now() - startedAt;
+
+        if (!response.ok) {
+          return {
+            checkedAt: new Date().toISOString(),
+            latencyMs,
+            message: `ComfyUI readiness probe returned ${response.status} ${response.statusText}.`,
+            status: "not_ready"
+          };
+        }
+
+        try {
+          const parsedBody = JSON.parse(responseBody) as unknown;
+
+          if (typeof parsedBody !== "object" || parsedBody === null) {
+            return {
+              checkedAt: new Date().toISOString(),
+              latencyMs,
+              message:
+                "ComfyUI readiness probe returned a non-object JSON payload.",
+              status: "not_ready"
+            };
+          }
+        } catch (error) {
+          return {
+            checkedAt: new Date().toISOString(),
+            latencyMs,
+            message:
+              error instanceof Error
+                ? `ComfyUI readiness probe returned invalid JSON: ${error.message}`
+                : "ComfyUI readiness probe returned invalid JSON.",
+            status: "not_ready"
+          };
+        }
+
+        return {
+          checkedAt: new Date().toISOString(),
+          latencyMs,
+          message: "ComfyUI API responded to the readiness probe.",
+          status: "ready"
+        };
+      } catch (error) {
+        return {
+          checkedAt: new Date().toISOString(),
+          latencyMs: Date.now() - startedAt,
+          message:
+            error instanceof Error
+              ? error.message
+              : "ComfyUI readiness probe failed.",
+          status: "not_ready"
+        };
+      }
+    },
+    describeConfiguration() {
+      return {
+        baseUrl: dependencies.baseUrl,
+        checkpointName: dependencies.checkpointName,
+        kind: "comfyui",
+        mode: "remote_comfyui",
+        workflowSource: dependencies.workflowSource
+      };
+    },
     async generateArtifacts(input) {
       const uploadedSourceImage = await uploadSourceImage({
         request: input.generationRequest,

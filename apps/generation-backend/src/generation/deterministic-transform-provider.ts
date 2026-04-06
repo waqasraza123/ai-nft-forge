@@ -87,6 +87,24 @@ async function renderVariantImage(input: {
 
 export function createDeterministicTransformProvider(): GenerationArtifactProvider {
   return {
+    async checkReadiness() {
+      return {
+        checkedAt: new Date().toISOString(),
+        latencyMs: 0,
+        message:
+          "Deterministic transform rendering is available inside the generation backend process.",
+        status: "ready"
+      };
+    },
+    describeConfiguration() {
+      return {
+        baseUrl: null,
+        checkpointName: null,
+        kind: "deterministic_transform",
+        mode: "deterministic_transform",
+        workflowSource: null
+      };
+    },
     async generateArtifacts(input) {
       const artifacts = [];
 

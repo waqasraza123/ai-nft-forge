@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node dist/index.js start",
     "health": "node dist/index.js health",
+    "ready": "node dist/index.js ready",
     "build": "rm -rf dist tsconfig.tsbuildinfo && tsc -p tsconfig.json",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc -p tsconfig.json --noEmit",

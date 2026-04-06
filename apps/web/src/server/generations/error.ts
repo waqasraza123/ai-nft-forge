@@ -2,6 +2,8 @@ export class GenerationServiceError extends Error {
   constructor(
     public readonly code:
       | "ACTIVE_GENERATION_EXISTS"
+      | "GENERATION_NOT_FOUND"
+      | "GENERATION_NOT_RETRYABLE"
       | "GENERATION_QUEUE_ERROR"
       | "INVALID_REQUEST"
       | "SESSION_REQUIRED"

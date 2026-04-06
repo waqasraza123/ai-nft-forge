@@ -52,6 +52,12 @@ export const generationBackendEnvSchema = z
       .positive()
       .max(65535)
       .default(8787),
+    GENERATION_BACKEND_READINESS_TIMEOUT_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .max(60_000)
+      .default(5_000),
     GENERATION_BACKEND_PROVIDER_KIND: z
       .enum(generationBackendProviderKinds)
       .default("deterministic_transform"),

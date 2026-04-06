@@ -6,12 +6,13 @@ import {
 
 import {
   generationBackendErrorResponseSchema,
+  type GenerationBackendHealthResponse,
+  type GenerationBackendReadinessResponse,
   generationBackendRequestSchema,
   type GenerationBackendErrorResponse,
   type GenerationBackendResponse
 } from "@ai-nft-forge/shared";
 
-import { createGenerationBackendHealthSnapshot } from "../lib/health.js";
 import type { Logger } from "../lib/logger.js";
 import { GenerationBackendServiceError } from "../generation/error.js";
 
@@ -37,6 +38,10 @@ type GenerationBackendServerDependencies = {
       };
     }): Promise<GenerationBackendResponse>;
   };
+  healthReporter: {
+    createHealthSnapshot(): GenerationBackendHealthResponse;
+    createReadinessSnapshot(): Promise<GenerationBackendReadinessResponse>;
+  };
   logger: Logger;
 };
 
@@ -54,8 +59,9 @@ function sendJson(
   statusCode: number,
   payload:
     | GenerationBackendErrorResponse
+    | GenerationBackendHealthResponse
+    | GenerationBackendReadinessResponse
     | GenerationBackendResponse
-    | ReturnType<typeof createGenerationBackendHealthSnapshot>
 ) {
   response.statusCode = statusCode;
   response.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -146,7 +152,19 @@ export function createGenerationBackendServer(
       sendJson(
         response,
         200,
-        createGenerationBackendHealthSnapshot(process.env)
+        dependencies.healthReporter.createHealthSnapshot()
+      );
+      return;
+    }
+
+    if (request.method === "GET" && requestUrl.pathname === "/ready") {
+      const readinessSnapshot =
+        await dependencies.healthReporter.createReadinessSnapshot();
+
+      sendJson(
+        response,
+        readinessSnapshot.status === "ready" ? 200 : 503,
+        readinessSnapshot
       );
       return;
     }

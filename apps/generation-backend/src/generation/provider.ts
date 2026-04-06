@@ -1,4 +1,6 @@
 import type {
+  GenerationBackendProviderConfiguration,
+  GenerationBackendReadinessProbe,
   GenerationBackendRequest,
   GenerationPipelineKey,
   StorageObjectData
@@ -18,6 +20,8 @@ export type GenerateVariantArtifactsInput = {
 };
 
 export type GenerationArtifactProvider = {
+  checkReadiness: () => Promise<GenerationBackendReadinessProbe>;
+  describeConfiguration: () => GenerationBackendProviderConfiguration;
   kind: "comfyui" | "deterministic_transform";
   generateArtifacts: (
     input: GenerateVariantArtifactsInput

@@ -2,9 +2,9 @@
 
 ## Runtime Services
 
-- Web app: `apps/web` serves marketing, studio, public placeholder, ops placeholder, health, auth, the interactive studio asset workflow, source asset list and intake routes, generation dispatch, and protected generated-output download-intent routes.
+- Web app: `apps/web` serves marketing, studio, public placeholder, live ops diagnostics, authenticated ops queue/activity controls, health, auth, the interactive studio asset workflow, source asset list and intake routes, generation dispatch, failed-generation retry, and protected generated-output download-intent routes.
 - Worker: `apps/worker` owns asynchronous job execution and queue consumers, including generation request processing, generated output materialization, and optional external HTTP backend delegation.
-- Generation backend: `apps/generation-backend` serves `POST /generate` and `GET /health`, authenticates worker requests when configured, reads source objects, selects either a deterministic or ComfyUI provider, and writes completed output variants into private object storage.
+- Generation backend: `apps/generation-backend` serves `POST /generate`, `GET /health`, and `GET /ready`, authenticates worker requests when configured, reads source objects, selects either a deterministic or ComfyUI provider, and writes completed output variants into private object storage.
 - PostgreSQL: system of record for auth, workspaces, brands, source assets, generation requests, generated assets, and audit data.
 - Redis: queue backend for BullMQ.
 - MinIO: local S3-compatible object storage boundary for source assets and generated outputs.
@@ -21,5 +21,6 @@
 - Web health route: `GET /api/health`
 - Worker health command: `pnpm worker:health`
 - Generation backend health command: `pnpm generation-backend:health`
+- Generation backend readiness command: `pnpm generation-backend:ready`
 - Database validation: `pnpm prisma:validate`
 - Compose validation: `pnpm infra:config`

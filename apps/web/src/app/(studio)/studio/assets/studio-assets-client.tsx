@@ -141,6 +141,34 @@ function canStartGeneration(asset: StudioSourceAssetSummary) {
   return asset.status === "uploaded" && !isGenerationActive(asset);
 }
 
+function resolveGenerationActionLabel(asset: StudioSourceAssetSummary) {
+  if (!asset.latestGeneration) {
+    return "Generate outputs";
+  }
+
+  if (asset.latestGeneration.status === "failed") {
+    return "Start new run";
+  }
+
+  return "Regenerate";
+}
+
+function resolveGenerationTerminalDate(asset: StudioSourceAssetSummary) {
+  if (!asset.latestGeneration) {
+    return null;
+  }
+
+  if (asset.latestGeneration.status === "failed") {
+    return asset.latestGeneration.failedAt;
+  }
+
+  if (asset.latestGeneration.status === "succeeded") {
+    return asset.latestGeneration.completedAt;
+  }
+
+  return asset.latestGeneration.startedAt;
+}
+
 function createFallbackErrorMessage(response: Response) {
   switch (response.status) {
     case 401:
@@ -239,6 +267,8 @@ function AssetActionCard(input: {
   downloadingGeneratedAssetId: string | null;
   generationVariantCount: number;
   isDispatchingGeneration: boolean;
+  isRetryingGeneration: boolean;
+  retryGeneration: (generationRequestId: string) => Promise<void>;
   setGenerationVariantCount: (variantCount: number) => void;
   startGeneration: (assetId: string, variantCount: number) => Promise<void>;
 }) {
@@ -247,6 +277,11 @@ function AssetActionCard(input: {
     : "No generation request";
   const latestGenerationRequestedAt =
     input.asset.latestGeneration?.createdAt ?? null;
+  const latestGenerationTerminalDate =
+    resolveGenerationTerminalDate(input.asset) ?? null;
+  const canRetryFailedGeneration =
+    input.asset.latestGeneration?.status === "failed" &&
+    canStartGeneration(input.asset);
 
   return (
     <SurfaceCard
@@ -291,7 +326,7 @@ function AssetActionCard(input: {
               }
               type="button"
             >
-              {input.asset.latestGeneration ? "Regenerate" : "Generate outputs"}
+              {resolveGenerationActionLabel(input.asset)}
             </button>
           </div>
         ) : null
@@ -314,11 +349,73 @@ function AssetActionCard(input: {
             : "No stored outputs"}
         </Pill>
         <Pill>{formatIsoDateTime(latestGenerationRequestedAt)}</Pill>
+        {input.asset.latestGeneration ? (
+          <Pill>{input.asset.latestGeneration.pipelineKey}</Pill>
+        ) : null}
+        {input.asset.latestGeneration?.queueJobId ? (
+          <Pill>{input.asset.latestGeneration.queueJobId}</Pill>
+        ) : null}
+        {latestGenerationTerminalDate ? (
+          <Pill>{formatIsoDateTime(latestGenerationTerminalDate)}</Pill>
+        ) : null}
       </div>
+      {input.asset.latestGeneration ? (
+        <div className="generation-detail-stack">
+          <div className="pill-row">
+            <Pill>{input.asset.latestGeneration.id}</Pill>
+            <Pill>
+              Requested{" "}
+              {formatIsoDateTime(input.asset.latestGeneration.createdAt)}
+            </Pill>
+            <Pill>
+              Started{" "}
+              {formatIsoDateTime(input.asset.latestGeneration.startedAt)}
+            </Pill>
+            <Pill>
+              {input.asset.latestGeneration.status === "failed"
+                ? `Failed ${formatIsoDateTime(input.asset.latestGeneration.failedAt)}`
+                : input.asset.latestGeneration.status === "succeeded"
+                  ? `Completed ${formatIsoDateTime(input.asset.latestGeneration.completedAt)}`
+                  : "Awaiting completion"}
+            </Pill>
+          </div>
+          {input.asset.latestGeneration.result ? (
+            <div className="status-banner status-banner--success">
+              <strong>Generation completed.</strong>
+              <span>
+                {input.asset.latestGeneration.result.generatedVariantCount}{" "}
+                variants requested
+              </span>
+              <span>
+                {input.asset.latestGeneration.result.storedAssetCount} stored
+                outputs
+              </span>
+              <span className="asset-output-key">
+                {input.asset.latestGeneration.result.outputGroupKey}
+              </span>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       {input.asset.latestGeneration?.failureMessage ? (
         <div className="status-banner status-banner--error">
           <strong>Generation failed.</strong>
+          {input.asset.latestGeneration.failureCode ? (
+            <span>{input.asset.latestGeneration.failureCode}</span>
+          ) : null}
           <span>{input.asset.latestGeneration.failureMessage}</span>
+          {canRetryFailedGeneration ? (
+            <button
+              className="button-action"
+              disabled={input.isRetryingGeneration}
+              onClick={() =>
+                void input.retryGeneration(input.asset.latestGeneration!.id)
+              }
+              type="button"
+            >
+              {input.isRetryingGeneration ? "Retrying..." : "Retry failed run"}
+            </button>
+          ) : null}
         </div>
       ) : null}
       {input.asset.latestGeneratedAssets.length > 0 ? (
@@ -375,6 +472,8 @@ export function StudioAssetsClient({
     null
   );
   const [downloadingGeneratedAssetId, setDownloadingGeneratedAssetId] =
+    useState<string | null>(null);
+  const [retryingGenerationRequestId, setRetryingGenerationRequestId] =
     useState<string | null>(null);
   const [
     generationVariantCountsByAssetId,
@@ -672,6 +771,44 @@ export function StudioAssetsClient({
     }
   };
 
+  const retryGeneration = async (generationRequestId: string) => {
+    setRetryingGenerationRequestId(generationRequestId);
+    setNotice({
+      message: "Retrying the failed generation request.",
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch(
+        `/api/studio/generations/${generationRequestId}/retry`,
+        {
+          method: "POST"
+        }
+      );
+
+      await parseJsonResponse({
+        response,
+        schema: generationRequestCreateResponseSchema
+      });
+      await refreshAssets();
+
+      setNotice({
+        message: "Failed generation request re-queued for worker processing.",
+        tone: "success"
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Generation retry could not be started.",
+        tone: "error"
+      });
+    } finally {
+      setRetryingGenerationRequestId(null);
+    }
+  };
+
   const downloadGeneratedAsset = async (generatedAssetId: string) => {
     setDownloadingGeneratedAssetId(generatedAssetId);
     setNotice({
@@ -814,6 +951,7 @@ export function StudioAssetsClient({
             <Pill>Polling on demand</Pill>
             <Pill>Signed downloads</Pill>
             <Pill>Variant count 1-8</Pill>
+            <Pill>Retry failed runs</Pill>
           </div>
         </SurfaceCard>
         <SurfaceCard
@@ -846,6 +984,9 @@ export function StudioAssetsClient({
             <Pill>POST /api/studio/assets/upload-intents</Pill>
             <Pill>POST /api/studio/assets/[assetId]/complete</Pill>
             <Pill>POST /api/studio/generations</Pill>
+            <Pill>
+              POST /api/studio/generations/[generationRequestId]/retry
+            </Pill>
             <Pill>
               POST
               /api/studio/generated-assets/[generatedAssetId]/download-intent
@@ -881,7 +1022,11 @@ export function StudioAssetsClient({
                 generationVariantCountsByAssetId[asset.id] ?? 4
               }
               isDispatchingGeneration={dispatchingAssetId === asset.id}
+              isRetryingGeneration={
+                retryingGenerationRequestId === asset.latestGeneration?.id
+              }
               key={asset.id}
+              retryGeneration={retryGeneration}
               setGenerationVariantCount={(variantCount) =>
                 setGenerationVariantCountsByAssetId(
                   (currentGenerationVariantCountsByAssetId) => ({

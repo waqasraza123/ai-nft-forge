@@ -1,15 +1,40 @@
-import { parseGenerationBackendEnv } from "@ai-nft-forge/shared";
+import {
+  generationBackendHealthResponseSchema,
+  generationBackendReadinessResponseSchema,
+  parseGenerationBackendEnv
+} from "@ai-nft-forge/shared";
 
-export function createGenerationBackendHealthSnapshot(
-  rawEnvironment: NodeJS.ProcessEnv
-) {
-  const env = parseGenerationBackendEnv(rawEnvironment);
+import type { GenerationArtifactProvider } from "../generation/provider.js";
 
-  return {
+export function createGenerationBackendHealthSnapshot(input: {
+  provider: GenerationArtifactProvider;
+  rawEnvironment: NodeJS.ProcessEnv;
+}) {
+  const env = parseGenerationBackendEnv(input.rawEnvironment);
+
+  return generationBackendHealthResponseSchema.parse({
     bindHost: env.GENERATION_BACKEND_BIND_HOST,
     port: env.GENERATION_BACKEND_PORT,
-    providerKind: env.GENERATION_BACKEND_PROVIDER_KIND,
+    provider: input.provider.describeConfiguration(),
+    readinessTimeoutMs: env.GENERATION_BACKEND_READINESS_TIMEOUT_MS,
     service: env.GENERATION_BACKEND_SERVICE_NAME,
-    status: "ok" as const
-  };
+    status: "ok",
+    uptimeSeconds: Number(process.uptime().toFixed(3))
+  });
+}
+
+export async function createGenerationBackendReadinessSnapshot(input: {
+  provider: GenerationArtifactProvider;
+  rawEnvironment: NodeJS.ProcessEnv;
+}) {
+  const env = parseGenerationBackendEnv(input.rawEnvironment);
+  const probe = await input.provider.checkReadiness();
+
+  return generationBackendReadinessResponseSchema.parse({
+    provider: input.provider.describeConfiguration(),
+    probe,
+    service: env.GENERATION_BACKEND_SERVICE_NAME,
+    status: probe.status,
+    uptimeSeconds: Number(process.uptime().toFixed(3))
+  });
 }

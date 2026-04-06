@@ -380,13 +380,15 @@ select {
 }
 
 .upload-queue,
-.asset-output-list {
+.asset-output-list,
+.ops-activity-list {
   display: grid;
   gap: 12px;
 }
 
 .upload-queue-item,
-.asset-output-item {
+.asset-output-item,
+.ops-activity-item {
   display: grid;
   gap: 12px;
   padding: 14px 16px;
@@ -398,6 +400,31 @@ select {
 .asset-output-item {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
+}
+
+.ops-activity-item__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ops-activity-item__copy {
+  display: grid;
+  gap: 4px;
+}
+
+.ops-activity-item__copy span,
+.ops-activity-meta {
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+.ops-activity-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
 }
 
 .upload-queue-copy,
@@ -445,6 +472,13 @@ select {
   border: 1px solid transparent;
   border-radius: 18px;
   line-height: 1.55;
+}
+
+.generation-detail-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
 }
 
 .status-banner--error {

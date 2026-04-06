@@ -30,4 +30,4 @@ Harden the repository for public release, document setup and operations, and pac
 
 ## Current State
 
-Phase 1 is complete and the first Phase 2 slice is now underway. The repo has the monorepo spine, web shell, worker shell, database package, auth/session foundation, local Docker-backed infrastructure, and now a source asset intake slice with storage-backed upload intents and upload completion tracking.
+Phase 1 is complete. Phase 2 is still active and now includes source asset intake, generation orchestration, generated-output persistence, the standalone generation backend, the ComfyUI provider path, provider-aware ops diagnostics for backend liveness and readiness, explicit studio retry flow plus richer latest-generation metadata, and authenticated ops queue depth plus owner-scoped generation activity/retry controls.

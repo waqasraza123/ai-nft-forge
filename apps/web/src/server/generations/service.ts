@@ -48,6 +48,10 @@ type GenerationRepositorySet = {
       ownerUserId: string;
       sourceAssetId: string;
     }): Promise<GenerationRequestRecord | null>;
+    findByIdForOwner(input: {
+      id: string;
+      ownerUserId: string;
+    }): Promise<GenerationRequestRecord | null>;
     markFailed(input: {
       failureCode: string;
       failureMessage: string;
@@ -101,6 +105,44 @@ function serializeGenerationRequest(
     startedAt: generationRequest.startedAt?.toISOString() ?? null,
     status: generationRequest.status
   });
+}
+
+async function enqueueCreatedGenerationRequest(
+  dependencies: GenerationServiceDependencies,
+  generationRequest: GenerationRequestRecord
+) {
+  try {
+    const queuedJob = await dependencies.queue.enqueue({
+      generationRequestId: generationRequest.id,
+      ownerUserId: generationRequest.ownerUserId,
+      requestedAt: dependencies.now().toISOString(),
+      sourceAssetId: generationRequest.sourceAssetId
+    });
+    const queuedGeneration =
+      await dependencies.repositories.generationRequestRepository.attachQueueJob(
+        {
+          id: generationRequest.id,
+          queueJobId: queuedJob.jobId
+        }
+      );
+
+    return generationRequestCreateResponseSchema.parse({
+      generation: serializeGenerationRequest(queuedGeneration)
+    });
+  } catch {
+    await dependencies.repositories.generationRequestRepository.markFailed({
+      failureCode: "QUEUE_ENQUEUE_FAILED",
+      failureMessage: "The generation request could not be queued.",
+      failedAt: dependencies.now(),
+      id: generationRequest.id
+    });
+
+    throw new GenerationServiceError(
+      "GENERATION_QUEUE_ERROR",
+      "The generation request could not be queued.",
+      500
+    );
+  }
 }
 
 export function createGenerationService(
@@ -162,38 +204,86 @@ export function createGenerationService(
           }
         );
 
-      try {
-        const queuedJob = await dependencies.queue.enqueue({
-          generationRequestId: generationRequest.id,
-          ownerUserId: input.ownerUserId,
-          requestedAt: dependencies.now().toISOString(),
-          sourceAssetId: generationRequest.sourceAssetId
-        });
-        const queuedGeneration =
-          await dependencies.repositories.generationRequestRepository.attachQueueJob(
-            {
-              id: generationRequest.id,
-              queueJobId: queuedJob.jobId
-            }
-          );
+      return enqueueCreatedGenerationRequest(dependencies, generationRequest);
+    },
 
-        return generationRequestCreateResponseSchema.parse({
-          generation: serializeGenerationRequest(queuedGeneration)
-        });
-      } catch {
-        await dependencies.repositories.generationRequestRepository.markFailed({
-          failureCode: "QUEUE_ENQUEUE_FAILED",
-          failureMessage: "The generation request could not be queued.",
-          failedAt: dependencies.now(),
-          id: generationRequest.id
-        });
+    async retryGenerationRequest(input: {
+      generationRequestId: string;
+      ownerUserId: string;
+    }) {
+      const existingGeneration =
+        await dependencies.repositories.generationRequestRepository.findByIdForOwner(
+          {
+            id: input.generationRequestId,
+            ownerUserId: input.ownerUserId
+          }
+        );
 
+      if (!existingGeneration) {
         throw new GenerationServiceError(
-          "GENERATION_QUEUE_ERROR",
-          "The generation request could not be queued.",
-          500
+          "GENERATION_NOT_FOUND",
+          "Generation request was not found.",
+          404
         );
       }
+
+      if (existingGeneration.status !== "failed") {
+        throw new GenerationServiceError(
+          "GENERATION_NOT_RETRYABLE",
+          "Only failed generation requests can be retried.",
+          409
+        );
+      }
+
+      const sourceAsset =
+        await dependencies.repositories.sourceAssetRepository.findByIdForOwner({
+          id: existingGeneration.sourceAssetId,
+          ownerUserId: input.ownerUserId
+        });
+
+      if (!sourceAsset) {
+        throw new GenerationServiceError(
+          "SOURCE_ASSET_NOT_FOUND",
+          "Source asset was not found.",
+          404
+        );
+      }
+
+      if (sourceAsset.status !== "uploaded") {
+        throw new GenerationServiceError(
+          "SOURCE_ASSET_NOT_READY",
+          "Source asset must be uploaded before generation can start.",
+          409
+        );
+      }
+
+      const activeGeneration =
+        await dependencies.repositories.generationRequestRepository.findActiveForSourceAsset(
+          {
+            ownerUserId: input.ownerUserId,
+            sourceAssetId: existingGeneration.sourceAssetId
+          }
+        );
+
+      if (activeGeneration) {
+        throw new GenerationServiceError(
+          "ACTIVE_GENERATION_EXISTS",
+          "A generation request is already active for this source asset.",
+          409
+        );
+      }
+
+      const retriedGeneration =
+        await dependencies.repositories.generationRequestRepository.createQueued(
+          {
+            ownerUserId: input.ownerUserId,
+            pipelineKey: existingGeneration.pipelineKey,
+            requestedVariantCount: existingGeneration.requestedVariantCount,
+            sourceAssetId: existingGeneration.sourceAssetId
+          }
+        );
+
+      return enqueueCreatedGenerationRequest(dependencies, retriedGeneration);
     }
   };
 }

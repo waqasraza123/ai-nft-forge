@@ -125,6 +125,66 @@ describe("database repositories", () => {
     expect(result?.id).toBe("generation_1");
   });
 
+  it("delegates recent owner-scoped generation activity lookup through the generation request repository", async () => {
+    const database = {
+      generationRequest: {
+        create: vi.fn(),
+        findFirst: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "generation_2"
+          }
+        ]),
+        findUnique: vi.fn(),
+        update: vi.fn()
+      }
+    };
+    const repository = createGenerationRequestRepository(database as never);
+
+    const result = await repository.listRecentForOwnerUserId({
+      limit: 5,
+      orderBy: "failedAtDesc",
+      ownerUserId: "user_1",
+      statuses: ["failed"]
+    });
+
+    expect(database.generationRequest.findMany).toHaveBeenCalledWith({
+      include: {
+        _count: {
+          select: {
+            generatedAssets: true
+          }
+        },
+        sourceAsset: {
+          select: {
+            id: true,
+            originalFilename: true,
+            status: true
+          }
+        }
+      },
+      orderBy: [
+        {
+          failedAt: "desc"
+        },
+        {
+          createdAt: "desc"
+        },
+        {
+          id: "desc"
+        }
+      ],
+      take: 5,
+      where: {
+        ownerUserId: "user_1",
+        status: {
+          in: ["failed"]
+        }
+      }
+    });
+    expect(result[0]?.id).toBe("generation_2");
+  });
+
   it("delegates generated asset listing through the generated asset repository", async () => {
     const database = {
       generatedAsset: {

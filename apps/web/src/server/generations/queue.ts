@@ -20,6 +20,15 @@ type GenerationQueueGlobal = typeof globalThis & {
 
 const generationQueueGlobal = globalThis as GenerationQueueGlobal;
 
+export type GenerationDispatchQueueCounts = {
+  active: number;
+  completed: number;
+  delayed: number;
+  failed: number;
+  paused: number;
+  waiting: number;
+};
+
 function createGenerationQueueConnection(
   rawEnvironment: NodeJS.ProcessEnv
 ): IORedis {
@@ -74,5 +83,28 @@ export async function enqueueGenerationRequest(
 
   return {
     jobId: String(job.id ?? parsedPayload.generationRequestId)
+  };
+}
+
+export async function getGenerationDispatchQueueCounts(
+  rawEnvironment: NodeJS.ProcessEnv = process.env
+): Promise<GenerationDispatchQueueCounts> {
+  const queue = getGenerationDispatchQueue(rawEnvironment);
+  const counts = await queue.getJobCounts(
+    "waiting",
+    "active",
+    "delayed",
+    "completed",
+    "failed",
+    "paused"
+  );
+
+  return {
+    active: counts.active ?? 0,
+    completed: counts.completed ?? 0,
+    delayed: counts.delayed ?? 0,
+    failed: counts.failed ?? 0,
+    paused: counts.paused ?? 0,
+    waiting: counts.waiting ?? 0
   };
 }

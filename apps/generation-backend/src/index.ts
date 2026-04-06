@@ -1,16 +1,44 @@
 import "dotenv/config";
 
-import { bootstrapGenerationBackendApplication } from "./bootstrap/application.js";
+import {
+  bootstrapGenerationBackendApplication,
+  createGenerationBackendRuntime
+} from "./bootstrap/application.js";
 import { registerGenerationBackendSignalHandlers } from "./bootstrap/signals.js";
-import { createGenerationBackendHealthSnapshot } from "./lib/health.js";
+import {
+  createGenerationBackendHealthSnapshot,
+  createGenerationBackendReadinessSnapshot
+} from "./lib/health.js";
 
 async function runGenerationBackendCommand(argv: string[]) {
   const command = argv[0] ?? "start";
 
-  if (command === "health") {
-    process.stdout.write(
-      `${JSON.stringify(createGenerationBackendHealthSnapshot(process.env))}\n`
-    );
+  if (command === "health" || command === "ready") {
+    const runtime = await createGenerationBackendRuntime(process.env);
+
+    if (command === "health") {
+      process.stdout.write(
+        `${JSON.stringify(
+          createGenerationBackendHealthSnapshot({
+            provider: runtime.provider,
+            rawEnvironment: process.env
+          })
+        )}\n`
+      );
+      return;
+    }
+
+    const readinessSnapshot = await createGenerationBackendReadinessSnapshot({
+      provider: runtime.provider,
+      rawEnvironment: process.env
+    });
+
+    process.stdout.write(`${JSON.stringify(readinessSnapshot)}\n`);
+
+    if (readinessSnapshot.status !== "ready") {
+      process.exitCode = 1;
+    }
+
     return;
   }
 
