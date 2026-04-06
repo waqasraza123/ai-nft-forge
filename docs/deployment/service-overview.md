@@ -2,7 +2,7 @@
 
 ## Runtime Services
 
-- Web app: `apps/web` serves marketing, studio, public placeholder, ops placeholder, health, auth, source asset intake, generation dispatch, and protected generated-output download-intent routes.
+- Web app: `apps/web` serves marketing, studio, public placeholder, ops placeholder, health, auth, the interactive studio asset workflow, source asset list and intake routes, generation dispatch, and protected generated-output download-intent routes.
 - Worker: `apps/worker` owns asynchronous job execution and queue consumers, including generation request processing, generated output materialization, and optional external HTTP backend delegation.
 - PostgreSQL: system of record for auth, workspaces, brands, source assets, generation requests, generated assets, and audit data.
 - Redis: queue backend for BullMQ.

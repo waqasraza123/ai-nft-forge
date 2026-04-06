@@ -187,4 +187,132 @@ describe("createSourceAssetService", () => {
       )
     );
   });
+
+  it("lists source assets with the latest generation and generated outputs", async () => {
+    const generationRequests = [
+      {
+        completedAt: new Date("2026-04-05T00:30:00.000Z"),
+        createdAt: new Date("2026-04-05T00:15:00.000Z"),
+        failedAt: null,
+        failureCode: null,
+        failureMessage: null,
+        id: "generation_2",
+        pipelineKey: "collectible-portrait-v1",
+        queueJobId: "job_2",
+        requestedVariantCount: 2,
+        resultJson: {
+          generatedVariantCount: 2,
+          outputGroupKey: "generated-assets/user_1/generation_2",
+          storedAssetCount: 2
+        },
+        sourceAssetId: "asset_1",
+        startedAt: new Date("2026-04-05T00:20:00.000Z"),
+        status: "succeeded" as const
+      },
+      {
+        completedAt: null,
+        createdAt: new Date("2026-04-05T00:10:00.000Z"),
+        failedAt: new Date("2026-04-05T00:12:00.000Z"),
+        failureCode: "GENERATION_PROCESSING_FAILED",
+        failureMessage: "Temporary backend failure",
+        id: "generation_1",
+        pipelineKey: "collectible-portrait-v1",
+        queueJobId: "job_1",
+        requestedVariantCount: 4,
+        resultJson: null,
+        sourceAssetId: "asset_1",
+        startedAt: new Date("2026-04-05T00:11:00.000Z"),
+        status: "failed" as const
+      }
+    ];
+    const generatedAssets = [
+      {
+        byteSize: 2048,
+        contentType: "image/png",
+        createdAt: new Date("2026-04-05T00:31:00.000Z"),
+        generationRequestId: "generation_2",
+        id: "generated_asset_1",
+        sourceAssetId: "asset_1",
+        storageBucket: "ai-nft-forge-private",
+        storageObjectKey:
+          "generated-assets/user_1/generation_2/variant-01-portrait.png",
+        variantIndex: 1
+      },
+      {
+        byteSize: 3072,
+        contentType: "image/png",
+        createdAt: new Date("2026-04-05T00:32:00.000Z"),
+        generationRequestId: "generation_2",
+        id: "generated_asset_2",
+        sourceAssetId: "asset_1",
+        storageBucket: "ai-nft-forge-private",
+        storageObjectKey:
+          "generated-assets/user_1/generation_2/variant-02-portrait.png",
+        variantIndex: 2
+      }
+    ];
+    const listedAssets = [
+      {
+        byteSize: 4096,
+        contentType: "image/png",
+        createdAt: new Date("2026-04-05T00:00:00.000Z"),
+        id: "asset_1",
+        originalFilename: "portrait.png",
+        ownerUserId: "user_1",
+        status: "uploaded" as const,
+        storageBucket: "ai-nft-forge-private",
+        storageObjectKey: "source-assets/user_1/portrait.png",
+        uploadedAt: new Date("2026-04-05T00:05:00.000Z")
+      }
+    ];
+    const service = createSourceAssetService({
+      now: () => new Date("2026-04-05T00:00:00.000Z"),
+      repositories: {
+        generatedAssetRepository: {
+          async listByGenerationRequestIds() {
+            return generatedAssets;
+          }
+        },
+        generationRequestRepository: {
+          async listBySourceAssetIds() {
+            return generationRequests;
+          }
+        },
+        sourceAssetRepository: {
+          async createPendingUpload() {
+            throw new Error("Not used in list test.");
+          },
+          async findByIdForOwner() {
+            throw new Error("Not used in list test.");
+          },
+          async listByOwnerUserId() {
+            return listedAssets;
+          },
+          async updateUploadState() {
+            throw new Error("Not used in list test.");
+          }
+        }
+      },
+      storage: {
+        async createUploadDescriptor() {
+          throw new Error("Not used in list test.");
+        },
+        async headPrivateObject() {
+          throw new Error("Not used in list test.");
+        },
+        privateBucketName: "ai-nft-forge-private"
+      }
+    });
+
+    const result = await service.listSourceAssets({
+      ownerUserId: "user_1"
+    });
+
+    expect(result.assets).toHaveLength(1);
+    expect(result.assets[0]?.latestGeneration?.id).toBe("generation_2");
+    expect(result.assets[0]?.latestGeneration?.generatedAssets).toHaveLength(2);
+    expect(result.assets[0]?.latestGeneratedAssets[0]?.id).toBe(
+      "generated_asset_1"
+    );
+  });
 });

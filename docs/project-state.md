@@ -2,7 +2,7 @@
 
 ## Product
 
-AI NFT Forge is planned as a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, and later minting onchain. The repository now contains the completed Phase 1 foundation plus the first four Phase 2 slices: storage-backed source asset intake, queue-backed generation orchestration, durable generated-output persistence, and the first external-backend plus protected-download boundary. Minting is still not implemented.
+AI NFT Forge is planned as a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, and later minting onchain. The repository now contains the completed Phase 1 foundation plus the first five Phase 2 slices: storage-backed source asset intake, queue-backed generation orchestration, durable generated-output persistence, the first external-backend plus protected-download boundary, and the first interactive browser workflow for upload, dispatch, polling, and retrieval. Minting is still not implemented.
 
 ## Current Architecture
 
@@ -23,7 +23,7 @@ Current implementation status:
 - `apps/web` exposes `GET /api/health`.
 - `apps/web` now exposes `POST /api/auth/nonce`, `POST /api/auth/verify`, `POST /api/auth/logout`, and `GET /api/auth/session`.
 - `apps/web` now protects `/studio` with server-side session lookup and redirects unauthenticated requests to `/sign-in`.
-- `apps/web` now exposes `/studio/assets`, `POST /api/studio/assets/upload-intents`, `POST /api/studio/assets/[assetId]/complete`, `POST /api/studio/generations`, and `POST /api/studio/generated-assets/[generatedAssetId]/download-intent` for source asset intake, generation dispatch, and protected generated-output retrieval.
+- `apps/web` now exposes an interactive `/studio/assets` browser workflow plus `GET /api/studio/assets`, `POST /api/studio/assets/upload-intents`, `POST /api/studio/assets/[assetId]/complete`, `POST /api/studio/generations`, and `POST /api/studio/generated-assets/[generatedAssetId]/download-intent` for source asset intake, generation dispatch, polling, and protected generated-output retrieval.
 - `apps/worker` is now a real Node.js worker shell with env parsing, PostgreSQL, Redis, and object-storage connection setup, BullMQ queue registration, generation request processing, selectable generation adapters (`storage_copy` or `http_backend`), a noop processor, graceful shutdown hooks, and a `health` command.
 - `packages/ui` provides reusable page-shell and surface primitives used by the web app.
 - `packages/shared` now centralizes worker env validation, auth request/response schemas, storage env parsing, reusable object-storage helpers, source asset upload contracts, generation request contracts, generated asset contracts, and queue payload definitions.
@@ -36,6 +36,7 @@ Current implementation status:
 - The first source asset intake slice uses server-issued signed uploads into the private object-storage bucket plus explicit upload completion verification.
 - The generation pipeline now uses persisted `GenerationRequest` and `GeneratedAsset` records, dispatches BullMQ jobs from the web app, and lets the worker either materialize generated outputs internally or validate artifacts produced by an external HTTP backend before transactionally marking requests succeeded.
 - Generated outputs now have a protected owner-scoped download-intent contract that issues short-lived signed storage URLs after database ownership and object existence checks.
+- The first operator-facing browser client now drives the full upload, generation dispatch, polling, and retrieval workflow from `/studio/assets` while keeping large object transfers on signed storage URLs and long-running work in the worker.
 - No external image generation backend or polished client wallet UI exists yet.
 
 The frozen technical direction remains:
@@ -52,7 +53,6 @@ The frozen technical direction remains:
 
 ## Non-Negotiable Rules
 
-- No product features were implemented in this slice.
 - No comments in code unless explicitly requested.
 - Prefer reusable modules and components over large multi-purpose files.
 - Use descriptive and consistent names.
@@ -87,6 +87,7 @@ The frozen technical direction remains:
 - Phase 2 Commit 2 landed the `GenerationRequest` schema, shared generation and queue contracts, the protected generation dispatch route, studio asset generation status surfacing, and worker-backed lifecycle processing for generation requests.
 - Phase 2 Commit 3 landed the `GeneratedAsset` schema, shared generated asset and object-storage contracts, a storage-backed generation adapter, transactional generated output persistence, and studio surfacing for stored generated outputs.
 - Phase 2 Commit 4 landed selectable worker generation adapters, the external HTTP backend contract, protected generated-asset download intents, and the first owner-scoped retrieval boundary for stored outputs.
+- Phase 2 Commit 5 landed the first interactive studio asset client with multi-file upload, explicit upload verification, per-asset generation dispatch controls, active-job polling, and generated-output download actions.
 
 ## Important Decisions
 
@@ -110,6 +111,7 @@ The frozen technical direction remains:
 - The first source asset intake slice is user-owned because the studio shell does not yet expose workspace-bound upload context.
 - The first generation orchestration slice uses a persisted `GenerationRequest` record as the system of record for queue lifecycle, with the web app dispatching BullMQ jobs and the worker owning state transitions and result summaries.
 - The first generated-output slice uses a private-bucket adapter boundary that can either copy source assets deterministically or validate artifacts produced by an external HTTP backend, and it only marks a generation succeeded after `GeneratedAsset` rows are committed.
+- The first browser workflow should orchestrate control-plane actions only: request signed upload and download intents, confirm uploads explicitly, dispatch generation jobs, and poll read models without moving long-running work or private object bytes through the Next.js server.
 - GitHub `origin` is configured and `main` tracks the remote.
 
 ## Deferred / Not Yet Implemented
@@ -122,8 +124,7 @@ The frozen technical direction remains:
 ## Risks / Watchouts
 
 - The web app and worker are not containerized yet; Phase 1 only containers the backing services needed for local reproducibility.
-- Browser-level smoke coverage is still deferred. Current coverage relies on build validation plus focused unit and integration tests.
-- Upload intent creation and generation dispatch are real, but there is still no browser upload or generation client in the repo. The current slice exposes server routes and the protected studio assets surface only.
+- The browser workflow is now real, but browser-level smoke coverage is still deferred. Current coverage relies on build validation, focused unit tests, and API/service tests rather than end-to-end automation.
 - The worker now supports an external HTTP generation backend contract, but the repository still does not ship a concrete model-serving process such as ComfyUI.
 - Planning docs should remain durable; avoid locking in low-level implementation details before the foundation lands.
 - `docs/_local/` must stay local-only and must never hold secrets.
