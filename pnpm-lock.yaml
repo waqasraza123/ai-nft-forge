@@ -52,6 +52,12 @@ importers:
       "@aws-sdk/s3-request-presigner":
         specifier: ^3.1024.0
         version: 3.1024.0
+      bullmq:
+        specifier: ^5.73.0
+        version: 5.73.0
+      ioredis:
+        specifier: ^5.10.1
+        version: 5.10.1
       next:
         specifier: ^16.2.2
         version: 16.2.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -74,6 +80,9 @@ importers:
 
   apps/worker:
     dependencies:
+      "@ai-nft-forge/database":
+        specifier: workspace:*
+        version: link:../../packages/database
       "@ai-nft-forge/shared":
         specifier: workspace:*
         version: link:../../packages/shared
@@ -112,6 +121,9 @@ importers:
 
   packages/shared:
     dependencies:
+      "@aws-sdk/client-s3":
+        specifier: ^3.1024.0
+        version: 3.1024.0
       zod:
         specifier: ^4.3.6
         version: 4.3.6

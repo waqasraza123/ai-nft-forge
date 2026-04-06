@@ -17,6 +17,8 @@
     "@ai-nft-forge/ui": "workspace:*",
     "@aws-sdk/client-s3": "^3.1024.0",
     "@aws-sdk/s3-request-presigner": "^3.1024.0",
+    "bullmq": "^5.73.0",
+    "ioredis": "^5.10.1",
     "next": "^16.2.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

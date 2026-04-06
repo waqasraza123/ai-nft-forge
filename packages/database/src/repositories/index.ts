@@ -15,6 +15,14 @@ export {
   type BrandRepository
 } from "./brand-repository.js";
 export {
+  createGeneratedAssetRepository,
+  type GeneratedAssetRepository
+} from "./generated-asset-repository.js";
+export {
+  createGenerationRequestRepository,
+  type GenerationRequestRepository
+} from "./generation-request-repository.js";
+export {
   createSourceAssetRepository,
   type SourceAssetRepository
 } from "./source-asset-repository.js";

@@ -39,6 +39,14 @@ export function createSourceAssetRepository(
       });
     },
 
+    findById(id: string): Promise<SourceAsset | null> {
+      return database.sourceAsset.findUnique({
+        where: {
+          id
+        }
+      });
+    },
+
     listByOwnerUserId(ownerUserId: string): Promise<SourceAsset[]> {
       return database.sourceAsset.findMany({
         orderBy: {

@@ -2,7 +2,7 @@
 
 ## Product
 
-AI NFT Forge is planned as a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, and later minting onchain. The repository now contains the completed Phase 1 foundation plus the first Phase 2 source asset intake slice: storage-backed upload intents, upload completion tracking, and a protected studio assets surface. Generation and minting are still not implemented.
+AI NFT Forge is planned as a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, and later minting onchain. The repository now contains the completed Phase 1 foundation plus the first three Phase 2 slices: storage-backed source asset intake, queue-backed generation orchestration, and the first generated-output handling boundary. External image generation backends and minting are still not implemented.
 
 ## Current Architecture
 
@@ -23,18 +23,20 @@ Current implementation status:
 - `apps/web` exposes `GET /api/health`.
 - `apps/web` now exposes `POST /api/auth/nonce`, `POST /api/auth/verify`, `POST /api/auth/logout`, and `GET /api/auth/session`.
 - `apps/web` now protects `/studio` with server-side session lookup and redirects unauthenticated requests to `/sign-in`.
-- `apps/web` now exposes `/studio/assets`, `POST /api/studio/assets/upload-intents`, and `POST /api/studio/assets/[assetId]/complete` for the first source asset intake slice.
-- `apps/worker` is now a real Node.js worker shell with env parsing, Redis connection setup, BullMQ queue registration, a noop processor, graceful shutdown hooks, and a `health` command.
+- `apps/web` now exposes `/studio/assets`, `POST /api/studio/assets/upload-intents`, `POST /api/studio/assets/[assetId]/complete`, and `POST /api/studio/generations` for source asset intake plus generation dispatch.
+- `apps/worker` is now a real Node.js worker shell with env parsing, PostgreSQL, Redis, and object-storage connection setup, BullMQ queue registration, generation request processing, a storage-backed generation adapter, a noop processor, graceful shutdown hooks, and a `health` command.
 - `packages/ui` provides reusable page-shell and surface primitives used by the web app.
-- `packages/shared` now centralizes worker env validation, auth request/response schemas, storage env parsing, and source asset upload contracts.
-- `packages/database` now contains the Prisma schema, initial SQL migration, repository helpers, transaction helper, PostgreSQL client boundary, and the first `SourceAsset` model plus repository.
+- `packages/shared` now centralizes worker env validation, auth request/response schemas, storage env parsing, reusable object-storage helpers, source asset upload contracts, generation request contracts, generated asset contracts, and queue payload definitions.
+- `packages/database` now contains the Prisma schema, initial SQL migration, repository helpers, transaction helper, PostgreSQL client boundary, and the first `SourceAsset`, `GenerationRequest`, and `GeneratedAsset` models and repositories.
 - `infra/docker/docker-compose.yml` now provides local PostgreSQL, Redis, MinIO, and MinIO bucket bootstrap services.
 - `.env.example` now documents the current local runtime environment shape.
 - `docs/runbooks/local-development.md` and `docs/deployment/service-overview.md` now document boot, verification, and service boundaries.
 - Prisma CLI configuration now lives in `packages/database/prisma.config.ts`, matching Prisma 7 requirements.
 - The runtime database client uses the PostgreSQL driver adapter and is created lazily from `DATABASE_URL`.
 - The first source asset intake slice uses server-issued signed uploads into the private object-storage bucket plus explicit upload completion verification.
-- No generation flow or polished client wallet UI exists yet.
+- The generation pipeline now uses persisted `GenerationRequest` and `GeneratedAsset` records, dispatches BullMQ jobs from the web app, and lets the worker materialize generated output objects into private storage before transactionally marking requests succeeded.
+- The first generation adapter is storage-backed and deterministic; external model inference remains deferred behind the same worker boundary.
+- No external image generation backend or polished client wallet UI exists yet.
 
 The frozen technical direction remains:
 
@@ -82,6 +84,8 @@ The frozen technical direction remains:
 - Phase 1 Commit 6 landed local Docker infrastructure, `.env.example`, setup and deployment docs, root verification commands, CI hardening, and the final Phase 1 handoff updates.
 - Phase 1 foundation is now complete and green for the current repo scope.
 - Phase 2 Commit 1 landed the `SourceAsset` schema, shared storage and source asset contracts, protected upload-intent and upload-complete routes, storage-backed web service logic, and the first `/studio/assets` surface.
+- Phase 2 Commit 2 landed the `GenerationRequest` schema, shared generation and queue contracts, the protected generation dispatch route, studio asset generation status surfacing, and worker-backed lifecycle processing for generation requests.
+- Phase 2 Commit 3 landed the `GeneratedAsset` schema, shared generated asset and object-storage contracts, a storage-backed generation adapter, transactional generated output persistence, and studio surfacing for stored generated outputs.
 
 ## Important Decisions
 
@@ -103,13 +107,14 @@ The frozen technical direction remains:
 - The local Compose stack uses dedicated host ports so Phase 1 services do not collide with unrelated local PostgreSQL or Redis installs.
 - Source asset intake now uses server-issued signed `PUT` uploads into the private bucket plus an explicit completion call that verifies object existence before database state changes to `uploaded`.
 - The first source asset intake slice is user-owned because the studio shell does not yet expose workspace-bound upload context.
+- The first generation orchestration slice uses a persisted `GenerationRequest` record as the system of record for queue lifecycle, with the web app dispatching BullMQ jobs and the worker owning state transitions and result summaries.
+- The first generated-output slice uses a private-bucket storage-backed adapter that materializes per-request output objects and only marks a generation succeeded after `GeneratedAsset` rows are committed.
 - GitHub `origin` is configured and `main` tracks the remote.
 
 ## Deferred / Not Yet Implemented
 
-- Redis and BullMQ jobs
 - Base Account integration and polished wallet UI
-- Generation pipeline
+- External model-backed generation adapter integration
 - Contracts, metadata publication, and minting
 - Live storefront data
 
@@ -117,7 +122,8 @@ The frozen technical direction remains:
 
 - The web app and worker are not containerized yet; Phase 1 only containers the backing services needed for local reproducibility.
 - Browser-level smoke coverage is still deferred. Current coverage relies on build validation plus focused unit and integration tests.
-- Upload intent creation is real, but there is still no browser upload client in the repo. The current slice exposes server routes and the protected studio assets surface only.
+- Upload intent creation and generation dispatch are real, but there is still no browser upload or generation client in the repo. The current slice exposes server routes and the protected studio assets surface only.
+- Generated outputs are real private-bucket objects with durable `GeneratedAsset` records, but they are currently deterministic storage-backed materializations rather than files produced by an external model backend.
 - Planning docs should remain durable; avoid locking in low-level implementation details before the foundation lands.
 - `docs/_local/` must stay local-only and must never hold secrets.
 

@@ -1,10 +1,14 @@
 import {
+  generatedAssetSummarySchema,
+  generationRequestSummarySchema,
+  generationResultSummarySchema,
   sourceAssetCompletionResponseSchema,
   sourceAssetContentTypeSchema,
   sourceAssetListResponseSchema,
   sourceAssetSummarySchema,
   sourceAssetUploadIntentRequestSchema,
   sourceAssetUploadIntentResponseSchema,
+  type GenerationRequestStatus,
   type SourceAssetContentType,
   type SourceAssetStatus
 } from "@ai-nft-forge/shared";
@@ -24,7 +28,45 @@ type SourceAssetRecord = {
   uploadedAt: Date | null;
 };
 
+type GenerationRequestRecord = {
+  completedAt: Date | null;
+  createdAt: Date;
+  failedAt: Date | null;
+  failureCode: string | null;
+  failureMessage: string | null;
+  id: string;
+  pipelineKey: string;
+  queueJobId: string | null;
+  requestedVariantCount: number;
+  resultJson: unknown;
+  sourceAssetId: string;
+  startedAt: Date | null;
+  status: GenerationRequestStatus;
+};
+
+type GeneratedAssetRecord = {
+  byteSize: number | null;
+  contentType: string;
+  createdAt: Date;
+  generationRequestId: string;
+  id: string;
+  sourceAssetId: string;
+  storageBucket: string;
+  storageObjectKey: string;
+  variantIndex: number;
+};
+
 type SourceAssetRepositorySet = {
+  generatedAssetRepository: {
+    listByGenerationRequestIds(
+      generationRequestIds: string[]
+    ): Promise<GeneratedAssetRecord[]>;
+  };
+  generationRequestRepository: {
+    listBySourceAssetIds(
+      sourceAssetIds: string[]
+    ): Promise<GenerationRequestRecord[]>;
+  };
   sourceAssetRepository: {
     createPendingUpload(input: {
       contentType: string;
@@ -83,6 +125,50 @@ function serializeSourceAssetSummary(asset: SourceAssetRecord) {
     originalFilename: asset.originalFilename,
     status: asset.status,
     uploadedAt: asset.uploadedAt?.toISOString() ?? null
+  });
+}
+
+function serializeGeneratedAsset(asset: GeneratedAssetRecord) {
+  return generatedAssetSummarySchema.parse({
+    byteSize: asset.byteSize,
+    contentType: asset.contentType,
+    createdAt: asset.createdAt.toISOString(),
+    generationRequestId: asset.generationRequestId,
+    id: asset.id,
+    sourceAssetId: asset.sourceAssetId,
+    storageBucket: asset.storageBucket,
+    storageObjectKey: asset.storageObjectKey,
+    variantIndex: asset.variantIndex
+  });
+}
+
+function serializeGenerationRequest(
+  generationRequest: GenerationRequestRecord | null,
+  generatedAssets: GeneratedAssetRecord[]
+) {
+  if (!generationRequest) {
+    return null;
+  }
+
+  return generationRequestSummarySchema.parse({
+    completedAt: generationRequest.completedAt?.toISOString() ?? null,
+    createdAt: generationRequest.createdAt.toISOString(),
+    failedAt: generationRequest.failedAt?.toISOString() ?? null,
+    failureCode: generationRequest.failureCode,
+    failureMessage: generationRequest.failureMessage,
+    generatedAssets: generatedAssets.map((asset) =>
+      serializeGeneratedAsset(asset)
+    ),
+    id: generationRequest.id,
+    pipelineKey: generationRequest.pipelineKey,
+    queueJobId: generationRequest.queueJobId,
+    requestedVariantCount: generationRequest.requestedVariantCount,
+    result: generationRequest.resultJson
+      ? generationResultSummarySchema.parse(generationRequest.resultJson)
+      : null,
+    sourceAssetId: generationRequest.sourceAssetId,
+    startedAt: generationRequest.startedAt?.toISOString() ?? null,
+    status: generationRequest.status
   });
 }
 
@@ -174,9 +260,67 @@ export function createSourceAssetService(
         await dependencies.repositories.sourceAssetRepository.listByOwnerUserId(
           input.ownerUserId
         );
+      const generationRequests =
+        await dependencies.repositories.generationRequestRepository.listBySourceAssetIds(
+          assets.map((asset) => asset.id)
+        );
+      const generatedAssets =
+        await dependencies.repositories.generatedAssetRepository.listByGenerationRequestIds(
+          generationRequests.map((generationRequest) => generationRequest.id)
+        );
+      const latestGenerationBySourceAssetId = new Map<
+        string,
+        GenerationRequestRecord
+      >();
+      const generatedAssetsByGenerationRequestId = new Map<
+        string,
+        GeneratedAssetRecord[]
+      >();
+
+      for (const generationRequest of generationRequests) {
+        if (
+          !latestGenerationBySourceAssetId.has(generationRequest.sourceAssetId)
+        ) {
+          latestGenerationBySourceAssetId.set(
+            generationRequest.sourceAssetId,
+            generationRequest
+          );
+        }
+      }
+
+      for (const generatedAsset of generatedAssets) {
+        const currentGeneratedAssets =
+          generatedAssetsByGenerationRequestId.get(
+            generatedAsset.generationRequestId
+          ) ?? [];
+
+        currentGeneratedAssets.push(generatedAsset);
+        generatedAssetsByGenerationRequestId.set(
+          generatedAsset.generationRequestId,
+          currentGeneratedAssets
+        );
+      }
 
       return sourceAssetListResponseSchema.parse({
-        assets: assets.map((asset) => serializeSourceAssetSummary(asset))
+        assets: assets.map((asset) => {
+          const latestGeneration =
+            latestGenerationBySourceAssetId.get(asset.id) ?? null;
+          const latestGeneratedAssets = latestGeneration
+            ? (generatedAssetsByGenerationRequestId.get(latestGeneration.id) ??
+              [])
+            : [];
+
+          return {
+            ...serializeSourceAssetSummary(asset),
+            latestGeneratedAssets: latestGeneratedAssets.map((generatedAsset) =>
+              serializeGeneratedAsset(generatedAsset)
+            ),
+            latestGeneration: serializeGenerationRequest(
+              latestGeneration,
+              latestGeneratedAssets
+            )
+          };
+        })
       });
     }
   };

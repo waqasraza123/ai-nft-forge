@@ -1,4 +1,4 @@
-import { sourceAssetErrorResponseSchema } from "@ai-nft-forge/shared";
+import { generationErrorResponseSchema } from "@ai-nft-forge/shared";
 import { NextResponse } from "next/server";
 
 import {
@@ -6,13 +6,13 @@ import {
   requireStudioApiSession as requireStudioApiSessionBase
 } from "../studio/http";
 
-import { SourceAssetServiceError } from "./error";
+import { GenerationServiceError } from "./error";
 
 export async function parseJsonBody(request: Request): Promise<unknown> {
   try {
     return await parseStudioJsonBody(request);
   } catch {
-    throw new SourceAssetServiceError(
+    throw new GenerationServiceError(
       "INVALID_REQUEST",
       "Request body must be valid JSON.",
       400
@@ -24,7 +24,7 @@ export async function requireStudioApiSession() {
   const session = await requireStudioApiSessionBase();
 
   if (!session) {
-    throw new SourceAssetServiceError(
+    throw new GenerationServiceError(
       "SESSION_REQUIRED",
       "An active studio session is required.",
       401
@@ -34,10 +34,10 @@ export async function requireStudioApiSession() {
   return session;
 }
 
-export function createSourceAssetErrorResponse(error: unknown): NextResponse {
-  if (error instanceof SourceAssetServiceError) {
+export function createGenerationErrorResponse(error: unknown): NextResponse {
+  if (error instanceof GenerationServiceError) {
     return NextResponse.json(
-      sourceAssetErrorResponseSchema.parse({
+      generationErrorResponseSchema.parse({
         error: {
           code: error.code,
           message: error.message
@@ -50,10 +50,10 @@ export function createSourceAssetErrorResponse(error: unknown): NextResponse {
   }
 
   return NextResponse.json(
-    sourceAssetErrorResponseSchema.parse({
+    generationErrorResponseSchema.parse({
       error: {
         code: "INTERNAL_SERVER_ERROR",
-        message: "Unexpected source asset error."
+        message: "Unexpected generation error."
       }
     }),
     {

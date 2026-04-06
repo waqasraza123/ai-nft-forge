@@ -33,6 +33,9 @@
 - Start Phase 2 with source asset intake before generation orchestration.
 - Use server-issued signed `PUT` uploads into the private S3-compatible bucket plus an explicit completion call that verifies object existence before marking an asset uploaded.
 - Keep the first source asset intake slice user-owned because the protected studio shell does not yet expose a workspace-bound upload context.
+- Use a persisted `GenerationRequest` record as the first durable generation orchestration boundary, with the web app enqueueing BullMQ work and the worker owning lifecycle transitions and stored result summaries.
+- Materialize first generated outputs into the private bucket and persist them as `GeneratedAsset` records before a generation request can succeed.
+- Keep external model backends behind the worker adapter boundary so the current storage-backed adapter can be replaced without reopening web or database contracts.
 
 ## Intentionally Deferred
 

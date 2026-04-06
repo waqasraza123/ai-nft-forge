@@ -18,16 +18,25 @@ enum SourceAssetStatus {
   upload_failed
 }
 
+enum GenerationRequestStatus {
+  queued
+  running
+  succeeded
+  failed
+}
+
 model User {
-  id              String         @id @default(cuid()) @map("id")
-  walletAddress   String         @unique @map("wallet_address")
-  displayName     String?        @map("display_name")
-  avatarUrl       String?        @map("avatar_url")
-  createdAt       DateTime       @default(now()) @map("created_at")
-  updatedAt       DateTime       @updatedAt @map("updated_at")
-  authSessions    AuthSession[]
+  id                 String              @id @default(cuid()) @map("id")
+  walletAddress      String              @unique @map("wallet_address")
+  displayName        String?             @map("display_name")
+  avatarUrl          String?             @map("avatar_url")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  authSessions       AuthSession[]
+  generatedAssets    GeneratedAsset[]    @relation("GeneratedAssetOwner")
+  generationRequests GenerationRequest[] @relation("GenerationRequestOwner")
   ownedSourceAssets SourceAsset[] @relation("SourceAssetOwner")
-  ownedWorkspaces Workspace[]    @relation("WorkspaceOwner")
+  ownedWorkspaces    Workspace[]         @relation("WorkspaceOwner")
 
   @@map("users")
 }
@@ -107,19 +116,70 @@ model AuditLog {
 }
 
 model SourceAsset {
-  id              String            @id @default(cuid()) @map("id")
-  ownerUserId     String            @map("owner_user_id")
-  originalFilename String           @map("original_filename")
-  contentType     String            @map("content_type")
-  storageBucket   String            @map("storage_bucket")
-  storageObjectKey String           @unique @map("storage_object_key")
-  byteSize        Int?              @map("byte_size")
-  status          SourceAssetStatus @default(pending_upload) @map("status")
-  uploadedAt      DateTime?         @map("uploaded_at")
-  createdAt       DateTime          @default(now()) @map("created_at")
-  updatedAt       DateTime          @updatedAt @map("updated_at")
-  ownerUser       User              @relation("SourceAssetOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  id                 String              @id @default(cuid()) @map("id")
+  ownerUserId        String              @map("owner_user_id")
+  originalFilename   String              @map("original_filename")
+  contentType        String              @map("content_type")
+  storageBucket      String              @map("storage_bucket")
+  storageObjectKey   String              @unique @map("storage_object_key")
+  byteSize           Int?                @map("byte_size")
+  status             SourceAssetStatus   @default(pending_upload) @map("status")
+  uploadedAt         DateTime?           @map("uploaded_at")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  generatedAssets    GeneratedAsset[]
+  generationRequests GenerationRequest[]
+  ownerUser          User                @relation("SourceAssetOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
 
   @@index([ownerUserId, status], map: "source_assets_owner_user_id_status_idx")
   @@map("source_assets")
+}
+
+model GenerationRequest {
+  id                    String                  @id @default(cuid()) @map("id")
+  sourceAssetId         String                  @map("source_asset_id")
+  ownerUserId           String                  @map("owner_user_id")
+  pipelineKey           String                  @map("pipeline_key")
+  requestedVariantCount Int                     @map("requested_variant_count")
+  status                GenerationRequestStatus @default(queued) @map("status")
+  queueJobId            String?                 @map("queue_job_id")
+  startedAt             DateTime?               @map("started_at")
+  completedAt           DateTime?               @map("completed_at")
+  failedAt              DateTime?               @map("failed_at")
+  failureCode           String?                 @map("failure_code")
+  failureMessage        String?                 @map("failure_message")
+  resultJson            Json?                   @map("result_json")
+  createdAt             DateTime                @default(now()) @map("created_at")
+  updatedAt             DateTime                @updatedAt @map("updated_at")
+  generatedAssets       GeneratedAsset[]
+  ownerUser             User                    @relation("GenerationRequestOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  sourceAsset           SourceAsset             @relation(fields: [sourceAssetId], references: [id], onDelete: Cascade)
+
+  @@index([ownerUserId, status], map: "generation_requests_owner_user_id_status_idx")
+  @@index([sourceAssetId, createdAt], map: "generation_requests_source_asset_id_created_at_idx")
+  @@index([queueJobId], map: "generation_requests_queue_job_id_idx")
+  @@map("generation_requests")
+}
+
+model GeneratedAsset {
+  id                  String            @id @default(cuid()) @map("id")
+  generationRequestId String            @map("generation_request_id")
+  sourceAssetId       String            @map("source_asset_id")
+  ownerUserId         String            @map("owner_user_id")
+  variantIndex        Int               @map("variant_index")
+  contentType         String            @map("content_type")
+  storageBucket       String            @map("storage_bucket")
+  storageObjectKey    String            @unique @map("storage_object_key")
+  byteSize            Int?              @map("byte_size")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+  generationRequest   GenerationRequest @relation(fields: [generationRequestId], references: [id], onDelete: Cascade)
+  ownerUser           User              @relation("GeneratedAssetOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  sourceAsset         SourceAsset       @relation(fields: [sourceAssetId], references: [id], onDelete: Cascade)
+
+  @@unique([generationRequestId, variantIndex], map: "generated_assets_generation_request_id_variant_index_key")
+  @@index([ownerUserId, createdAt], map: "generated_assets_owner_user_id_created_at_idx")
+  @@index([sourceAssetId, createdAt], map: "generated_assets_source_asset_id_created_at_idx")
+  @@index([generationRequestId, createdAt], map: "generated_assets_generation_request_id_created_at_idx")
+  @@map("generated_assets")
 }

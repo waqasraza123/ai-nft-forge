@@ -31,6 +31,16 @@ function createSourceAssetHarness() {
   const service = createSourceAssetService({
     now: () => new Date("2026-04-05T00:00:00.000Z"),
     repositories: {
+      generatedAssetRepository: {
+        async listByGenerationRequestIds() {
+          return [];
+        }
+      },
+      generationRequestRepository: {
+        async listBySourceAssetIds() {
+          return [];
+        }
+      },
       sourceAssetRepository: {
         async createPendingUpload(input) {
           assetIndex += 1;

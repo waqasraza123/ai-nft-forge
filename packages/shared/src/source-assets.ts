@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+import { generatedAssetSummarySchema } from "./generated-assets.js";
+import { generationRequestSummarySchema } from "./generations.js";
+
 export const sourceAssetStatusValues = [
   "pending_upload",
   "uploaded",
@@ -38,8 +41,13 @@ export const sourceAssetSummarySchema = z.object({
   uploadedAt: z.string().min(1).nullable()
 });
 
+export const studioSourceAssetSummarySchema = sourceAssetSummarySchema.extend({
+  latestGeneratedAssets: z.array(generatedAssetSummarySchema),
+  latestGeneration: generationRequestSummarySchema.nullable()
+});
+
 export const sourceAssetListResponseSchema = z.object({
-  assets: z.array(sourceAssetSummarySchema)
+  assets: z.array(studioSourceAssetSummarySchema)
 });
 
 export const sourceAssetUploadIntentRequestSchema = z.object({
@@ -84,6 +92,9 @@ export type SourceAssetContentType =
   (typeof sourceAssetContentTypeValues)[number];
 export type SourceAssetStatus = (typeof sourceAssetStatusValues)[number];
 export type SourceAssetSummary = z.infer<typeof sourceAssetSummarySchema>;
+export type StudioSourceAssetSummary = z.infer<
+  typeof studioSourceAssetSummarySchema
+>;
 export type SourceAssetListResponse = z.infer<
   typeof sourceAssetListResponseSchema
 >;

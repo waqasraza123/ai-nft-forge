@@ -5,6 +5,12 @@ export const workerLogLevels = ["debug", "info", "warn", "error"] as const;
 export type WorkerLogLevel = (typeof workerLogLevels)[number];
 
 export const workerEnvSchema = z.object({
+  GENERATION_QUEUE_CONCURRENCY: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(32)
+    .default(1),
   LOG_LEVEL: z.enum(workerLogLevels).default("info"),
   NOOP_QUEUE_CONCURRENCY: z.coerce.number().int().positive().max(32).default(1),
   REDIS_URL: z.string().url().default("redis://127.0.0.1:56379"),

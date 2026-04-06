@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  generationJobNames,
+  generationQueueNames,
   foundationJobNames,
   foundationQueueNames,
   queueCatalog
@@ -12,6 +14,10 @@ describe("queueCatalog", () => {
       {
         jobName: foundationJobNames.noop,
         queueName: foundationQueueNames.foundation
+      },
+      {
+        jobName: generationJobNames.processSourceAssetGeneration,
+        queueName: generationQueueNames.generationDispatch
       }
     ]);
   });

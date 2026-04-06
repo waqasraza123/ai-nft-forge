@@ -2,11 +2,11 @@
 
 ## Runtime Services
 
-- Web app: `apps/web` serves marketing, studio, public placeholder, ops placeholder, health, and auth routes.
-- Worker: `apps/worker` owns asynchronous job execution and queue consumers.
-- PostgreSQL: system of record for auth, workspaces, brands, and audit data.
+- Web app: `apps/web` serves marketing, studio, public placeholder, ops placeholder, health, auth, source asset intake, and generation dispatch routes.
+- Worker: `apps/worker` owns asynchronous job execution and queue consumers, including generation request processing and generated output materialization.
+- PostgreSQL: system of record for auth, workspaces, brands, source assets, generation requests, generated assets, and audit data.
 - Redis: queue backend for BullMQ.
-- MinIO: local S3-compatible object storage boundary for later asset workflows.
+- MinIO: local S3-compatible object storage boundary for source assets and generated outputs.
 
 ## Phase 1 Deployment Shape
 

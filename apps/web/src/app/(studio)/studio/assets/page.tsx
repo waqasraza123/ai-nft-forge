@@ -21,12 +21,28 @@ export default async function StudioAssetsPage() {
   const result = await createRuntimeSourceAssetService().listSourceAssets({
     ownerUserId: session.user.id
   });
+  const queuedAssets = result.assets.filter(
+    (asset) => asset.latestGeneration?.status === "queued"
+  ).length;
+  const runningAssets = result.assets.filter(
+    (asset) => asset.latestGeneration?.status === "running"
+  ).length;
+  const completedAssets = result.assets.filter(
+    (asset) => asset.latestGeneration?.status === "succeeded"
+  ).length;
+  const generatedOutputCount = result.assets.reduce(
+    (total, asset) => total + asset.latestGeneratedAssets.length,
+    0
+  );
+  const uploadedAssets = result.assets.filter(
+    (asset) => asset.status === "uploaded"
+  ).length;
 
   return (
     <PageShell
       eyebrow="Studio assets"
-      title="Source asset intake is now part of the protected studio surface"
-      lead="This Phase 2 slice adds storage-backed upload intent records and upload completion tracking without jumping ahead to generation or collection workflows."
+      title="Source asset intake now feeds stored generated outputs"
+      lead="Uploaded source assets can now be dispatched into a worker-backed generation flow that materializes generated output objects in private storage, persists `GeneratedAsset` records, and surfaces output state in the studio."
       actions={
         <>
           <Link className="action-link" href="/studio">
@@ -41,43 +57,49 @@ export default async function StudioAssetsPage() {
     >
       <SurfaceGrid>
         <SurfaceCard
-          body="The server creates a pending source asset record and returns a signed upload target in private object storage."
+          body="The web app now creates queued generation requests for uploaded source assets and dispatches them into BullMQ for worker processing."
           eyebrow="Current slice"
-          title="Direct upload contract"
+          title="Queue-backed generation dispatch"
         >
           <div className="pill-row">
             <Pill>POST /api/studio/assets/upload-intents</Pill>
             <Pill>POST /api/studio/assets/[assetId]/complete</Pill>
+            <Pill>POST /api/studio/generations</Pill>
           </div>
         </SurfaceCard>
         <SurfaceCard
-          body="Generation remains deferred. This slice only lands durable intake and storage confirmation boundaries."
+          body="This slice writes durable generated output objects and records through a storage-backed adapter while keeping external model backends deferred."
           eyebrow="Guardrail"
-          title="No generation yet"
+          title="First real adapter boundary"
         >
           <div className="pill-row">
-            <Pill>Generation deferred</Pill>
+            <Pill>Generated assets persisted</Pill>
+            <Pill>ComfyUI deferred</Pill>
             <Pill>Contracts deferred</Pill>
           </div>
         </SurfaceCard>
         <SurfaceCard
-          body="The current protected owner can inspect the stored source asset records below."
+          body="The current protected owner can inspect source assets, generation request state, and stored generated outputs below."
           eyebrow="Summary"
           span={8}
-          title="Current source asset records"
+          title="Current source asset and generation records"
         >
           <div className="metric-list">
             <MetricTile label="Owner" value={session.user.walletAddress} />
             <MetricTile label="Assets" value={String(result.assets.length)} />
+            <MetricTile label="Uploaded" value={String(uploadedAssets)} />
+            <MetricTile label="Queued" value={String(queuedAssets)} />
+            <MetricTile label="Running" value={String(runningAssets)} />
+            <MetricTile label="Succeeded" value={String(completedAssets)} />
             <MetricTile
-              label="Latest status"
-              value={result.assets[0]?.status ?? "none"}
+              label="Generated outputs"
+              value={String(generatedOutputCount)}
             />
           </div>
         </SurfaceCard>
         {result.assets.length === 0 ? (
           <SurfaceCard
-            body="No source assets have been created for this session owner yet. The API routes are ready for the first upload client to use."
+            body="No source assets have been created for this session owner yet. The upload and generation API routes are ready for the first studio client."
             eyebrow="Empty state"
             span={4}
             title="No assets yet"
@@ -94,6 +116,25 @@ export default async function StudioAssetsPage() {
               <div className="pill-row">
                 <Pill>{asset.id}</Pill>
                 <Pill>{asset.uploadedAt ?? "Pending upload"}</Pill>
+                <Pill>
+                  {asset.latestGeneration
+                    ? `Generation ${asset.latestGeneration.status}`
+                    : "No generation request"}
+                </Pill>
+                <Pill>
+                  {asset.latestGeneration
+                    ? `${asset.latestGeneration.requestedVariantCount} variants`
+                    : "Ready for dispatch"}
+                </Pill>
+                <Pill>
+                  {asset.latestGeneratedAssets.length > 0
+                    ? `${asset.latestGeneratedAssets.length} stored outputs`
+                    : "No stored outputs"}
+                </Pill>
+                <Pill>
+                  {asset.latestGeneratedAssets[0]?.storageObjectKey ??
+                    "Output keys pending"}
+                </Pill>
               </div>
             </SurfaceCard>
           ))

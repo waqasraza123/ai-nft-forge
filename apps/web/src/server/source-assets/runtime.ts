@@ -1,4 +1,6 @@
 import {
+  createGeneratedAssetRepository,
+  createGenerationRequestRepository,
   createSourceAssetRepository,
   getDatabaseClient
 } from "@ai-nft-forge/database";
@@ -21,6 +23,9 @@ export function createRuntimeSourceAssetService(
   return createSourceAssetService({
     now: () => new Date(),
     repositories: {
+      generatedAssetRepository: createGeneratedAssetRepository(databaseClient),
+      generationRequestRepository:
+        createGenerationRequestRepository(databaseClient),
       sourceAssetRepository: createSourceAssetRepository(databaseClient)
     },
     storage: {
