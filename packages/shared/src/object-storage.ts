@@ -3,6 +3,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  PutObjectCommand,
   S3Client
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -11,6 +12,12 @@ import { parseStorageEnv, type StorageEnv } from "./env/storage-env.js";
 
 export type StorageObjectHead = {
   byteSize: number | null;
+  contentType: string | null;
+};
+
+export type StorageObjectData = {
+  body: Uint8Array;
+  byteSize: number;
   contentType: string | null;
 };
 
@@ -120,6 +127,55 @@ export async function copyStorageObject(input: {
       Metadata: input.metadata,
       MetadataDirective:
         input.contentType || input.metadata ? "REPLACE" : undefined
+    })
+  );
+}
+
+export async function getStorageObjectBytes(input: {
+  bucket: string;
+  client: S3Client;
+  key: string;
+}): Promise<StorageObjectData> {
+  const response = await input.client.send(
+    new GetObjectCommand({
+      Bucket: input.bucket,
+      Key: input.key
+    })
+  );
+
+  if (!response.Body) {
+    throw new Error(
+      `Storage object ${input.key} did not include a response body.`
+    );
+  }
+
+  const body = await response.Body.transformToByteArray();
+
+  return {
+    body,
+    byteSize:
+      typeof response.ContentLength === "number"
+        ? response.ContentLength
+        : body.byteLength,
+    contentType: response.ContentType ?? null
+  };
+}
+
+export async function putStorageObject(input: {
+  body: Uint8Array;
+  bucket: string;
+  client: S3Client;
+  contentType: string;
+  key: string;
+  metadata?: Record<string, string>;
+}) {
+  await input.client.send(
+    new PutObjectCommand({
+      Body: input.body,
+      Bucket: input.bucket,
+      ContentType: input.contentType,
+      Key: input.key,
+      Metadata: input.metadata
     })
   );
 }

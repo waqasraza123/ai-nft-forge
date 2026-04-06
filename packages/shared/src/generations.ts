@@ -79,6 +79,20 @@ export const generationBackendResponseSchema = z.object({
   outputGroupKey: z.string().min(1)
 });
 
+export const generationBackendErrorResponseSchema = z.object({
+  error: z.object({
+    code: z.enum([
+      "BACKEND_AUTH_REQUIRED",
+      "BACKEND_AUTH_INVALID",
+      "INTERNAL_SERVER_ERROR",
+      "INVALID_REQUEST",
+      "SOURCE_ASSET_UNSUPPORTED",
+      "SOURCE_OBJECT_MISSING"
+    ]),
+    message: z.string().min(1)
+  })
+});
+
 export const generationErrorResponseSchema = z.object({
   error: z.object({
     code: z.enum([
@@ -118,6 +132,9 @@ export type GenerationBackendRequest = z.infer<
 >;
 export type GenerationBackendResponse = z.infer<
   typeof generationBackendResponseSchema
+>;
+export type GenerationBackendErrorResponse = z.infer<
+  typeof generationBackendErrorResponseSchema
 >;
 export type GenerationErrorResponse = z.infer<
   typeof generationErrorResponseSchema

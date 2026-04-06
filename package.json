@@ -11,6 +11,7 @@
     "build": "turbo run build",
     "db:migrate:deploy": "pnpm --filter @ai-nft-forge/database prisma:migrate:deploy",
     "db:migrate:status": "pnpm --filter @ai-nft-forge/database prisma:migrate:status",
+    "generation-backend:health": "pnpm --filter @ai-nft-forge/generation-backend health",
     "infra:config": "docker compose -f infra/docker/docker-compose.yml config",
     "infra:down": "docker compose -f infra/docker/docker-compose.yml down --remove-orphans",
     "infra:logs": "docker compose -f infra/docker/docker-compose.yml logs --tail=100",
@@ -23,7 +24,7 @@
     "test": "turbo run test",
     "worker:health": "pnpm --filter @ai-nft-forge/worker health",
     "format-check": "prettier --check .",
-    "validate": "pnpm format-check && pnpm prisma:validate && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm worker:health"
+    "validate": "pnpm format-check && pnpm prisma:validate && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm worker:health && pnpm generation-backend:health"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

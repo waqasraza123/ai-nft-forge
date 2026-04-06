@@ -12,9 +12,12 @@
 2. `pnpm install`
 3. `pnpm infra:up`
 4. `pnpm db:migrate:deploy`
-5. `pnpm --filter @ai-nft-forge/web dev`
-6. `pnpm --filter @ai-nft-forge/worker build`
-7. `pnpm --filter @ai-nft-forge/worker start`
+5. Set `GENERATION_ADAPTER_KIND=http_backend` if you want the worker to route requests through the standalone generation backend service.
+6. `pnpm --filter @ai-nft-forge/web dev`
+7. `pnpm --filter @ai-nft-forge/generation-backend build`
+8. `pnpm --filter @ai-nft-forge/generation-backend start`
+9. `pnpm --filter @ai-nft-forge/worker build`
+10. `pnpm --filter @ai-nft-forge/worker start`
 
 ## Local Services
 
@@ -30,6 +33,7 @@
 - `DATABASE_URL='postgresql://ai_nft_forge:ai_nft_forge@127.0.0.1:55432/ai_nft_forge?schema=public' pnpm db:migrate:status`
 - `curl http://127.0.0.1:3000/api/health`
 - `pnpm worker:health`
+- `pnpm generation-backend:health`
 
 ## Shutdown
 

@@ -15,6 +15,11 @@ export {
   type AuthVerifyRequest
 } from "./auth.js";
 export {
+  parseGenerationBackendEnv,
+  generationBackendEnvSchema,
+  type GenerationBackendEnv
+} from "./env/generation-backend-env.js";
+export {
   parseStorageEnv,
   storageEnvSchema,
   type StorageEnv
@@ -25,8 +30,11 @@ export {
   copyStorageObject,
   deleteStorageObject,
   getStorageConfig,
+  getStorageObjectBytes,
   headStorageObject,
+  putStorageObject,
   sanitizeStorageFileName,
+  type StorageObjectData,
   type StorageObjectHead
 } from "./object-storage.js";
 export {
@@ -56,6 +64,7 @@ export {
 } from "./queues.js";
 export {
   generationBackendArtifactSchema,
+  generationBackendErrorResponseSchema,
   generationBackendRequestSchema,
   generationBackendResponseSchema,
   generationErrorResponseSchema,
@@ -69,6 +78,7 @@ export {
   generationResultSummarySchema,
   generationVariantCountSchema,
   type GenerationBackendArtifact,
+  type GenerationBackendErrorResponse,
   type GenerationBackendRequest,
   type GenerationBackendResponse,
   type GenerationErrorResponse,

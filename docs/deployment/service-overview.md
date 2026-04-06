@@ -4,6 +4,7 @@
 
 - Web app: `apps/web` serves marketing, studio, public placeholder, ops placeholder, health, auth, the interactive studio asset workflow, source asset list and intake routes, generation dispatch, and protected generated-output download-intent routes.
 - Worker: `apps/worker` owns asynchronous job execution and queue consumers, including generation request processing, generated output materialization, and optional external HTTP backend delegation.
+- Generation backend: `apps/generation-backend` serves `POST /generate` and `GET /health`, transforms source assets into output variants, writes them into private object storage, and authenticates worker requests when a bearer token is configured.
 - PostgreSQL: system of record for auth, workspaces, brands, source assets, generation requests, generated assets, and audit data.
 - Redis: queue backend for BullMQ.
 - MinIO: local S3-compatible object storage boundary for source assets and generated outputs.
@@ -19,5 +20,6 @@
 
 - Web health route: `GET /api/health`
 - Worker health command: `pnpm worker:health`
+- Generation backend health command: `pnpm generation-backend:health`
 - Database validation: `pnpm prisma:validate`
 - Compose validation: `pnpm infra:config`
