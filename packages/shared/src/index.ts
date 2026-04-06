@@ -15,6 +15,7 @@ export {
   type AuthVerifyRequest
 } from "./auth.js";
 export {
+  generationBackendProviderKinds,
   parseGenerationBackendEnv,
   generationBackendEnvSchema,
   type GenerationBackendEnv

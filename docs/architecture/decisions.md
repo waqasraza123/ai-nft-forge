@@ -39,6 +39,7 @@
 - Keep generated-output retrieval owner-scoped and server-mediated by issuing short-lived signed download intents instead of exposing storage objects directly.
 - Keep the browser workflow as a control-plane client only: it should request signed upload and download intents, confirm uploads, dispatch worker jobs, and poll read models, while large object transfer stays between the browser and object storage.
 - Keep the first concrete generation backend as a standalone HTTP service that owns source-object reads, output writes, request authentication, and partial-output cleanup so future model infrastructure can replace the current deterministic renderer behind the same contract.
+- Keep the standalone generation backend provider-based, with a deterministic transform provider as the safe default and a ComfyUI provider selected by environment when real model inference is available.
 
 ## Intentionally Deferred
 

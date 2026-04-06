@@ -8,6 +8,7 @@ import {
   type GenerationBackendEnv
 } from "@ai-nft-forge/shared";
 
+import { createGenerationArtifactProvider } from "../generation/provider-factory.js";
 import { createGenerationBackendService } from "../generation/service.js";
 import { createGenerationBackendServer } from "../http/server.js";
 import { createLogger, type Logger } from "../lib/logger.js";
@@ -28,8 +29,13 @@ export async function bootstrapGenerationBackendApplication(
     level: env.LOG_LEVEL,
     service: env.GENERATION_BACKEND_SERVICE_NAME
   });
+  const provider = await createGenerationArtifactProvider({
+    env,
+    logger
+  });
   const generationService = createGenerationBackendService({
     logger,
+    provider,
     storage: {
       deleteObject: (input) =>
         deleteStorageObject({
@@ -83,7 +89,8 @@ export async function bootstrapGenerationBackendApplication(
 
   logger.info("Generation backend application bootstrapped", {
     bindHost: env.GENERATION_BACKEND_BIND_HOST,
-    port: env.GENERATION_BACKEND_PORT
+    port: env.GENERATION_BACKEND_PORT,
+    providerKind: env.GENERATION_BACKEND_PROVIDER_KIND
   });
 
   let isClosed = false;

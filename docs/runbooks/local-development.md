@@ -13,11 +13,14 @@
 3. `pnpm infra:up`
 4. `pnpm db:migrate:deploy`
 5. Set `GENERATION_ADAPTER_KIND=http_backend` if you want the worker to route requests through the standalone generation backend service.
-6. `pnpm --filter @ai-nft-forge/web dev`
-7. `pnpm --filter @ai-nft-forge/generation-backend build`
-8. `pnpm --filter @ai-nft-forge/generation-backend start`
-9. `pnpm --filter @ai-nft-forge/worker build`
-10. `pnpm --filter @ai-nft-forge/worker start`
+6. Leave `GENERATION_BACKEND_PROVIDER_KIND=deterministic_transform` for a no-GPU local backend, or switch it to `comfyui` and set `COMFYUI_BASE_URL` plus `COMFYUI_CHECKPOINT_NAME` when a ComfyUI server is available.
+7. If you use `COMFYUI_WORKFLOW_PATH`, point it at a JSON API workflow template that still contains the required `__COMFY_*__` placeholders used by the backend.
+8. Start ComfyUI separately before the generation backend when `GENERATION_BACKEND_PROVIDER_KIND=comfyui`.
+9. `pnpm --filter @ai-nft-forge/web dev`
+10. `pnpm --filter @ai-nft-forge/generation-backend build`
+11. `pnpm --filter @ai-nft-forge/generation-backend start`
+12. `pnpm --filter @ai-nft-forge/worker build`
+13. `pnpm --filter @ai-nft-forge/worker start`
 
 ## Local Services
 

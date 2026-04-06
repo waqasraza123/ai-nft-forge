@@ -70,10 +70,12 @@ function sendBackendError(
       | "BACKEND_AUTH_REQUIRED"
       | "INTERNAL_SERVER_ERROR"
       | "INVALID_REQUEST"
+      | "MODEL_BACKEND_ERROR"
+      | "MODEL_BACKEND_TIMEOUT"
       | "SOURCE_ASSET_UNSUPPORTED"
       | "SOURCE_OBJECT_MISSING";
     message: string;
-    statusCode: 400 | 401 | 404 | 422 | 500;
+    statusCode: 400 | 401 | 404 | 422 | 500 | 502 | 504;
   }
 ) {
   sendJson(

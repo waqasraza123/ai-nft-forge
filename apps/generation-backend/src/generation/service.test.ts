@@ -1,31 +1,30 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { generationBackendRequestSchema } from "@ai-nft-forge/shared";
-import sharp from "sharp";
 
 import { createGenerationBackendService } from "./service.js";
-
-async function createFixtureImage() {
-  return sharp({
-    create: {
-      background: {
-        alpha: 1,
-        b: 148,
-        g: 96,
-        r: 42
-      },
-      channels: 3,
-      height: 12,
-      width: 12
-    }
-  })
-    .png()
-    .toBuffer();
-}
+import type { GenerationArtifactProvider } from "./provider.js";
 
 describe("createGenerationBackendService", () => {
-  it("renders transformed variants into the target storage bucket", async () => {
-    const sourceImage = await createFixtureImage();
+  function createProvider(): GenerationArtifactProvider {
+    return {
+      async generateArtifacts(input) {
+        return Array.from(
+          { length: input.generationRequest.requestedVariantCount },
+          (_, index) => ({
+            body: new Uint8Array([index + 1]),
+            contentType: "image/png",
+            fileExtension: "png",
+            variantIndex: index + 1
+          })
+        );
+      },
+      kind: "deterministic_transform"
+    };
+  }
+
+  it("stores provider artifacts into the target storage bucket", async () => {
+    const sourceImage = new Uint8Array([1, 2, 3]);
     const storedOutputs = new Map<string, Uint8Array>();
     const service = createGenerationBackendService({
       logger: {
@@ -34,6 +33,7 @@ describe("createGenerationBackendService", () => {
         info: vi.fn(),
         warn: vi.fn()
       },
+      provider: createProvider(),
       storage: {
         async deleteObject() {
           throw new Error("deleteObject should not be called in success path.");
@@ -80,7 +80,7 @@ describe("createGenerationBackendService", () => {
   });
 
   it("cleans up partial outputs when writing a later variant fails", async () => {
-    const sourceImage = await createFixtureImage();
+    const sourceImage = new Uint8Array([1, 2, 3]);
     const deleteObject = vi.fn().mockResolvedValue(undefined);
     const putObject = vi
       .fn()
@@ -93,6 +93,7 @@ describe("createGenerationBackendService", () => {
         info: vi.fn(),
         warn: vi.fn()
       },
+      provider: createProvider(),
       storage: {
         deleteObject,
         async getObjectBytes() {
@@ -133,5 +134,66 @@ describe("createGenerationBackendService", () => {
       bucket: "ai-nft-forge-private",
       key: "generated-assets/user_1/generation_1/variant-01-portrait.png"
     });
+  });
+
+  it("fails when the provider returns fewer artifacts than requested", async () => {
+    const service = createGenerationBackendService({
+      logger: {
+        debug: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn()
+      },
+      provider: {
+        async generateArtifacts() {
+          return [
+            {
+              body: new Uint8Array([1]),
+              contentType: "image/png",
+              fileExtension: "png",
+              variantIndex: 1
+            }
+          ];
+        },
+        kind: "comfyui"
+      },
+      storage: {
+        async deleteObject() {
+          return undefined;
+        },
+        async getObjectBytes() {
+          return {
+            body: new Uint8Array([1, 2, 3]),
+            byteSize: 3,
+            contentType: "image/png"
+          };
+        },
+        async putObject() {
+          return undefined;
+        }
+      },
+      targetBucketName: "ai-nft-forge-private"
+    });
+
+    await expect(
+      service.generate(
+        generationBackendRequestSchema.parse({
+          generationRequestId: "generation_1",
+          ownerUserId: "user_1",
+          pipelineKey: "collectible-portrait-v1",
+          requestedVariantCount: 2,
+          sourceAsset: {
+            contentType: "image/png",
+            originalFilename: "portrait.png",
+            storageBucket: "ai-nft-forge-private",
+            storageObjectKey: "source-assets/user_1/portrait.png"
+          },
+          target: {
+            bucket: "ai-nft-forge-private",
+            outputGroupKey: "generated-assets/user_1/generation_1"
+          }
+        })
+      )
+    ).rejects.toThrow("Generation provider returned 1 artifacts");
   });
 });

@@ -86,6 +86,8 @@ export const generationBackendErrorResponseSchema = z.object({
       "BACKEND_AUTH_INVALID",
       "INTERNAL_SERVER_ERROR",
       "INVALID_REQUEST",
+      "MODEL_BACKEND_ERROR",
+      "MODEL_BACKEND_TIMEOUT",
       "SOURCE_ASSET_UNSUPPORTED",
       "SOURCE_OBJECT_MISSING"
     ]),

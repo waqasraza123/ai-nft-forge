@@ -2,7 +2,7 @@
 
 ## Product
 
-AI NFT Forge is planned as a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, and later minting onchain. The repository now contains the completed Phase 1 foundation plus the first six Phase 2 slices: storage-backed source asset intake, queue-backed generation orchestration, durable generated-output persistence, the first external-backend plus protected-download boundary, the first interactive browser workflow for upload, dispatch, polling, and retrieval, and a concrete standalone generation backend service behind the worker HTTP contract. Minting is still not implemented.
+AI NFT Forge is planned as a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, and later minting onchain. The repository now contains the completed Phase 1 foundation plus the first seven Phase 2 slices: storage-backed source asset intake, queue-backed generation orchestration, durable generated-output persistence, the first external-backend plus protected-download boundary, the first interactive browser workflow for upload, dispatch, polling, and retrieval, a concrete standalone generation backend service behind the worker HTTP contract, and the first model-backed ComfyUI provider inside that backend. Minting is still not implemented.
 
 ## Current Architecture
 
@@ -26,7 +26,7 @@ Current implementation status:
 - `apps/web` now protects `/studio` with server-side session lookup and redirects unauthenticated requests to `/sign-in`.
 - `apps/web` now exposes an interactive `/studio/assets` browser workflow plus `GET /api/studio/assets`, `POST /api/studio/assets/upload-intents`, `POST /api/studio/assets/[assetId]/complete`, `POST /api/studio/generations`, and `POST /api/studio/generated-assets/[generatedAssetId]/download-intent` for source asset intake, generation dispatch, polling, and protected generated-output retrieval.
 - `apps/worker` is now a real Node.js worker shell with env parsing, PostgreSQL, Redis, and object-storage connection setup, BullMQ queue registration, generation request processing, selectable generation adapters (`storage_copy` or `http_backend`), a noop processor, graceful shutdown hooks, and a `health` command.
-- `apps/generation-backend` is now a real Node.js service that implements the worker HTTP generation contract, validates bearer auth when configured, reads source objects from private storage, renders transformed PNG variants, writes them back to private storage, exposes `GET /health`, and cleans up partial outputs on failure.
+- `apps/generation-backend` is now a real Node.js service that implements the worker HTTP generation contract, validates bearer auth when configured, reads source objects from private storage, writes generated outputs back to private storage, exposes `GET /health`, cleans up partial outputs on failure, and supports either a deterministic transform provider or a ComfyUI-backed model provider behind the same contract.
 - `packages/ui` provides reusable page-shell and surface primitives used by the web app.
 - `packages/shared` now centralizes worker env validation, auth request/response schemas, storage env parsing, reusable object-storage helpers, source asset upload contracts, generation request contracts, generated asset contracts, and queue payload definitions.
 - `packages/database` now contains the Prisma schema, initial SQL migration, repository helpers, transaction helper, PostgreSQL client boundary, and the first `SourceAsset`, `GenerationRequest`, and `GeneratedAsset` models and repositories.
@@ -51,7 +51,7 @@ The frozen technical direction remains:
 - Docker-first self-hosted deployment
 - Base Sepolia for development and Base Mainnet for production
 - OpenZeppelin-based ERC-721 for 1/1 items and ERC-1155 for edition drops later
-- ComfyUI with a model adapter architecture later
+- ComfyUI behind the standalone generation backend service with deterministic fallback for local and validation-friendly operation
 
 ## Non-Negotiable Rules
 
@@ -91,6 +91,7 @@ The frozen technical direction remains:
 - Phase 2 Commit 4 landed selectable worker generation adapters, the external HTTP backend contract, protected generated-asset download intents, and the first owner-scoped retrieval boundary for stored outputs.
 - Phase 2 Commit 5 landed the first interactive studio asset client with multi-file upload, explicit upload verification, per-asset generation dispatch controls, active-job polling, and generated-output download actions.
 - Phase 2 Commit 6 landed the standalone generation backend service, shared backend env and storage primitives, real transformed output rendering, backend health reporting, and local runtime wiring for worker-to-backend generation.
+- Phase 2 Commit 7 landed the first provider-based model backend inside `apps/generation-backend`, including ComfyUI upload/prompt/history/view orchestration, workflow templating and validation, provider-aware error handling, and deterministic fallback preservation.
 
 ## Important Decisions
 
@@ -116,12 +117,12 @@ The frozen technical direction remains:
 - The first generated-output slice uses a private-bucket adapter boundary that can either copy source assets deterministically or validate artifacts produced by an external HTTP backend, and it only marks a generation succeeded after `GeneratedAsset` rows are committed.
 - The first browser workflow should orchestrate control-plane actions only: request signed upload and download intents, confirm uploads explicitly, dispatch generation jobs, and poll read models without moving long-running work or private object bytes through the Next.js server.
 - The first concrete generation backend should remain standalone behind the existing HTTP contract so the deterministic transformation implementation can later be replaced by a model-backed service without reopening worker, web, or database boundaries.
+- Keep the standalone generation backend provider-based so deterministic rendering remains a safe default while ComfyUI and future model backends can be introduced without reopening the worker or web contracts.
 - GitHub `origin` is configured and `main` tracks the remote.
 
 ## Deferred / Not Yet Implemented
 
 - Base Account integration and polished wallet UI
-- Model-backed generation implementation behind the new HTTP service contract
 - Contracts, metadata publication, and minting
 - Live storefront data
 
@@ -129,7 +130,7 @@ The frozen technical direction remains:
 
 - The web app and worker are not containerized yet; Phase 1 only containers the backing services needed for local reproducibility.
 - The browser workflow is now real, but browser-level smoke coverage is still deferred. Current coverage relies on build validation, focused unit tests, and API/service tests rather than end-to-end automation.
-- The repository now ships a concrete generation backend service, but it currently produces deterministic transformed variants rather than true model inference from a system such as ComfyUI.
+- The repository now ships a ComfyUI-backed generation path, but production deployments still need a separately operated ComfyUI instance, model files, and GPU capacity planning.
 - Planning docs should remain durable; avoid locking in low-level implementation details before the foundation lands.
 - `docs/_local/` must stay local-only and must never hold secrets.
 
