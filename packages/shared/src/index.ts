@@ -21,6 +21,7 @@ export {
 } from "./env/storage-env.js";
 export {
   createObjectStorageClient,
+  createSignedStorageDownload,
   copyStorageObject,
   deleteStorageObject,
   getStorageConfig,
@@ -34,9 +35,11 @@ export {
   type WebAuthEnv
 } from "./env/web-auth-env.js";
 export {
+  generationAdapterKinds,
   parseWorkerEnv,
   workerEnvSchema,
   workerLogLevels,
+  type GenerationAdapterKind,
   type WorkerEnv,
   type WorkerLogLevel
 } from "./env/worker-env.js";
@@ -52,6 +55,9 @@ export {
   type NoopJobPayload
 } from "./queues.js";
 export {
+  generationBackendArtifactSchema,
+  generationBackendRequestSchema,
+  generationBackendResponseSchema,
   generationErrorResponseSchema,
   generationPipelineKeySchema,
   generationPipelineKeyValues,
@@ -62,6 +68,9 @@ export {
   generationRequestSummarySchema,
   generationResultSummarySchema,
   generationVariantCountSchema,
+  type GenerationBackendArtifact,
+  type GenerationBackendRequest,
+  type GenerationBackendResponse,
   type GenerationErrorResponse,
   type GenerationPipelineKey,
   type GenerationRequestCreateRequest,
@@ -71,7 +80,13 @@ export {
   type GenerationResultSummary
 } from "./generations.js";
 export {
+  generatedAssetDownloadDescriptorSchema,
+  generatedAssetDownloadIntentResponseSchema,
+  generatedAssetErrorResponseSchema,
   generatedAssetSummarySchema,
+  type GeneratedAssetDownloadDescriptor,
+  type GeneratedAssetDownloadIntentResponse,
+  type GeneratedAssetErrorResponse,
   type GeneratedAssetSummary
 } from "./generated-assets.js";
 export {

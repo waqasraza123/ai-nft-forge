@@ -50,6 +50,35 @@ export const generationRequestCreateResponseSchema = z.object({
   generation: generationRequestSummarySchema
 });
 
+export const generationBackendArtifactSchema = z.object({
+  contentType: z.string().trim().min(1),
+  storageBucket: z.string().trim().min(1),
+  storageObjectKey: z.string().trim().min(1),
+  variantIndex: z.number().int().positive()
+});
+
+export const generationBackendRequestSchema = z.object({
+  generationRequestId: z.string().min(1),
+  ownerUserId: z.string().min(1),
+  pipelineKey: generationPipelineKeySchema,
+  requestedVariantCount: generationVariantCountSchema,
+  sourceAsset: z.object({
+    contentType: z.string().trim().min(1),
+    originalFilename: z.string().trim().min(1),
+    storageBucket: z.string().trim().min(1),
+    storageObjectKey: z.string().trim().min(1)
+  }),
+  target: z.object({
+    bucket: z.string().trim().min(1),
+    outputGroupKey: z.string().min(1)
+  })
+});
+
+export const generationBackendResponseSchema = z.object({
+  artifacts: z.array(generationBackendArtifactSchema).min(1).max(8),
+  outputGroupKey: z.string().min(1)
+});
+
 export const generationErrorResponseSchema = z.object({
   error: z.object({
     code: z.enum([
@@ -80,6 +109,15 @@ export type GenerationRequestCreateRequest = z.infer<
 >;
 export type GenerationRequestCreateResponse = z.infer<
   typeof generationRequestCreateResponseSchema
+>;
+export type GenerationBackendArtifact = z.infer<
+  typeof generationBackendArtifactSchema
+>;
+export type GenerationBackendRequest = z.infer<
+  typeof generationBackendRequestSchema
+>;
+export type GenerationBackendResponse = z.infer<
+  typeof generationBackendResponseSchema
 >;
 export type GenerationErrorResponse = z.infer<
   typeof generationErrorResponseSchema

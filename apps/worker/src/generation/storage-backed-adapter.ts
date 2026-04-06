@@ -7,34 +7,18 @@ import {
 } from "@ai-nft-forge/shared";
 
 import type { Logger } from "../lib/logger.js";
-
-export type MaterializedGeneratedAsset = {
-  byteSize: number | null;
-  contentType: string;
-  storageBucket: string;
-  storageObjectKey: string;
-  variantIndex: number;
-};
+import {
+  resolveGenerationOutputGroupKey,
+  type GenerationAdapter,
+  type MaterializeGenerationOutputsInput,
+  type MaterializeGenerationOutputsResult,
+  type MaterializedGeneratedAsset
+} from "./adapter.js";
 
 type StorageBackedGenerationAdapterDependencies = {
   logger: Logger;
   storageClient: ReturnType<typeof createObjectStorageClient>;
-};
-
-type MaterializeGenerationOutputsInput = {
-  generationRequest: {
-    id: string;
-    ownerUserId: string;
-    pipelineKey: string;
-    requestedVariantCount: number;
-    sourceAssetId: string;
-  };
-  sourceAsset: {
-    contentType: string;
-    originalFilename: string;
-    storageBucket: string;
-    storageObjectKey: string;
-  };
+  targetBucketName: string;
 };
 
 function resolveOutputExtension(input: {
@@ -74,8 +58,9 @@ function resolveOutputBaseName(originalFilename: string) {
 
 export function createStorageBackedGenerationAdapter({
   logger,
-  storageClient
-}: StorageBackedGenerationAdapterDependencies) {
+  storageClient,
+  targetBucketName
+}: StorageBackedGenerationAdapterDependencies): GenerationAdapter {
   return {
     async cleanupMaterializedOutputs(outputs: MaterializedGeneratedAsset[]) {
       await Promise.all(
@@ -91,15 +76,11 @@ export function createStorageBackedGenerationAdapter({
 
     async materializeGenerationOutputs(
       input: MaterializeGenerationOutputsInput
-    ): Promise<{
-      generatedAssets: MaterializedGeneratedAsset[];
-      outputGroupKey: string;
-    }> {
-      const outputGroupKey = [
-        "generated-assets",
-        input.generationRequest.ownerUserId,
-        input.generationRequest.id
-      ].join("/");
+    ): Promise<MaterializeGenerationOutputsResult> {
+      const outputGroupKey = resolveGenerationOutputGroupKey({
+        generationRequestId: input.generationRequest.id,
+        ownerUserId: input.generationRequest.ownerUserId
+      });
       const outputFileExtension = resolveOutputExtension({
         contentType: input.sourceAsset.contentType,
         originalFilename: input.sourceAsset.originalFilename
@@ -120,7 +101,7 @@ export function createStorageBackedGenerationAdapter({
         ].join("/");
 
         await copyStorageObject({
-          bucket: input.sourceAsset.storageBucket,
+          bucket: targetBucketName,
           client: storageClient,
           contentType: input.sourceAsset.contentType,
           key: objectKey,
@@ -135,7 +116,7 @@ export function createStorageBackedGenerationAdapter({
         });
 
         const copiedObjectHead = await headStorageObject({
-          bucket: input.sourceAsset.storageBucket,
+          bucket: targetBucketName,
           client: storageClient,
           key: objectKey
         });
@@ -150,7 +131,7 @@ export function createStorageBackedGenerationAdapter({
           byteSize: copiedObjectHead.byteSize,
           contentType:
             copiedObjectHead.contentType ?? input.sourceAsset.contentType,
-          storageBucket: input.sourceAsset.storageBucket,
+          storageBucket: targetBucketName,
           storageObjectKey: objectKey,
           variantIndex
         });

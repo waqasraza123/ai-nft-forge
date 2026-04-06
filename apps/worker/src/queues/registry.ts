@@ -13,8 +13,8 @@ import {
   type WorkerEnv
 } from "@ai-nft-forge/shared";
 
-import type { MaterializedGeneratedAsset } from "../generation/storage-backed-adapter.js";
 import type { Logger } from "../lib/logger.js";
+import type { GenerationAdapter } from "../generation/adapter.js";
 import {
   createGenerationRequestProcessor,
   type GenerationRequestJobResult
@@ -27,29 +27,7 @@ import {
 type WorkerQueueRegistryOptions = {
   databaseClient: DatabaseClient;
   env: WorkerEnv;
-  generationAdapter: {
-    cleanupMaterializedOutputs(
-      outputs: MaterializedGeneratedAsset[]
-    ): Promise<void>;
-    materializeGenerationOutputs(input: {
-      generationRequest: {
-        id: string;
-        ownerUserId: string;
-        pipelineKey: string;
-        requestedVariantCount: number;
-        sourceAssetId: string;
-      };
-      sourceAsset: {
-        contentType: string;
-        originalFilename: string;
-        storageBucket: string;
-        storageObjectKey: string;
-      };
-    }): Promise<{
-      generatedAssets: MaterializedGeneratedAsset[];
-      outputGroupKey: string;
-    }>;
-  };
+  generationAdapter: GenerationAdapter;
   logger: Logger;
   repositories: {
     generationRequestRepository: {

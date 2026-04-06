@@ -41,8 +41,8 @@ export default async function StudioAssetsPage() {
   return (
     <PageShell
       eyebrow="Studio assets"
-      title="Source asset intake now feeds stored generated outputs"
-      lead="Uploaded source assets can now be dispatched into a worker-backed generation flow that materializes generated output objects in private storage, persists `GeneratedAsset` records, and surfaces output state in the studio."
+      title="Source asset intake now feeds retrievable generated outputs"
+      lead="Uploaded source assets can now be dispatched into a worker-backed generation flow that can target either the storage-copy adapter or an external HTTP backend, persist `GeneratedAsset` records, and expose protected download intents for stored outputs."
       actions={
         <>
           <Link className="action-link" href="/studio">
@@ -57,7 +57,7 @@ export default async function StudioAssetsPage() {
     >
       <SurfaceGrid>
         <SurfaceCard
-          body="The web app now creates queued generation requests for uploaded source assets and dispatches them into BullMQ for worker processing."
+          body="The web app now creates queued generation requests for uploaded source assets, dispatches them into BullMQ for worker processing, and can mint protected download intents for stored generated outputs."
           eyebrow="Current slice"
           title="Queue-backed generation dispatch"
         >
@@ -65,16 +65,20 @@ export default async function StudioAssetsPage() {
             <Pill>POST /api/studio/assets/upload-intents</Pill>
             <Pill>POST /api/studio/assets/[assetId]/complete</Pill>
             <Pill>POST /api/studio/generations</Pill>
+            <Pill>
+              POST
+              /api/studio/generated-assets/[generatedAssetId]/download-intent
+            </Pill>
           </div>
         </SurfaceCard>
         <SurfaceCard
-          body="This slice writes durable generated output objects and records through a storage-backed adapter while keeping external model backends deferred."
+          body="The worker can now run either the deterministic storage-copy adapter or a validated external HTTP backend contract without reopening the web or database layers."
           eyebrow="Guardrail"
-          title="First real adapter boundary"
+          title="Selectable generation adapters"
         >
           <div className="pill-row">
             <Pill>Generated assets persisted</Pill>
-            <Pill>ComfyUI deferred</Pill>
+            <Pill>HTTP backend supported</Pill>
             <Pill>Contracts deferred</Pill>
           </div>
         </SurfaceCard>

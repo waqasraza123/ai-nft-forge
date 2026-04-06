@@ -124,6 +124,9 @@ importers:
       "@aws-sdk/client-s3":
         specifier: ^3.1024.0
         version: 3.1024.0
+      "@aws-sdk/s3-request-presigner":
+        specifier: ^3.1024.0
+        version: 3.1024.0
       zod:
         specifier: ^4.3.6
         version: 4.3.6

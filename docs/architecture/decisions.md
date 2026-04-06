@@ -36,6 +36,7 @@
 - Use a persisted `GenerationRequest` record as the first durable generation orchestration boundary, with the web app enqueueing BullMQ work and the worker owning lifecycle transitions and stored result summaries.
 - Materialize first generated outputs into the private bucket and persist them as `GeneratedAsset` records before a generation request can succeed.
 - Keep external model backends behind the worker adapter boundary so the current storage-backed adapter can be replaced without reopening web or database contracts.
+- Keep generated-output retrieval owner-scoped and server-mediated by issuing short-lived signed download intents instead of exposing storage objects directly.
 
 ## Intentionally Deferred
 

@@ -54,6 +54,18 @@ export function createGeneratedAssetRepository(
           }
         }
       });
+    },
+
+    findByIdForOwner(input: {
+      id: string;
+      ownerUserId: string;
+    }): Promise<GeneratedAsset | null> {
+      return database.generatedAsset.findFirst({
+        where: {
+          id: input.id,
+          ownerUserId: input.ownerUserId
+        }
+      });
     }
   };
 }

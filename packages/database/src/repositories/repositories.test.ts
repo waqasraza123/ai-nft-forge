@@ -160,4 +160,30 @@ describe("database repositories", () => {
     });
     expect(result[0]?.id).toBe("generated_asset_1");
   });
+
+  it("delegates generated asset ownership lookup through the generated asset repository", async () => {
+    const database = {
+      generatedAsset: {
+        create: vi.fn(),
+        findFirst: vi.fn().mockResolvedValue({
+          id: "generated_asset_2"
+        }),
+        findMany: vi.fn()
+      }
+    };
+    const repository = createGeneratedAssetRepository(database as never);
+
+    const result = await repository.findByIdForOwner({
+      id: "generated_asset_2",
+      ownerUserId: "user_1"
+    });
+
+    expect(database.generatedAsset.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: "generated_asset_2",
+        ownerUserId: "user_1"
+      }
+    });
+    expect(result?.id).toBe("generated_asset_2");
+  });
 });

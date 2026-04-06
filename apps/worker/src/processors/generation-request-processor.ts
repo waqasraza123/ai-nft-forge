@@ -13,8 +13,11 @@ import {
   type GenerationRequestStatus
 } from "@ai-nft-forge/shared";
 
-import type { MaterializedGeneratedAsset } from "../generation/storage-backed-adapter.js";
 import type { Logger } from "../lib/logger.js";
+import type {
+  GenerationAdapter,
+  MaterializedGeneratedAsset
+} from "../generation/adapter.js";
 
 type GenerationRequestRecord = {
   id: string;
@@ -37,29 +40,7 @@ type SourceAssetRecord = {
 };
 
 type GenerationRequestProcessorDependencies = {
-  adapter: {
-    cleanupMaterializedOutputs(
-      outputs: MaterializedGeneratedAsset[]
-    ): Promise<void>;
-    materializeGenerationOutputs(input: {
-      generationRequest: {
-        id: string;
-        ownerUserId: string;
-        pipelineKey: string;
-        requestedVariantCount: number;
-        sourceAssetId: string;
-      };
-      sourceAsset: {
-        contentType: string;
-        originalFilename: string;
-        storageBucket: string;
-        storageObjectKey: string;
-      };
-    }): Promise<{
-      generatedAssets: MaterializedGeneratedAsset[];
-      outputGroupKey: string;
-    }>;
-  };
+  adapter: GenerationAdapter;
   databaseClient: DatabaseClient;
   logger: Logger;
   now: () => Date;

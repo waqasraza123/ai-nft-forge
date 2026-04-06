@@ -8,11 +8,12 @@ import {
 } from "@ai-nft-forge/database";
 import {
   createObjectStorageClient,
+  getStorageConfig,
   parseWorkerEnv,
   type WorkerEnv
 } from "@ai-nft-forge/shared";
 
-import { createStorageBackedGenerationAdapter } from "../generation/storage-backed-adapter.js";
+import { createGenerationAdapter } from "../generation/factory.js";
 import { createLogger, type Logger } from "../lib/logger.js";
 import { createRedisConnection } from "../lib/redis.js";
 import {
@@ -39,13 +40,16 @@ export async function bootstrapWorkerApplication(
     service: env.WORKER_SERVICE_NAME
   });
   const objectStorageClient = createObjectStorageClient(rawEnvironment);
+  const storageConfig = getStorageConfig(rawEnvironment);
   const redisConnection = createRedisConnection(env);
   const queueRegistry = createQueueRegistry({
     databaseClient,
     env,
-    generationAdapter: createStorageBackedGenerationAdapter({
+    generationAdapter: createGenerationAdapter({
+      env,
       logger,
-      storageClient: objectStorageClient
+      storageClient: objectStorageClient,
+      targetBucketName: storageConfig.S3_BUCKET_PRIVATE
     }),
     logger,
     repositories: {

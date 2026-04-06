@@ -19,6 +19,12 @@ const booleanEnvironmentValueSchema = z.preprocess((value) => {
 }, z.boolean());
 
 export const storageEnvSchema = z.object({
+  GENERATED_ASSET_DOWNLOAD_URL_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(3600)
+    .default(300),
   S3_ACCESS_KEY_ID: z.string().trim().min(1),
   S3_BUCKET_PRIVATE: z.string().trim().min(1),
   S3_BUCKET_PUBLIC: z.string().trim().min(1),

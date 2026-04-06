@@ -1,6 +1,6 @@
 # Routes And Jobs
 
-This document defines durable boundary expectations for the first implementation slices. The repository now has the initial web routes, auth and health endpoints, source asset intake routes, the first generation dispatch route, and the first generation worker output-handling job family.
+This document defines durable boundary expectations for the first implementation slices. The repository now has the initial web routes, auth and health endpoints, source asset intake routes, the generation dispatch route, the first protected generated-output retrieval route, and the first generation worker output-handling job family.
 
 ## Current Route Surfaces
 
@@ -18,6 +18,7 @@ This document defines durable boundary expectations for the first implementation
 - `/api/studio/assets/upload-intents`
 - `/api/studio/assets/[assetId]/complete`
 - `/api/studio/generations`
+- `/api/studio/generated-assets/[generatedAssetId]/download-intent`
 
 ## Planned Surface Areas
 

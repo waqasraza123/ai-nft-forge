@@ -1,9 +1,11 @@
 import {
   CopyObjectCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
   HeadObjectCommand,
   S3Client
 } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import { parseStorageEnv, type StorageEnv } from "./env/storage-env.js";
 
@@ -133,4 +135,29 @@ export async function deleteStorageObject(input: {
       Key: input.key
     })
   );
+}
+
+export async function createSignedStorageDownload(input: {
+  bucket: string;
+  client: S3Client;
+  expiresInSeconds: number;
+  key: string;
+}) {
+  const expiresAt = new Date(Date.now() + input.expiresInSeconds * 1000);
+  const url = await getSignedUrl(
+    input.client,
+    new GetObjectCommand({
+      Bucket: input.bucket,
+      Key: input.key
+    }),
+    {
+      expiresIn: input.expiresInSeconds
+    }
+  );
+
+  return {
+    expiresAt: expiresAt.toISOString(),
+    method: "GET" as const,
+    url
+  };
 }

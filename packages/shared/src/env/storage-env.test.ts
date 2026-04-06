@@ -6,6 +6,7 @@ describe("parseStorageEnv", () => {
   it("parses explicit storage environment values", () => {
     expect(
       parseStorageEnv({
+        GENERATED_ASSET_DOWNLOAD_URL_TTL_SECONDS: "120",
         S3_ACCESS_KEY_ID: "minio",
         S3_BUCKET_PRIVATE: "private",
         S3_BUCKET_PUBLIC: "public",
@@ -17,6 +18,7 @@ describe("parseStorageEnv", () => {
         SOURCE_ASSET_UPLOAD_URL_TTL_SECONDS: "600"
       })
     ).toEqual({
+      GENERATED_ASSET_DOWNLOAD_URL_TTL_SECONDS: 120,
       S3_ACCESS_KEY_ID: "minio",
       S3_BUCKET_PRIVATE: "private",
       S3_BUCKET_PUBLIC: "public",
@@ -39,6 +41,7 @@ describe("parseStorageEnv", () => {
         S3_SECRET_ACCESS_KEY: "secret"
       })
     ).toEqual({
+      GENERATED_ASSET_DOWNLOAD_URL_TTL_SECONDS: 300,
       S3_ACCESS_KEY_ID: "minio",
       S3_BUCKET_PRIVATE: "private",
       S3_BUCKET_PUBLIC: "public",
