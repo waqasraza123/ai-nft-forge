@@ -133,6 +133,20 @@ export function createGenerationRequestRepository(
       });
     },
 
+    async listDistinctOwnerUserIds(): Promise<string[]> {
+      const rows = await database.generationRequest.findMany({
+        distinct: ["ownerUserId"],
+        orderBy: {
+          ownerUserId: "asc"
+        },
+        select: {
+          ownerUserId: true
+        }
+      });
+
+      return rows.map((row) => row.ownerUserId);
+    },
+
     findByIdForOwner(input: {
       id: string;
       ownerUserId: string;

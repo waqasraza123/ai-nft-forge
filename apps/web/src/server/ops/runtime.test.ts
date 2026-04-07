@@ -20,6 +20,7 @@ describe("loadOpsRuntime", () => {
     expect(runtime.operator.session).toBeNull();
     expect(runtime.operator.queue).toBeNull();
     expect(runtime.operator.activity).toBeNull();
+    expect(runtime.operator.history).toBeNull();
     expect(runtime.operator.observability).toBeNull();
   });
 
@@ -157,9 +158,59 @@ describe("loadOpsRuntime", () => {
         }
       ]
     });
+    const loadOperatorHistory = vi.fn().mockResolvedValue({
+      captures: [
+        {
+          backendReadinessMessage:
+            "ComfyUI API responded to the readiness probe.",
+          backendReadinessStatus: "ready",
+          capturedAt: "2026-04-06T10:00:00.000Z",
+          criticalAlertCount: 0,
+          id: "capture_1",
+          observabilityMessage:
+            "Recent operator metrics and runtime alerts look healthy.",
+          observabilityStatus: "ok",
+          oldestQueuedAgeSeconds: null,
+          oldestRunningAgeSeconds: 90,
+          queueCounts: {
+            active: 1,
+            completed: 4,
+            delayed: 0,
+            failed: 1,
+            paused: 0,
+            waiting: 2
+          },
+          queueStatus: "ok",
+          warningAlertCount: 0,
+          windows: [
+            {
+              averageCompletionSeconds: 180,
+              checkedAt: "2026-04-06T10:00:00.000Z",
+              failedCount: 0,
+              from: "2026-04-06T09:00:00.000Z",
+              label: "Last hour",
+              maxCompletionSeconds: 180,
+              queuedCount: 0,
+              runningCount: 1,
+              storedAssetCount: 4,
+              succeededCount: 1,
+              successRatePercent: 100,
+              totalCount: 2,
+              windowKey: "1h"
+            }
+          ],
+          workerAdapter: "http_backend"
+        }
+      ],
+      deliveries: [],
+      message:
+        "Persisted observability captures and alert deliveries loaded from PostgreSQL.",
+      status: "ok"
+    });
     const runtime = await loadOpsRuntime({
       fetchFn,
       loadOperatorActivity,
+      loadOperatorHistory,
       loadOperatorObservability,
       loadQueueSnapshot,
       now: () => new Date("2026-04-06T12:00:00.000Z"),
@@ -192,6 +243,12 @@ describe("loadOpsRuntime", () => {
         GENERATION_BACKEND_URL: "http://127.0.0.1:8787/generate"
       }
     });
+    expect(loadOperatorHistory).toHaveBeenCalledWith({
+      ownerUserId: "user_1",
+      rawEnvironment: {
+        GENERATION_BACKEND_URL: "http://127.0.0.1:8787/generate"
+      }
+    });
     expect(loadOperatorObservability).toHaveBeenCalledWith({
       checkedAt: "2026-04-06T12:00:00.000Z",
       generationBackendReadiness: expect.objectContaining({
@@ -215,6 +272,14 @@ describe("loadOpsRuntime", () => {
         expect.objectContaining({
           id: "generation_1",
           status: "running"
+        })
+      ],
+      status: "ok"
+    });
+    expect(runtime.operator.history).toMatchObject({
+      captures: [
+        expect.objectContaining({
+          id: "capture_1"
         })
       ],
       status: "ok"

@@ -25,6 +25,44 @@ enum GenerationRequestStatus {
   failed
 }
 
+enum OpsQueueStatus {
+  ok
+  unreachable
+}
+
+enum OpsBackendReadinessStatus {
+  ready
+  not_ready
+  unconfigured
+  unreachable
+}
+
+enum OpsObservabilityStatus {
+  ok
+  warning
+  critical
+  unreachable
+}
+
+enum OpsAlertSeverity {
+  warning
+  critical
+}
+
+enum OpsAlertStateStatus {
+  active
+  resolved
+}
+
+enum OpsAlertDeliveryChannel {
+  audit_log
+}
+
+enum OpsAlertDeliveryState {
+  delivered
+  failed
+}
+
 model User {
   id                 String              @id @default(cuid()) @map("id")
   walletAddress      String              @unique @map("wallet_address")
@@ -35,6 +73,10 @@ model User {
   authSessions       AuthSession[]
   generatedAssets    GeneratedAsset[]    @relation("GeneratedAssetOwner")
   generationRequests GenerationRequest[] @relation("GenerationRequestOwner")
+  opsAlertDeliveries OpsAlertDelivery[]  @relation("OpsAlertDeliveryOwner")
+  opsAlertStates     OpsAlertState[]     @relation("OpsAlertStateOwner")
+  opsCaptures        OpsObservabilityCapture[] @relation("OpsObservabilityCaptureOwner")
+  opsWindowSnapshots OpsGenerationWindowSnapshot[] @relation("OpsGenerationWindowSnapshotOwner")
   ownedSourceAssets SourceAsset[] @relation("SourceAssetOwner")
   ownedWorkspaces    Workspace[]         @relation("WorkspaceOwner")
 
@@ -182,4 +224,105 @@ model GeneratedAsset {
   @@index([sourceAssetId, createdAt], map: "generated_assets_source_asset_id_created_at_idx")
   @@index([generationRequestId, createdAt], map: "generated_assets_generation_request_id_created_at_idx")
   @@map("generated_assets")
+}
+
+model OpsObservabilityCapture {
+  id                     String                   @id @default(cuid()) @map("id")
+  ownerUserId            String                   @map("owner_user_id")
+  capturedAt             DateTime                 @map("captured_at")
+  queueStatus            OpsQueueStatus           @map("queue_status")
+  queueWaitingCount      Int?                     @map("queue_waiting_count")
+  queueActiveCount       Int?                     @map("queue_active_count")
+  queueDelayedCount      Int?                     @map("queue_delayed_count")
+  queueFailedCount       Int?                     @map("queue_failed_count")
+  queueCompletedCount    Int?                     @map("queue_completed_count")
+  queuePausedCount       Int?                     @map("queue_paused_count")
+  queueConcurrency       Int?                     @map("queue_concurrency")
+  workerAdapter          String?                  @map("worker_adapter")
+  backendReadinessStatus OpsBackendReadinessStatus @map("backend_readiness_status")
+  backendReadinessMessage String                  @map("backend_readiness_message")
+  observabilityStatus    OpsObservabilityStatus   @map("observability_status")
+  observabilityMessage   String                   @map("observability_message")
+  oldestQueuedAgeSeconds Int?                     @map("oldest_queued_age_seconds")
+  oldestRunningAgeSeconds Int?                    @map("oldest_running_age_seconds")
+  criticalAlertCount     Int                      @default(0) @map("critical_alert_count")
+  warningAlertCount      Int                      @default(0) @map("warning_alert_count")
+  createdAt              DateTime                 @default(now()) @map("created_at")
+  alertDeliveries        OpsAlertDelivery[]
+  ownerUser              User                     @relation("OpsObservabilityCaptureOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  windowSnapshots        OpsGenerationWindowSnapshot[]
+
+  @@index([ownerUserId, capturedAt], map: "ops_observability_captures_owner_user_id_captured_at_idx")
+  @@map("ops_observability_captures")
+}
+
+model OpsGenerationWindowSnapshot {
+  id                      String                  @id @default(cuid()) @map("id")
+  captureId               String                  @map("capture_id")
+  ownerUserId             String                  @map("owner_user_id")
+  capturedAt              DateTime                @map("captured_at")
+  windowKey               String                  @map("window_key")
+  from                    DateTime                @map("from")
+  label                   String                  @map("label")
+  totalCount              Int                     @map("total_count")
+  queuedCount             Int                     @map("queued_count")
+  runningCount            Int                     @map("running_count")
+  succeededCount          Int                     @map("succeeded_count")
+  failedCount             Int                     @map("failed_count")
+  storedAssetCount        Int                     @map("stored_asset_count")
+  successRatePercent      Float?                  @map("success_rate_percent")
+  averageCompletionSeconds Int?                   @map("average_completion_seconds")
+  maxCompletionSeconds    Int?                    @map("max_completion_seconds")
+  createdAt               DateTime                @default(now()) @map("created_at")
+  capture                 OpsObservabilityCapture @relation(fields: [captureId], references: [id], onDelete: Cascade)
+  ownerUser               User                    @relation("OpsGenerationWindowSnapshotOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([captureId, windowKey], map: "ops_generation_window_snapshots_capture_id_window_key_key")
+  @@index([ownerUserId, capturedAt], map: "ops_generation_window_snapshots_owner_user_id_captured_at_idx")
+  @@map("ops_generation_window_snapshots")
+}
+
+model OpsAlertState {
+  id              String              @id @default(cuid()) @map("id")
+  ownerUserId     String              @map("owner_user_id")
+  code            String              @map("code")
+  severity        OpsAlertSeverity    @map("severity")
+  title           String              @map("title")
+  message         String              @map("message")
+  status          OpsAlertStateStatus @default(active) @map("status")
+  firstObservedAt DateTime            @map("first_observed_at")
+  lastObservedAt  DateTime            @map("last_observed_at")
+  lastDeliveredAt DateTime?           @map("last_delivered_at")
+  resolvedAt      DateTime?           @map("resolved_at")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+  deliveries      OpsAlertDelivery[]
+  ownerUser       User                @relation("OpsAlertStateOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerUserId, code], map: "ops_alert_states_owner_user_id_code_key")
+  @@index([ownerUserId, status], map: "ops_alert_states_owner_user_id_status_idx")
+  @@map("ops_alert_states")
+}
+
+model OpsAlertDelivery {
+  id              String                  @id @default(cuid()) @map("id")
+  captureId       String                  @map("capture_id")
+  alertStateId    String                  @map("alert_state_id")
+  ownerUserId     String                  @map("owner_user_id")
+  code            String                  @map("code")
+  severity        OpsAlertSeverity        @map("severity")
+  title           String                  @map("title")
+  message         String                  @map("message")
+  deliveryChannel OpsAlertDeliveryChannel @map("delivery_channel")
+  deliveryState   OpsAlertDeliveryState   @map("delivery_state")
+  deliveredAt     DateTime?               @map("delivered_at")
+  failureMessage  String?                 @map("failure_message")
+  createdAt       DateTime                @default(now()) @map("created_at")
+  alertState      OpsAlertState           @relation(fields: [alertStateId], references: [id], onDelete: Cascade)
+  capture         OpsObservabilityCapture @relation(fields: [captureId], references: [id], onDelete: Cascade)
+  ownerUser       User                    @relation("OpsAlertDeliveryOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@index([ownerUserId, createdAt], map: "ops_alert_deliveries_owner_user_id_created_at_idx")
+  @@index([alertStateId, createdAt], map: "ops_alert_deliveries_alert_state_id_created_at_idx")
+  @@map("ops_alert_deliveries")
 }

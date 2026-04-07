@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "ops:capture": "node dist/index.js capture-observability",
     "start": "node dist/index.js start",
     "health": "node dist/index.js health",
     "build": "rm -rf dist tsconfig.tsbuildinfo && tsc -p tsconfig.json",

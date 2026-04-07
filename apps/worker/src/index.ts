@@ -3,6 +3,7 @@ import "dotenv/config";
 import { bootstrapWorkerApplication } from "./bootstrap/application.js";
 import { registerWorkerSignalHandlers } from "./bootstrap/signals.js";
 import { createWorkerHealthSnapshot } from "./lib/health.js";
+import { captureRuntimeOpsObservability } from "./ops/runtime.js";
 
 async function runWorkerCommand(argv: string[]) {
   const command = argv[0] ?? "start";
@@ -11,6 +12,13 @@ async function runWorkerCommand(argv: string[]) {
     process.stdout.write(
       `${JSON.stringify(createWorkerHealthSnapshot(process.env))}\n`
     );
+    return;
+  }
+
+  if (command === "capture-observability") {
+    const captureSummary = await captureRuntimeOpsObservability(process.env);
+
+    process.stdout.write(`${JSON.stringify(captureSummary)}\n`);
     return;
   }
 

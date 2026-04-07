@@ -1,5 +1,7 @@
 import {
+  createOpsAlertDeliveryRepository,
   createGenerationRequestRepository,
+  createOpsObservabilityCaptureRepository,
   getDatabaseClient
 } from "@ai-nft-forge/database";
 import {
@@ -142,6 +144,54 @@ export type OpsOperatorObservability = {
   windows: OpsGenerationWindowSummary[];
 };
 
+export type OpsPersistedCaptureSummary = {
+  backendReadinessMessage: string;
+  backendReadinessStatus:
+    | "not_ready"
+    | "ready"
+    | "unconfigured"
+    | "unreachable";
+  capturedAt: string;
+  criticalAlertCount: number;
+  id: string;
+  observabilityMessage: string;
+  observabilityStatus: "critical" | "ok" | "unreachable" | "warning";
+  oldestQueuedAgeSeconds: number | null;
+  oldestRunningAgeSeconds: number | null;
+  queueCounts: {
+    active: number | null;
+    completed: number | null;
+    delayed: number | null;
+    failed: number | null;
+    paused: number | null;
+    waiting: number | null;
+  };
+  queueStatus: "ok" | "unreachable";
+  warningAlertCount: number;
+  windows: OpsGenerationWindowSummary[];
+  workerAdapter: string | null;
+};
+
+export type OpsAlertDeliverySummary = {
+  code: string;
+  createdAt: string;
+  deliveredAt: string | null;
+  deliveryChannel: "audit_log";
+  deliveryState: "delivered" | "failed";
+  failureMessage: string | null;
+  id: string;
+  message: string;
+  severity: "critical" | "warning";
+  title: string;
+};
+
+type OwnerPersistedObservabilityHistory = {
+  captures: OpsPersistedCaptureSummary[];
+  deliveries: OpsAlertDeliverySummary[];
+  message: string;
+  status: "ok" | "unreachable";
+};
+
 export type OpsRuntimeSnapshot = {
   generationBackend: {
     endpoints: {
@@ -154,6 +204,7 @@ export type OpsRuntimeSnapshot = {
   };
   operator: {
     activity: OwnerGenerationActivity | null;
+    history: OwnerPersistedObservabilityHistory | null;
     observability: OpsOperatorObservability | null;
     queue: OpsQueueSnapshot | null;
     session: CurrentSession;
@@ -167,6 +218,10 @@ type LoadOpsRuntimeInput = {
     ownerUserId: string;
     rawEnvironment: NodeJS.ProcessEnv;
   }) => Promise<OwnerGenerationActivity>;
+  loadOperatorHistory?: (input: {
+    ownerUserId: string;
+    rawEnvironment: NodeJS.ProcessEnv;
+  }) => Promise<OwnerPersistedObservabilityHistory>;
   loadOperatorObservability?: (input: {
     checkedAt: string;
     generationBackendReadiness: GenerationBackendReadinessState;
@@ -193,9 +248,21 @@ type EndpointSet = {
 type GenerationActivityRepository = ReturnType<
   typeof createGenerationRequestRepository
 >;
+type PersistedCaptureRepository = ReturnType<
+  typeof createOpsObservabilityCaptureRepository
+>;
+type PersistedAlertDeliveryRepository = ReturnType<
+  typeof createOpsAlertDeliveryRepository
+>;
 
 type GenerationActivityRecord = Awaited<
   ReturnType<GenerationActivityRepository["listRecentForOwnerUserId"]>
+>[number];
+type PersistedCaptureRecord = Awaited<
+  ReturnType<PersistedCaptureRepository["listRecentForOwnerUserId"]>
+>[number];
+type PersistedAlertDeliveryRecord = Awaited<
+  ReturnType<PersistedAlertDeliveryRepository["listRecentForOwnerUserId"]>
 >[number];
 
 type OwnerGenerationMetrics = {
@@ -414,6 +481,18 @@ function createGenerationRepository(rawEnvironment: NodeJS.ProcessEnv) {
   return createGenerationRequestRepository(getDatabaseClient(rawEnvironment));
 }
 
+function createPersistedCaptureRepository(rawEnvironment: NodeJS.ProcessEnv) {
+  return createOpsObservabilityCaptureRepository(
+    getDatabaseClient(rawEnvironment)
+  );
+}
+
+function createPersistedAlertDeliveryRepository(
+  rawEnvironment: NodeJS.ProcessEnv
+) {
+  return createOpsAlertDeliveryRepository(getDatabaseClient(rawEnvironment));
+}
+
 function createPercentage(numerator: number, denominator: number) {
   if (denominator <= 0) {
     return null;
@@ -510,6 +589,67 @@ function createGenerationWindowSummary(input: {
     successRatePercent: createPercentage(succeededCount, terminalCount),
     totalCount: input.generations.length,
     windowKey: input.windowKey
+  };
+}
+
+function serializePersistedCapture(
+  capture: PersistedCaptureRecord
+): OpsPersistedCaptureSummary {
+  return {
+    backendReadinessMessage: capture.backendReadinessMessage,
+    backendReadinessStatus: capture.backendReadinessStatus,
+    capturedAt: capture.capturedAt.toISOString(),
+    criticalAlertCount: capture.criticalAlertCount,
+    id: capture.id,
+    observabilityMessage: capture.observabilityMessage,
+    observabilityStatus: capture.observabilityStatus,
+    oldestQueuedAgeSeconds: capture.oldestQueuedAgeSeconds,
+    oldestRunningAgeSeconds: capture.oldestRunningAgeSeconds,
+    queueCounts: {
+      active: capture.queueActiveCount,
+      completed: capture.queueCompletedCount,
+      delayed: capture.queueDelayedCount,
+      failed: capture.queueFailedCount,
+      paused: capture.queuePausedCount,
+      waiting: capture.queueWaitingCount
+    },
+    queueStatus: capture.queueStatus,
+    warningAlertCount: capture.warningAlertCount,
+    windows: capture.windowSnapshots.map(
+      (window): OpsGenerationWindowSummary => ({
+        averageCompletionSeconds: window.averageCompletionSeconds,
+        checkedAt: window.capturedAt.toISOString(),
+        failedCount: window.failedCount,
+        from: window.from.toISOString(),
+        label: window.label,
+        maxCompletionSeconds: window.maxCompletionSeconds,
+        queuedCount: window.queuedCount,
+        runningCount: window.runningCount,
+        storedAssetCount: window.storedAssetCount,
+        succeededCount: window.succeededCount,
+        successRatePercent: window.successRatePercent,
+        totalCount: window.totalCount,
+        windowKey: window.windowKey as OpsGenerationWindowKey
+      })
+    ),
+    workerAdapter: capture.workerAdapter
+  };
+}
+
+function serializeAlertDelivery(
+  delivery: PersistedAlertDeliveryRecord
+): OpsAlertDeliverySummary {
+  return {
+    code: delivery.code,
+    createdAt: delivery.createdAt.toISOString(),
+    deliveredAt: delivery.deliveredAt?.toISOString() ?? null,
+    deliveryChannel: delivery.deliveryChannel,
+    deliveryState: delivery.deliveryState,
+    failureMessage: delivery.failureMessage,
+    id: delivery.id,
+    message: delivery.message,
+    severity: delivery.severity,
+    title: delivery.title
   };
 }
 
@@ -830,6 +970,48 @@ async function loadOwnerGenerationObservability(input: {
   };
 }
 
+async function loadOwnerPersistedObservabilityHistory(input: {
+  ownerUserId: string;
+  rawEnvironment: NodeJS.ProcessEnv;
+}): Promise<OwnerPersistedObservabilityHistory> {
+  try {
+    const captureRepository = createPersistedCaptureRepository(
+      input.rawEnvironment
+    );
+    const alertDeliveryRepository = createPersistedAlertDeliveryRepository(
+      input.rawEnvironment
+    );
+    const [captures, deliveries] = await Promise.all([
+      captureRepository.listRecentForOwnerUserId({
+        limit: 7,
+        ownerUserId: input.ownerUserId
+      }),
+      alertDeliveryRepository.listRecentForOwnerUserId({
+        limit: 12,
+        ownerUserId: input.ownerUserId
+      })
+    ]);
+
+    return {
+      captures: captures.map(serializePersistedCapture),
+      deliveries: deliveries.map(serializeAlertDelivery),
+      message:
+        "Persisted observability captures and alert deliveries loaded from PostgreSQL.",
+      status: "ok"
+    };
+  } catch (error) {
+    return {
+      captures: [],
+      deliveries: [],
+      message:
+        error instanceof Error
+          ? error.message
+          : "Persisted observability history could not be loaded.",
+      status: "unreachable"
+    };
+  }
+}
+
 async function loadQueueSnapshot(input: {
   checkedAt: string;
   rawEnvironment: NodeJS.ProcessEnv;
@@ -892,21 +1074,28 @@ export async function loadOpsRuntime(
 
   let operatorQueue: OpsQueueSnapshot | null = null;
   let operatorActivity: OwnerGenerationActivity | null = null;
+  let operatorHistory: OwnerPersistedObservabilityHistory | null = null;
   let operatorObservability: OpsOperatorObservability | null = null;
 
   if (session?.user.id) {
     const queueSnapshotLoader = input.loadQueueSnapshot ?? loadQueueSnapshot;
     const operatorActivityLoader =
       input.loadOperatorActivity ?? loadOwnerGenerationActivity;
+    const operatorHistoryLoader =
+      input.loadOperatorHistory ?? loadOwnerPersistedObservabilityHistory;
     const operatorObservabilityLoader =
       input.loadOperatorObservability ?? loadOwnerGenerationObservability;
 
-    [operatorQueue, operatorActivity] = await Promise.all([
+    [operatorQueue, operatorActivity, operatorHistory] = await Promise.all([
       queueSnapshotLoader({
         checkedAt,
         rawEnvironment
       }),
       operatorActivityLoader({
+        ownerUserId: session.user.id,
+        rawEnvironment
+      }),
+      operatorHistoryLoader({
         ownerUserId: session.user.id,
         rawEnvironment
       })
@@ -934,6 +1123,7 @@ export async function loadOpsRuntime(
     },
     operator: {
       activity: operatorActivity,
+      history: operatorHistory,
       observability: operatorObservability,
       queue: operatorQueue,
       session

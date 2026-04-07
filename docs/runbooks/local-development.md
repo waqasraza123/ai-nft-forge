@@ -22,6 +22,7 @@
 12. `pnpm --filter @ai-nft-forge/generation-backend start`
 13. `pnpm --filter @ai-nft-forge/worker build`
 14. `pnpm --filter @ai-nft-forge/worker start`
+15. Run `pnpm --filter @ai-nft-forge/worker ops:capture` manually or from a scheduler when you want persisted `/ops` history and alert-delivery records populated locally.
 
 ## Local Services
 
@@ -36,6 +37,7 @@
 - `pnpm validate`
 - `pnpm --filter @ai-nft-forge/web exec playwright install chromium`
 - `pnpm test:smoke`
+- `pnpm --filter @ai-nft-forge/worker ops:capture`
 - `DATABASE_URL='postgresql://ai_nft_forge:ai_nft_forge@127.0.0.1:55432/ai_nft_forge?schema=public' pnpm db:migrate:status`
 - `curl http://127.0.0.1:3000/api/health`
 - `pnpm worker:health`

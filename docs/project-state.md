@@ -2,7 +2,7 @@
 
 ## Product
 
-AI NFT Forge is planned as a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, and later minting onchain. The repository now contains the completed Phase 1 foundation plus the first thirteen Phase 2 slices: storage-backed source asset intake, queue-backed generation orchestration, durable generated-output persistence, the first external-backend plus protected-download boundary, the first interactive browser workflow for upload, dispatch, polling, and retrieval, a concrete standalone generation backend service behind the worker HTTP contract, the first model-backed ComfyUI provider inside that backend, provider-aware ops diagnostics plus backend readiness checks around that real model path, richer studio-visible generation metadata plus explicit failed-request retry ergonomics, authenticated ops queue depth plus owner-scoped generation activity and retry controls, fuller per-asset generation history plus archived-run comparison inside the studio, rolling owner-scoped ops metrics plus synthesized alert diagnostics beyond point-in-time queue depth, and browser-level smoke coverage for the protected studio and ops workflows. Minting is still not implemented.
+AI NFT Forge is planned as a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, and later minting onchain. The repository now contains the completed Phase 1 foundation plus the first fourteen Phase 2 slices: storage-backed source asset intake, queue-backed generation orchestration, durable generated-output persistence, the first external-backend plus protected-download boundary, the first interactive browser workflow for upload, dispatch, polling, and retrieval, a concrete standalone generation backend service behind the worker HTTP contract, the first model-backed ComfyUI provider inside that backend, provider-aware ops diagnostics plus backend readiness checks around that real model path, richer studio-visible generation metadata plus explicit failed-request retry ergonomics, authenticated ops queue depth plus owner-scoped generation activity and retry controls, fuller per-asset generation history plus archived-run comparison inside the studio, rolling owner-scoped ops metrics plus synthesized alert diagnostics beyond point-in-time queue depth, browser-level smoke coverage for the protected studio and ops workflows, and persisted multi-day ops observability captures plus durable alert-delivery history. Minting is still not implemented.
 
 ## Current Architecture
 
@@ -41,6 +41,8 @@ Current implementation status:
 - The first operator-facing browser client now drives the full upload, generation dispatch, retry, polling, and retrieval workflow from `/studio/assets` while keeping large object transfers on signed storage URLs and long-running work in the worker.
 - The studio asset surface now exposes richer latest-generation metadata plus full per-asset generation history, archived-run inspection, and owner-scoped download/retry actions from the history view.
 - The ops route now surfaces live web health plus generation-backend liveness/readiness snapshots, and for authenticated operators it also exposes generation queue depth, rolling owner-scoped request windows, synthesized alert diagnostics, owner-scoped recent active/failed generation activity, and owner-scoped retry controls.
+- The worker now also supports a one-shot observability capture command that persists owner-scoped ops snapshots, window summaries, alert state, and alert-delivery records into PostgreSQL for later `/ops` inspection.
+- The ops route now also renders persisted observability capture history and recent alert-delivery records so operators can inspect more than the current request-derived runtime state.
 - `apps/web` now also ships Playwright-based browser smoke coverage for `/studio/assets` and `/ops`, including real auth handshake, seeded owner-scoped fixture data, isolated test schema/Redis usage, and CI execution.
 - No polished client wallet UI exists yet.
 
@@ -101,6 +103,7 @@ The frozen technical direction remains:
 - Phase 2 Commit 11 landed full per-asset generation history in the studio read model plus archived-run inspection, comparison, download, and retry ergonomics on `/studio/assets`.
 - Phase 2 Commit 12 landed rolling owner-scoped ops metrics plus synthesized alert diagnostics on `/ops`, extending the operator surface beyond point-in-time queue depth into recent success-rate, duration, backlog, and stalled-work signals.
 - Phase 2 Commit 13 landed browser-level smoke coverage for `/studio/assets` and `/ops`, including isolated Playwright runtime wiring, real session creation, seeded history/activity fixtures, and CI execution.
+- Phase 2 Commit 14 landed persisted owner-scoped ops observability captures plus durable alert-delivery history, including new PostgreSQL models, a worker capture command, and `/ops` history panels for multi-day review.
 
 ## Important Decisions
 
@@ -129,6 +132,7 @@ The frozen technical direction remains:
 - Keep the standalone generation backend provider-based so deterministic rendering remains a safe default while ComfyUI and future model backends can be introduced without reopening the worker or web contracts.
 - The standalone generation backend should expose separate liveness and readiness diagnostics, with readiness delegated to the active provider so ComfyUI reachability failures surface before operator-driven generation attempts.
 - The web ops surface should consume generation-backend diagnostics from the configured backend URL rather than duplicating backend state inside the web app.
+- Persisted ops history and alert delivery should be generated from the worker side through an explicit capture command so the web app remains a read/control plane rather than a background scheduler.
 - Retry ergonomics should preserve the failed request's pipeline and requested variant count by default so operators can quickly rerun the same job without re-entering parameters.
 - Deeper ops controls should stay authenticated and owner-scoped until workspace-level operator roles exist; the public `/ops` surface should stay limited to coarse runtime diagnostics.
 - GitHub `origin` is configured and `main` tracks the remote.
@@ -143,7 +147,7 @@ The frozen technical direction remains:
 
 - The web app and worker are not containerized yet; Phase 1 only containers the backing services needed for local reproducibility.
 - The repository now ships a ComfyUI-backed generation path, but production deployments still need a separately operated ComfyUI instance, model files, and GPU capacity planning.
-- The ops surface now exposes backend liveness/readiness plus authenticated queue depth, rolling owner-scoped metrics, synthesized alerts, and owner-scoped retry controls, but persisted multi-day metrics, alert delivery, and cross-user/workspace controls are still deferred.
+- The ops surface now exposes backend liveness/readiness plus authenticated queue depth, rolling owner-scoped metrics, persisted observability history, durable alert-delivery records, synthesized alerts, and owner-scoped retry controls, but cross-user/workspace controls and external alert channels are still deferred.
 - The studio surface now exposes per-asset generation history, but cross-asset comparison, bulk actions, and workspace/operator-wide comparison tools remain deferred.
 - Planning docs should remain durable; avoid locking in low-level implementation details before the foundation lands.
 - `docs/_local/` must stay local-only and must never hold secrets.
@@ -161,6 +165,7 @@ The frozen technical direction remains:
 - `pnpm build`
 - `pnpm --filter @ai-nft-forge/web exec playwright install chromium`
 - `pnpm test:smoke`
+- `pnpm --filter @ai-nft-forge/worker ops:capture`
 - `pnpm worker:health`
 - `pnpm generation-backend:health`
 - `pnpm generation-backend:ready`

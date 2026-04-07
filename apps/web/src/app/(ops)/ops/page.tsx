@@ -31,7 +31,7 @@ export default async function OpsPage() {
     <PageShell
       eyebrow="Ops"
       title="Live runtime, alerts, and queue diagnostics for the generation path"
-      lead="This surface now carries public runtime health plus authenticated queue depth, rolling generation metrics, synthesized operator alerts, recent generation activity, and owner-scoped retry controls so operator checks do not depend on the studio asset browser alone."
+      lead="This surface now carries public runtime health plus authenticated queue depth, rolling generation metrics, synthesized operator alerts, persisted observability history, alert-delivery records, recent generation activity, and owner-scoped retry controls so operator checks do not depend on a single request window or the studio asset browser alone."
       actions={
         <>
           <Link className="action-link" href="/api/health">

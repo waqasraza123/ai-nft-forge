@@ -23,6 +23,18 @@ export {
   type GenerationRequestRepository
 } from "./generation-request-repository.js";
 export {
+  createOpsAlertDeliveryRepository,
+  type OpsAlertDeliveryRepository
+} from "./ops-alert-delivery-repository.js";
+export {
+  createOpsAlertStateRepository,
+  type OpsAlertStateRepository
+} from "./ops-alert-state-repository.js";
+export {
+  createOpsObservabilityCaptureRepository,
+  type OpsObservabilityCaptureRepository
+} from "./ops-observability-capture-repository.js";
+export {
   createSourceAssetRepository,
   type SourceAssetRepository
 } from "./source-asset-repository.js";

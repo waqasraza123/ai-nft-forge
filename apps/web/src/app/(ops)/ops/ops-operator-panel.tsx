@@ -7,8 +7,10 @@ import { useState } from "react";
 import { MetricTile, Pill, SurfaceCard, SurfaceGrid } from "@ai-nft-forge/ui";
 
 import type {
+  OpsAlertDeliverySummary,
   OpsGenerationWindowSummary,
   OpsGenerationActivitySummary,
+  OpsPersistedCaptureSummary,
   OpsRuntimeSnapshot
 } from "../../../server/ops/runtime";
 
@@ -229,6 +231,93 @@ function WindowSummary({ window }: { window: OpsGenerationWindowSummary }) {
   );
 }
 
+function PersistedCaptureItem({
+  capture
+}: {
+  capture: OpsPersistedCaptureSummary;
+}) {
+  return (
+    <div className="ops-window-item">
+      <div className="ops-activity-item__header">
+        <div className="ops-activity-item__copy">
+          <strong>{formatDateTime(capture.capturedAt)}</strong>
+          <span>{capture.observabilityMessage}</span>
+        </div>
+        <Pill>{capture.observabilityStatus}</Pill>
+      </div>
+      <div className="pill-row">
+        <Pill>{capture.backendReadinessStatus}</Pill>
+        <Pill>{capture.queueStatus}</Pill>
+        <Pill>{capture.workerAdapter ?? "Unknown adapter"}</Pill>
+        <Pill>{capture.criticalAlertCount} critical</Pill>
+        <Pill>{capture.warningAlertCount} warning</Pill>
+        <Pill>
+          Oldest queued {formatDurationSeconds(capture.oldestQueuedAgeSeconds)}
+        </Pill>
+        <Pill>
+          Oldest running{" "}
+          {formatDurationSeconds(capture.oldestRunningAgeSeconds)}
+        </Pill>
+      </div>
+      <div className="pill-row">
+        <Pill>Waiting {capture.queueCounts.waiting ?? "n/a"}</Pill>
+        <Pill>Active {capture.queueCounts.active ?? "n/a"}</Pill>
+        <Pill>Failed {capture.queueCounts.failed ?? "n/a"}</Pill>
+        <Pill>Completed {capture.queueCounts.completed ?? "n/a"}</Pill>
+      </div>
+      <div className="ops-window-list">
+        {capture.windows.map((window) => (
+          <WindowSummary
+            key={`${capture.id}-${window.windowKey}`}
+            window={window}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AlertDeliveryItem({
+  delivery
+}: {
+  delivery: OpsAlertDeliverySummary;
+}) {
+  const tone =
+    delivery.deliveryState === "failed"
+      ? "error"
+      : delivery.severity === "critical"
+        ? "error"
+        : "info";
+
+  return (
+    <div className="ops-activity-item">
+      <div className="ops-activity-item__header">
+        <div className="ops-activity-item__copy">
+          <strong>{delivery.title}</strong>
+          <span>{delivery.message}</span>
+        </div>
+        <Pill>{delivery.deliveryState}</Pill>
+      </div>
+      <div className="pill-row">
+        <Pill>{delivery.code}</Pill>
+        <Pill>{delivery.severity}</Pill>
+        <Pill>{delivery.deliveryChannel}</Pill>
+      </div>
+      <div className={`status-banner status-banner--${tone}`}>
+        <strong>
+          {delivery.deliveredAt
+            ? `Delivered ${formatDateTime(delivery.deliveredAt)}`
+            : `Recorded ${formatDateTime(delivery.createdAt)}`}
+        </strong>
+        <span>
+          {delivery.failureMessage ??
+            "This alert was persisted through the audit-log delivery channel."}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
   const router = useRouter();
   const [notice, setNotice] = useState<NoticeState>(null);
@@ -301,6 +390,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
 
   const queue = operator.queue;
   const activity = operator.activity;
+  const history = operator.history;
   const observability = operator.observability;
   const observabilityTone = resolveStatusBannerTone(
     observability?.status ?? "unreachable"
@@ -394,6 +484,53 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
         ) : (
           <div className="asset-placeholder">
             Rolling generation windows are not available for this operator.
+          </div>
+        )}
+      </SurfaceCard>
+      <SurfaceCard
+        body={
+          history?.status === "ok"
+            ? "Persisted captures retain multi-day observability checkpoints so operators can review how alert state, queue pressure, and recent generation windows changed over time."
+            : (history?.message ??
+              "Persisted observability history is only loaded after the operator session resolves.")
+        }
+        eyebrow={history?.status ?? "unreachable"}
+        span={12}
+        title="Persisted observability history"
+      >
+        {history?.captures.length ? (
+          <div className="ops-window-list">
+            {history.captures.map((capture) => (
+              <PersistedCaptureItem capture={capture} key={capture.id} />
+            ))}
+          </div>
+        ) : (
+          <div className="asset-placeholder">
+            No persisted observability captures are available for this operator
+            yet.
+          </div>
+        )}
+      </SurfaceCard>
+      <SurfaceCard
+        body={
+          history?.status === "ok"
+            ? "Delivered alert records persist the operator-facing alert timeline instead of limiting diagnosis to whatever is active on the current request."
+            : (history?.message ??
+              "Recent alert delivery history could not be loaded for this operator.")
+        }
+        eyebrow={history?.status ?? "unreachable"}
+        span={12}
+        title="Recent alert deliveries"
+      >
+        {history?.deliveries.length ? (
+          <div className="ops-activity-list">
+            {history.deliveries.map((delivery) => (
+              <AlertDeliveryItem delivery={delivery} key={delivery.id} />
+            ))}
+          </div>
+        ) : (
+          <div className="asset-placeholder">
+            No persisted alert deliveries are available for this operator yet.
           </div>
         )}
       </SurfaceCard>

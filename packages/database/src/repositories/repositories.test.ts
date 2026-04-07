@@ -3,6 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 import { createAuthSessionRepository } from "./auth-session-repository.js";
 import { createGeneratedAssetRepository } from "./generated-asset-repository.js";
 import { createGenerationRequestRepository } from "./generation-request-repository.js";
+import { createOpsAlertDeliveryRepository } from "./ops-alert-delivery-repository.js";
+import { createOpsAlertStateRepository } from "./ops-alert-state-repository.js";
+import { createOpsObservabilityCaptureRepository } from "./ops-observability-capture-repository.js";
 import { createSourceAssetRepository } from "./source-asset-repository.js";
 import { createUserRepository } from "./user-repository.js";
 
@@ -123,6 +126,39 @@ describe("database repositories", () => {
       }
     });
     expect(result?.id).toBe("generation_1");
+  });
+
+  it("delegates distinct generation owner lookup through the generation request repository", async () => {
+    const database = {
+      generationRequest: {
+        create: vi.fn(),
+        findFirst: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([
+          {
+            ownerUserId: "user_1"
+          },
+          {
+            ownerUserId: "user_2"
+          }
+        ]),
+        findUnique: vi.fn(),
+        update: vi.fn()
+      }
+    };
+    const repository = createGenerationRequestRepository(database as never);
+
+    const result = await repository.listDistinctOwnerUserIds();
+
+    expect(database.generationRequest.findMany).toHaveBeenCalledWith({
+      distinct: ["ownerUserId"],
+      orderBy: {
+        ownerUserId: "asc"
+      },
+      select: {
+        ownerUserId: true
+      }
+    });
+    expect(result).toEqual(["user_1", "user_2"]);
   });
 
   it("delegates recent owner-scoped generation activity lookup through the generation request repository", async () => {
@@ -352,5 +388,219 @@ describe("database repositories", () => {
       }
     });
     expect(result?.id).toBe("generated_asset_2");
+  });
+
+  it("delegates observability capture creation through the ops capture repository", async () => {
+    const database = {
+      opsObservabilityCapture: {
+        create: vi.fn().mockResolvedValue({
+          id: "capture_1"
+        }),
+        findMany: vi.fn()
+      }
+    };
+    const repository = createOpsObservabilityCaptureRepository(
+      database as never
+    );
+
+    const result = await repository.create({
+      backendReadinessMessage: "Ready",
+      backendReadinessStatus: "ready",
+      capturedAt: new Date("2026-04-07T09:00:00.000Z"),
+      criticalAlertCount: 1,
+      observabilityMessage:
+        "1 critical and 0 warning operator alerts are active.",
+      observabilityStatus: "critical",
+      oldestQueuedAgeSeconds: 900,
+      oldestRunningAgeSeconds: 1200,
+      ownerUserId: "user_1",
+      queueActiveCount: 0,
+      queueCompletedCount: 4,
+      queueConcurrency: 1,
+      queueDelayedCount: 0,
+      queueFailedCount: 2,
+      queuePausedCount: 0,
+      queueStatus: "ok",
+      queueWaitingCount: 3,
+      warningAlertCount: 0,
+      windows: [
+        {
+          averageCompletionSeconds: 180,
+          capturedAt: new Date("2026-04-07T09:00:00.000Z"),
+          failedCount: 2,
+          from: new Date("2026-04-07T08:00:00.000Z"),
+          label: "Last hour",
+          maxCompletionSeconds: 240,
+          ownerUserId: "user_1",
+          queuedCount: 1,
+          runningCount: 0,
+          storedAssetCount: 3,
+          succeededCount: 1,
+          successRatePercent: 33.3,
+          totalCount: 4,
+          windowKey: "1h"
+        }
+      ],
+      workerAdapter: "http_backend"
+    });
+
+    expect(database.opsObservabilityCapture.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        backendReadinessMessage: "Ready",
+        backendReadinessStatus: "ready",
+        criticalAlertCount: 1,
+        observabilityStatus: "critical",
+        ownerUserId: "user_1",
+        queueStatus: "ok",
+        warningAlertCount: 0,
+        windowSnapshots: {
+          create: [
+            expect.objectContaining({
+              label: "Last hour",
+              ownerUserId: "user_1",
+              windowKey: "1h"
+            })
+          ]
+        }
+      })
+    });
+    expect(result.id).toBe("capture_1");
+  });
+
+  it("delegates alert state ownership and resolution through the ops alert state repository", async () => {
+    const database = {
+      opsAlertState: {
+        create: vi.fn().mockResolvedValue({
+          id: "alert_state_1"
+        }),
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "alert_state_1"
+          }
+        ]),
+        update: vi.fn().mockResolvedValue({
+          id: "alert_state_1",
+          status: "resolved"
+        })
+      }
+    };
+    const repository = createOpsAlertStateRepository(database as never);
+    const observedAt = new Date("2026-04-07T09:00:00.000Z");
+
+    await repository.createActive({
+      code: "QUEUE_STALLED",
+      message: "3 generation jobs are waiting while no jobs are active.",
+      observedAt,
+      ownerUserId: "user_1",
+      severity: "critical",
+      title: "The generation queue appears stalled."
+    });
+    const states = await repository.listByOwnerUserIdAndCodes({
+      codes: ["QUEUE_STALLED"],
+      ownerUserId: "user_1"
+    });
+    const resolved = await repository.markResolved({
+      id: "alert_state_1",
+      observedAt
+    });
+
+    expect(database.opsAlertState.create).toHaveBeenCalledWith({
+      data: {
+        code: "QUEUE_STALLED",
+        firstObservedAt: observedAt,
+        lastObservedAt: observedAt,
+        message: "3 generation jobs are waiting while no jobs are active.",
+        ownerUserId: "user_1",
+        severity: "critical",
+        status: "active",
+        title: "The generation queue appears stalled."
+      }
+    });
+    expect(database.opsAlertState.findMany).toHaveBeenCalledWith({
+      where: {
+        code: {
+          in: ["QUEUE_STALLED"]
+        },
+        ownerUserId: "user_1"
+      }
+    });
+    expect(database.opsAlertState.update).toHaveBeenCalledWith({
+      data: {
+        lastObservedAt: observedAt,
+        resolvedAt: observedAt,
+        status: "resolved"
+      },
+      where: {
+        id: "alert_state_1"
+      }
+    });
+    expect(states[0]?.id).toBe("alert_state_1");
+    expect(resolved.status).toBe("resolved");
+  });
+
+  it("delegates alert delivery persistence through the ops alert delivery repository", async () => {
+    const database = {
+      opsAlertDelivery: {
+        create: vi.fn().mockResolvedValue({
+          id: "alert_delivery_1"
+        }),
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "alert_delivery_1"
+          }
+        ])
+      }
+    };
+    const repository = createOpsAlertDeliveryRepository(database as never);
+
+    const created = await repository.create({
+      alertStateId: "alert_state_1",
+      captureId: "capture_1",
+      code: "QUEUE_STALLED",
+      deliveredAt: new Date("2026-04-07T09:00:00.000Z"),
+      deliveryChannel: "audit_log",
+      deliveryState: "delivered",
+      failureMessage: null,
+      message: "3 generation jobs are waiting while no jobs are active.",
+      ownerUserId: "user_1",
+      severity: "critical",
+      title: "The generation queue appears stalled."
+    });
+    const deliveries = await repository.listRecentForOwnerUserId({
+      limit: 5,
+      ownerUserId: "user_1"
+    });
+
+    expect(database.opsAlertDelivery.create).toHaveBeenCalledWith({
+      data: {
+        alertStateId: "alert_state_1",
+        captureId: "capture_1",
+        code: "QUEUE_STALLED",
+        deliveredAt: new Date("2026-04-07T09:00:00.000Z"),
+        deliveryChannel: "audit_log",
+        deliveryState: "delivered",
+        failureMessage: null,
+        message: "3 generation jobs are waiting while no jobs are active.",
+        ownerUserId: "user_1",
+        severity: "critical",
+        title: "The generation queue appears stalled."
+      }
+    });
+    expect(database.opsAlertDelivery.findMany).toHaveBeenCalledWith({
+      orderBy: [
+        {
+          createdAt: "desc"
+        },
+        {
+          id: "desc"
+        }
+      ],
+      take: 5,
+      where: {
+        ownerUserId: "user_1"
+      }
+    });
+    expect(created.id).toBe("alert_delivery_1");
+    expect(deliveries[0]?.id).toBe("alert_delivery_1");
   });
 });
