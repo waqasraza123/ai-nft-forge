@@ -29,6 +29,8 @@ import {
   SurfaceGrid
 } from "@ai-nft-forge/ui";
 
+import { StudioAssetCard } from "./studio-asset-card";
+
 type StudioAssetsClientProps = {
   initialAssets: StudioSourceAssetSummary[];
   ownerWalletAddress: string;
@@ -98,75 +100,11 @@ function resolveSourceAssetContentType(
   return sourceAssetContentTypeByExtension.get(extension) ?? null;
 }
 
-function formatAssetByteSize(byteSize: number | null) {
-  if (typeof byteSize !== "number" || Number.isNaN(byteSize)) {
-    return "Size pending";
-  }
-
-  if (byteSize < 1024) {
-    return `${byteSize} B`;
-  }
-
-  const units = ["KB", "MB", "GB"];
-  let value = byteSize / 1024;
-  let unitIndex = 0;
-
-  while (value >= 1024 && unitIndex < units.length - 1) {
-    value /= 1024;
-    unitIndex += 1;
-  }
-
-  return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unitIndex]}`;
-}
-
-function formatIsoDateTime(value: string | null) {
-  if (!value) {
-    return "Pending";
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short"
-  }).format(new Date(value));
-}
-
 function isGenerationActive(asset: StudioSourceAssetSummary) {
   return (
     asset.latestGeneration?.status === "queued" ||
     asset.latestGeneration?.status === "running"
   );
-}
-
-function canStartGeneration(asset: StudioSourceAssetSummary) {
-  return asset.status === "uploaded" && !isGenerationActive(asset);
-}
-
-function resolveGenerationActionLabel(asset: StudioSourceAssetSummary) {
-  if (!asset.latestGeneration) {
-    return "Generate outputs";
-  }
-
-  if (asset.latestGeneration.status === "failed") {
-    return "Start new run";
-  }
-
-  return "Regenerate";
-}
-
-function resolveGenerationTerminalDate(asset: StudioSourceAssetSummary) {
-  if (!asset.latestGeneration) {
-    return null;
-  }
-
-  if (asset.latestGeneration.status === "failed") {
-    return asset.latestGeneration.failedAt;
-  }
-
-  if (asset.latestGeneration.status === "succeeded") {
-    return asset.latestGeneration.completedAt;
-  }
-
-  return asset.latestGeneration.startedAt;
 }
 
 function createFallbackErrorMessage(response: Response) {
@@ -261,200 +199,48 @@ function triggerBrowserDownload(url: string) {
   link.remove();
 }
 
-function AssetActionCard(input: {
-  asset: StudioSourceAssetSummary;
-  downloadGeneratedAsset: (generatedAssetId: string) => Promise<void>;
-  downloadingGeneratedAssetId: string | null;
-  generationVariantCount: number;
-  isDispatchingGeneration: boolean;
-  isRetryingGeneration: boolean;
-  retryGeneration: (generationRequestId: string) => Promise<void>;
-  setGenerationVariantCount: (variantCount: number) => void;
-  startGeneration: (assetId: string, variantCount: number) => Promise<void>;
+function reconcileSelectedGenerationIds(input: {
+  assets: StudioSourceAssetSummary[];
+  current: Record<string, string>;
 }) {
-  const generationStatusLabel = input.asset.latestGeneration
-    ? `Generation ${input.asset.latestGeneration.status}`
-    : "No generation request";
-  const latestGenerationRequestedAt =
-    input.asset.latestGeneration?.createdAt ?? null;
-  const latestGenerationTerminalDate =
-    resolveGenerationTerminalDate(input.asset) ?? null;
-  const canRetryFailedGeneration =
-    input.asset.latestGeneration?.status === "failed" &&
-    canStartGeneration(input.asset);
+  const next: Record<string, string> = {};
+  let hasChanged = false;
 
-  return (
-    <SurfaceCard
-      body={`${input.asset.contentType} · ${formatAssetByteSize(input.asset.byteSize)}`}
-      eyebrow={input.asset.status}
-      span={4}
-      title={input.asset.originalFilename}
-      footer={
-        canStartGeneration(input.asset) ? (
-          <div className="studio-action-stack">
-            <label
-              className="field-stack"
-              htmlFor={`variant-count-${input.asset.id}`}
-            >
-              <span className="field-label">Variant count</span>
-              <select
-                className="input-field"
-                disabled={input.isDispatchingGeneration}
-                id={`variant-count-${input.asset.id}`}
-                onChange={(event) =>
-                  input.setGenerationVariantCount(Number(event.target.value))
-                }
-                value={input.generationVariantCount}
-              >
-                {Array.from({ length: 8 }, (_, index) => index + 1).map(
-                  (variantCount) => (
-                    <option key={variantCount} value={variantCount}>
-                      {variantCount} variant{variantCount === 1 ? "" : "s"}
-                    </option>
-                  )
-                )}
-              </select>
-            </label>
-            <button
-              className="button-action button-action--accent"
-              disabled={input.isDispatchingGeneration}
-              onClick={() =>
-                void input.startGeneration(
-                  input.asset.id,
-                  input.generationVariantCount
-                )
-              }
-              type="button"
-            >
-              {resolveGenerationActionLabel(input.asset)}
-            </button>
-          </div>
-        ) : null
+  for (const asset of input.assets) {
+    const selectedGenerationId = input.current[asset.id];
+
+    if (!selectedGenerationId) {
+      continue;
+    }
+
+    if (
+      asset.generationHistory.some(
+        (generation) => generation.id === selectedGenerationId
+      )
+    ) {
+      next[asset.id] = selectedGenerationId;
+      continue;
+    }
+
+    hasChanged = true;
+  }
+
+  if (!hasChanged) {
+    const currentAssetIds = Object.keys(input.current);
+
+    if (currentAssetIds.length !== Object.keys(next).length) {
+      hasChanged = true;
+    } else {
+      for (const assetId of currentAssetIds) {
+        if (input.current[assetId] !== next[assetId]) {
+          hasChanged = true;
+          break;
+        }
       }
-    >
-      <div className="pill-row">
-        <Pill>{input.asset.id}</Pill>
-        <Pill>{formatIsoDateTime(input.asset.uploadedAt)}</Pill>
-        <Pill>{generationStatusLabel}</Pill>
-        <Pill>
-          {input.asset.latestGeneration
-            ? `${input.asset.latestGeneration.requestedVariantCount} variants`
-            : input.asset.status === "uploaded"
-              ? "Ready for dispatch"
-              : "Upload in progress"}
-        </Pill>
-        <Pill>
-          {input.asset.latestGeneratedAssets.length > 0
-            ? `${input.asset.latestGeneratedAssets.length} stored outputs`
-            : "No stored outputs"}
-        </Pill>
-        <Pill>{formatIsoDateTime(latestGenerationRequestedAt)}</Pill>
-        {input.asset.latestGeneration ? (
-          <Pill>{input.asset.latestGeneration.pipelineKey}</Pill>
-        ) : null}
-        {input.asset.latestGeneration?.queueJobId ? (
-          <Pill>{input.asset.latestGeneration.queueJobId}</Pill>
-        ) : null}
-        {latestGenerationTerminalDate ? (
-          <Pill>{formatIsoDateTime(latestGenerationTerminalDate)}</Pill>
-        ) : null}
-      </div>
-      {input.asset.latestGeneration ? (
-        <div className="generation-detail-stack">
-          <div className="pill-row">
-            <Pill>{input.asset.latestGeneration.id}</Pill>
-            <Pill>
-              Requested{" "}
-              {formatIsoDateTime(input.asset.latestGeneration.createdAt)}
-            </Pill>
-            <Pill>
-              Started{" "}
-              {formatIsoDateTime(input.asset.latestGeneration.startedAt)}
-            </Pill>
-            <Pill>
-              {input.asset.latestGeneration.status === "failed"
-                ? `Failed ${formatIsoDateTime(input.asset.latestGeneration.failedAt)}`
-                : input.asset.latestGeneration.status === "succeeded"
-                  ? `Completed ${formatIsoDateTime(input.asset.latestGeneration.completedAt)}`
-                  : "Awaiting completion"}
-            </Pill>
-          </div>
-          {input.asset.latestGeneration.result ? (
-            <div className="status-banner status-banner--success">
-              <strong>Generation completed.</strong>
-              <span>
-                {input.asset.latestGeneration.result.generatedVariantCount}{" "}
-                variants requested
-              </span>
-              <span>
-                {input.asset.latestGeneration.result.storedAssetCount} stored
-                outputs
-              </span>
-              <span className="asset-output-key">
-                {input.asset.latestGeneration.result.outputGroupKey}
-              </span>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-      {input.asset.latestGeneration?.failureMessage ? (
-        <div className="status-banner status-banner--error">
-          <strong>Generation failed.</strong>
-          {input.asset.latestGeneration.failureCode ? (
-            <span>{input.asset.latestGeneration.failureCode}</span>
-          ) : null}
-          <span>{input.asset.latestGeneration.failureMessage}</span>
-          {canRetryFailedGeneration ? (
-            <button
-              className="button-action"
-              disabled={input.isRetryingGeneration}
-              onClick={() =>
-                void input.retryGeneration(input.asset.latestGeneration!.id)
-              }
-              type="button"
-            >
-              {input.isRetryingGeneration ? "Retrying..." : "Retry failed run"}
-            </button>
-          ) : null}
-        </div>
-      ) : null}
-      {input.asset.latestGeneratedAssets.length > 0 ? (
-        <div className="asset-output-list">
-          {input.asset.latestGeneratedAssets.map((generatedAsset) => {
-            const isDownloading =
-              input.downloadingGeneratedAssetId === generatedAsset.id;
+    }
+  }
 
-            return (
-              <div className="asset-output-item" key={generatedAsset.id}>
-                <div className="asset-output-copy">
-                  <strong>{`Variant ${generatedAsset.variantIndex}`}</strong>
-                  <span>{formatAssetByteSize(generatedAsset.byteSize)}</span>
-                  <span className="asset-output-key">
-                    {generatedAsset.storageObjectKey}
-                  </span>
-                </div>
-                <button
-                  className="button-action"
-                  disabled={isDownloading}
-                  onClick={() =>
-                    void input.downloadGeneratedAsset(generatedAsset.id)
-                  }
-                  type="button"
-                >
-                  {isDownloading ? "Preparing..." : "Download"}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="asset-placeholder">
-          Stored generated outputs will appear here after worker processing
-          succeeds.
-        </div>
-      )}
-    </SurfaceCard>
-  );
+  return hasChanged ? next : input.current;
 }
 
 export function StudioAssetsClient({
@@ -479,6 +265,8 @@ export function StudioAssetsClient({
     generationVariantCountsByAssetId,
     setGenerationVariantCountsByAssetId
   ] = useState<Record<string, number>>({});
+  const [selectedGenerationIdsByAssetId, setSelectedGenerationIdsByAssetId] =
+    useState<Record<string, string>>({});
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const refreshInFlightRef = useRef(false);
 
@@ -488,11 +276,34 @@ export function StudioAssetsClient({
   const runningAssets = assets.filter(
     (asset) => asset.latestGeneration?.status === "running"
   ).length;
-  const completedAssets = assets.filter(
-    (asset) => asset.latestGeneration?.status === "succeeded"
-  ).length;
+  const totalGenerationRunCount = assets.reduce(
+    (count, asset) => count + asset.generationHistory.length,
+    0
+  );
+  const failedGenerationRunCount = assets.reduce(
+    (count, asset) =>
+      count +
+      asset.generationHistory.filter(
+        (generation) => generation.status === "failed"
+      ).length,
+    0
+  );
+  const succeededGenerationRunCount = assets.reduce(
+    (count, asset) =>
+      count +
+      asset.generationHistory.filter(
+        (generation) => generation.status === "succeeded"
+      ).length,
+    0
+  );
   const generatedOutputCount = assets.reduce(
-    (total, asset) => total + asset.latestGeneratedAssets.length,
+    (count, asset) =>
+      count +
+      asset.generationHistory.reduce(
+        (assetCount, generation) =>
+          assetCount + generation.generatedAssets.length,
+        0
+      ),
     0
   );
   const uploadedAssets = assets.filter(
@@ -540,6 +351,12 @@ export function StudioAssetsClient({
 
       startTransition(() => {
         setAssets(result.assets);
+        setSelectedGenerationIdsByAssetId((current) =>
+          reconcileSelectedGenerationIds({
+            assets: result.assets,
+            current
+          })
+        );
       });
     } catch (error) {
       if (!input?.silent) {
@@ -748,10 +565,16 @@ export function StudioAssetsClient({
         method: "POST"
       });
 
-      await parseJsonResponse({
+      const result = await parseJsonResponse({
         response,
         schema: generationRequestCreateResponseSchema
       });
+      setSelectedGenerationIdsByAssetId(
+        (currentSelectedGenerationIdsByAssetId) => ({
+          ...currentSelectedGenerationIdsByAssetId,
+          [assetId]: result.generation.id
+        })
+      );
       await refreshAssets();
 
       setNotice({
@@ -786,10 +609,16 @@ export function StudioAssetsClient({
         }
       );
 
-      await parseJsonResponse({
+      const result = await parseJsonResponse({
         response,
         schema: generationRequestCreateResponseSchema
       });
+      setSelectedGenerationIdsByAssetId(
+        (currentSelectedGenerationIdsByAssetId) => ({
+          ...currentSelectedGenerationIdsByAssetId,
+          [result.generation.sourceAssetId]: result.generation.id
+        })
+      );
       await refreshAssets();
 
       setNotice({
@@ -849,8 +678,8 @@ export function StudioAssetsClient({
   return (
     <PageShell
       eyebrow="Studio assets"
-      title="Upload, dispatch, poll, and retrieve generated outputs"
-      lead="The studio asset workflow now runs end to end in the browser: source images upload directly into private storage through signed intents, generation requests dispatch into BullMQ, active jobs poll automatically, and generated outputs download through short-lived protected intents."
+      title="Upload, dispatch, review history, and retrieve generated outputs"
+      lead="The studio asset workflow now runs end to end in the browser: source images upload directly into private storage through signed intents, generation requests dispatch into BullMQ, active jobs poll automatically, and each asset keeps a browsable generation history so prior runs can be compared and retried without leaving the studio."
       actions={
         <>
           <Link className="action-link" href="/studio">
@@ -941,7 +770,7 @@ export function StudioAssetsClient({
           ) : null}
         </SurfaceCard>
         <SurfaceCard
-          body="Uploads are owner-scoped and private. Generations dispatch per asset, polling only runs while work is queued or running, and downloads are mediated by short-lived signed intents."
+          body="Uploads are owner-scoped and private. Generations dispatch per asset, polling only runs while work is queued or running, retries stay bound to explicit failed runs, and every asset now retains its full generation history."
           eyebrow="Workflow"
           span={4}
           title="Operator guardrails"
@@ -952,10 +781,11 @@ export function StudioAssetsClient({
             <Pill>Signed downloads</Pill>
             <Pill>Variant count 1-8</Pill>
             <Pill>Retry failed runs</Pill>
+            <Pill>Per-asset history</Pill>
           </div>
         </SurfaceCard>
         <SurfaceCard
-          body="Current source asset state stays live below. Dispatch controls unlock after upload verification, and generated outputs expose direct download actions after worker completion."
+          body="Current source asset state stays live below. Dispatch controls unlock after upload verification, the latest run still drives active-state polling, and each asset now exposes full run history plus archived-output comparison."
           eyebrow="Summary"
           span={8}
           title="Current source asset and generation records"
@@ -964,9 +794,20 @@ export function StudioAssetsClient({
             <MetricTile label="Owner" value={ownerWalletAddress} />
             <MetricTile label="Assets" value={String(assets.length)} />
             <MetricTile label="Uploaded" value={String(uploadedAssets)} />
-            <MetricTile label="Queued" value={String(queuedAssets)} />
-            <MetricTile label="Running" value={String(runningAssets)} />
-            <MetricTile label="Succeeded" value={String(completedAssets)} />
+            <MetricTile
+              label="Generation runs"
+              value={String(totalGenerationRunCount)}
+            />
+            <MetricTile label="Queued assets" value={String(queuedAssets)} />
+            <MetricTile label="Running assets" value={String(runningAssets)} />
+            <MetricTile
+              label="Succeeded runs"
+              value={String(succeededGenerationRunCount)}
+            />
+            <MetricTile
+              label="Failed runs"
+              value={String(failedGenerationRunCount)}
+            />
             <MetricTile
               label="Generated outputs"
               value={String(generatedOutputCount)}
@@ -974,7 +815,7 @@ export function StudioAssetsClient({
           </div>
         </SurfaceCard>
         <SurfaceCard
-          body="The route surface is now complete enough for the first operator-facing browser workflow on top of the upload, generation, and retrieval contracts."
+          body="The route surface now supports not only upload, dispatch, retry, and protected retrieval, but also a richer studio read model where assets carry generation history suitable for in-browser comparison."
           eyebrow="Routes"
           span={4}
           title="Live browser boundary"
@@ -1014,7 +855,7 @@ export function StudioAssetsClient({
           />
         ) : (
           assets.map((asset) => (
-            <AssetActionCard
+            <StudioAssetCard
               asset={asset}
               downloadGeneratedAsset={downloadGeneratedAsset}
               downloadingGeneratedAssetId={downloadingGeneratedAssetId}
@@ -1022,16 +863,25 @@ export function StudioAssetsClient({
                 generationVariantCountsByAssetId[asset.id] ?? 4
               }
               isDispatchingGeneration={dispatchingAssetId === asset.id}
-              isRetryingGeneration={
-                retryingGenerationRequestId === asset.latestGeneration?.id
-              }
               key={asset.id}
               retryGeneration={retryGeneration}
+              retryingGenerationRequestId={retryingGenerationRequestId}
+              selectedGenerationId={
+                selectedGenerationIdsByAssetId[asset.id] ?? null
+              }
               setGenerationVariantCount={(variantCount) =>
                 setGenerationVariantCountsByAssetId(
                   (currentGenerationVariantCountsByAssetId) => ({
                     ...currentGenerationVariantCountsByAssetId,
                     [asset.id]: variantCount
+                  })
+                )
+              }
+              setSelectedGenerationId={(generationRequestId) =>
+                setSelectedGenerationIdsByAssetId(
+                  (currentSelectedGenerationIdsByAssetId) => ({
+                    ...currentSelectedGenerationIdsByAssetId,
+                    [asset.id]: generationRequestId
                   })
                 )
               }

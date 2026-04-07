@@ -38,6 +38,21 @@ type GenerationRequestWithSourceAssetAndCounts =
     };
   }>;
 
+const generationRequestActivityInclude = {
+  _count: {
+    select: {
+      generatedAssets: true
+    }
+  },
+  sourceAsset: {
+    select: {
+      id: true,
+      originalFilename: true,
+      status: true
+    }
+  }
+} satisfies Prisma.GenerationRequestInclude;
+
 function resolveRecentGenerationOrderBy(orderBy: RecentGenerationRequestOrder) {
   if (orderBy === "failedAtDesc") {
     return [
@@ -161,20 +176,7 @@ export function createGenerationRequestRepository(
       statuses?: GenerationRequestStatus[];
     }): Promise<GenerationRequestWithSourceAssetAndCounts[]> {
       return database.generationRequest.findMany({
-        include: {
-          _count: {
-            select: {
-              generatedAssets: true
-            }
-          },
-          sourceAsset: {
-            select: {
-              id: true,
-              originalFilename: true,
-              status: true
-            }
-          }
-        },
+        include: generationRequestActivityInclude,
         orderBy: resolveRecentGenerationOrderBy(
           input.orderBy ?? "createdAtDesc"
         ),
@@ -188,6 +190,60 @@ export function createGenerationRequestRepository(
                 }
               }
             : {})
+        }
+      });
+    },
+
+    listRecentForOwnerUserIdSince(input: {
+      orderBy?: RecentGenerationRequestOrder;
+      ownerUserId: string;
+      since: Date;
+      statuses?: GenerationRequestStatus[];
+    }): Promise<GenerationRequestWithSourceAssetAndCounts[]> {
+      return database.generationRequest.findMany({
+        include: generationRequestActivityInclude,
+        orderBy: resolveRecentGenerationOrderBy(
+          input.orderBy ?? "createdAtDesc"
+        ),
+        where: {
+          createdAt: {
+            gte: input.since
+          },
+          ownerUserId: input.ownerUserId,
+          ...(input.statuses && input.statuses.length > 0
+            ? {
+                status: {
+                  in: input.statuses
+                }
+              }
+            : {})
+        }
+      });
+    },
+
+    findOldestForOwnerUserId(input: {
+      ownerUserId: string;
+      statuses: GenerationRequestStatus[];
+    }): Promise<GenerationRequestWithSourceAssetAndCounts | null> {
+      if (input.statuses.length === 0) {
+        return Promise.resolve(null);
+      }
+
+      return database.generationRequest.findFirst({
+        include: generationRequestActivityInclude,
+        orderBy: [
+          {
+            createdAt: "asc"
+          },
+          {
+            id: "asc"
+          }
+        ],
+        where: {
+          ownerUserId: input.ownerUserId,
+          status: {
+            in: input.statuses
+          }
         }
       });
     },

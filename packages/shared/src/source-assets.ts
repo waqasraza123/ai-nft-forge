@@ -42,6 +42,7 @@ export const sourceAssetSummarySchema = z.object({
 });
 
 export const studioSourceAssetSummarySchema = sourceAssetSummarySchema.extend({
+  generationHistory: z.array(generationRequestSummarySchema),
   latestGeneratedAssets: z.array(generatedAssetSummarySchema),
   latestGeneration: generationRequestSummarySchema.nullable()
 });

@@ -381,14 +381,19 @@ select {
 
 .upload-queue,
 .asset-output-list,
-.ops-activity-list {
+.ops-activity-list,
+.generation-history-list,
+.ops-alert-list,
+.ops-window-list {
   display: grid;
   gap: 12px;
 }
 
 .upload-queue-item,
 .asset-output-item,
-.ops-activity-item {
+.ops-activity-item,
+.generation-history-item,
+.ops-window-item {
   display: grid;
   gap: 12px;
   padding: 14px 16px;
@@ -413,6 +418,49 @@ select {
 .ops-activity-item__copy {
   display: grid;
   gap: 4px;
+}
+
+.generation-history-item {
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+
+.generation-history-item--selected {
+  border-color: rgba(139, 94, 52, 0.26);
+  background: rgba(248, 228, 205, 0.62);
+  transform: translateY(-1px);
+}
+
+.generation-history-item__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.generation-history-item__copy,
+.generation-history-item__actions {
+  display: grid;
+  gap: 8px;
+}
+
+.generation-history-item__copy span,
+.generation-history-meta {
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+.generation-history-item__actions {
+  justify-items: end;
+}
+
+.generation-history-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
 }
 
 .ops-activity-item__copy span,
@@ -544,6 +592,10 @@ select {
 
   .asset-output-item {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .generation-history-item__actions {
+    justify-items: stretch;
   }
 }
 

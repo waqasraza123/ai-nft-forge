@@ -7,6 +7,7 @@ import { useState } from "react";
 import { MetricTile, Pill, SurfaceCard, SurfaceGrid } from "@ai-nft-forge/ui";
 
 import type {
+  OpsGenerationWindowSummary,
   OpsGenerationActivitySummary,
   OpsRuntimeSnapshot
 } from "../../../server/ops/runtime";
@@ -58,6 +59,57 @@ function formatRelativeDuration(fromIso: string, toIso?: string | null) {
   const remainingHours = totalHours % 24;
 
   return `${totalDays}d ${remainingHours}h`;
+}
+
+function formatDurationSeconds(value: number | null) {
+  if (value === null || !Number.isFinite(value)) {
+    return "n/a";
+  }
+
+  if (value < 60) {
+    return `${value}s`;
+  }
+
+  const minutes = Math.floor(value / 60);
+  const seconds = value % 60;
+
+  if (minutes < 60) {
+    return `${minutes}m ${seconds}s`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  if (hours < 24) {
+    return `${hours}h ${remainingMinutes}m`;
+  }
+
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+
+  return `${days}d ${remainingHours}h`;
+}
+
+function formatPercent(value: number | null) {
+  if (value === null || !Number.isFinite(value)) {
+    return "n/a";
+  }
+
+  return `${value}%`;
+}
+
+function resolveStatusBannerTone(
+  status: "critical" | "ok" | "unreachable" | "warning"
+) {
+  if (status === "critical" || status === "unreachable") {
+    return "error";
+  }
+
+  if (status === "warning") {
+    return "info";
+  }
+
+  return "success";
 }
 
 function renderActivityTiming(activity: OpsGenerationActivitySummary) {
@@ -140,6 +192,43 @@ function ActivityItem({
   );
 }
 
+function WindowSummary({ window }: { window: OpsGenerationWindowSummary }) {
+  return (
+    <div className="ops-window-item">
+      <div className="ops-activity-item__header">
+        <div className="ops-activity-item__copy">
+          <strong>{window.label}</strong>
+          <span>From {formatDateTime(window.from)}</span>
+        </div>
+        <Pill>{window.windowKey}</Pill>
+      </div>
+      <div className="metric-list">
+        <MetricTile label="Requests" value={String(window.totalCount)} />
+        <MetricTile label="Queued" value={String(window.queuedCount)} />
+        <MetricTile label="Running" value={String(window.runningCount)} />
+        <MetricTile label="Succeeded" value={String(window.succeededCount)} />
+        <MetricTile label="Failed" value={String(window.failedCount)} />
+        <MetricTile
+          label="Success rate"
+          value={formatPercent(window.successRatePercent)}
+        />
+        <MetricTile
+          label="Avg completion"
+          value={formatDurationSeconds(window.averageCompletionSeconds)}
+        />
+        <MetricTile
+          label="Max completion"
+          value={formatDurationSeconds(window.maxCompletionSeconds)}
+        />
+        <MetricTile
+          label="Stored assets"
+          value={String(window.storedAssetCount)}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
   const router = useRouter();
   const [notice, setNotice] = useState<NoticeState>(null);
@@ -212,6 +301,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
 
   const queue = operator.queue;
   const activity = operator.activity;
+  const observability = operator.observability;
+  const observabilityTone = resolveStatusBannerTone(
+    observability?.status ?? "unreachable"
+  );
 
   return (
     <SurfaceGrid>
@@ -228,6 +321,82 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
           </div>
         </SurfaceCard>
       ) : null}
+      <SurfaceCard
+        body={
+          observability?.message ??
+          "Operational alerts are only loaded after the operator session resolves."
+        }
+        eyebrow={observability?.status ?? "hidden"}
+        span={12}
+        title="Operational alerts"
+      >
+        {observability ? (
+          <>
+            <div
+              className={`status-banner status-banner--${observabilityTone}`}
+            >
+              <strong>{observability.status}</strong>
+              <span>{observability.message}</span>
+              <span>Checked {formatDateTime(observability.checkedAt)}</span>
+            </div>
+            <div className="pill-row">
+              <Pill>
+                Oldest queued{" "}
+                {formatDurationSeconds(observability.oldestQueuedAgeSeconds)}
+              </Pill>
+              <Pill>
+                Oldest running{" "}
+                {formatDurationSeconds(observability.oldestRunningAgeSeconds)}
+              </Pill>
+            </div>
+            {observability.alerts.length ? (
+              <div className="ops-alert-list">
+                {observability.alerts.map((alert) => (
+                  <div
+                    className={`status-banner status-banner--${
+                      alert.severity === "critical" ? "error" : "info"
+                    }`}
+                    key={alert.code}
+                  >
+                    <strong>{alert.title}</strong>
+                    <span>{alert.message}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="asset-placeholder">
+                No active operator alerts were derived from the latest queue,
+                backend, and rolling-window signals.
+              </div>
+            )}
+          </>
+        ) : null}
+      </SurfaceCard>
+      <SurfaceCard
+        body={
+          observability?.status === "ok" ||
+          observability?.status === "warning" ||
+          observability?.status === "critical"
+            ? "Rolling windows summarize recent owner-scoped request volume, success rate, and completion duration so operator checks no longer depend on point-in-time queue depth alone."
+            : (observability?.message ??
+              "Rolling generation metrics could not be loaded for this operator.")
+        }
+        eyebrow={observability?.status ?? "unreachable"}
+        span={12}
+        title="Rolling generation metrics"
+      >
+        {observability?.windows.length ? (
+          <div className="ops-window-list">
+            {observability.windows.map((window) => (
+              <WindowSummary key={window.windowKey} window={window} />
+            ))}
+          </div>
+        ) : (
+          <div className="asset-placeholder">
+            Rolling generation windows are not available for this operator.
+          </div>
+        )}
+      </SurfaceCard>
       <SurfaceCard
         body={
           queue?.status === "ok"
@@ -293,7 +462,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
       <SurfaceCard
         body={
           activity?.status === "ok"
-            ? "Queued and running generation requests are grouped here so operator checks no longer depend on the studio asset list."
+            ? "Queued and running generation requests stay grouped here while the alert and rolling-window panels above summarize trend health."
             : (activity?.message ??
               "Recent activity could not be loaded for this operator.")
         }
@@ -316,7 +485,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
       <SurfaceCard
         body={
           activity?.status === "ok"
-            ? "Failed owner-scoped generation requests can be retried here without returning to the studio asset browser."
+            ? "Failed owner-scoped generation requests can be retried here without returning to the studio asset browser, even when alerts or rolling metrics indicate degradation."
             : (activity?.message ??
               "Retryable failure history could not be loaded for this operator.")
         }

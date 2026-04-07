@@ -20,6 +20,7 @@ describe("loadOpsRuntime", () => {
     expect(runtime.operator.session).toBeNull();
     expect(runtime.operator.queue).toBeNull();
     expect(runtime.operator.activity).toBeNull();
+    expect(runtime.operator.observability).toBeNull();
   });
 
   it("loads generation backend diagnostics plus authenticated operator signals", async () => {
@@ -131,9 +132,35 @@ describe("loadOpsRuntime", () => {
       retryableFailures: [],
       status: "ok"
     });
+    const loadOperatorObservability = vi.fn().mockResolvedValue({
+      alerts: [],
+      checkedAt: "2026-04-06T12:00:00.000Z",
+      message: "Recent operator metrics and runtime alerts look healthy.",
+      oldestQueuedAgeSeconds: null,
+      oldestRunningAgeSeconds: 120,
+      status: "ok",
+      windows: [
+        {
+          averageCompletionSeconds: 180,
+          checkedAt: "2026-04-06T12:00:00.000Z",
+          failedCount: 0,
+          from: "2026-04-06T11:00:00.000Z",
+          label: "Last hour",
+          maxCompletionSeconds: 180,
+          queuedCount: 0,
+          runningCount: 1,
+          storedAssetCount: 4,
+          succeededCount: 1,
+          successRatePercent: 100,
+          totalCount: 2,
+          windowKey: "1h"
+        }
+      ]
+    });
     const runtime = await loadOpsRuntime({
       fetchFn,
       loadOperatorActivity,
+      loadOperatorObservability,
       loadQueueSnapshot,
       now: () => new Date("2026-04-06T12:00:00.000Z"),
       rawEnvironment: {
@@ -165,6 +192,20 @@ describe("loadOpsRuntime", () => {
         GENERATION_BACKEND_URL: "http://127.0.0.1:8787/generate"
       }
     });
+    expect(loadOperatorObservability).toHaveBeenCalledWith({
+      checkedAt: "2026-04-06T12:00:00.000Z",
+      generationBackendReadiness: expect.objectContaining({
+        status: "ready"
+      }),
+      ownerUserId: "user_1",
+      queueSnapshot: expect.objectContaining({
+        status: "ok"
+      }),
+      rawEnvironment: {
+        GENERATION_BACKEND_URL: "http://127.0.0.1:8787/generate"
+      },
+      referenceTime: new Date("2026-04-06T12:00:00.000Z")
+    });
     expect(runtime.operator.session?.user.id).toBe("user_1");
     expect(runtime.operator.queue).toMatchObject({
       status: "ok"
@@ -176,6 +217,9 @@ describe("loadOpsRuntime", () => {
           status: "running"
         })
       ],
+      status: "ok"
+    });
+    expect(runtime.operator.observability).toMatchObject({
       status: "ok"
     });
   });

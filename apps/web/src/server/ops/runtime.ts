@@ -107,6 +107,41 @@ type OwnerGenerationActivity = {
   status: "ok" | "unreachable";
 };
 
+type OpsGenerationWindowKey = "1h" | "24h";
+
+export type OpsGenerationWindowSummary = {
+  averageCompletionSeconds: number | null;
+  checkedAt: string;
+  failedCount: number;
+  from: string;
+  label: string;
+  maxCompletionSeconds: number | null;
+  queuedCount: number;
+  runningCount: number;
+  storedAssetCount: number;
+  succeededCount: number;
+  successRatePercent: number | null;
+  totalCount: number;
+  windowKey: OpsGenerationWindowKey;
+};
+
+export type OpsOperatorAlertSummary = {
+  code: string;
+  message: string;
+  severity: "critical" | "warning";
+  title: string;
+};
+
+export type OpsOperatorObservability = {
+  alerts: OpsOperatorAlertSummary[];
+  checkedAt: string;
+  message: string;
+  oldestQueuedAgeSeconds: number | null;
+  oldestRunningAgeSeconds: number | null;
+  status: "critical" | "ok" | "unreachable" | "warning";
+  windows: OpsGenerationWindowSummary[];
+};
+
 export type OpsRuntimeSnapshot = {
   generationBackend: {
     endpoints: {
@@ -119,6 +154,7 @@ export type OpsRuntimeSnapshot = {
   };
   operator: {
     activity: OwnerGenerationActivity | null;
+    observability: OpsOperatorObservability | null;
     queue: OpsQueueSnapshot | null;
     session: CurrentSession;
   };
@@ -131,6 +167,14 @@ type LoadOpsRuntimeInput = {
     ownerUserId: string;
     rawEnvironment: NodeJS.ProcessEnv;
   }) => Promise<OwnerGenerationActivity>;
+  loadOperatorObservability?: (input: {
+    checkedAt: string;
+    generationBackendReadiness: GenerationBackendReadinessState;
+    ownerUserId: string;
+    queueSnapshot: OpsQueueSnapshot | null;
+    rawEnvironment: NodeJS.ProcessEnv;
+    referenceTime: Date;
+  }) => Promise<OpsOperatorObservability>;
   loadQueueSnapshot?: (input: {
     checkedAt: string;
     rawEnvironment: NodeJS.ProcessEnv;
@@ -146,13 +190,48 @@ type EndpointSet = {
   readinessUrl: string;
 };
 
+type GenerationActivityRepository = ReturnType<
+  typeof createGenerationRequestRepository
+>;
+
+type GenerationActivityRecord = Awaited<
+  ReturnType<GenerationActivityRepository["listRecentForOwnerUserId"]>
+>[number];
+
+type OwnerGenerationMetrics = {
+  checkedAt: string;
+  message: string;
+  oldestQueuedAgeSeconds: number | null;
+  oldestRunningAgeSeconds: number | null;
+  status: "ok" | "unreachable";
+  windows: OpsGenerationWindowSummary[];
+};
+
 const probeTimeoutMs = 5_000;
 const activeGenerationLimit = 6;
 const retryableFailureLimit = 6;
-
-function createTimestamp(now: () => Date) {
-  return now().toISOString();
-}
+const observabilityWindows = [
+  {
+    durationMs: 60 * 60 * 1000,
+    key: "1h",
+    label: "Last hour"
+  },
+  {
+    durationMs: 24 * 60 * 60 * 1000,
+    key: "24h",
+    label: "Last 24 hours"
+  }
+] as const;
+const queueWaitingWarningMultiplier = 2;
+const queueWaitingCriticalMultiplier = 4;
+const recentFailureWarningCount = 3;
+const recentFailureCriticalCount = 5;
+const recentFailureWarningRate = 0.4;
+const recentFailureCriticalRate = 0.6;
+const oldestQueuedWarningAgeMs = 5 * 60 * 1000;
+const oldestQueuedCriticalAgeMs = 15 * 60 * 1000;
+const oldestRunningWarningAgeMs = 15 * 60 * 1000;
+const oldestRunningCriticalAgeMs = 30 * 60 * 1000;
 
 function resolveGenerationBackendEndpoints(
   rawEnvironment: NodeJS.ProcessEnv
@@ -303,14 +382,143 @@ function parseStoredAssetCount(
   return parsedResult.data.storedAssetCount;
 }
 
+function serializeGenerationActivity(
+  generation: GenerationActivityRecord
+): OpsGenerationActivitySummary {
+  return {
+    completedAt: generation.completedAt?.toISOString() ?? null,
+    createdAt: generation.createdAt.toISOString(),
+    failedAt: generation.failedAt?.toISOString() ?? null,
+    failureCode: generation.failureCode,
+    failureMessage: generation.failureMessage,
+    generatedAssetCount: generation._count.generatedAssets,
+    id: generation.id,
+    pipelineKey: generation.pipelineKey,
+    queueJobId: generation.queueJobId,
+    requestedVariantCount: generation.requestedVariantCount,
+    sourceAsset: {
+      id: generation.sourceAsset.id,
+      originalFilename: generation.sourceAsset.originalFilename,
+      status: generation.sourceAsset.status
+    },
+    startedAt: generation.startedAt?.toISOString() ?? null,
+    status: generation.status,
+    storedAssetCount: parseStoredAssetCount(
+      generation.resultJson,
+      generation._count.generatedAssets
+    )
+  };
+}
+
+function createGenerationRepository(rawEnvironment: NodeJS.ProcessEnv) {
+  return createGenerationRequestRepository(getDatabaseClient(rawEnvironment));
+}
+
+function createPercentage(numerator: number, denominator: number) {
+  if (denominator <= 0) {
+    return null;
+  }
+
+  return Number(((numerator / denominator) * 100).toFixed(1));
+}
+
+function createAverageDurationSeconds(values: number[]) {
+  if (values.length === 0) {
+    return null;
+  }
+
+  return Math.round(
+    values.reduce((total, value) => total + value, 0) / values.length
+  );
+}
+
+function createMaxDurationSeconds(values: number[]) {
+  if (values.length === 0) {
+    return null;
+  }
+
+  return Math.max(...values);
+}
+
+function resolveCompletionDurationSeconds(
+  generation: GenerationActivityRecord
+) {
+  if (!generation.completedAt) {
+    return null;
+  }
+
+  const durationSeconds = Math.round(
+    (generation.completedAt.getTime() - generation.createdAt.getTime()) / 1000
+  );
+
+  return Math.max(0, durationSeconds);
+}
+
+function createAgeSeconds(from: Date, referenceTime: Date) {
+  const ageSeconds = Math.round(
+    (referenceTime.getTime() - from.getTime()) / 1000
+  );
+
+  return Math.max(0, ageSeconds);
+}
+
+function createGenerationWindowSummary(input: {
+  checkedAt: string;
+  from: Date;
+  generations: GenerationActivityRecord[];
+  label: string;
+  windowKey: OpsGenerationWindowKey;
+}): OpsGenerationWindowSummary {
+  const queuedCount = input.generations.filter(
+    (generation) => generation.status === "queued"
+  ).length;
+  const runningCount = input.generations.filter(
+    (generation) => generation.status === "running"
+  ).length;
+  const succeededGenerations = input.generations.filter(
+    (generation) =>
+      generation.status === "succeeded" && generation.completedAt !== null
+  );
+  const succeededCount = succeededGenerations.length;
+  const failedCount = input.generations.filter(
+    (generation) => generation.status === "failed"
+  ).length;
+  const completionDurations = succeededGenerations
+    .map((generation) => resolveCompletionDurationSeconds(generation))
+    .filter((duration): duration is number => duration !== null);
+  const terminalCount = succeededCount + failedCount;
+
+  return {
+    averageCompletionSeconds: createAverageDurationSeconds(completionDurations),
+    checkedAt: input.checkedAt,
+    failedCount,
+    from: input.from.toISOString(),
+    label: input.label,
+    maxCompletionSeconds: createMaxDurationSeconds(completionDurations),
+    queuedCount,
+    runningCount,
+    storedAssetCount: input.generations.reduce(
+      (count, generation) =>
+        count +
+        parseStoredAssetCount(
+          generation.resultJson,
+          generation._count.generatedAssets
+        ),
+      0
+    ),
+    succeededCount,
+    successRatePercent: createPercentage(succeededCount, terminalCount),
+    totalCount: input.generations.length,
+    windowKey: input.windowKey
+  };
+}
+
 async function loadOwnerGenerationActivity(input: {
   ownerUserId: string;
   rawEnvironment: NodeJS.ProcessEnv;
 }): Promise<OwnerGenerationActivity> {
   try {
-    const repository = createGenerationRequestRepository(
-      getDatabaseClient(input.rawEnvironment)
-    );
+    const repository = createGenerationRepository(input.rawEnvironment);
     const [activeGenerations, retryableFailures] = await Promise.all([
       repository.listRecentForOwnerUserId({
         limit: activeGenerationLimit,
@@ -325,38 +533,10 @@ async function loadOwnerGenerationActivity(input: {
       })
     ]);
 
-    const serializeGeneration = (
-      generation: Awaited<
-        ReturnType<typeof repository.listRecentForOwnerUserId>
-      >[number]
-    ): OpsGenerationActivitySummary => ({
-      completedAt: generation.completedAt?.toISOString() ?? null,
-      createdAt: generation.createdAt.toISOString(),
-      failedAt: generation.failedAt?.toISOString() ?? null,
-      failureCode: generation.failureCode,
-      failureMessage: generation.failureMessage,
-      generatedAssetCount: generation._count.generatedAssets,
-      id: generation.id,
-      pipelineKey: generation.pipelineKey,
-      queueJobId: generation.queueJobId,
-      requestedVariantCount: generation.requestedVariantCount,
-      sourceAsset: {
-        id: generation.sourceAsset.id,
-        originalFilename: generation.sourceAsset.originalFilename,
-        status: generation.sourceAsset.status
-      },
-      startedAt: generation.startedAt?.toISOString() ?? null,
-      status: generation.status,
-      storedAssetCount: parseStoredAssetCount(
-        generation.resultJson,
-        generation._count.generatedAssets
-      )
-    });
-
     return {
-      active: activeGenerations.map(serializeGeneration),
+      active: activeGenerations.map(serializeGenerationActivity),
       message: "Recent generation activity loaded from PostgreSQL.",
-      retryableFailures: retryableFailures.map(serializeGeneration),
+      retryableFailures: retryableFailures.map(serializeGenerationActivity),
       status: "ok"
     };
   } catch (error) {
@@ -370,6 +550,284 @@ async function loadOwnerGenerationActivity(input: {
       status: "unreachable"
     };
   }
+}
+
+async function loadOwnerGenerationMetrics(input: {
+  checkedAt: string;
+  ownerUserId: string;
+  rawEnvironment: NodeJS.ProcessEnv;
+  referenceTime: Date;
+}): Promise<OwnerGenerationMetrics> {
+  try {
+    const repository = createGenerationRepository(input.rawEnvironment);
+    const [oldestQueuedGeneration, oldestRunningGeneration, ...windowResults] =
+      await Promise.all([
+        repository.findOldestForOwnerUserId({
+          ownerUserId: input.ownerUserId,
+          statuses: ["queued"]
+        }),
+        repository.findOldestForOwnerUserId({
+          ownerUserId: input.ownerUserId,
+          statuses: ["running"]
+        }),
+        ...observabilityWindows.map((window) =>
+          repository.listRecentForOwnerUserIdSince({
+            ownerUserId: input.ownerUserId,
+            since: new Date(input.referenceTime.getTime() - window.durationMs)
+          })
+        )
+      ]);
+
+    return {
+      checkedAt: input.checkedAt,
+      message: "Rolling generation metrics loaded from PostgreSQL.",
+      oldestQueuedAgeSeconds: oldestQueuedGeneration
+        ? createAgeSeconds(
+            oldestQueuedGeneration.createdAt,
+            input.referenceTime
+          )
+        : null,
+      oldestRunningAgeSeconds: oldestRunningGeneration
+        ? createAgeSeconds(
+            oldestRunningGeneration.startedAt ??
+              oldestRunningGeneration.createdAt,
+            input.referenceTime
+          )
+        : null,
+      status: "ok",
+      windows: observabilityWindows.map((window, index) =>
+        createGenerationWindowSummary({
+          checkedAt: input.checkedAt,
+          from: new Date(input.referenceTime.getTime() - window.durationMs),
+          generations: windowResults[index] ?? [],
+          label: window.label,
+          windowKey: window.key
+        })
+      )
+    };
+  } catch (error) {
+    return {
+      checkedAt: input.checkedAt,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Rolling generation metrics could not be loaded.",
+      oldestQueuedAgeSeconds: null,
+      oldestRunningAgeSeconds: null,
+      status: "unreachable",
+      windows: []
+    };
+  }
+}
+
+function createOperatorAlertSummary(input: {
+  metrics: OwnerGenerationMetrics;
+  queueSnapshot: OpsQueueSnapshot | null;
+  readiness: GenerationBackendReadinessState;
+}) {
+  const alerts: OpsOperatorAlertSummary[] = [];
+  const lastHourWindow = input.metrics.windows.find(
+    (window) => window.windowKey === "1h"
+  );
+
+  if (
+    input.queueSnapshot?.status === "ok" &&
+    input.queueSnapshot.workerAdapter === "http_backend" &&
+    input.readiness.status !== "ready"
+  ) {
+    alerts.push({
+      code: "GENERATION_BACKEND_NOT_READY",
+      message: input.readiness.message,
+      severity: "critical",
+      title: "Generation backend is not ready for the active worker adapter."
+    });
+  }
+
+  if (input.queueSnapshot?.status === "unreachable") {
+    alerts.push({
+      code: "QUEUE_DIAGNOSTICS_UNAVAILABLE",
+      message: input.queueSnapshot.message,
+      severity: "warning",
+      title: "Queue diagnostics could not be loaded."
+    });
+  }
+
+  if (
+    input.queueSnapshot?.status === "ok" &&
+    input.queueSnapshot.counts &&
+    input.queueSnapshot.concurrency > 0
+  ) {
+    const waitingCount = input.queueSnapshot.counts.waiting;
+    const activeCount = input.queueSnapshot.counts.active;
+
+    if (waitingCount > 0 && activeCount === 0) {
+      alerts.push({
+        code: "QUEUE_STALLED",
+        message: `${waitingCount} generation jobs are waiting while no jobs are active.`,
+        severity: "critical",
+        title: "The generation queue appears stalled."
+      });
+    } else if (
+      waitingCount >=
+      input.queueSnapshot.concurrency * queueWaitingCriticalMultiplier
+    ) {
+      alerts.push({
+        code: "QUEUE_BACKLOG_CRITICAL",
+        message: `${waitingCount} generation jobs are waiting against ${input.queueSnapshot.concurrency}x configured concurrency.`,
+        severity: "critical",
+        title: "The generation queue backlog is critically high."
+      });
+    } else if (
+      waitingCount >=
+      input.queueSnapshot.concurrency * queueWaitingWarningMultiplier
+    ) {
+      alerts.push({
+        code: "QUEUE_BACKLOG_WARNING",
+        message: `${waitingCount} generation jobs are waiting against ${input.queueSnapshot.concurrency}x configured concurrency.`,
+        severity: "warning",
+        title: "The generation queue backlog is elevated."
+      });
+    }
+  }
+
+  if (input.metrics.status !== "ok") {
+    alerts.push({
+      code: "ROLLING_METRICS_UNAVAILABLE",
+      message: input.metrics.message,
+      severity: "warning",
+      title: "Rolling generation metrics could not be loaded."
+    });
+  }
+
+  if (input.metrics.status === "ok" && lastHourWindow) {
+    const lastHourTerminalCount =
+      lastHourWindow.succeededCount + lastHourWindow.failedCount;
+    const lastHourFailureRate =
+      lastHourTerminalCount > 0
+        ? lastHourWindow.failedCount / lastHourTerminalCount
+        : null;
+
+    if (
+      lastHourFailureRate !== null &&
+      lastHourWindow.failedCount >= recentFailureCriticalCount &&
+      lastHourFailureRate >= recentFailureCriticalRate
+    ) {
+      alerts.push({
+        code: "RECENT_FAILURE_SPIKE_CRITICAL",
+        message: `${lastHourWindow.failedCount} owner-scoped failures were recorded in the last hour with a ${lastHourWindow.successRatePercent ?? 0}% success rate.`,
+        severity: "critical",
+        title: "Recent generation failures are critically elevated."
+      });
+    } else if (
+      lastHourFailureRate !== null &&
+      lastHourWindow.failedCount >= recentFailureWarningCount &&
+      lastHourFailureRate >= recentFailureWarningRate
+    ) {
+      alerts.push({
+        code: "RECENT_FAILURE_SPIKE_WARNING",
+        message: `${lastHourWindow.failedCount} owner-scoped failures were recorded in the last hour with a ${lastHourWindow.successRatePercent ?? 0}% success rate.`,
+        severity: "warning",
+        title: "Recent generation failures are elevated."
+      });
+    }
+
+    if (
+      input.metrics.oldestQueuedAgeSeconds !== null &&
+      input.metrics.oldestQueuedAgeSeconds * 1000 >= oldestQueuedCriticalAgeMs
+    ) {
+      alerts.push({
+        code: "OWNER_QUEUE_AGE_CRITICAL",
+        message: `The oldest queued owner-scoped request has waited ${input.metrics.oldestQueuedAgeSeconds}s.`,
+        severity: "critical",
+        title: "Queued owner-scoped generation work is critically old."
+      });
+    } else if (
+      input.metrics.oldestQueuedAgeSeconds !== null &&
+      input.metrics.oldestQueuedAgeSeconds * 1000 >= oldestQueuedWarningAgeMs
+    ) {
+      alerts.push({
+        code: "OWNER_QUEUE_AGE_WARNING",
+        message: `The oldest queued owner-scoped request has waited ${input.metrics.oldestQueuedAgeSeconds}s.`,
+        severity: "warning",
+        title: "Queued owner-scoped generation work is older than expected."
+      });
+    }
+
+    if (
+      input.metrics.oldestRunningAgeSeconds !== null &&
+      input.metrics.oldestRunningAgeSeconds * 1000 >= oldestRunningCriticalAgeMs
+    ) {
+      alerts.push({
+        code: "OWNER_RUNNING_AGE_CRITICAL",
+        message: `The oldest running owner-scoped request has been active for ${input.metrics.oldestRunningAgeSeconds}s.`,
+        severity: "critical",
+        title: "Running owner-scoped generation work looks critically long."
+      });
+    } else if (
+      input.metrics.oldestRunningAgeSeconds !== null &&
+      input.metrics.oldestRunningAgeSeconds * 1000 >= oldestRunningWarningAgeMs
+    ) {
+      alerts.push({
+        code: "OWNER_RUNNING_AGE_WARNING",
+        message: `The oldest running owner-scoped request has been active for ${input.metrics.oldestRunningAgeSeconds}s.`,
+        severity: "warning",
+        title: "Running owner-scoped generation work is longer than expected."
+      });
+    }
+  }
+
+  return alerts;
+}
+
+async function loadOwnerGenerationObservability(input: {
+  checkedAt: string;
+  generationBackendReadiness: GenerationBackendReadinessState;
+  ownerUserId: string;
+  queueSnapshot: OpsQueueSnapshot | null;
+  rawEnvironment: NodeJS.ProcessEnv;
+  referenceTime: Date;
+}): Promise<OpsOperatorObservability> {
+  const metrics = await loadOwnerGenerationMetrics({
+    checkedAt: input.checkedAt,
+    ownerUserId: input.ownerUserId,
+    rawEnvironment: input.rawEnvironment,
+    referenceTime: input.referenceTime
+  });
+  const alerts = createOperatorAlertSummary({
+    metrics,
+    queueSnapshot: input.queueSnapshot,
+    readiness: input.generationBackendReadiness
+  });
+  const criticalAlertCount = alerts.filter(
+    (alert) => alert.severity === "critical"
+  ).length;
+  const warningAlertCount = alerts.filter(
+    (alert) => alert.severity === "warning"
+  ).length;
+
+  return {
+    alerts,
+    checkedAt: input.checkedAt,
+    message:
+      criticalAlertCount > 0
+        ? `${criticalAlertCount} critical and ${warningAlertCount} warning operator alerts are active.`
+        : warningAlertCount > 0
+          ? `${warningAlertCount} warning operator alerts are active.`
+          : metrics.status === "ok"
+            ? "Recent operator metrics and runtime alerts look healthy."
+            : metrics.message,
+    oldestQueuedAgeSeconds: metrics.oldestQueuedAgeSeconds,
+    oldestRunningAgeSeconds: metrics.oldestRunningAgeSeconds,
+    status:
+      criticalAlertCount > 0
+        ? "critical"
+        : warningAlertCount > 0
+          ? "warning"
+          : metrics.status === "ok"
+            ? "ok"
+            : "unreachable",
+    windows: metrics.windows
+  };
 }
 
 async function loadQueueSnapshot(input: {
@@ -413,7 +871,8 @@ export async function loadOpsRuntime(
   const fetchFn = input.fetchFn ?? fetch;
   const now = input.now ?? (() => new Date());
   const rawEnvironment = input.rawEnvironment ?? process.env;
-  const checkedAt = createTimestamp(now);
+  const referenceTime = now();
+  const checkedAt = referenceTime.toISOString();
   const endpoints = resolveGenerationBackendEndpoints(rawEnvironment);
   const resolveSession =
     input.resolveSession ?? (() => getCurrentAuthSession());
@@ -433,11 +892,14 @@ export async function loadOpsRuntime(
 
   let operatorQueue: OpsQueueSnapshot | null = null;
   let operatorActivity: OwnerGenerationActivity | null = null;
+  let operatorObservability: OpsOperatorObservability | null = null;
 
   if (session?.user.id) {
     const queueSnapshotLoader = input.loadQueueSnapshot ?? loadQueueSnapshot;
     const operatorActivityLoader =
       input.loadOperatorActivity ?? loadOwnerGenerationActivity;
+    const operatorObservabilityLoader =
+      input.loadOperatorObservability ?? loadOwnerGenerationObservability;
 
     [operatorQueue, operatorActivity] = await Promise.all([
       queueSnapshotLoader({
@@ -449,6 +911,15 @@ export async function loadOpsRuntime(
         rawEnvironment
       })
     ]);
+
+    operatorObservability = await operatorObservabilityLoader({
+      checkedAt,
+      generationBackendReadiness: readiness,
+      ownerUserId: session.user.id,
+      queueSnapshot: operatorQueue,
+      rawEnvironment,
+      referenceTime
+    });
   }
 
   return {
@@ -463,6 +934,7 @@ export async function loadOpsRuntime(
     },
     operator: {
       activity: operatorActivity,
+      observability: operatorObservability,
       queue: operatorQueue,
       session
     },

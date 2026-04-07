@@ -309,10 +309,16 @@ describe("createSourceAssetService", () => {
     });
 
     expect(result.assets).toHaveLength(1);
+    expect(result.assets[0]?.generationHistory).toHaveLength(2);
+    expect(result.assets[0]?.generationHistory[0]?.id).toBe("generation_2");
+    expect(result.assets[0]?.generationHistory[1]?.id).toBe("generation_1");
     expect(result.assets[0]?.latestGeneration?.id).toBe("generation_2");
     expect(result.assets[0]?.latestGeneration?.generatedAssets).toHaveLength(2);
     expect(result.assets[0]?.latestGeneratedAssets[0]?.id).toBe(
       "generated_asset_1"
     );
+    expect(
+      result.assets[0]?.generationHistory[1]?.generatedAssets
+    ).toHaveLength(0);
   });
 });

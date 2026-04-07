@@ -185,6 +185,113 @@ describe("database repositories", () => {
     expect(result[0]?.id).toBe("generation_2");
   });
 
+  it("delegates recent windowed generation lookup through the generation request repository", async () => {
+    const database = {
+      generationRequest: {
+        create: vi.fn(),
+        findFirst: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "generation_3"
+          }
+        ]),
+        findUnique: vi.fn(),
+        update: vi.fn()
+      }
+    };
+    const repository = createGenerationRequestRepository(database as never);
+    const since = new Date("2026-04-07T05:00:00.000Z");
+
+    const result = await repository.listRecentForOwnerUserIdSince({
+      ownerUserId: "user_1",
+      since
+    });
+
+    expect(database.generationRequest.findMany).toHaveBeenCalledWith({
+      include: {
+        _count: {
+          select: {
+            generatedAssets: true
+          }
+        },
+        sourceAsset: {
+          select: {
+            id: true,
+            originalFilename: true,
+            status: true
+          }
+        }
+      },
+      orderBy: [
+        {
+          createdAt: "desc"
+        },
+        {
+          id: "desc"
+        }
+      ],
+      where: {
+        createdAt: {
+          gte: since
+        },
+        ownerUserId: "user_1"
+      }
+    });
+    expect(result[0]?.id).toBe("generation_3");
+  });
+
+  it("delegates oldest owner-scoped generation lookup through the generation request repository", async () => {
+    const database = {
+      generationRequest: {
+        create: vi.fn(),
+        findFirst: vi.fn().mockResolvedValue({
+          id: "generation_queued_1"
+        }),
+        findMany: vi.fn(),
+        findUnique: vi.fn(),
+        update: vi.fn()
+      }
+    };
+    const repository = createGenerationRequestRepository(database as never);
+
+    const result = await repository.findOldestForOwnerUserId({
+      ownerUserId: "user_1",
+      statuses: ["queued"]
+    });
+
+    expect(database.generationRequest.findFirst).toHaveBeenCalledWith({
+      include: {
+        _count: {
+          select: {
+            generatedAssets: true
+          }
+        },
+        sourceAsset: {
+          select: {
+            id: true,
+            originalFilename: true,
+            status: true
+          }
+        }
+      },
+      orderBy: [
+        {
+          createdAt: "asc"
+        },
+        {
+          id: "asc"
+        }
+      ],
+      where: {
+        ownerUserId: "user_1",
+        status: {
+          in: ["queued"]
+        }
+      }
+    });
+    expect(result?.id).toBe("generation_queued_1");
+  });
+
   it("delegates generated asset listing through the generated asset repository", async () => {
     const database = {
       generatedAsset: {

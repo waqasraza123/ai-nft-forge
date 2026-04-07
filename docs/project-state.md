@@ -2,7 +2,7 @@
 
 ## Product
 
-AI NFT Forge is planned as a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, and later minting onchain. The repository now contains the completed Phase 1 foundation plus the first ten Phase 2 slices: storage-backed source asset intake, queue-backed generation orchestration, durable generated-output persistence, the first external-backend plus protected-download boundary, the first interactive browser workflow for upload, dispatch, polling, and retrieval, a concrete standalone generation backend service behind the worker HTTP contract, the first model-backed ComfyUI provider inside that backend, provider-aware ops diagnostics plus backend readiness checks around that real model path, richer studio-visible generation metadata plus explicit failed-request retry ergonomics, and authenticated ops queue depth plus owner-scoped generation activity and retry controls. Minting is still not implemented.
+AI NFT Forge is planned as a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, and later minting onchain. The repository now contains the completed Phase 1 foundation plus the first twelve Phase 2 slices: storage-backed source asset intake, queue-backed generation orchestration, durable generated-output persistence, the first external-backend plus protected-download boundary, the first interactive browser workflow for upload, dispatch, polling, and retrieval, a concrete standalone generation backend service behind the worker HTTP contract, the first model-backed ComfyUI provider inside that backend, provider-aware ops diagnostics plus backend readiness checks around that real model path, richer studio-visible generation metadata plus explicit failed-request retry ergonomics, authenticated ops queue depth plus owner-scoped generation activity and retry controls, fuller per-asset generation history plus archived-run comparison inside the studio, and rolling owner-scoped ops metrics plus synthesized alert diagnostics beyond point-in-time queue depth. Minting is still not implemented.
 
 ## Current Architecture
 
@@ -24,7 +24,7 @@ Current implementation status:
 - `apps/web` exposes `GET /api/health`.
 - `apps/web` now exposes `POST /api/auth/nonce`, `POST /api/auth/verify`, `POST /api/auth/logout`, and `GET /api/auth/session`.
 - `apps/web` now protects `/studio` with server-side session lookup and redirects unauthenticated requests to `/sign-in`.
-- `apps/web` now exposes an interactive `/studio/assets` browser workflow plus `GET /api/studio/assets`, `POST /api/studio/assets/upload-intents`, `POST /api/studio/assets/[assetId]/complete`, `POST /api/studio/generations`, `POST /api/studio/generations/[generationRequestId]/retry`, and `POST /api/studio/generated-assets/[generatedAssetId]/download-intent` for source asset intake, generation dispatch, retry, polling, and protected generated-output retrieval.
+- `apps/web` now exposes an interactive `/studio/assets` browser workflow plus `GET /api/studio/assets`, `POST /api/studio/assets/upload-intents`, `POST /api/studio/assets/[assetId]/complete`, `POST /api/studio/generations`, `POST /api/studio/generations/[generationRequestId]/retry`, and `POST /api/studio/generated-assets/[generatedAssetId]/download-intent` for source asset intake, generation dispatch, retry, polling, protected generated-output retrieval, and per-asset generation history inspection.
 - `apps/worker` is now a real Node.js worker shell with env parsing, PostgreSQL, Redis, and object-storage connection setup, BullMQ queue registration, generation request processing, selectable generation adapters (`storage_copy` or `http_backend`), a noop processor, graceful shutdown hooks, and a `health` command.
 - `apps/generation-backend` is now a real Node.js service that implements the worker HTTP generation contract, validates bearer auth when configured, reads source objects from private storage, writes generated outputs back to private storage, exposes `GET /health` plus provider-aware `GET /ready`, cleans up partial outputs on failure, and supports either a deterministic transform provider or a ComfyUI-backed model provider behind the same contract.
 - `packages/ui` provides reusable page-shell and surface primitives used by the web app.
@@ -39,8 +39,8 @@ Current implementation status:
 - The generation pipeline now uses persisted `GenerationRequest` and `GeneratedAsset` records, dispatches BullMQ jobs from the web app, and lets the worker either materialize generated outputs internally or validate artifacts produced by an external HTTP backend before transactionally marking requests succeeded.
 - Generated outputs now have a protected owner-scoped download-intent contract that issues short-lived signed storage URLs after database ownership and object existence checks.
 - The first operator-facing browser client now drives the full upload, generation dispatch, retry, polling, and retrieval workflow from `/studio/assets` while keeping large object transfers on signed storage URLs and long-running work in the worker.
-- The studio asset surface now exposes richer latest-generation metadata, including pipeline, queue job, timestamps, failure code/message, and output-group result details for the latest request.
-- The ops route now surfaces live web health plus generation-backend liveness/readiness snapshots, and for authenticated operators it also exposes generation queue depth, owner-scoped recent active/failed generation activity, and owner-scoped retry controls.
+- The studio asset surface now exposes richer latest-generation metadata plus full per-asset generation history, archived-run inspection, and owner-scoped download/retry actions from the history view.
+- The ops route now surfaces live web health plus generation-backend liveness/readiness snapshots, and for authenticated operators it also exposes generation queue depth, rolling owner-scoped request windows, synthesized alert diagnostics, owner-scoped recent active/failed generation activity, and owner-scoped retry controls.
 - No polished client wallet UI exists yet.
 
 The frozen technical direction remains:
@@ -97,6 +97,8 @@ The frozen technical direction remains:
 - Phase 2 Commit 8 landed provider-aware generation-backend readiness checks, shared health/readiness contracts, readiness CLI support, and a live `/ops` diagnostics surface for web and backend runtime status.
 - Phase 2 Commit 9 landed explicit retry support for failed generation requests plus richer studio-visible latest-generation metadata and result surfacing.
 - Phase 2 Commit 10 landed authenticated ops queue diagnostics, owner-scoped recent generation activity surfacing, and owner-scoped retry controls on `/ops`.
+- Phase 2 Commit 11 landed full per-asset generation history in the studio read model plus archived-run inspection, comparison, download, and retry ergonomics on `/studio/assets`.
+- Phase 2 Commit 12 landed rolling owner-scoped ops metrics plus synthesized alert diagnostics on `/ops`, extending the operator surface beyond point-in-time queue depth into recent success-rate, duration, backlog, and stalled-work signals.
 
 ## Important Decisions
 
@@ -140,8 +142,8 @@ The frozen technical direction remains:
 - The web app and worker are not containerized yet; Phase 1 only containers the backing services needed for local reproducibility.
 - The browser workflow is now real, but browser-level smoke coverage is still deferred. Current coverage relies on build validation, focused unit tests, and API/service tests rather than end-to-end automation.
 - The repository now ships a ComfyUI-backed generation path, but production deployments still need a separately operated ComfyUI instance, model files, and GPU capacity planning.
-- The ops surface now exposes backend liveness/readiness plus authenticated queue depth and owner-scoped retry controls, but historical runtime metrics, alerts, and cross-user/workspace controls are still deferred.
-- The studio surface still only shows the latest generation per asset; full generation history and operator-side comparison tools remain deferred.
+- The ops surface now exposes backend liveness/readiness plus authenticated queue depth, rolling owner-scoped metrics, synthesized alerts, and owner-scoped retry controls, but persisted multi-day metrics, alert delivery, and cross-user/workspace controls are still deferred.
+- The studio surface now exposes per-asset generation history, but cross-asset comparison, bulk actions, and workspace/operator-wide comparison tools remain deferred.
 - Planning docs should remain durable; avoid locking in low-level implementation details before the foundation lands.
 - `docs/_local/` must stay local-only and must never hold secrets.
 

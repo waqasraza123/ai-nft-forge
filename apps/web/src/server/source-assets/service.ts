@@ -116,6 +116,31 @@ type SourceAssetServiceDependencies = {
   storage: StorageBoundary;
 };
 
+function compareGenerationRequestsDesc(
+  left: GenerationRequestRecord,
+  right: GenerationRequestRecord
+) {
+  const createdAtDifference =
+    right.createdAt.getTime() - left.createdAt.getTime();
+
+  if (createdAtDifference !== 0) {
+    return createdAtDifference;
+  }
+
+  return right.id.localeCompare(left.id);
+}
+
+function compareGeneratedAssets(
+  left: GeneratedAssetRecord,
+  right: GeneratedAssetRecord
+) {
+  if (left.variantIndex !== right.variantIndex) {
+    return left.variantIndex - right.variantIndex;
+  }
+
+  return left.id.localeCompare(right.id);
+}
+
 function serializeSourceAssetSummary(asset: SourceAssetRecord) {
   return sourceAssetSummarySchema.parse({
     byteSize: asset.byteSize,
@@ -268,24 +293,28 @@ export function createSourceAssetService(
         await dependencies.repositories.generatedAssetRepository.listByGenerationRequestIds(
           generationRequests.map((generationRequest) => generationRequest.id)
         );
-      const latestGenerationBySourceAssetId = new Map<
+      const generationHistoryBySourceAssetId = new Map<
         string,
-        GenerationRequestRecord
+        GenerationRequestRecord[]
       >();
       const generatedAssetsByGenerationRequestId = new Map<
         string,
         GeneratedAssetRecord[]
       >();
 
-      for (const generationRequest of generationRequests) {
-        if (
-          !latestGenerationBySourceAssetId.has(generationRequest.sourceAssetId)
-        ) {
-          latestGenerationBySourceAssetId.set(
-            generationRequest.sourceAssetId,
-            generationRequest
-          );
-        }
+      for (const generationRequest of [...generationRequests].sort(
+        compareGenerationRequestsDesc
+      )) {
+        const currentGenerationHistory =
+          generationHistoryBySourceAssetId.get(
+            generationRequest.sourceAssetId
+          ) ?? [];
+
+        currentGenerationHistory.push(generationRequest);
+        generationHistoryBySourceAssetId.set(
+          generationRequest.sourceAssetId,
+          currentGenerationHistory
+        );
       }
 
       for (const generatedAsset of generatedAssets) {
@@ -295,6 +324,7 @@ export function createSourceAssetService(
           ) ?? [];
 
         currentGeneratedAssets.push(generatedAsset);
+        currentGeneratedAssets.sort(compareGeneratedAssets);
         generatedAssetsByGenerationRequestId.set(
           generatedAsset.generationRequestId,
           currentGeneratedAssets
@@ -303,22 +333,24 @@ export function createSourceAssetService(
 
       return sourceAssetListResponseSchema.parse({
         assets: assets.map((asset) => {
-          const latestGeneration =
-            latestGenerationBySourceAssetId.get(asset.id) ?? null;
-          const latestGeneratedAssets = latestGeneration
-            ? (generatedAssetsByGenerationRequestId.get(latestGeneration.id) ??
-              [])
-            : [];
+          const generationHistoryRecords =
+            generationHistoryBySourceAssetId.get(asset.id) ?? [];
+          const generationHistory = generationHistoryRecords.map(
+            (generationRequest) =>
+              serializeGenerationRequest(
+                generationRequest,
+                generatedAssetsByGenerationRequestId.get(
+                  generationRequest.id
+                ) ?? []
+              )
+          );
+          const latestGeneration = generationHistory[0] ?? null;
 
           return {
             ...serializeSourceAssetSummary(asset),
-            latestGeneratedAssets: latestGeneratedAssets.map((generatedAsset) =>
-              serializeGeneratedAsset(generatedAsset)
-            ),
-            latestGeneration: serializeGenerationRequest(
-              latestGeneration,
-              latestGeneratedAssets
-            )
+            generationHistory,
+            latestGeneratedAssets: latestGeneration?.generatedAssets ?? [],
+            latestGeneration
           };
         })
       });
