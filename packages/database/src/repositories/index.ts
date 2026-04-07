@@ -27,6 +27,10 @@ export {
   type OpsAlertDeliveryRepository
 } from "./ops-alert-delivery-repository.js";
 export {
+  createOpsAlertMuteRepository,
+  type OpsAlertMuteRepository
+} from "./ops-alert-mute-repository.js";
+export {
   createOpsAlertStateRepository,
   type OpsAlertStateRepository
 } from "./ops-alert-state-repository.js";

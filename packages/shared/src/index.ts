@@ -39,12 +39,20 @@ export {
   type StorageObjectHead
 } from "./object-storage.js";
 export {
+  opsAlertMuteRequestSchema,
+  opsAlertMuteResponseSchema,
+  opsAlertMuteSummarySchema,
   opsAlertAcknowledgeResponseSchema,
   opsAlertStateStatusSchema,
   opsAlertStateSummarySchema,
+  opsAlertUnmuteResponseSchema,
   opsErrorResponseSchema,
+  type OpsAlertMuteRequest,
+  type OpsAlertMuteResponse,
+  type OpsAlertMuteSummary,
   type OpsAlertAcknowledgeResponse,
   type OpsAlertStateSummary,
+  type OpsAlertUnmuteResponse,
   type OpsErrorResponse
 } from "./ops.js";
 export {

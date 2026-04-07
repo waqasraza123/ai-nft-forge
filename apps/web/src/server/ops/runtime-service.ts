@@ -1,4 +1,5 @@
 import {
+  createOpsAlertMuteRepository,
   createOpsAlertStateRepository,
   getDatabaseClient
 } from "@ai-nft-forge/database";
@@ -13,6 +14,7 @@ export function createRuntimeOpsService(
   return createOpsService({
     now: () => new Date(),
     repositories: {
+      opsAlertMuteRepository: createOpsAlertMuteRepository(databaseClient),
       opsAlertStateRepository: createOpsAlertStateRepository(databaseClient)
     }
   });

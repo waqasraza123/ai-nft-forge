@@ -178,9 +178,17 @@ describe("loadOpsRuntime", () => {
           lastDeliveredAt: "2026-04-06T11:56:00.000Z",
           lastObservedAt: "2026-04-06T11:56:00.000Z",
           message: "2 generation jobs are waiting while no jobs are active.",
+          mutedUntil: "2026-04-06T13:00:00.000Z",
           severity: "critical",
           status: "active",
           title: "The generation queue appears stalled."
+        }
+      ],
+      activeMutes: [
+        {
+          code: "QUEUE_STALLED",
+          id: "mute_1",
+          mutedUntil: "2026-04-06T13:00:00.000Z"
         }
       ],
       captures: [
@@ -300,7 +308,14 @@ describe("loadOpsRuntime", () => {
       activeAlerts: [
         expect.objectContaining({
           id: "alert_state_1",
+          mutedUntil: "2026-04-06T13:00:00.000Z",
           status: "active"
+        })
+      ],
+      activeMutes: [
+        expect.objectContaining({
+          code: "QUEUE_STALLED",
+          id: "mute_1"
         })
       ],
       captures: [

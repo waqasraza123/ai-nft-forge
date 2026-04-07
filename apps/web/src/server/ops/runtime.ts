@@ -1,11 +1,13 @@
 import {
   createOpsAlertDeliveryRepository,
+  createOpsAlertMuteRepository,
   createOpsAlertStateRepository,
   createGenerationRequestRepository,
   createOpsObservabilityCaptureRepository,
   getDatabaseClient
 } from "@ai-nft-forge/database";
 import {
+  opsAlertMuteSummarySchema,
   opsAlertStateSummarySchema,
   generationBackendHealthResponseSchema,
   generationBackendReadinessResponseSchema,
@@ -196,9 +198,16 @@ export type OpsAlertStateSummary = {
   lastDeliveredAt: string | null;
   lastObservedAt: string;
   message: string;
+  mutedUntil: string | null;
   severity: "critical" | "warning";
   status: "active" | "resolved";
   title: string;
+};
+
+export type OpsAlertMuteSummary = {
+  code: string;
+  id: string;
+  mutedUntil: string;
 };
 
 export type OpsCaptureAutomation = {
@@ -215,6 +224,7 @@ export type OpsCaptureAutomation = {
 
 type OwnerPersistedObservabilityHistory = {
   activeAlerts: OpsAlertStateSummary[];
+  activeMutes: OpsAlertMuteSummary[];
   captures: OpsPersistedCaptureSummary[];
   deliveries: OpsAlertDeliverySummary[];
   message: string;
@@ -284,6 +294,9 @@ type PersistedCaptureRepository = ReturnType<
 type PersistedAlertDeliveryRepository = ReturnType<
   typeof createOpsAlertDeliveryRepository
 >;
+type PersistedAlertMuteRepository = ReturnType<
+  typeof createOpsAlertMuteRepository
+>;
 type PersistedAlertStateRepository = ReturnType<
   typeof createOpsAlertStateRepository
 >;
@@ -296,6 +309,9 @@ type PersistedCaptureRecord = Awaited<
 >[number];
 type PersistedAlertDeliveryRecord = Awaited<
   ReturnType<PersistedAlertDeliveryRepository["listRecentForOwnerUserId"]>
+>[number];
+type PersistedAlertMuteRecord = Awaited<
+  ReturnType<PersistedAlertMuteRepository["listActiveByOwnerUserId"]>
 >[number];
 type PersistedAlertStateRecord = Awaited<
   ReturnType<PersistedAlertStateRepository["listActiveByOwnerUserId"]>
@@ -529,6 +545,10 @@ function createPersistedAlertDeliveryRepository(
   return createOpsAlertDeliveryRepository(getDatabaseClient(rawEnvironment));
 }
 
+function createPersistedAlertMuteRepository(rawEnvironment: NodeJS.ProcessEnv) {
+  return createOpsAlertMuteRepository(getDatabaseClient(rawEnvironment));
+}
+
 function createPersistedAlertStateRepository(
   rawEnvironment: NodeJS.ProcessEnv
 ) {
@@ -696,7 +716,8 @@ function serializeAlertDelivery(
 }
 
 function serializeAlertState(
-  alertState: PersistedAlertStateRecord
+  alertState: PersistedAlertStateRecord,
+  mutedUntil: Date | null
 ): OpsAlertStateSummary {
   return opsAlertStateSummarySchema.parse({
     acknowledgedAt: alertState.acknowledgedAt?.toISOString() ?? null,
@@ -707,9 +728,20 @@ function serializeAlertState(
     lastDeliveredAt: alertState.lastDeliveredAt?.toISOString() ?? null,
     lastObservedAt: alertState.lastObservedAt.toISOString(),
     message: alertState.message,
+    mutedUntil: mutedUntil?.toISOString() ?? null,
     severity: alertState.severity,
     status: alertState.status,
     title: alertState.title
+  });
+}
+
+function serializeAlertMute(
+  mute: PersistedAlertMuteRecord
+): OpsAlertMuteSummary {
+  return opsAlertMuteSummarySchema.parse({
+    code: mute.code,
+    id: mute.id,
+    mutedUntil: mute.mutedUntil.toISOString()
   });
 }
 
@@ -1041,23 +1073,40 @@ async function loadOwnerPersistedObservabilityHistory(input: {
     const alertStateRepository = createPersistedAlertStateRepository(
       input.rawEnvironment
     );
+    const alertMuteRepository = createPersistedAlertMuteRepository(
+      input.rawEnvironment
+    );
     const alertDeliveryRepository = createPersistedAlertDeliveryRepository(
       input.rawEnvironment
     );
-    const [activeAlerts, captures, deliveries] = await Promise.all([
-      alertStateRepository.listActiveByOwnerUserId(input.ownerUserId),
-      captureRepository.listRecentForOwnerUserId({
-        limit: 7,
-        ownerUserId: input.ownerUserId
-      }),
-      alertDeliveryRepository.listRecentForOwnerUserId({
-        limit: 12,
-        ownerUserId: input.ownerUserId
-      })
-    ]);
+    const referenceTime = new Date();
+    const [activeAlerts, activeMutes, captures, deliveries] = await Promise.all(
+      [
+        alertStateRepository.listActiveByOwnerUserId(input.ownerUserId),
+        alertMuteRepository.listActiveByOwnerUserId({
+          observedAt: referenceTime,
+          ownerUserId: input.ownerUserId
+        }),
+        captureRepository.listRecentForOwnerUserId({
+          limit: 7,
+          ownerUserId: input.ownerUserId
+        }),
+        alertDeliveryRepository.listRecentForOwnerUserId({
+          limit: 12,
+          ownerUserId: input.ownerUserId
+        })
+      ]
+    );
+    const muteByCode = new Map(activeMutes.map((mute) => [mute.code, mute]));
 
     return {
-      activeAlerts: activeAlerts.map(serializeAlertState),
+      activeAlerts: activeAlerts.map((alertState) =>
+        serializeAlertState(
+          alertState,
+          muteByCode.get(alertState.code)?.mutedUntil ?? null
+        )
+      ),
+      activeMutes: activeMutes.map(serializeAlertMute),
       captures: captures.map(serializePersistedCapture),
       deliveries: deliveries.map(serializeAlertDelivery),
       message:
@@ -1067,6 +1116,7 @@ async function loadOwnerPersistedObservabilityHistory(input: {
   } catch (error) {
     return {
       activeAlerts: [],
+      activeMutes: [],
       captures: [],
       deliveries: [],
       message:

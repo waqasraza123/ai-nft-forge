@@ -34,6 +34,25 @@ export function createOpsErrorResponse(error: unknown): NextResponse {
     );
   }
 
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    error.name === "ZodError"
+  ) {
+    return NextResponse.json(
+      opsErrorResponseSchema.parse({
+        error: {
+          code: "INVALID_REQUEST",
+          message: "The ops request payload is invalid."
+        }
+      }),
+      {
+        status: 400
+      }
+    );
+  }
+
   return NextResponse.json(
     opsErrorResponseSchema.parse({
       error: {

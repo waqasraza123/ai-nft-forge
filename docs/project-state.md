@@ -2,7 +2,7 @@
 
 ## Product
 
-AI NFT Forge is planned as a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, and later minting onchain. The repository now contains the completed Phase 1 foundation plus the first seventeen Phase 2 slices: storage-backed source asset intake, queue-backed generation orchestration, durable generated-output persistence, the first external-backend plus protected-download boundary, the first interactive browser workflow for upload, dispatch, polling, and retrieval, a concrete standalone generation backend service behind the worker HTTP contract, the first model-backed ComfyUI provider inside that backend, provider-aware ops diagnostics plus backend readiness checks around that real model path, richer studio-visible generation metadata plus explicit failed-request retry ergonomics, authenticated ops queue depth plus owner-scoped generation activity and retry controls, fuller per-asset generation history plus archived-run comparison inside the studio, rolling owner-scoped ops metrics plus synthesized alert diagnostics beyond point-in-time queue depth, browser-level smoke coverage for the protected studio and ops workflows, persisted multi-day ops observability captures plus durable alert-delivery history, worker-owned capture scheduling plus operator-visible automation status on `/ops`, generic outbound webhook delivery for persisted ops alerts, and explicit owner-scoped acknowledgment controls for active persisted alerts on `/ops`. Minting is still not implemented.
+AI NFT Forge is planned as a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, and later minting onchain. The repository now contains the completed Phase 1 foundation plus the first eighteen Phase 2 slices: storage-backed source asset intake, queue-backed generation orchestration, durable generated-output persistence, the first external-backend plus protected-download boundary, the first interactive browser workflow for upload, dispatch, polling, and retrieval, a concrete standalone generation backend service behind the worker HTTP contract, the first model-backed ComfyUI provider inside that backend, provider-aware ops diagnostics plus backend readiness checks around that real model path, richer studio-visible generation metadata plus explicit failed-request retry ergonomics, authenticated ops queue depth plus owner-scoped generation activity and retry controls, fuller per-asset generation history plus archived-run comparison inside the studio, rolling owner-scoped ops metrics plus synthesized alert diagnostics beyond point-in-time queue depth, browser-level smoke coverage for the protected studio and ops workflows, persisted multi-day ops observability captures plus durable alert-delivery history, worker-owned capture scheduling plus operator-visible automation status on `/ops`, generic outbound webhook delivery for persisted ops alerts, explicit owner-scoped acknowledgment controls for active persisted alerts on `/ops`, and owner-scoped bounded mute policy for persisted alert delivery on `/ops`. Minting is still not implemented.
 
 ## Current Architecture
 
@@ -46,7 +46,7 @@ Current implementation status:
 - The worker can now also run persisted ops observability capture on an interval behind a Redis lease so duplicate worker replicas do not emit the same scheduled capture.
 - The ops route now also renders capture-automation health for authenticated operators so they can verify cadence, startup behavior, and last-capture freshness.
 - The worker can now also deliver persisted ops alerts to a configured outbound webhook while still recording every audit-log and webhook delivery attempt in PostgreSQL for `/ops` review.
-- The ops route now also renders active persisted alert state plus owner-scoped acknowledgment controls, while the worker clears acknowledgments automatically when the underlying alert resolves or materially changes.
+- The ops route now also renders active persisted alert state plus owner-scoped acknowledgment and mute controls, while the worker clears acknowledgments automatically when the underlying alert resolves or materially changes and suppresses alert delivery while active mutes are in effect.
 - `apps/web` now also ships Playwright-based browser smoke coverage for `/studio/assets` and `/ops`, including real auth handshake, seeded owner-scoped fixture data, isolated test schema/Redis usage, and CI execution.
 - No polished client wallet UI exists yet.
 
@@ -111,6 +111,7 @@ The frozen technical direction remains:
 - Phase 2 Commit 15 landed worker-owned ops capture scheduling with Redis lease coordination plus operator-visible automation status on `/ops`, so persisted observability no longer depends on manual command execution alone.
 - Phase 2 Commit 16 landed generic outbound webhook delivery for persisted ops alerts, extending the worker-owned alert path beyond audit-log-only records while preserving durable per-channel delivery history on `/ops`.
 - Phase 2 Commit 17 landed owner-scoped acknowledgment controls for active persisted alerts on `/ops`, including PostgreSQL-backed acknowledgment state, an authenticated acknowledge API route, and worker-side acknowledgment reset when alert conditions resolve or materially change.
+- Phase 2 Commit 18 landed owner-scoped bounded mute policy for persisted ops alerts on `/ops`, including PostgreSQL-backed mute records, authenticated mute and clear-mute API routes, worker-side delivery suppression while mutes are active, and operator-visible mute state on active alerts.
 
 ## Important Decisions
 
@@ -143,6 +144,7 @@ The frozen technical direction remains:
 - Automatic persisted ops capture should still live in the worker and coordinate through Redis leasing so multi-replica deployments do not duplicate scheduled captures while the web app stays read/control plane only.
 - External alert delivery should stay generic and worker-owned through a configurable outbound webhook rather than coupling the repo to a single vendor-specific notification service.
 - Persisted active alerts should support explicit owner-scoped acknowledgment in the web control plane, but acknowledgment reset should remain worker-owned so changed or recurring alert conditions resurface automatically.
+- Persisted alert mute policy should stay owner-scoped, time-bounded, and delivery-focused so operators can suppress noisy alerts without hiding active alert state from `/ops` or reopening the workspace-role problem.
 - Retry ergonomics should preserve the failed request's pipeline and requested variant count by default so operators can quickly rerun the same job without re-entering parameters.
 - Deeper ops controls should stay authenticated and owner-scoped until workspace-level operator roles exist; the public `/ops` surface should stay limited to coarse runtime diagnostics.
 - GitHub `origin` is configured and `main` tracks the remote.
@@ -157,7 +159,7 @@ The frozen technical direction remains:
 
 - The web app and worker are not containerized yet; Phase 1 only containers the backing services needed for local reproducibility.
 - The repository now ships a ComfyUI-backed generation path, but production deployments still need a separately operated ComfyUI instance, model files, and GPU capacity planning.
-- The ops surface now exposes backend liveness/readiness plus authenticated queue depth, rolling owner-scoped metrics, persisted observability history, active-alert acknowledgment controls, durable multi-channel alert-delivery records, capture-automation health, synthesized alerts, and owner-scoped retry controls, but cross-user/workspace controls are still deferred.
+- The ops surface now exposes backend liveness/readiness plus authenticated queue depth, rolling owner-scoped metrics, persisted observability history, active-alert acknowledgment and mute controls, durable multi-channel alert-delivery records, capture-automation health, synthesized alerts, and owner-scoped retry controls, but cross-user/workspace controls are still deferred.
 - The studio surface now exposes per-asset generation history, but cross-asset comparison, bulk actions, and workspace/operator-wide comparison tools remain deferred.
 - Planning docs should remain durable; avoid locking in low-level implementation details before the foundation lands.
 - `docs/_local/` must stay local-only and must never hold secrets.

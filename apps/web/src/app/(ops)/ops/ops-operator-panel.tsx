@@ -8,6 +8,7 @@ import { MetricTile, Pill, SurfaceCard, SurfaceGrid } from "@ai-nft-forge/ui";
 
 import type {
   OpsAlertDeliverySummary,
+  OpsAlertMuteSummary,
   OpsAlertStateSummary,
   OpsCaptureAutomation,
   OpsGenerationWindowSummary,
@@ -335,11 +336,19 @@ function AlertDeliveryItem({
 function ActiveAlertItem({
   alert,
   acknowledging,
-  onAcknowledge
+  clearingMute,
+  muting,
+  onAcknowledge,
+  onClearMute,
+  onMute
 }: {
   alert: OpsAlertStateSummary;
   acknowledging: boolean;
+  clearingMute: boolean;
+  muting: boolean;
   onAcknowledge: (alertStateId: string) => Promise<void>;
+  onClearMute: (alertStateId: string) => Promise<void>;
+  onMute: (alertStateId: string, durationHours: number) => Promise<void>;
 }) {
   const tone = alert.severity === "critical" ? "error" : "info";
 
@@ -360,6 +369,11 @@ function ActiveAlertItem({
             ? `Acknowledged ${formatDateTime(alert.acknowledgedAt)}`
             : "Not acknowledged"}
         </Pill>
+        <Pill>
+          {alert.mutedUntil
+            ? `Muted until ${formatDateTime(alert.mutedUntil)}`
+            : "Delivery active"}
+        </Pill>
       </div>
       <div className={`status-banner status-banner--${tone}`}>
         <strong>First seen {formatDateTime(alert.firstObservedAt)}</strong>
@@ -371,8 +385,8 @@ function ActiveAlertItem({
             : "not recorded"}
         </span>
       </div>
-      {!alert.acknowledgedAt ? (
-        <div className="studio-action-row">
+      <div className="studio-action-row">
+        {!alert.acknowledgedAt ? (
           <button
             className="button-action"
             disabled={acknowledging}
@@ -383,8 +397,84 @@ function ActiveAlertItem({
           >
             {acknowledging ? "Acknowledging…" : "Acknowledge alert"}
           </button>
+        ) : null}
+        <button
+          className="button-action"
+          disabled={muting || clearingMute}
+          onClick={() => {
+            void onMute(alert.id, 1);
+          }}
+          type="button"
+        >
+          {muting ? "Saving mute…" : "Mute 1h"}
+        </button>
+        <button
+          className="button-action"
+          disabled={muting || clearingMute}
+          onClick={() => {
+            void onMute(alert.id, 24);
+          }}
+          type="button"
+        >
+          {muting ? "Saving mute…" : "Mute 1d"}
+        </button>
+        <button
+          className="button-action"
+          disabled={muting || clearingMute}
+          onClick={() => {
+            void onMute(alert.id, 24 * 7);
+          }}
+          type="button"
+        >
+          {muting ? "Saving mute…" : "Mute 7d"}
+        </button>
+        {alert.mutedUntil ? (
+          <button
+            className="button-action"
+            disabled={muting || clearingMute}
+            onClick={() => {
+              void onClearMute(alert.id);
+            }}
+            type="button"
+          >
+            {clearingMute ? "Clearing mute…" : "Clear mute"}
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function ActiveMuteItem({
+  mute,
+  clearing,
+  onClear
+}: {
+  mute: OpsAlertMuteSummary;
+  clearing: boolean;
+  onClear: (code: string) => Promise<void>;
+}) {
+  return (
+    <div className="ops-activity-item">
+      <div className="ops-activity-item__header">
+        <div className="ops-activity-item__copy">
+          <strong>{mute.code}</strong>
+          <span>Muted until {formatDateTime(mute.mutedUntil)}</span>
         </div>
-      ) : null}
+        <Pill>mute</Pill>
+      </div>
+      <div className="studio-action-row">
+        <button
+          className="button-action"
+          disabled={clearing}
+          onClick={() => {
+            void onClear(mute.code);
+          }}
+          type="button"
+        >
+          {clearing ? "Clearing mute…" : "Clear mute"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -395,6 +485,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
   const [acknowledgingAlertStateId, setAcknowledgingAlertStateId] = useState<
     string | null
   >(null);
+  const [clearingMuteCode, setClearingMuteCode] = useState<string | null>(null);
+  const [mutingAlertStateId, setMutingAlertStateId] = useState<string | null>(
+    null
+  );
   const [retryingGenerationRequestId, setRetryingGenerationRequestId] =
     useState<string | null>(null);
 
@@ -475,6 +569,131 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
       });
     } finally {
       setAcknowledgingAlertStateId(null);
+    }
+  };
+
+  const muteAlertState = async (
+    alertStateId: string,
+    durationHours: number
+  ) => {
+    setMutingAlertStateId(alertStateId);
+    setNotice(null);
+
+    try {
+      const response = await fetch(`/api/ops/alerts/${alertStateId}/mute`, {
+        body: JSON.stringify({
+          durationHours
+        }),
+        headers: {
+          "content-type": "application/json"
+        },
+        method: "POST"
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const message =
+          typeof payload?.error?.message === "string"
+            ? payload.error.message
+            : "Alert mute could not be recorded.";
+
+        throw new Error(message);
+      }
+
+      setNotice({
+        message: `Alert delivery was muted for ${durationHours} hour${durationHours === 1 ? "" : "s"}.`,
+        tone: "success"
+      });
+      router.refresh();
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Alert mute could not be recorded.",
+        tone: "error"
+      });
+    } finally {
+      setMutingAlertStateId(null);
+    }
+  };
+
+  const clearAlertMuteByAlertStateId = async (alertStateId: string) => {
+    const alert = operator.history?.activeAlerts.find(
+      (activeAlert) => activeAlert.id === alertStateId
+    );
+    const muteCode = alert?.code ?? null;
+
+    setClearingMuteCode(muteCode);
+    setNotice(null);
+
+    try {
+      const response = await fetch(`/api/ops/alerts/${alertStateId}/mute`, {
+        method: "DELETE"
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const message =
+          typeof payload?.error?.message === "string"
+            ? payload.error.message
+            : "Alert mute could not be cleared.";
+
+        throw new Error(message);
+      }
+
+      setNotice({
+        message: "Alert mute was cleared on the ops surface.",
+        tone: "success"
+      });
+      router.refresh();
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Alert mute could not be cleared.",
+        tone: "error"
+      });
+    } finally {
+      setClearingMuteCode(null);
+    }
+  };
+
+  const clearAlertMuteByCode = async (code: string) => {
+    setClearingMuteCode(code);
+    setNotice(null);
+
+    try {
+      const response = await fetch(`/api/ops/alert-mutes/${code}`, {
+        method: "DELETE"
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const message =
+          typeof payload?.error?.message === "string"
+            ? payload.error.message
+            : "Alert mute could not be cleared.";
+
+        throw new Error(message);
+      }
+
+      setNotice({
+        message: "Alert mute was cleared on the ops surface.",
+        tone: "success"
+      });
+      router.refresh();
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Alert mute could not be cleared.",
+        tone: "error"
+      });
+    } finally {
+      setClearingMuteCode(null);
     }
   };
 
@@ -689,15 +908,47 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
             {history.activeAlerts.map((alert) => (
               <ActiveAlertItem
                 acknowledging={acknowledgingAlertStateId === alert.id}
+                clearingMute={clearingMuteCode === alert.code}
                 alert={alert}
                 key={alert.id}
                 onAcknowledge={acknowledgeAlertState}
+                onClearMute={clearAlertMuteByAlertStateId}
+                onMute={muteAlertState}
+                muting={mutingAlertStateId === alert.id}
               />
             ))}
           </div>
         ) : (
           <div className="asset-placeholder">
             No persisted active alerts are currently open for this operator.
+          </div>
+        )}
+      </SurfaceCard>
+      <SurfaceCard
+        body={
+          history?.status === "ok"
+            ? "Owner-scoped mute policy suppresses alert delivery for a bounded duration without hiding the underlying persisted alert state from `/ops`."
+            : (history?.message ??
+              "Muted alert policy is only loaded after the operator session resolves.")
+        }
+        eyebrow={history?.status ?? "unreachable"}
+        span={12}
+        title="Muted alert policy"
+      >
+        {history?.activeMutes.length ? (
+          <div className="ops-activity-list">
+            {history.activeMutes.map((mute) => (
+              <ActiveMuteItem
+                clearing={clearingMuteCode === mute.code}
+                key={mute.id}
+                mute={mute}
+                onClear={clearAlertMuteByCode}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="asset-placeholder">
+            No active alert mutes are configured for this operator.
           </div>
         )}
       </SurfaceCard>

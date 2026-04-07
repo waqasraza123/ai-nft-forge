@@ -75,6 +75,7 @@ model User {
   generatedAssets    GeneratedAsset[]    @relation("GeneratedAssetOwner")
   generationRequests GenerationRequest[] @relation("GenerationRequestOwner")
   opsAlertDeliveries OpsAlertDelivery[]  @relation("OpsAlertDeliveryOwner")
+  opsAlertMutes      OpsAlertMute[]      @relation("OpsAlertMuteOwner")
   acknowledgedOpsAlertStates OpsAlertState[] @relation("OpsAlertStateAcknowledgedBy")
   opsAlertStates     OpsAlertState[]     @relation("OpsAlertStateOwner")
   opsCaptures        OpsObservabilityCapture[] @relation("OpsObservabilityCaptureOwner")
@@ -308,6 +309,20 @@ model OpsAlertState {
   @@index([acknowledgedByUserId], map: "ops_alert_states_acknowledged_by_user_id_idx")
   @@index([ownerUserId, status], map: "ops_alert_states_owner_user_id_status_idx")
   @@map("ops_alert_states")
+}
+
+model OpsAlertMute {
+  id          String   @id @default(cuid()) @map("id")
+  ownerUserId String   @map("owner_user_id")
+  code        String   @map("code")
+  mutedUntil  DateTime @map("muted_until")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  ownerUser   User     @relation("OpsAlertMuteOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerUserId, code], map: "ops_alert_mutes_owner_user_id_code_key")
+  @@index([ownerUserId, mutedUntil], map: "ops_alert_mutes_owner_user_id_muted_until_idx")
+  @@map("ops_alert_mutes")
 }
 
 model OpsAlertDelivery {

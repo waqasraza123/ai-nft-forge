@@ -4,6 +4,7 @@ import { createAuthSessionRepository } from "./auth-session-repository.js";
 import { createGeneratedAssetRepository } from "./generated-asset-repository.js";
 import { createGenerationRequestRepository } from "./generation-request-repository.js";
 import { createOpsAlertDeliveryRepository } from "./ops-alert-delivery-repository.js";
+import { createOpsAlertMuteRepository } from "./ops-alert-mute-repository.js";
 import { createOpsAlertStateRepository } from "./ops-alert-state-repository.js";
 import { createOpsObservabilityCaptureRepository } from "./ops-observability-capture-repository.js";
 import { createSourceAssetRepository } from "./source-asset-repository.js";
@@ -635,5 +636,120 @@ describe("database repositories", () => {
     });
     expect(created.id).toBe("alert_delivery_1");
     expect(deliveries[0]?.id).toBe("alert_delivery_1");
+  });
+
+  it("delegates active alert mute persistence through the ops alert mute repository", async () => {
+    const database = {
+      opsAlertMute: {
+        deleteMany: vi.fn().mockResolvedValue({
+          count: 1
+        }),
+        findFirst: vi.fn().mockResolvedValue({
+          id: "mute_1"
+        }),
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "mute_1"
+          }
+        ]),
+        upsert: vi.fn().mockResolvedValue({
+          code: "QUEUE_STALLED",
+          id: "mute_1",
+          mutedUntil: new Date("2026-04-08T09:00:00.000Z"),
+          ownerUserId: "user_1"
+        })
+      }
+    };
+    const repository = createOpsAlertMuteRepository(database as never);
+    const observedAt = new Date("2026-04-07T09:00:00.000Z");
+    const mutedUntil = new Date("2026-04-08T09:00:00.000Z");
+
+    const mute = await repository.upsert({
+      code: "QUEUE_STALLED",
+      mutedUntil,
+      ownerUserId: "user_1"
+    });
+    const activeMute = await repository.findActiveByOwnerUserIdAndCode({
+      code: "QUEUE_STALLED",
+      observedAt,
+      ownerUserId: "user_1"
+    });
+    const activeMutes = await repository.listActiveByOwnerUserId({
+      observedAt,
+      ownerUserId: "user_1"
+    });
+    const activeMutesByCode = await repository.listActiveByOwnerUserIdAndCodes({
+      codes: ["QUEUE_STALLED"],
+      observedAt,
+      ownerUserId: "user_1"
+    });
+    const deleted = await repository.deleteByOwnerUserIdAndCode({
+      code: "QUEUE_STALLED",
+      ownerUserId: "user_1"
+    });
+
+    expect(database.opsAlertMute.upsert).toHaveBeenCalledWith({
+      create: {
+        code: "QUEUE_STALLED",
+        mutedUntil,
+        ownerUserId: "user_1"
+      },
+      update: {
+        mutedUntil
+      },
+      where: {
+        ownerUserId_code: {
+          code: "QUEUE_STALLED",
+          ownerUserId: "user_1"
+        }
+      }
+    });
+    expect(database.opsAlertMute.findFirst).toHaveBeenCalledWith({
+      where: {
+        code: "QUEUE_STALLED",
+        mutedUntil: {
+          gt: observedAt
+        },
+        ownerUserId: "user_1"
+      }
+    });
+    expect(database.opsAlertMute.findMany).toHaveBeenNthCalledWith(1, {
+      orderBy: [
+        {
+          mutedUntil: "desc"
+        },
+        {
+          id: "desc"
+        }
+      ],
+      where: {
+        mutedUntil: {
+          gt: observedAt
+        },
+        ownerUserId: "user_1"
+      }
+    });
+    expect(database.opsAlertMute.findMany).toHaveBeenNthCalledWith(2, {
+      where: {
+        code: {
+          in: ["QUEUE_STALLED"]
+        },
+        mutedUntil: {
+          gt: observedAt
+        },
+        ownerUserId: "user_1"
+      }
+    });
+    expect(database.opsAlertMute.deleteMany).toHaveBeenCalledWith({
+      where: {
+        code: "QUEUE_STALLED",
+        ownerUserId: "user_1"
+      }
+    });
+    expect(mute.id).toBe("mute_1");
+    expect(activeMute?.id).toBe("mute_1");
+    expect(activeMutes[0]?.id).toBe("mute_1");
+    expect(activeMutesByCode[0]?.id).toBe("mute_1");
+    expect(deleted.count).toBe(1);
   });
 });

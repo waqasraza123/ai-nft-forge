@@ -86,6 +86,12 @@ type CaptureSummary = {
 
 type OpsAlertDeliveryChannel = "audit_log" | "webhook";
 
+type AlertMuteRecord = {
+  code: string;
+  id: string;
+  mutedUntil: Date;
+};
+
 type AlertStateRecord = {
   acknowledgedAt: Date | null;
   acknowledgedByUserId: string | null;
@@ -134,6 +140,13 @@ type OpsObservabilityCaptureServiceDependencies = {
   loadQueueSnapshot: () => Promise<QueueSnapshot>;
   logger: Logger;
   now: () => Date;
+  opsAlertMuteRepository: {
+    listActiveByOwnerUserIdAndCodes(input: {
+      codes: string[];
+      observedAt: Date;
+      ownerUserId: string;
+    }): Promise<AlertMuteRecord[]>;
+  };
   opsAlertDeliveryRepository: {
     create(input: {
       alertStateId: string;
@@ -645,7 +658,9 @@ function shouldDeliverAlert(input: {
     input.existingState.status !== "active" ||
     input.existingState.message !== input.alert.message ||
     input.existingState.title !== input.alert.title ||
-    input.existingState.severity !== input.alert.severity
+    input.existingState.severity !== input.alert.severity ||
+    (input.existingState.lastDeliveredAt === null &&
+      input.existingState.acknowledgedAt === null)
   );
 }
 
@@ -735,8 +750,19 @@ export function createOpsObservabilityCaptureService(
             codes: alerts.map((alert) => alert.code),
             ownerUserId
           });
+        const activeMutes =
+          await dependencies.opsAlertMuteRepository.listActiveByOwnerUserIdAndCodes(
+            {
+              codes: alerts.map((alert) => alert.code),
+              observedAt: referenceTime,
+              ownerUserId
+            }
+          );
         const existingStateByCode = new Map(
           existingStates.map((state) => [state.code, state])
+        );
+        const activeMuteByCode = new Map(
+          activeMutes.map((mute) => [mute.code, mute])
         );
         const currentAlertCodeSet = new Set(alerts.map((alert) => alert.code));
 
@@ -758,6 +784,7 @@ export function createOpsObservabilityCaptureService(
             alert,
             existingState
           });
+          const activeMute = activeMuteByCode.get(alert.code);
           const alertState = existingState
             ? await dependencies.opsAlertStateRepository.update({
                 ...(deliverAlert
@@ -782,7 +809,7 @@ export function createOpsObservabilityCaptureService(
                 title: alert.title
               });
 
-          if (!deliverAlert) {
+          if (!deliverAlert || activeMute) {
             continue;
           }
 

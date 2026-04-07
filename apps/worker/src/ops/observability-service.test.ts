@@ -71,6 +71,9 @@ describe("createOpsObservabilityCaptureService", () => {
     const opsAlertDeliveryRepository = {
       create: vi.fn().mockResolvedValue({})
     };
+    const opsAlertMuteRepository = {
+      listActiveByOwnerUserIdAndCodes: vi.fn().mockResolvedValue([])
+    };
     const opsAlertStateRepository = {
       createActive: vi.fn().mockResolvedValue({
         acknowledgedAt: null,
@@ -119,6 +122,7 @@ describe("createOpsObservabilityCaptureService", () => {
       }),
       logger,
       now: () => new Date("2026-04-07T09:00:00.000Z"),
+      opsAlertMuteRepository,
       opsAlertDeliveryRepository,
       opsAlertStateRepository,
       opsObservabilityCaptureRepository
@@ -260,6 +264,9 @@ describe("createOpsObservabilityCaptureService", () => {
       }),
       logger: createLogger(),
       now: () => new Date("2026-04-07T09:00:00.000Z"),
+      opsAlertMuteRepository: {
+        listActiveByOwnerUserIdAndCodes: vi.fn().mockResolvedValue([])
+      },
       opsAlertDeliveryRepository: {
         create: vi.fn()
       },
@@ -297,6 +304,9 @@ describe("createOpsObservabilityCaptureService", () => {
     };
     const opsAlertDeliveryRepository = {
       create: vi.fn().mockResolvedValue({})
+    };
+    const opsAlertMuteRepository = {
+      listActiveByOwnerUserIdAndCodes: vi.fn().mockResolvedValue([])
     };
     const opsAlertStateRepository = {
       createActive: vi.fn().mockResolvedValue({
@@ -353,6 +363,7 @@ describe("createOpsObservabilityCaptureService", () => {
       }),
       logger: createLogger(),
       now: () => new Date("2026-04-07T09:00:00.000Z"),
+      opsAlertMuteRepository,
       opsAlertDeliveryRepository,
       opsAlertStateRepository,
       opsObservabilityCaptureRepository: {
@@ -379,6 +390,102 @@ describe("createOpsObservabilityCaptureService", () => {
       captureCount: 1,
       deliveredAlertCount: 1,
       failedDeliveryCount: 1,
+      ownerCount: 1,
+      resolvedAlertCount: 0
+    });
+  });
+
+  it("suppresses alert delivery while an owner-scoped mute is active", async () => {
+    const auditLogRepository = {
+      create: vi.fn().mockResolvedValue({})
+    };
+    const alertWebhookDelivery = {
+      deliver: vi.fn().mockResolvedValue(undefined),
+      enabled: true
+    };
+    const opsAlertDeliveryRepository = {
+      create: vi.fn().mockResolvedValue({})
+    };
+    const opsAlertStateRepository = {
+      createActive: vi.fn().mockResolvedValue({
+        acknowledgedAt: null,
+        acknowledgedByUserId: null,
+        code: "QUEUE_STALLED",
+        id: "alert_state_1",
+        lastDeliveredAt: null,
+        message: "1 generation jobs are waiting while no jobs are active.",
+        severity: "critical",
+        status: "active",
+        title: "The generation queue appears stalled."
+      }),
+      listActiveByOwnerUserId: vi.fn().mockResolvedValue([]),
+      listByOwnerUserIdAndCodes: vi.fn().mockResolvedValue([]),
+      markResolved: vi.fn(),
+      setLastDeliveredAt: vi.fn().mockResolvedValue({}),
+      update: vi.fn()
+    };
+    const service = createOpsObservabilityCaptureService({
+      alertWebhookDelivery,
+      auditLogRepository,
+      generationRequestRepository: {
+        findOldestForOwnerUserId: vi
+          .fn()
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce(null),
+        listDistinctOwnerUserIds: vi.fn().mockResolvedValue(["user_1"]),
+        listRecentForOwnerUserIdSince: vi
+          .fn()
+          .mockResolvedValueOnce([])
+          .mockResolvedValueOnce([])
+      },
+      loadBackendReadiness: vi.fn().mockResolvedValue({
+        message: "ComfyUI API responded to the readiness probe.",
+        status: "ready"
+      }),
+      loadQueueSnapshot: vi.fn().mockResolvedValue({
+        concurrency: 1,
+        counts: {
+          active: 0,
+          completed: 3,
+          delayed: 0,
+          failed: 1,
+          paused: 0,
+          waiting: 1
+        },
+        message: "Generation dispatch queue metrics loaded from Redis.",
+        status: "ok",
+        workerAdapter: "http_backend"
+      }),
+      logger: createLogger(),
+      now: () => new Date("2026-04-07T09:00:00.000Z"),
+      opsAlertMuteRepository: {
+        listActiveByOwnerUserIdAndCodes: vi.fn().mockResolvedValue([
+          {
+            code: "QUEUE_STALLED",
+            id: "mute_1",
+            mutedUntil: new Date("2026-04-07T10:00:00.000Z")
+          }
+        ])
+      },
+      opsAlertDeliveryRepository,
+      opsAlertStateRepository,
+      opsObservabilityCaptureRepository: {
+        create: vi.fn().mockResolvedValue({
+          id: "capture_1"
+        })
+      }
+    });
+
+    const summary = await service.captureAllOwnerObservability();
+
+    expect(auditLogRepository.create).not.toHaveBeenCalled();
+    expect(alertWebhookDelivery.deliver).not.toHaveBeenCalled();
+    expect(opsAlertDeliveryRepository.create).not.toHaveBeenCalled();
+    expect(opsAlertStateRepository.setLastDeliveredAt).not.toHaveBeenCalled();
+    expect(summary).toEqual({
+      captureCount: 1,
+      deliveredAlertCount: 0,
+      failedDeliveryCount: 0,
       ownerCount: 1,
       resolvedAlertCount: 0
     });
