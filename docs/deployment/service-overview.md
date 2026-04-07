@@ -2,8 +2,8 @@
 
 ## Runtime Services
 
-- Web app: `apps/web` serves marketing, studio, public placeholder, live ops diagnostics, persisted ops history and alert-delivery read models, authenticated ops queue/activity controls, rolling owner-scoped ops metrics, synthesized operator alerts, health, auth, the interactive studio asset workflow, source asset list and intake routes, generation dispatch, failed-generation retry, and protected generated-output download-intent routes.
-- Worker: `apps/worker` owns asynchronous job execution and queue consumers, including generation request processing, generated output materialization, optional external HTTP backend delegation, and the persisted ops observability capture command used for scheduled history and alert delivery.
+- Web app: `apps/web` serves marketing, studio, public placeholder, live ops diagnostics, persisted ops history and multi-channel alert-delivery read models, active-alert acknowledgment controls, capture-automation status, authenticated ops queue/activity controls, rolling owner-scoped ops metrics, synthesized operator alerts, health, auth, the interactive studio asset workflow, source asset list and intake routes, generation dispatch, failed-generation retry, and protected generated-output download-intent routes.
+- Worker: `apps/worker` owns asynchronous job execution and queue consumers, including generation request processing, generated output materialization, optional external HTTP backend delegation, and both the one-shot and interval-scheduled persisted ops observability capture path used for history and multi-channel alert delivery.
 - Generation backend: `apps/generation-backend` serves `POST /generate`, `GET /health`, and `GET /ready`, authenticates worker requests when configured, reads source objects, selects either a deterministic or ComfyUI provider, and writes completed output variants into private object storage.
 - PostgreSQL: system of record for auth, workspaces, brands, source assets, generation requests, generated assets, persisted ops observability captures, alert state, alert delivery records, and audit data.
 - Redis: queue backend for BullMQ.
@@ -21,6 +21,8 @@
 - Web health route: `GET /api/health`
 - Worker health command: `pnpm worker:health`
 - Worker ops observability capture command: `pnpm --filter @ai-nft-forge/worker ops:capture`
+- Worker ops observability capture scheduler: `OPS_OBSERVABILITY_CAPTURE_SCHEDULE_ENABLED=true` on `apps/worker`
+- Worker outbound alert webhook: `OPS_ALERT_WEBHOOK_ENABLED=true` with `OPS_ALERT_WEBHOOK_URL`
 - Generation backend health command: `pnpm generation-backend:health`
 - Generation backend readiness command: `pnpm generation-backend:ready`
 - Database validation: `pnpm prisma:validate`

@@ -8,6 +8,8 @@ import { MetricTile, Pill, SurfaceCard, SurfaceGrid } from "@ai-nft-forge/ui";
 
 import type {
   OpsAlertDeliverySummary,
+  OpsAlertStateSummary,
+  OpsCaptureAutomation,
   OpsGenerationWindowSummary,
   OpsGenerationActivitySummary,
   OpsPersistedCaptureSummary,
@@ -112,6 +114,18 @@ function resolveStatusBannerTone(
   }
 
   return "success";
+}
+
+function resolveAutomationBannerTone(status: OpsCaptureAutomation["status"]) {
+  if (status === "healthy") {
+    return "success";
+  }
+
+  if (status === "disabled") {
+    return "info";
+  }
+
+  return "error";
 }
 
 function renderActivityTiming(activity: OpsGenerationActivitySummary) {
@@ -311,9 +325,66 @@ function AlertDeliveryItem({
         </strong>
         <span>
           {delivery.failureMessage ??
-            "This alert was persisted through the audit-log delivery channel."}
+            "This alert was persisted through an operator delivery channel."}
         </span>
       </div>
+    </div>
+  );
+}
+
+function ActiveAlertItem({
+  alert,
+  acknowledging,
+  onAcknowledge
+}: {
+  alert: OpsAlertStateSummary;
+  acknowledging: boolean;
+  onAcknowledge: (alertStateId: string) => Promise<void>;
+}) {
+  const tone = alert.severity === "critical" ? "error" : "info";
+
+  return (
+    <div className="ops-activity-item">
+      <div className="ops-activity-item__header">
+        <div className="ops-activity-item__copy">
+          <strong>{alert.title}</strong>
+          <span>{alert.message}</span>
+        </div>
+        <Pill>{alert.severity}</Pill>
+      </div>
+      <div className="pill-row">
+        <Pill>{alert.code}</Pill>
+        <Pill>{alert.status}</Pill>
+        <Pill>
+          {alert.acknowledgedAt
+            ? `Acknowledged ${formatDateTime(alert.acknowledgedAt)}`
+            : "Not acknowledged"}
+        </Pill>
+      </div>
+      <div className={`status-banner status-banner--${tone}`}>
+        <strong>First seen {formatDateTime(alert.firstObservedAt)}</strong>
+        <span>Last seen {formatDateTime(alert.lastObservedAt)}</span>
+        <span>
+          Last delivered{" "}
+          {alert.lastDeliveredAt
+            ? formatDateTime(alert.lastDeliveredAt)
+            : "not recorded"}
+        </span>
+      </div>
+      {!alert.acknowledgedAt ? (
+        <div className="studio-action-row">
+          <button
+            className="button-action"
+            disabled={acknowledging}
+            onClick={() => {
+              void onAcknowledge(alert.id);
+            }}
+            type="button"
+          >
+            {acknowledging ? "Acknowledging…" : "Acknowledge alert"}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -321,6 +392,9 @@ function AlertDeliveryItem({
 export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
   const router = useRouter();
   const [notice, setNotice] = useState<NoticeState>(null);
+  const [acknowledgingAlertStateId, setAcknowledgingAlertStateId] = useState<
+    string | null
+  >(null);
   const [retryingGenerationRequestId, setRetryingGenerationRequestId] =
     useState<string | null>(null);
 
@@ -364,6 +438,46 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
     }
   };
 
+  const acknowledgeAlertState = async (alertStateId: string) => {
+    setAcknowledgingAlertStateId(alertStateId);
+    setNotice(null);
+
+    try {
+      const response = await fetch(
+        `/api/ops/alerts/${alertStateId}/acknowledge`,
+        {
+          method: "POST"
+        }
+      );
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const message =
+          typeof payload?.error?.message === "string"
+            ? payload.error.message
+            : "Alert acknowledgment could not be recorded.";
+
+        throw new Error(message);
+      }
+
+      setNotice({
+        message: "Alert acknowledgment was recorded on the ops surface.",
+        tone: "success"
+      });
+      router.refresh();
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Alert acknowledgment could not be recorded.",
+        tone: "error"
+      });
+    } finally {
+      setAcknowledgingAlertStateId(null);
+    }
+  };
+
   if (!operator.session) {
     return (
       <SurfaceGrid>
@@ -390,10 +504,14 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
 
   const queue = operator.queue;
   const activity = operator.activity;
+  const captureAutomation = operator.captureAutomation;
   const history = operator.history;
   const observability = operator.observability;
   const observabilityTone = resolveStatusBannerTone(
     observability?.status ?? "unreachable"
+  );
+  const captureAutomationTone = resolveAutomationBannerTone(
+    captureAutomation?.status ?? "unreachable"
   );
 
   return (
@@ -489,6 +607,102 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
       </SurfaceCard>
       <SurfaceCard
         body={
+          captureAutomation?.status === "healthy"
+            ? "Worker-owned automation now persists observability captures on a recurring cadence while Redis lease coordination suppresses duplicate runs across replicas."
+            : (captureAutomation?.message ??
+              "Ops capture automation is only evaluated after the operator session resolves.")
+        }
+        eyebrow={captureAutomation?.status ?? "unreachable"}
+        span={12}
+        title="Capture automation"
+      >
+        {captureAutomation ? (
+          <>
+            <div
+              className={`status-banner status-banner--${captureAutomationTone}`}
+            >
+              <strong>{captureAutomation.status}</strong>
+              <span>{captureAutomation.message}</span>
+            </div>
+            <div className="pill-row">
+              <Pill>
+                {captureAutomation.enabled
+                  ? "Scheduler enabled"
+                  : "Manual only"}
+              </Pill>
+              <Pill>
+                Interval{" "}
+                {captureAutomation.intervalSeconds !== null
+                  ? formatDurationSeconds(captureAutomation.intervalSeconds)
+                  : "n/a"}
+              </Pill>
+              <Pill>
+                Jitter{" "}
+                {captureAutomation.jitterSeconds !== null
+                  ? formatDurationSeconds(captureAutomation.jitterSeconds)
+                  : "n/a"}
+              </Pill>
+              <Pill>
+                Lock TTL{" "}
+                {captureAutomation.lockTtlSeconds !== null
+                  ? formatDurationSeconds(captureAutomation.lockTtlSeconds)
+                  : "n/a"}
+              </Pill>
+              <Pill>
+                {captureAutomation.runOnStart === null
+                  ? "Run-on-start n/a"
+                  : captureAutomation.runOnStart
+                    ? "Runs on startup"
+                    : "Startup capture disabled"}
+              </Pill>
+              <Pill>
+                Last capture{" "}
+                {captureAutomation.lastCaptureAgeSeconds !== null
+                  ? `${formatDurationSeconds(captureAutomation.lastCaptureAgeSeconds)} ago`
+                  : "n/a"}
+              </Pill>
+            </div>
+            <div className="ops-activity-meta">
+              <span>
+                Latest persisted capture{" "}
+                {captureAutomation.lastCapturedAt
+                  ? formatDateTime(captureAutomation.lastCapturedAt)
+                  : "not available"}
+              </span>
+            </div>
+          </>
+        ) : null}
+      </SurfaceCard>
+      <SurfaceCard
+        body={
+          history?.status === "ok"
+            ? "Persisted active alerts survive beyond one page load, carry explicit acknowledgment state, and clear automatically when the underlying worker-owned alert condition resolves or materially changes."
+            : (history?.message ??
+              "Persisted active alerts are only loaded after the operator session resolves.")
+        }
+        eyebrow={history?.status ?? "unreachable"}
+        span={12}
+        title="Active persisted alerts"
+      >
+        {history?.activeAlerts.length ? (
+          <div className="ops-activity-list">
+            {history.activeAlerts.map((alert) => (
+              <ActiveAlertItem
+                acknowledging={acknowledgingAlertStateId === alert.id}
+                alert={alert}
+                key={alert.id}
+                onAcknowledge={acknowledgeAlertState}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="asset-placeholder">
+            No persisted active alerts are currently open for this operator.
+          </div>
+        )}
+      </SurfaceCard>
+      <SurfaceCard
+        body={
           history?.status === "ok"
             ? "Persisted captures retain multi-day observability checkpoints so operators can review how alert state, queue pressure, and recent generation windows changed over time."
             : (history?.message ??
@@ -514,7 +728,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
       <SurfaceCard
         body={
           history?.status === "ok"
-            ? "Delivered alert records persist the operator-facing alert timeline instead of limiting diagnosis to whatever is active on the current request."
+            ? "Delivered alert records persist the operator-facing alert timeline across internal audit-log and external webhook channels instead of limiting diagnosis to whatever is active on the current request."
             : (history?.message ??
               "Recent alert delivery history could not be loaded for this operator.")
         }

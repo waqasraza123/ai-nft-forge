@@ -1,10 +1,12 @@
 import {
   createOpsAlertDeliveryRepository,
+  createOpsAlertStateRepository,
   createGenerationRequestRepository,
   createOpsObservabilityCaptureRepository,
   getDatabaseClient
 } from "@ai-nft-forge/database";
 import {
+  opsAlertStateSummarySchema,
   generationBackendHealthResponseSchema,
   generationBackendReadinessResponseSchema,
   generationQueueNames,
@@ -176,7 +178,7 @@ export type OpsAlertDeliverySummary = {
   code: string;
   createdAt: string;
   deliveredAt: string | null;
-  deliveryChannel: "audit_log";
+  deliveryChannel: "audit_log" | "webhook";
   deliveryState: "delivered" | "failed";
   failureMessage: string | null;
   id: string;
@@ -185,7 +187,34 @@ export type OpsAlertDeliverySummary = {
   title: string;
 };
 
+export type OpsAlertStateSummary = {
+  acknowledgedAt: string | null;
+  acknowledgedByUserId: string | null;
+  code: string;
+  firstObservedAt: string;
+  id: string;
+  lastDeliveredAt: string | null;
+  lastObservedAt: string;
+  message: string;
+  severity: "critical" | "warning";
+  status: "active" | "resolved";
+  title: string;
+};
+
+export type OpsCaptureAutomation = {
+  enabled: boolean;
+  intervalSeconds: number | null;
+  jitterSeconds: number | null;
+  lastCaptureAgeSeconds: number | null;
+  lastCapturedAt: string | null;
+  lockTtlSeconds: number | null;
+  message: string;
+  runOnStart: boolean | null;
+  status: "disabled" | "healthy" | "stale" | "unreachable";
+};
+
 type OwnerPersistedObservabilityHistory = {
+  activeAlerts: OpsAlertStateSummary[];
   captures: OpsPersistedCaptureSummary[];
   deliveries: OpsAlertDeliverySummary[];
   message: string;
@@ -204,6 +233,7 @@ export type OpsRuntimeSnapshot = {
   };
   operator: {
     activity: OwnerGenerationActivity | null;
+    captureAutomation: OpsCaptureAutomation | null;
     history: OwnerPersistedObservabilityHistory | null;
     observability: OpsOperatorObservability | null;
     queue: OpsQueueSnapshot | null;
@@ -254,6 +284,9 @@ type PersistedCaptureRepository = ReturnType<
 type PersistedAlertDeliveryRepository = ReturnType<
   typeof createOpsAlertDeliveryRepository
 >;
+type PersistedAlertStateRepository = ReturnType<
+  typeof createOpsAlertStateRepository
+>;
 
 type GenerationActivityRecord = Awaited<
   ReturnType<GenerationActivityRepository["listRecentForOwnerUserId"]>
@@ -263,6 +296,9 @@ type PersistedCaptureRecord = Awaited<
 >[number];
 type PersistedAlertDeliveryRecord = Awaited<
   ReturnType<PersistedAlertDeliveryRepository["listRecentForOwnerUserId"]>
+>[number];
+type PersistedAlertStateRecord = Awaited<
+  ReturnType<PersistedAlertStateRepository["listActiveByOwnerUserId"]>
 >[number];
 
 type OwnerGenerationMetrics = {
@@ -493,6 +529,12 @@ function createPersistedAlertDeliveryRepository(
   return createOpsAlertDeliveryRepository(getDatabaseClient(rawEnvironment));
 }
 
+function createPersistedAlertStateRepository(
+  rawEnvironment: NodeJS.ProcessEnv
+) {
+  return createOpsAlertStateRepository(getDatabaseClient(rawEnvironment));
+}
+
 function createPercentage(numerator: number, denominator: number) {
   if (denominator <= 0) {
     return null;
@@ -651,6 +693,24 @@ function serializeAlertDelivery(
     severity: delivery.severity,
     title: delivery.title
   };
+}
+
+function serializeAlertState(
+  alertState: PersistedAlertStateRecord
+): OpsAlertStateSummary {
+  return opsAlertStateSummarySchema.parse({
+    acknowledgedAt: alertState.acknowledgedAt?.toISOString() ?? null,
+    acknowledgedByUserId: alertState.acknowledgedByUserId,
+    code: alertState.code,
+    firstObservedAt: alertState.firstObservedAt.toISOString(),
+    id: alertState.id,
+    lastDeliveredAt: alertState.lastDeliveredAt?.toISOString() ?? null,
+    lastObservedAt: alertState.lastObservedAt.toISOString(),
+    message: alertState.message,
+    severity: alertState.severity,
+    status: alertState.status,
+    title: alertState.title
+  });
 }
 
 async function loadOwnerGenerationActivity(input: {
@@ -978,10 +1038,14 @@ async function loadOwnerPersistedObservabilityHistory(input: {
     const captureRepository = createPersistedCaptureRepository(
       input.rawEnvironment
     );
+    const alertStateRepository = createPersistedAlertStateRepository(
+      input.rawEnvironment
+    );
     const alertDeliveryRepository = createPersistedAlertDeliveryRepository(
       input.rawEnvironment
     );
-    const [captures, deliveries] = await Promise.all([
+    const [activeAlerts, captures, deliveries] = await Promise.all([
+      alertStateRepository.listActiveByOwnerUserId(input.ownerUserId),
       captureRepository.listRecentForOwnerUserId({
         limit: 7,
         ownerUserId: input.ownerUserId
@@ -993,6 +1057,7 @@ async function loadOwnerPersistedObservabilityHistory(input: {
     ]);
 
     return {
+      activeAlerts: activeAlerts.map(serializeAlertState),
       captures: captures.map(serializePersistedCapture),
       deliveries: deliveries.map(serializeAlertDelivery),
       message:
@@ -1001,12 +1066,123 @@ async function loadOwnerPersistedObservabilityHistory(input: {
     };
   } catch (error) {
     return {
+      activeAlerts: [],
       captures: [],
       deliveries: [],
       message:
         error instanceof Error
           ? error.message
           : "Persisted observability history could not be loaded.",
+      status: "unreachable"
+    };
+  }
+}
+
+function loadOpsCaptureAutomation(input: {
+  history: OwnerPersistedObservabilityHistory | null;
+  rawEnvironment: NodeJS.ProcessEnv;
+  referenceTime: Date;
+}): OpsCaptureAutomation {
+  try {
+    const workerEnv = parseWorkerEnv(input.rawEnvironment);
+    const latestCapture = input.history?.captures[0] ?? null;
+    const lastCapturedAt = latestCapture?.capturedAt ?? null;
+    const lastCaptureAgeSeconds = lastCapturedAt
+      ? createAgeSeconds(new Date(lastCapturedAt), input.referenceTime)
+      : null;
+
+    if (!workerEnv.OPS_OBSERVABILITY_CAPTURE_SCHEDULE_ENABLED) {
+      return {
+        enabled: false,
+        intervalSeconds: workerEnv.OPS_OBSERVABILITY_CAPTURE_INTERVAL_SECONDS,
+        jitterSeconds: workerEnv.OPS_OBSERVABILITY_CAPTURE_JITTER_SECONDS,
+        lastCaptureAgeSeconds,
+        lastCapturedAt,
+        lockTtlSeconds: workerEnv.OPS_OBSERVABILITY_CAPTURE_LOCK_TTL_SECONDS,
+        message:
+          "Automatic capture scheduling is disabled. Run ops:capture manually or from an external scheduler.",
+        runOnStart: workerEnv.OPS_OBSERVABILITY_CAPTURE_RUN_ON_START,
+        status: "disabled"
+      };
+    }
+
+    if (input.history?.status === "unreachable") {
+      return {
+        enabled: true,
+        intervalSeconds: workerEnv.OPS_OBSERVABILITY_CAPTURE_INTERVAL_SECONDS,
+        jitterSeconds: workerEnv.OPS_OBSERVABILITY_CAPTURE_JITTER_SECONDS,
+        lastCaptureAgeSeconds: null,
+        lastCapturedAt: null,
+        lockTtlSeconds: workerEnv.OPS_OBSERVABILITY_CAPTURE_LOCK_TTL_SECONDS,
+        message:
+          "Automatic capture scheduling is enabled, but persisted history could not be loaded to verify the latest run.",
+        runOnStart: workerEnv.OPS_OBSERVABILITY_CAPTURE_RUN_ON_START,
+        status: "unreachable"
+      };
+    }
+
+    if (!lastCapturedAt || lastCaptureAgeSeconds === null) {
+      return {
+        enabled: true,
+        intervalSeconds: workerEnv.OPS_OBSERVABILITY_CAPTURE_INTERVAL_SECONDS,
+        jitterSeconds: workerEnv.OPS_OBSERVABILITY_CAPTURE_JITTER_SECONDS,
+        lastCaptureAgeSeconds: null,
+        lastCapturedAt: null,
+        lockTtlSeconds: workerEnv.OPS_OBSERVABILITY_CAPTURE_LOCK_TTL_SECONDS,
+        message:
+          "Automatic capture scheduling is enabled, but no persisted captures are available yet.",
+        runOnStart: workerEnv.OPS_OBSERVABILITY_CAPTURE_RUN_ON_START,
+        status: "stale"
+      };
+    }
+
+    const staleThresholdSeconds =
+      workerEnv.OPS_OBSERVABILITY_CAPTURE_INTERVAL_SECONDS +
+      workerEnv.OPS_OBSERVABILITY_CAPTURE_JITTER_SECONDS +
+      Math.max(
+        60,
+        Math.round(workerEnv.OPS_OBSERVABILITY_CAPTURE_INTERVAL_SECONDS / 2)
+      );
+
+    if (lastCaptureAgeSeconds > staleThresholdSeconds) {
+      return {
+        enabled: true,
+        intervalSeconds: workerEnv.OPS_OBSERVABILITY_CAPTURE_INTERVAL_SECONDS,
+        jitterSeconds: workerEnv.OPS_OBSERVABILITY_CAPTURE_JITTER_SECONDS,
+        lastCaptureAgeSeconds,
+        lastCapturedAt,
+        lockTtlSeconds: workerEnv.OPS_OBSERVABILITY_CAPTURE_LOCK_TTL_SECONDS,
+        message: `Automatic capture scheduling is enabled, but the most recent persisted capture is ${lastCaptureAgeSeconds}s old.`,
+        runOnStart: workerEnv.OPS_OBSERVABILITY_CAPTURE_RUN_ON_START,
+        status: "stale"
+      };
+    }
+
+    return {
+      enabled: true,
+      intervalSeconds: workerEnv.OPS_OBSERVABILITY_CAPTURE_INTERVAL_SECONDS,
+      jitterSeconds: workerEnv.OPS_OBSERVABILITY_CAPTURE_JITTER_SECONDS,
+      lastCaptureAgeSeconds,
+      lastCapturedAt,
+      lockTtlSeconds: workerEnv.OPS_OBSERVABILITY_CAPTURE_LOCK_TTL_SECONDS,
+      message:
+        "Automatic capture scheduling is active and recent persisted history is arriving on schedule.",
+      runOnStart: workerEnv.OPS_OBSERVABILITY_CAPTURE_RUN_ON_START,
+      status: "healthy"
+    };
+  } catch (error) {
+    return {
+      enabled: false,
+      intervalSeconds: null,
+      jitterSeconds: null,
+      lastCaptureAgeSeconds: null,
+      lastCapturedAt: null,
+      lockTtlSeconds: null,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Ops capture automation could not be evaluated.",
+      runOnStart: null,
       status: "unreachable"
     };
   }
@@ -1074,6 +1250,7 @@ export async function loadOpsRuntime(
 
   let operatorQueue: OpsQueueSnapshot | null = null;
   let operatorActivity: OwnerGenerationActivity | null = null;
+  let operatorCaptureAutomation: OpsCaptureAutomation | null = null;
   let operatorHistory: OwnerPersistedObservabilityHistory | null = null;
   let operatorObservability: OpsOperatorObservability | null = null;
 
@@ -1109,6 +1286,11 @@ export async function loadOpsRuntime(
       rawEnvironment,
       referenceTime
     });
+    operatorCaptureAutomation = loadOpsCaptureAutomation({
+      history: operatorHistory,
+      rawEnvironment,
+      referenceTime
+    });
   }
 
   return {
@@ -1123,6 +1305,7 @@ export async function loadOpsRuntime(
     },
     operator: {
       activity: operatorActivity,
+      captureAutomation: operatorCaptureAutomation,
       history: operatorHistory,
       observability: operatorObservability,
       queue: operatorQueue,

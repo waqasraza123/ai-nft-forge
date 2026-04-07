@@ -56,6 +56,7 @@ enum OpsAlertStateStatus {
 
 enum OpsAlertDeliveryChannel {
   audit_log
+  webhook
 }
 
 enum OpsAlertDeliveryState {
@@ -74,6 +75,7 @@ model User {
   generatedAssets    GeneratedAsset[]    @relation("GeneratedAssetOwner")
   generationRequests GenerationRequest[] @relation("GenerationRequestOwner")
   opsAlertDeliveries OpsAlertDelivery[]  @relation("OpsAlertDeliveryOwner")
+  acknowledgedOpsAlertStates OpsAlertState[] @relation("OpsAlertStateAcknowledgedBy")
   opsAlertStates     OpsAlertState[]     @relation("OpsAlertStateOwner")
   opsCaptures        OpsObservabilityCapture[] @relation("OpsObservabilityCaptureOwner")
   opsWindowSnapshots OpsGenerationWindowSnapshot[] @relation("OpsGenerationWindowSnapshotOwner")
@@ -283,23 +285,27 @@ model OpsGenerationWindowSnapshot {
 }
 
 model OpsAlertState {
-  id              String              @id @default(cuid()) @map("id")
-  ownerUserId     String              @map("owner_user_id")
-  code            String              @map("code")
-  severity        OpsAlertSeverity    @map("severity")
-  title           String              @map("title")
-  message         String              @map("message")
-  status          OpsAlertStateStatus @default(active) @map("status")
-  firstObservedAt DateTime            @map("first_observed_at")
-  lastObservedAt  DateTime            @map("last_observed_at")
-  lastDeliveredAt DateTime?           @map("last_delivered_at")
-  resolvedAt      DateTime?           @map("resolved_at")
-  createdAt       DateTime            @default(now()) @map("created_at")
-  updatedAt       DateTime            @updatedAt @map("updated_at")
-  deliveries      OpsAlertDelivery[]
-  ownerUser       User                @relation("OpsAlertStateOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  id                   String              @id @default(cuid()) @map("id")
+  ownerUserId          String              @map("owner_user_id")
+  acknowledgedByUserId String?             @map("acknowledged_by_user_id")
+  code                 String              @map("code")
+  severity             OpsAlertSeverity    @map("severity")
+  title                String              @map("title")
+  message              String              @map("message")
+  status               OpsAlertStateStatus @default(active) @map("status")
+  firstObservedAt      DateTime            @map("first_observed_at")
+  lastObservedAt       DateTime            @map("last_observed_at")
+  lastDeliveredAt      DateTime?           @map("last_delivered_at")
+  acknowledgedAt       DateTime?           @map("acknowledged_at")
+  resolvedAt           DateTime?           @map("resolved_at")
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
+  deliveries           OpsAlertDelivery[]
+  acknowledgedByUser   User?               @relation("OpsAlertStateAcknowledgedBy", fields: [acknowledgedByUserId], references: [id], onDelete: SetNull)
+  ownerUser            User                @relation("OpsAlertStateOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
 
   @@unique([ownerUserId, code], map: "ops_alert_states_owner_user_id_code_key")
+  @@index([acknowledgedByUserId], map: "ops_alert_states_acknowledged_by_user_id_idx")
   @@index([ownerUserId, status], map: "ops_alert_states_owner_user_id_status_idx")
   @@map("ops_alert_states")
 }

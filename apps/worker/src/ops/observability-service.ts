@@ -84,7 +84,11 @@ type CaptureSummary = {
   resolvedAlertCount: number;
 };
 
+type OpsAlertDeliveryChannel = "audit_log" | "webhook";
+
 type AlertStateRecord = {
+  acknowledgedAt: Date | null;
+  acknowledgedByUserId: string | null;
   code: string;
   id: string;
   lastDeliveredAt: Date | null;
@@ -95,6 +99,15 @@ type AlertStateRecord = {
 };
 
 type OpsObservabilityCaptureServiceDependencies = {
+  alertWebhookDelivery?: {
+    deliver(input: {
+      alert: OpsOperatorAlertSummary;
+      captureId: string;
+      deliveredAt: string;
+      ownerUserId: string;
+    }): Promise<void>;
+    enabled: boolean;
+  };
   auditLogRepository: {
     create(input: {
       action: string;
@@ -127,7 +140,7 @@ type OpsObservabilityCaptureServiceDependencies = {
       captureId: string;
       code: string;
       deliveredAt: Date | null;
-      deliveryChannel: "audit_log";
+      deliveryChannel: OpsAlertDeliveryChannel;
       deliveryState: "delivered" | "failed";
       failureMessage: string | null;
       message: string;
@@ -159,6 +172,8 @@ type OpsObservabilityCaptureServiceDependencies = {
       id: string;
     }): Promise<AlertStateRecord>;
     update(input: {
+      acknowledgedAt?: Date | null;
+      acknowledgedByUserId?: string | null;
       id: string;
       lastDeliveredAt?: Date | null;
       message: string;
@@ -634,6 +649,10 @@ function shouldDeliverAlert(input: {
   );
 }
 
+function createDeliveryFailureMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Alert delivery failed.";
+}
+
 export function createOpsObservabilityCaptureService(
   dependencies: OpsObservabilityCaptureServiceDependencies
 ) {
@@ -741,6 +760,12 @@ export function createOpsObservabilityCaptureService(
           });
           const alertState = existingState
             ? await dependencies.opsAlertStateRepository.update({
+                ...(deliverAlert
+                  ? {
+                      acknowledgedAt: null,
+                      acknowledgedByUserId: null
+                    }
+                  : {}),
                 id: existingState.id,
                 message: alert.message,
                 observedAt: referenceTime,
@@ -761,62 +786,95 @@ export function createOpsObservabilityCaptureService(
             continue;
           }
 
-          try {
-            await dependencies.auditLogRepository.create({
-              action: "ops.alert.delivered",
-              actorId: "worker",
-              actorType: "system",
-              entityId: ownerUserId,
-              entityType: "user",
-              metadataJson: {
-                alertCode: alert.code,
+          let deliveredAtLeastOnce = false;
+
+          const attemptDelivery = async (input: {
+            deliveryChannel: OpsAlertDeliveryChannel;
+            deliver: () => Promise<unknown>;
+            failureLogMessage: string;
+          }) => {
+            try {
+              await input.deliver();
+              await dependencies.opsAlertDeliveryRepository.create({
+                alertStateId: alertState.id,
                 captureId: capture.id,
-                deliveredAt: capturedAt,
+                code: alert.code,
+                deliveredAt: referenceTime,
+                deliveryChannel: input.deliveryChannel,
+                deliveryState: "delivered",
+                failureMessage: null,
                 message: alert.message,
+                ownerUserId,
                 severity: alert.severity,
                 title: alert.title
-              }
+              });
+              deliveredAtLeastOnce = true;
+              summary.deliveredAlertCount += 1;
+            } catch (error) {
+              const failureMessage = createDeliveryFailureMessage(error);
+
+              dependencies.logger.error(input.failureLogMessage, {
+                alertCode: alert.code,
+                error: failureMessage,
+                ownerUserId
+              });
+              await dependencies.opsAlertDeliveryRepository.create({
+                alertStateId: alertState.id,
+                captureId: capture.id,
+                code: alert.code,
+                deliveredAt: null,
+                deliveryChannel: input.deliveryChannel,
+                deliveryState: "failed",
+                failureMessage,
+                message: alert.message,
+                ownerUserId,
+                severity: alert.severity,
+                title: alert.title
+              });
+              summary.failedDeliveryCount += 1;
+            }
+          };
+
+          await attemptDelivery({
+            deliver: () =>
+              dependencies.auditLogRepository.create({
+                action: "ops.alert.delivered",
+                actorId: "worker",
+                actorType: "system",
+                entityId: ownerUserId,
+                entityType: "user",
+                metadataJson: {
+                  alertCode: alert.code,
+                  captureId: capture.id,
+                  deliveredAt: capturedAt,
+                  message: alert.message,
+                  severity: alert.severity,
+                  title: alert.title
+                }
+              }),
+            deliveryChannel: "audit_log",
+            failureLogMessage: "Ops audit-log alert delivery failed"
+          });
+
+          if (dependencies.alertWebhookDelivery?.enabled) {
+            await attemptDelivery({
+              deliver: () =>
+                dependencies.alertWebhookDelivery!.deliver({
+                  alert,
+                  captureId: capture.id,
+                  deliveredAt: capturedAt,
+                  ownerUserId
+                }),
+              deliveryChannel: "webhook",
+              failureLogMessage: "Ops webhook alert delivery failed"
             });
-            await dependencies.opsAlertDeliveryRepository.create({
-              alertStateId: alertState.id,
-              captureId: capture.id,
-              code: alert.code,
-              deliveredAt: referenceTime,
-              deliveryChannel: "audit_log",
-              deliveryState: "delivered",
-              failureMessage: null,
-              message: alert.message,
-              ownerUserId,
-              severity: alert.severity,
-              title: alert.title
-            });
+          }
+
+          if (deliveredAtLeastOnce) {
             await dependencies.opsAlertStateRepository.setLastDeliveredAt({
               deliveredAt: referenceTime,
               id: alertState.id
             });
-            summary.deliveredAlertCount += 1;
-          } catch (error) {
-            const failureMessage =
-              error instanceof Error ? error.message : "Alert delivery failed.";
-
-            dependencies.logger.error("Ops alert delivery failed", {
-              alertCode: alert.code,
-              ownerUserId
-            });
-            await dependencies.opsAlertDeliveryRepository.create({
-              alertStateId: alertState.id,
-              captureId: capture.id,
-              code: alert.code,
-              deliveredAt: null,
-              deliveryChannel: "audit_log",
-              deliveryState: "failed",
-              failureMessage,
-              message: alert.message,
-              ownerUserId,
-              severity: alert.severity,
-              title: alert.title
-            });
-            summary.failedDeliveryCount += 1;
           }
         }
 

@@ -39,6 +39,15 @@ export {
   type StorageObjectHead
 } from "./object-storage.js";
 export {
+  opsAlertAcknowledgeResponseSchema,
+  opsAlertStateStatusSchema,
+  opsAlertStateSummarySchema,
+  opsErrorResponseSchema,
+  type OpsAlertAcknowledgeResponse,
+  type OpsAlertStateSummary,
+  type OpsErrorResponse
+} from "./ops.js";
+export {
   parseWebAuthEnv,
   webAuthEnvSchema,
   type WebAuthEnv

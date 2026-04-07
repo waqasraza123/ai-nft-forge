@@ -20,11 +20,20 @@ describe("loadOpsRuntime", () => {
     expect(runtime.operator.session).toBeNull();
     expect(runtime.operator.queue).toBeNull();
     expect(runtime.operator.activity).toBeNull();
+    expect(runtime.operator.captureAutomation).toBeNull();
     expect(runtime.operator.history).toBeNull();
     expect(runtime.operator.observability).toBeNull();
   });
 
   it("loads generation backend diagnostics plus authenticated operator signals", async () => {
+    const rawEnvironment = {
+      GENERATION_BACKEND_URL: "http://127.0.0.1:8787/generate",
+      OPS_OBSERVABILITY_CAPTURE_INTERVAL_SECONDS: "300",
+      OPS_OBSERVABILITY_CAPTURE_JITTER_SECONDS: "15",
+      OPS_OBSERVABILITY_CAPTURE_LOCK_TTL_SECONDS: "600",
+      OPS_OBSERVABILITY_CAPTURE_RUN_ON_START: "true",
+      OPS_OBSERVABILITY_CAPTURE_SCHEDULE_ENABLED: "true"
+    } as unknown as NodeJS.ProcessEnv;
     const fetchFn = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(
@@ -159,12 +168,27 @@ describe("loadOpsRuntime", () => {
       ]
     });
     const loadOperatorHistory = vi.fn().mockResolvedValue({
+      activeAlerts: [
+        {
+          acknowledgedAt: null,
+          acknowledgedByUserId: null,
+          code: "QUEUE_STALLED",
+          firstObservedAt: "2026-04-06T11:30:00.000Z",
+          id: "alert_state_1",
+          lastDeliveredAt: "2026-04-06T11:56:00.000Z",
+          lastObservedAt: "2026-04-06T11:56:00.000Z",
+          message: "2 generation jobs are waiting while no jobs are active.",
+          severity: "critical",
+          status: "active",
+          title: "The generation queue appears stalled."
+        }
+      ],
       captures: [
         {
           backendReadinessMessage:
             "ComfyUI API responded to the readiness probe.",
           backendReadinessStatus: "ready",
-          capturedAt: "2026-04-06T10:00:00.000Z",
+          capturedAt: "2026-04-06T11:56:00.000Z",
           criticalAlertCount: 0,
           id: "capture_1",
           observabilityMessage:
@@ -214,9 +238,7 @@ describe("loadOpsRuntime", () => {
       loadOperatorObservability,
       loadQueueSnapshot,
       now: () => new Date("2026-04-06T12:00:00.000Z"),
-      rawEnvironment: {
-        GENERATION_BACKEND_URL: "http://127.0.0.1:8787/generate"
-      } as unknown as NodeJS.ProcessEnv,
+      rawEnvironment,
       resolveSession
     });
 
@@ -233,21 +255,15 @@ describe("loadOpsRuntime", () => {
     });
     expect(loadQueueSnapshot).toHaveBeenCalledWith({
       checkedAt: "2026-04-06T12:00:00.000Z",
-      rawEnvironment: {
-        GENERATION_BACKEND_URL: "http://127.0.0.1:8787/generate"
-      }
+      rawEnvironment
     });
     expect(loadOperatorActivity).toHaveBeenCalledWith({
       ownerUserId: "user_1",
-      rawEnvironment: {
-        GENERATION_BACKEND_URL: "http://127.0.0.1:8787/generate"
-      }
+      rawEnvironment
     });
     expect(loadOperatorHistory).toHaveBeenCalledWith({
       ownerUserId: "user_1",
-      rawEnvironment: {
-        GENERATION_BACKEND_URL: "http://127.0.0.1:8787/generate"
-      }
+      rawEnvironment
     });
     expect(loadOperatorObservability).toHaveBeenCalledWith({
       checkedAt: "2026-04-06T12:00:00.000Z",
@@ -258,9 +274,7 @@ describe("loadOpsRuntime", () => {
       queueSnapshot: expect.objectContaining({
         status: "ok"
       }),
-      rawEnvironment: {
-        GENERATION_BACKEND_URL: "http://127.0.0.1:8787/generate"
-      },
+      rawEnvironment,
       referenceTime: new Date("2026-04-06T12:00:00.000Z")
     });
     expect(runtime.operator.session?.user.id).toBe("user_1");
@@ -276,7 +290,19 @@ describe("loadOpsRuntime", () => {
       ],
       status: "ok"
     });
+    expect(runtime.operator.captureAutomation).toMatchObject({
+      enabled: true,
+      intervalSeconds: 300,
+      lastCapturedAt: "2026-04-06T11:56:00.000Z",
+      status: "healthy"
+    });
     expect(runtime.operator.history).toMatchObject({
+      activeAlerts: [
+        expect.objectContaining({
+          id: "alert_state_1",
+          status: "active"
+        })
+      ],
       captures: [
         expect.objectContaining({
           id: "capture_1"

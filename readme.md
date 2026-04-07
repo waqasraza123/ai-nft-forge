@@ -9,7 +9,7 @@ The repository is organized as a pnpm monorepo and is being delivered in phases 
 - Current phase: Phase 2, upload and generation pipeline
 - Phase 1 foundation is complete
 - The repository already includes authenticated studio flows, source asset intake, queue-backed generation orchestration, generated-output storage, a standalone generation backend, ComfyUI provider support, studio generation history, and authenticated ops diagnostics with rolling owner-scoped metrics and synthesized alerts
-- The ops surface now also retains persisted observability captures and durable alert-delivery history generated from the worker side
+- The ops surface now also retains persisted observability captures, active-alert acknowledgment state, durable multi-channel alert-delivery history, and operator-visible capture-automation status generated from the worker side
 - Browser-level smoke coverage now exists for the protected studio asset history flow and authenticated ops diagnostics/retry flow through Playwright
 - Minting, collection drafting, and public storefront completion are still in future phases
 
@@ -40,7 +40,7 @@ Authoritative project state lives in:
 - Protected generated-asset download intents
 - Per-asset generation history, retry, and comparison in the studio
 - Authenticated ops queue diagnostics, rolling owner-scoped request windows, and alert synthesis
-- Persisted ops observability captures and durable alert-delivery history on `/ops`
+- Persisted ops observability captures, active-alert acknowledgment controls, durable multi-channel alert-delivery history, capture-automation status, and outbound webhook support on `/ops`
 
 ## Technical Direction
 

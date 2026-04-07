@@ -470,6 +470,9 @@ describe("database repositories", () => {
   it("delegates alert state ownership and resolution through the ops alert state repository", async () => {
     const database = {
       opsAlertState: {
+        findFirst: vi.fn().mockResolvedValue({
+          id: "alert_state_1"
+        }),
         create: vi.fn().mockResolvedValue({
           id: "alert_state_1"
         }),
@@ -495,6 +498,15 @@ describe("database repositories", () => {
       severity: "critical",
       title: "The generation queue appears stalled."
     });
+    const acknowledged = await repository.acknowledge({
+      acknowledgedAt: observedAt,
+      acknowledgedByUserId: "user_1",
+      id: "alert_state_1"
+    });
+    const found = await repository.findByIdForOwner({
+      id: "alert_state_1",
+      ownerUserId: "user_1"
+    });
     const states = await repository.listByOwnerUserIdAndCodes({
       codes: ["QUEUE_STALLED"],
       ownerUserId: "user_1"
@@ -506,6 +518,8 @@ describe("database repositories", () => {
 
     expect(database.opsAlertState.create).toHaveBeenCalledWith({
       data: {
+        acknowledgedAt: null,
+        acknowledgedByUserId: null,
         code: "QUEUE_STALLED",
         firstObservedAt: observedAt,
         lastObservedAt: observedAt,
@@ -514,6 +528,21 @@ describe("database repositories", () => {
         severity: "critical",
         status: "active",
         title: "The generation queue appears stalled."
+      }
+    });
+    expect(database.opsAlertState.update).toHaveBeenNthCalledWith(1, {
+      data: {
+        acknowledgedAt: observedAt,
+        acknowledgedByUserId: "user_1"
+      },
+      where: {
+        id: "alert_state_1"
+      }
+    });
+    expect(database.opsAlertState.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: "alert_state_1",
+        ownerUserId: "user_1"
       }
     });
     expect(database.opsAlertState.findMany).toHaveBeenCalledWith({
@@ -526,6 +555,8 @@ describe("database repositories", () => {
     });
     expect(database.opsAlertState.update).toHaveBeenCalledWith({
       data: {
+        acknowledgedAt: null,
+        acknowledgedByUserId: null,
         lastObservedAt: observedAt,
         resolvedAt: observedAt,
         status: "resolved"
@@ -534,6 +565,8 @@ describe("database repositories", () => {
         id: "alert_state_1"
       }
     });
+    expect(acknowledged.id).toBe("alert_state_1");
+    expect(found?.id).toBe("alert_state_1");
     expect(states[0]?.id).toBe("alert_state_1");
     expect(resolved.status).toBe("resolved");
   });

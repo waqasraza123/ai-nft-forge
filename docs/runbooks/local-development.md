@@ -22,7 +22,9 @@
 12. `pnpm --filter @ai-nft-forge/generation-backend start`
 13. `pnpm --filter @ai-nft-forge/worker build`
 14. `pnpm --filter @ai-nft-forge/worker start`
-15. Run `pnpm --filter @ai-nft-forge/worker ops:capture` manually or from a scheduler when you want persisted `/ops` history and alert-delivery records populated locally.
+15. Leave `OPS_OBSERVABILITY_CAPTURE_SCHEDULE_ENABLED=false` when you want fully manual capture runs, or enable it to let the worker persist `/ops` history on an interval with Redis lease coordination.
+16. Run `pnpm --filter @ai-nft-forge/worker ops:capture` manually when you want an immediate persisted `/ops` capture outside the automated cadence.
+17. Set `OPS_ALERT_WEBHOOK_ENABLED=true` plus `OPS_ALERT_WEBHOOK_URL` when you want the worker to POST operator alerts to an external webhook in addition to the built-in audit-log delivery record.
 
 ## Local Services
 

@@ -12,6 +12,22 @@ export function createOpsAlertStateRepository(
   database: OpsAlertStateRepositoryDatabase
 ) {
   return {
+    acknowledge(input: {
+      acknowledgedAt: Date;
+      acknowledgedByUserId: string;
+      id: string;
+    }): Promise<OpsAlertState> {
+      return database.opsAlertState.update({
+        data: {
+          acknowledgedAt: input.acknowledgedAt,
+          acknowledgedByUserId: input.acknowledgedByUserId
+        },
+        where: {
+          id: input.id
+        }
+      });
+    },
+
     createActive(input: {
       code: string;
       message: string;
@@ -22,6 +38,8 @@ export function createOpsAlertStateRepository(
     }): Promise<OpsAlertState> {
       return database.opsAlertState.create({
         data: {
+          acknowledgedAt: null,
+          acknowledgedByUserId: null,
           code: input.code,
           firstObservedAt: input.observedAt,
           lastObservedAt: input.observedAt,
@@ -30,6 +48,18 @@ export function createOpsAlertStateRepository(
           severity: input.severity,
           status: "active",
           title: input.title
+        }
+      });
+    },
+
+    findByIdForOwner(input: {
+      id: string;
+      ownerUserId: string;
+    }): Promise<OpsAlertState | null> {
+      return database.opsAlertState.findFirst({
+        where: {
+          id: input.id,
+          ownerUserId: input.ownerUserId
         }
       });
     },
@@ -75,6 +105,8 @@ export function createOpsAlertStateRepository(
     }): Promise<OpsAlertState> {
       return database.opsAlertState.update({
         data: {
+          acknowledgedAt: null,
+          acknowledgedByUserId: null,
           lastObservedAt: input.observedAt,
           resolvedAt: input.observedAt,
           status: "resolved"
@@ -100,6 +132,8 @@ export function createOpsAlertStateRepository(
     },
 
     update(input: {
+      acknowledgedAt?: Date | null;
+      acknowledgedByUserId?: string | null;
       id: string;
       lastDeliveredAt?: Date | null;
       message: string;
@@ -109,6 +143,16 @@ export function createOpsAlertStateRepository(
       title: string;
     }): Promise<OpsAlertState> {
       const data = {
+        ...(input.acknowledgedAt === undefined
+          ? {}
+          : {
+              acknowledgedAt: input.acknowledgedAt
+            }),
+        ...(input.acknowledgedByUserId === undefined
+          ? {}
+          : {
+              acknowledgedByUserId: input.acknowledgedByUserId
+            }),
         lastObservedAt: input.observedAt,
         message: input.message,
         resolvedAt: input.status === "resolved" ? input.observedAt : null,

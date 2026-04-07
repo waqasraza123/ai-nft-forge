@@ -1,4 +1,5 @@
 import { Queue } from "bullmq";
+import type { Redis } from "ioredis";
 
 import {
   createAuditLogRepository,
@@ -6,22 +7,35 @@ import {
   createGenerationRequestRepository,
   createOpsAlertDeliveryRepository,
   createOpsAlertStateRepository,
-  createOpsObservabilityCaptureRepository
+  createOpsObservabilityCaptureRepository,
+  type DatabaseClient
 } from "@ai-nft-forge/database";
 import {
   generationBackendReadinessResponseSchema,
   generationQueueNames,
-  parseWorkerEnv
+  parseWorkerEnv,
+  type WorkerEnv
 } from "@ai-nft-forge/shared";
 
 import { createLogger } from "../lib/logger.js";
+import type { Logger } from "../lib/logger.js";
 import { createRedisConnection } from "../lib/redis.js";
+import { createOpsAlertWebhookClient } from "./alert-webhook.js";
 import {
   createOpsObservabilityCaptureService,
   type OpsObservabilityCaptureService
 } from "./observability-service.js";
 
 type FetchLike = typeof fetch;
+
+type CaptureRuntimeOpsObservabilityInput = {
+  databaseClient: DatabaseClient;
+  env: WorkerEnv;
+  fetchFn?: FetchLike;
+  logger: Logger;
+  rawEnvironment?: NodeJS.ProcessEnv;
+  redisConnection: Redis;
+};
 
 function resolveGenerationBackendReadinessUrl(
   rawEnvironment: NodeJS.ProcessEnv
@@ -35,17 +49,14 @@ function resolveGenerationBackendReadinessUrl(
   return new URL("/ready", generationBackendUrl).toString();
 }
 
-export async function captureRuntimeOpsObservability(
-  rawEnvironment: NodeJS.ProcessEnv = process.env,
-  fetchFn: FetchLike = fetch
-) {
-  const env = parseWorkerEnv(rawEnvironment);
-  const logger = createLogger({
-    level: env.LOG_LEVEL,
-    service: env.WORKER_SERVICE_NAME
-  });
-  const databaseClient = createDatabaseClient(rawEnvironment);
-  const redisConnection = createRedisConnection(env);
+export async function captureRuntimeOpsObservabilityWithDependencies({
+  databaseClient,
+  env,
+  fetchFn = fetch,
+  logger,
+  rawEnvironment = process.env,
+  redisConnection
+}: CaptureRuntimeOpsObservabilityInput) {
   const generationDispatchQueue = new Queue(
     generationQueueNames.generationDispatch,
     {
@@ -56,6 +67,10 @@ export async function captureRuntimeOpsObservability(
 
   const service: OpsObservabilityCaptureService =
     createOpsObservabilityCaptureService({
+      alertWebhookDelivery: createOpsAlertWebhookClient({
+        env,
+        fetchFn
+      }),
       auditLogRepository: createAuditLogRepository(databaseClient),
       generationRequestRepository:
         createGenerationRequestRepository(databaseClient),
@@ -150,6 +165,31 @@ export async function captureRuntimeOpsObservability(
     return await service.captureAllOwnerObservability();
   } finally {
     await generationDispatchQueue.close();
+  }
+}
+
+export async function captureRuntimeOpsObservability(
+  rawEnvironment: NodeJS.ProcessEnv = process.env,
+  fetchFn: FetchLike = fetch
+) {
+  const env = parseWorkerEnv(rawEnvironment);
+  const logger = createLogger({
+    level: env.LOG_LEVEL,
+    service: env.WORKER_SERVICE_NAME
+  });
+  const databaseClient = createDatabaseClient(rawEnvironment);
+  const redisConnection = createRedisConnection(env);
+
+  try {
+    return await captureRuntimeOpsObservabilityWithDependencies({
+      databaseClient,
+      env,
+      fetchFn,
+      logger,
+      rawEnvironment,
+      redisConnection
+    });
+  } finally {
     await databaseClient.$disconnect();
     await redisConnection.quit();
   }
