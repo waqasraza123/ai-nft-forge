@@ -8,6 +8,7 @@
     "build": "next build",
     "lint": "eslint . --max-warnings=0",
     "start": "next start",
+    "test:smoke": "playwright test",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
   },
@@ -25,6 +26,7 @@
     "viem": "^2.38.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3"
   }

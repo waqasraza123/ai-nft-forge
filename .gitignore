@@ -4,6 +4,8 @@ dist/
 .turbo/
 .next/
 coverage/
+playwright-report/
+test-results/
 *.tsbuildinfo
 .env
 .env.local

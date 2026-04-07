@@ -34,6 +34,8 @@
 
 - `pnpm infra:ps`
 - `pnpm validate`
+- `pnpm --filter @ai-nft-forge/web exec playwright install chromium`
+- `pnpm test:smoke`
 - `DATABASE_URL='postgresql://ai_nft_forge:ai_nft_forge@127.0.0.1:55432/ai_nft_forge?schema=public' pnpm db:migrate:status`
 - `curl http://127.0.0.1:3000/api/health`
 - `pnpm worker:health`

@@ -34,3 +34,29 @@ jobs:
         run: pnpm build
       - name: Worker Health
         run: pnpm worker:health
+  browser-smoke:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.17.0
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright Chromium
+        run: pnpm --filter @ai-nft-forge/web exec playwright install --with-deps chromium
+      - name: Browser Smoke
+        run: pnpm test:smoke
+      - if: failure()
+        name: Upload browser smoke artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-smoke-artifacts
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results

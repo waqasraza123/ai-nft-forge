@@ -9,6 +9,7 @@ The repository is organized as a pnpm monorepo and is being delivered in phases 
 - Current phase: Phase 2, upload and generation pipeline
 - Phase 1 foundation is complete
 - The repository already includes authenticated studio flows, source asset intake, queue-backed generation orchestration, generated-output storage, a standalone generation backend, ComfyUI provider support, studio generation history, and authenticated ops diagnostics with rolling owner-scoped metrics and synthesized alerts
+- Browser-level smoke coverage now exists for the protected studio asset history flow and authenticated ops diagnostics/retry flow through Playwright
 - Minting, collection drafting, and public storefront completion are still in future phases
 
 Authoritative project state lives in:
@@ -89,6 +90,8 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
+pnpm --filter @ai-nft-forge/web exec playwright install chromium
+pnpm test:smoke
 pnpm worker:health
 pnpm generation-backend:health
 pnpm generation-backend:ready

@@ -21,6 +21,7 @@
     "infra:up:gpu": "docker compose -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.gpu.yml --profile gpu up -d",
     "lint": "turbo run lint",
     "prisma:validate": "pnpm --filter @ai-nft-forge/database prisma:validate",
+    "test:smoke": "node scripts/run-browser-smoke.mjs",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "worker:health": "pnpm --filter @ai-nft-forge/worker health",
