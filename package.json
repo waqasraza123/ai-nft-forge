@@ -21,9 +21,12 @@
     "infra:up:gpu": "docker compose -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.gpu.yml --profile gpu up -d",
     "lint": "turbo run lint",
     "prisma:validate": "pnpm --filter @ai-nft-forge/database prisma:validate",
+    "safe-push": "bash ./scripts/safe-push.sh",
+    "setup:githooks": "git config --local core.hooksPath .githooks && chmod +x .githooks/pre-push scripts/verify-push.sh scripts/safe-push.sh",
     "test:smoke": "node scripts/run-browser-smoke.mjs",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "verify:push": "bash ./scripts/verify-push.sh",
     "worker:health": "pnpm --filter @ai-nft-forge/worker health",
     "format-check": "prettier --check .",
     "validate": "pnpm format-check && pnpm prisma:validate && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm worker:health && pnpm generation-backend:health"

@@ -1,6 +1,11 @@
 import {
   opsAlertAcknowledgeResponseSchema,
+  opsAlertEscalationPolicyResponseSchema,
   opsAlertMuteResponseSchema,
+  opsAlertSchedulePolicyResponseSchema,
+  opsAlertRoutingPolicyResponseSchema,
+  createOpsAlertScheduleDayMask,
+  parseOpsAlertScheduleDayMask,
   opsAlertUnmuteResponseSchema
 } from "@ai-nft-forge/shared";
 
@@ -10,6 +15,29 @@ type AlertMuteRecord = {
   code: string;
   id: string;
   mutedUntil: Date;
+};
+
+type AlertRoutingPolicyRecord = {
+  id: string;
+  updatedAt: Date;
+  webhookEnabled: boolean;
+  webhookMinimumSeverity: "critical" | "warning";
+};
+
+type AlertEscalationPolicyRecord = {
+  firstReminderDelayMinutes: number;
+  id: string;
+  repeatReminderIntervalMinutes: number;
+  updatedAt: Date;
+};
+
+type AlertSchedulePolicyRecord = {
+  activeDaysMask: number;
+  endMinuteOfDay: number;
+  id: string;
+  startMinuteOfDay: number;
+  timezone: string;
+  updatedAt: Date;
 };
 
 type AlertStateRecord = {
@@ -45,6 +73,38 @@ type OpsServiceDependencies = {
         ownerUserId: string;
       }): Promise<AlertMuteRecord>;
     };
+    opsAlertRoutingPolicyRepository: {
+      deleteByOwnerUserId(input: {
+        ownerUserId: string;
+      }): Promise<{ count: number }>;
+      upsert(input: {
+        ownerUserId: string;
+        webhookEnabled: boolean;
+        webhookMinimumSeverity: "critical" | "warning";
+      }): Promise<AlertRoutingPolicyRecord>;
+    };
+    opsAlertEscalationPolicyRepository: {
+      deleteByOwnerUserId(input: {
+        ownerUserId: string;
+      }): Promise<{ count: number }>;
+      upsert(input: {
+        firstReminderDelayMinutes: number;
+        ownerUserId: string;
+        repeatReminderIntervalMinutes: number;
+      }): Promise<AlertEscalationPolicyRecord>;
+    };
+    opsAlertSchedulePolicyRepository: {
+      deleteByOwnerUserId(input: {
+        ownerUserId: string;
+      }): Promise<{ count: number }>;
+      upsert(input: {
+        activeDaysMask: number;
+        endMinuteOfDay: number;
+        ownerUserId: string;
+        startMinuteOfDay: number;
+        timezone: string;
+      }): Promise<AlertSchedulePolicyRecord>;
+    };
     opsAlertStateRepository: {
       acknowledge(input: {
         acknowledgedAt: Date;
@@ -58,6 +118,71 @@ type OpsServiceDependencies = {
     };
   };
 };
+
+function serializeAlertRoutingPolicy(policy: AlertRoutingPolicyRecord | null) {
+  return {
+    id: policy?.id ?? null,
+    source: policy ? "owner_override" : "default",
+    updatedAt: policy?.updatedAt.toISOString() ?? null,
+    webhookMode: policy
+      ? policy.webhookEnabled
+        ? policy.webhookMinimumSeverity === "critical"
+          ? "critical_only"
+          : "all"
+        : "disabled"
+      : "all"
+  } as const;
+}
+
+function serializeAlertEscalationPolicy(
+  policy: AlertEscalationPolicyRecord | null
+) {
+  return {
+    firstReminderDelayMinutes: policy?.firstReminderDelayMinutes ?? null,
+    id: policy?.id ?? null,
+    repeatReminderIntervalMinutes:
+      policy?.repeatReminderIntervalMinutes ?? null,
+    source: policy ? "owner_override" : "default",
+    updatedAt: policy?.updatedAt.toISOString() ?? null
+  } as const;
+}
+
+function serializeAlertSchedulePolicy(policy: AlertSchedulePolicyRecord | null) {
+  return {
+    activeDays: policy
+      ? parseOpsAlertScheduleDayMask(policy.activeDaysMask)
+      : [],
+    endMinuteOfDay: policy?.endMinuteOfDay ?? null,
+    id: policy?.id ?? null,
+    source: policy ? "owner_override" : "default",
+    startMinuteOfDay: policy?.startMinuteOfDay ?? null,
+    timezone: policy?.timezone ?? null,
+    updatedAt: policy?.updatedAt.toISOString() ?? null
+  } as const;
+}
+
+function parseAlertRoutingWebhookMode(
+  webhookMode: "all" | "critical_only" | "disabled"
+) {
+  if (webhookMode === "disabled") {
+    return {
+      webhookEnabled: false,
+      webhookMinimumSeverity: "warning" as const
+    };
+  }
+
+  if (webhookMode === "critical_only") {
+    return {
+      webhookEnabled: true,
+      webhookMinimumSeverity: "critical" as const
+    };
+  }
+
+  return {
+    webhookEnabled: true,
+    webhookMinimumSeverity: "warning" as const
+  };
+}
 
 function serializeAlertState(
   alertState: AlertStateRecord,
@@ -227,6 +352,98 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
       return opsAlertUnmuteResponseSchema.parse({
         code: input.code,
         removed: result.count > 0
+      });
+    },
+
+    async updateAlertRoutingPolicy(input: {
+      ownerUserId: string;
+      webhookMode: "all" | "critical_only" | "disabled";
+    }) {
+      const policy =
+        await dependencies.repositories.opsAlertRoutingPolicyRepository.upsert({
+          ownerUserId: input.ownerUserId,
+          ...parseAlertRoutingWebhookMode(input.webhookMode)
+        });
+
+      return opsAlertRoutingPolicyResponseSchema.parse({
+        policy: serializeAlertRoutingPolicy(policy)
+      });
+    },
+
+    async resetAlertRoutingPolicy(input: { ownerUserId: string }) {
+      await dependencies.repositories.opsAlertRoutingPolicyRepository.deleteByOwnerUserId(
+        {
+          ownerUserId: input.ownerUserId
+        }
+      );
+
+      return opsAlertRoutingPolicyResponseSchema.parse({
+        policy: serializeAlertRoutingPolicy(null)
+      });
+    },
+
+    async updateAlertEscalationPolicy(input: {
+      firstReminderDelayMinutes: number;
+      ownerUserId: string;
+      repeatReminderIntervalMinutes: number;
+    }) {
+      const policy =
+        await dependencies.repositories.opsAlertEscalationPolicyRepository.upsert(
+          {
+            firstReminderDelayMinutes: input.firstReminderDelayMinutes,
+            ownerUserId: input.ownerUserId,
+            repeatReminderIntervalMinutes:
+              input.repeatReminderIntervalMinutes
+          }
+        );
+
+      return opsAlertEscalationPolicyResponseSchema.parse({
+        policy: serializeAlertEscalationPolicy(policy)
+      });
+    },
+
+    async resetAlertEscalationPolicy(input: { ownerUserId: string }) {
+      await dependencies.repositories.opsAlertEscalationPolicyRepository.deleteByOwnerUserId(
+        {
+          ownerUserId: input.ownerUserId
+        }
+      );
+
+      return opsAlertEscalationPolicyResponseSchema.parse({
+        policy: serializeAlertEscalationPolicy(null)
+      });
+    },
+
+    async updateAlertSchedulePolicy(input: {
+      activeDays: Array<"sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat">;
+      endMinuteOfDay: number;
+      ownerUserId: string;
+      startMinuteOfDay: number;
+      timezone: string;
+    }) {
+      const policy =
+        await dependencies.repositories.opsAlertSchedulePolicyRepository.upsert({
+          activeDaysMask: createOpsAlertScheduleDayMask(input.activeDays),
+          endMinuteOfDay: input.endMinuteOfDay,
+          ownerUserId: input.ownerUserId,
+          startMinuteOfDay: input.startMinuteOfDay,
+          timezone: input.timezone
+        });
+
+      return opsAlertSchedulePolicyResponseSchema.parse({
+        policy: serializeAlertSchedulePolicy(policy)
+      });
+    },
+
+    async resetAlertSchedulePolicy(input: { ownerUserId: string }) {
+      await dependencies.repositories.opsAlertSchedulePolicyRepository.deleteByOwnerUserId(
+        {
+          ownerUserId: input.ownerUserId
+        }
+      );
+
+      return opsAlertSchedulePolicyResponseSchema.parse({
+        policy: serializeAlertSchedulePolicy(null)
       });
     }
   };

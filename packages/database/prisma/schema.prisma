@@ -76,6 +76,9 @@ model User {
   generationRequests GenerationRequest[] @relation("GenerationRequestOwner")
   opsAlertDeliveries OpsAlertDelivery[]  @relation("OpsAlertDeliveryOwner")
   opsAlertMutes      OpsAlertMute[]      @relation("OpsAlertMuteOwner")
+  opsAlertRoutingPolicies OpsAlertRoutingPolicy[] @relation("OpsAlertRoutingPolicyOwner")
+  opsAlertEscalationPolicies OpsAlertEscalationPolicy[] @relation("OpsAlertEscalationPolicyOwner")
+  opsAlertSchedulePolicies OpsAlertSchedulePolicy[] @relation("OpsAlertSchedulePolicyOwner")
   acknowledgedOpsAlertStates OpsAlertState[] @relation("OpsAlertStateAcknowledgedBy")
   opsAlertStates     OpsAlertState[]     @relation("OpsAlertStateOwner")
   opsCaptures        OpsObservabilityCapture[] @relation("OpsObservabilityCaptureOwner")
@@ -297,6 +300,9 @@ model OpsAlertState {
   firstObservedAt      DateTime            @map("first_observed_at")
   lastObservedAt       DateTime            @map("last_observed_at")
   lastDeliveredAt      DateTime?           @map("last_delivered_at")
+  lastAuditLogDeliveredAt DateTime?        @map("last_audit_log_delivered_at")
+  firstWebhookDeliveredAt DateTime?        @map("first_webhook_delivered_at")
+  lastWebhookDeliveredAt DateTime?         @map("last_webhook_delivered_at")
   acknowledgedAt       DateTime?           @map("acknowledged_at")
   resolvedAt           DateTime?           @map("resolved_at")
   createdAt            DateTime            @default(now()) @map("created_at")
@@ -323,6 +329,47 @@ model OpsAlertMute {
   @@unique([ownerUserId, code], map: "ops_alert_mutes_owner_user_id_code_key")
   @@index([ownerUserId, mutedUntil], map: "ops_alert_mutes_owner_user_id_muted_until_idx")
   @@map("ops_alert_mutes")
+}
+
+model OpsAlertRoutingPolicy {
+  id                     String           @id @default(cuid()) @map("id")
+  ownerUserId            String           @map("owner_user_id")
+  webhookEnabled         Boolean          @default(true) @map("webhook_enabled")
+  webhookMinimumSeverity OpsAlertSeverity @default(warning) @map("webhook_minimum_severity")
+  createdAt              DateTime         @default(now()) @map("created_at")
+  updatedAt              DateTime         @updatedAt @map("updated_at")
+  ownerUser              User             @relation("OpsAlertRoutingPolicyOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerUserId], map: "ops_alert_routing_policies_owner_user_id_key")
+  @@map("ops_alert_routing_policies")
+}
+
+model OpsAlertSchedulePolicy {
+  id               String   @id @default(cuid()) @map("id")
+  ownerUserId      String   @map("owner_user_id")
+  timezone         String   @map("timezone")
+  activeDaysMask   Int      @map("active_days_mask")
+  startMinuteOfDay Int      @map("start_minute_of_day")
+  endMinuteOfDay   Int      @map("end_minute_of_day")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  ownerUser        User     @relation("OpsAlertSchedulePolicyOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerUserId], map: "ops_alert_schedule_policies_owner_user_id_key")
+  @@map("ops_alert_schedule_policies")
+}
+
+model OpsAlertEscalationPolicy {
+  id                            String   @id @default(cuid()) @map("id")
+  ownerUserId                   String   @map("owner_user_id")
+  firstReminderDelayMinutes     Int      @map("first_reminder_delay_minutes")
+  repeatReminderIntervalMinutes Int      @map("repeat_reminder_interval_minutes")
+  createdAt                     DateTime @default(now()) @map("created_at")
+  updatedAt                     DateTime @updatedAt @map("updated_at")
+  ownerUser                     User     @relation("OpsAlertEscalationPolicyOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerUserId], map: "ops_alert_escalation_policies_owner_user_id_key")
+  @@map("ops_alert_escalation_policies")
 }
 
 model OpsAlertDelivery {

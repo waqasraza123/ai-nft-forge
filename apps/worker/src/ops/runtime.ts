@@ -6,7 +6,10 @@ import {
   createDatabaseClient,
   createGenerationRequestRepository,
   createOpsAlertDeliveryRepository,
+  createOpsAlertEscalationPolicyRepository,
   createOpsAlertMuteRepository,
+  createOpsAlertRoutingPolicyRepository,
+  createOpsAlertSchedulePolicyRepository,
   createOpsAlertStateRepository,
   createOpsObservabilityCaptureRepository,
   type DatabaseClient
@@ -155,7 +158,13 @@ export async function captureRuntimeOpsObservabilityWithDependencies({
       },
       logger,
       now: () => new Date(),
+      opsAlertEscalationPolicyRepository:
+        createOpsAlertEscalationPolicyRepository(databaseClient),
       opsAlertMuteRepository: createOpsAlertMuteRepository(databaseClient),
+      opsAlertRoutingPolicyRepository:
+        createOpsAlertRoutingPolicyRepository(databaseClient),
+      opsAlertSchedulePolicyRepository:
+        createOpsAlertSchedulePolicyRepository(databaseClient),
       opsAlertDeliveryRepository:
         createOpsAlertDeliveryRepository(databaseClient),
       opsAlertStateRepository: createOpsAlertStateRepository(databaseClient),

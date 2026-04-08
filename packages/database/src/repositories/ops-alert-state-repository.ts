@@ -41,9 +41,12 @@ export function createOpsAlertStateRepository(
           acknowledgedAt: null,
           acknowledgedByUserId: null,
           code: input.code,
+          firstWebhookDeliveredAt: null,
           firstObservedAt: input.observedAt,
+          lastAuditLogDeliveredAt: null,
           lastObservedAt: input.observedAt,
           message: input.message,
+          lastWebhookDeliveredAt: null,
           ownerUserId: input.ownerUserId,
           severity: input.severity,
           status: "active",
@@ -118,13 +121,32 @@ export function createOpsAlertStateRepository(
     },
 
     setLastDeliveredAt(input: {
+      deliveryChannel?: "audit_log" | "webhook";
       deliveredAt: Date;
+      firstWebhookDeliveredAt?: Date;
       id: string;
     }): Promise<OpsAlertState> {
+      const data = {
+        lastDeliveredAt: input.deliveredAt,
+        ...(input.deliveryChannel === "audit_log"
+          ? {
+              lastAuditLogDeliveredAt: input.deliveredAt
+            }
+          : {}),
+        ...(input.deliveryChannel === "webhook"
+          ? {
+              ...(input.firstWebhookDeliveredAt === undefined
+                ? {}
+                : {
+                    firstWebhookDeliveredAt: input.firstWebhookDeliveredAt
+                  }),
+              lastWebhookDeliveredAt: input.deliveredAt
+            }
+          : {})
+      };
+
       return database.opsAlertState.update({
-        data: {
-          lastDeliveredAt: input.deliveredAt
-        },
+        data,
         where: {
           id: input.id
         }

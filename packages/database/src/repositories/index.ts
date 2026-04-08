@@ -31,6 +31,18 @@ export {
   type OpsAlertMuteRepository
 } from "./ops-alert-mute-repository.js";
 export {
+  createOpsAlertEscalationPolicyRepository,
+  type OpsAlertEscalationPolicyRepository
+} from "./ops-alert-escalation-policy-repository.js";
+export {
+  createOpsAlertRoutingPolicyRepository,
+  type OpsAlertRoutingPolicyRepository
+} from "./ops-alert-routing-policy-repository.js";
+export {
+  createOpsAlertSchedulePolicyRepository,
+  type OpsAlertSchedulePolicyRepository
+} from "./ops-alert-schedule-policy-repository.js";
+export {
   createOpsAlertStateRepository,
   type OpsAlertStateRepository
 } from "./ops-alert-state-repository.js";

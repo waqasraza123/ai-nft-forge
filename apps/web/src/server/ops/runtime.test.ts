@@ -20,6 +20,9 @@ describe("loadOpsRuntime", () => {
     expect(runtime.operator.session).toBeNull();
     expect(runtime.operator.queue).toBeNull();
     expect(runtime.operator.activity).toBeNull();
+    expect(runtime.operator.alertEscalation).toBeNull();
+    expect(runtime.operator.alertRouting).toBeNull();
+    expect(runtime.operator.alertSchedule).toBeNull();
     expect(runtime.operator.captureAutomation).toBeNull();
     expect(runtime.operator.history).toBeNull();
     expect(runtime.operator.observability).toBeNull();
@@ -142,6 +145,47 @@ describe("loadOpsRuntime", () => {
       retryableFailures: [],
       status: "ok"
     });
+    const loadOperatorAlertRouting = vi.fn().mockResolvedValue({
+      message:
+        "Webhook delivery is limited to critical alerts for this operator.",
+      policy: {
+        id: "routing_1",
+        source: "owner_override",
+        updatedAt: "2026-04-06T11:57:00.000Z",
+        webhookMode: "critical_only"
+      },
+      status: "configured",
+      webhookConfigured: true
+    });
+    const loadOperatorAlertEscalation = vi.fn().mockResolvedValue({
+      message:
+        "Webhook reminders will resend active unacknowledged alerts after 1 hour and every 3 hours after that.",
+      policy: {
+        firstReminderDelayMinutes: 60,
+        id: "escalation_1",
+        repeatReminderIntervalMinutes: 180,
+        source: "owner_override",
+        updatedAt: "2026-04-06T11:55:00.000Z"
+      },
+      status: "configured",
+      webhookConfigured: true
+    });
+    const loadOperatorAlertSchedule = vi.fn().mockResolvedValue({
+      localTimeLabel: "Mon 08:00",
+      message:
+        "Webhook delivery is currently outside the scheduled window for this operator (weekdays 09:00-17:00 America/New_York).",
+      policy: {
+        activeDays: ["mon", "tue", "wed", "thu", "fri"],
+        endMinuteOfDay: 1020,
+        id: "schedule_1",
+        source: "owner_override",
+        startMinuteOfDay: 540,
+        timezone: "America/New_York",
+        updatedAt: "2026-04-06T11:56:00.000Z"
+      },
+      status: "inactive",
+      webhookConfigured: true
+    });
     const loadOperatorObservability = vi.fn().mockResolvedValue({
       alerts: [],
       checkedAt: "2026-04-06T12:00:00.000Z",
@@ -242,6 +286,9 @@ describe("loadOpsRuntime", () => {
     const runtime = await loadOpsRuntime({
       fetchFn,
       loadOperatorActivity,
+      loadOperatorAlertEscalation,
+      loadOperatorAlertRouting,
+      loadOperatorAlertSchedule,
       loadOperatorHistory,
       loadOperatorObservability,
       loadQueueSnapshot,
@@ -268,6 +315,19 @@ describe("loadOpsRuntime", () => {
     expect(loadOperatorActivity).toHaveBeenCalledWith({
       ownerUserId: "user_1",
       rawEnvironment
+    });
+    expect(loadOperatorAlertEscalation).toHaveBeenCalledWith({
+      ownerUserId: "user_1",
+      rawEnvironment
+    });
+    expect(loadOperatorAlertRouting).toHaveBeenCalledWith({
+      ownerUserId: "user_1",
+      rawEnvironment
+    });
+    expect(loadOperatorAlertSchedule).toHaveBeenCalledWith({
+      ownerUserId: "user_1",
+      rawEnvironment,
+      referenceTime: new Date("2026-04-06T12:00:00.000Z")
     });
     expect(loadOperatorHistory).toHaveBeenCalledWith({
       ownerUserId: "user_1",
@@ -297,6 +357,31 @@ describe("loadOpsRuntime", () => {
         })
       ],
       status: "ok"
+    });
+    expect(runtime.operator.alertRouting).toMatchObject({
+      policy: {
+        id: "routing_1",
+        webhookMode: "critical_only"
+      },
+      status: "configured",
+      webhookConfigured: true
+    });
+    expect(runtime.operator.alertEscalation).toMatchObject({
+      policy: {
+        firstReminderDelayMinutes: 60,
+        id: "escalation_1",
+        repeatReminderIntervalMinutes: 180
+      },
+      status: "configured",
+      webhookConfigured: true
+    });
+    expect(runtime.operator.alertSchedule).toMatchObject({
+      policy: {
+        id: "schedule_1",
+        timezone: "America/New_York"
+      },
+      status: "inactive",
+      webhookConfigured: true
     });
     expect(runtime.operator.captureAutomation).toMatchObject({
       enabled: true,

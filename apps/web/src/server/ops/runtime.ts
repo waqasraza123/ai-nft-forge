@@ -1,23 +1,34 @@
 import {
   createOpsAlertDeliveryRepository,
+  createOpsAlertEscalationPolicyRepository,
   createOpsAlertMuteRepository,
+  createOpsAlertRoutingPolicyRepository,
+  createOpsAlertSchedulePolicyRepository,
   createOpsAlertStateRepository,
   createGenerationRequestRepository,
   createOpsObservabilityCaptureRepository,
   getDatabaseClient
 } from "@ai-nft-forge/database";
 import {
+  opsAlertEscalationPolicySummarySchema,
   opsAlertMuteSummarySchema,
+  opsAlertRoutingPolicySummarySchema,
+  opsAlertSchedulePolicySummarySchema,
   opsAlertStateSummarySchema,
+  evaluateOpsAlertSchedulePolicy,
+  formatOpsAlertScheduleLocalTime,
+  formatOpsAlertScheduleMinuteOfDay,
   generationBackendHealthResponseSchema,
   generationBackendReadinessResponseSchema,
   generationQueueNames,
   generationResultSummarySchema,
+  parseOpsAlertScheduleDayMask,
   parseWorkerEnv,
   type AuthSessionResponse,
   type GenerationBackendHealthResponse,
   type GenerationBackendReadinessResponse,
-  type GenerationRequestStatus
+  type GenerationRequestStatus,
+  type OpsAlertScheduleDay
 } from "@ai-nft-forge/shared";
 
 import { getCurrentAuthSession } from "../auth/session";
@@ -210,6 +221,53 @@ export type OpsAlertMuteSummary = {
   mutedUntil: string;
 };
 
+export type OpsAlertRoutingPolicySummary = {
+  id: string | null;
+  source: "default" | "owner_override";
+  updatedAt: string | null;
+  webhookMode: "all" | "critical_only" | "disabled";
+};
+
+export type OpsAlertRouting = {
+  message: string;
+  policy: OpsAlertRoutingPolicySummary;
+  status: "configured" | "unconfigured" | "unreachable";
+  webhookConfigured: boolean;
+};
+
+export type OpsAlertEscalationPolicySummary = {
+  firstReminderDelayMinutes: number | null;
+  id: string | null;
+  repeatReminderIntervalMinutes: number | null;
+  source: "default" | "owner_override";
+  updatedAt: string | null;
+};
+
+export type OpsAlertEscalation = {
+  message: string;
+  policy: OpsAlertEscalationPolicySummary;
+  status: "configured" | "disabled" | "unconfigured" | "unreachable";
+  webhookConfigured: boolean;
+};
+
+export type OpsAlertSchedulePolicySummary = {
+  activeDays: OpsAlertScheduleDay[];
+  endMinuteOfDay: number | null;
+  id: string | null;
+  source: "default" | "owner_override";
+  startMinuteOfDay: number | null;
+  timezone: string | null;
+  updatedAt: string | null;
+};
+
+export type OpsAlertSchedule = {
+  localTimeLabel: string | null;
+  message: string;
+  policy: OpsAlertSchedulePolicySummary;
+  status: "active" | "inactive" | "unconfigured" | "unreachable";
+  webhookConfigured: boolean;
+};
+
 export type OpsCaptureAutomation = {
   enabled: boolean;
   intervalSeconds: number | null;
@@ -243,6 +301,9 @@ export type OpsRuntimeSnapshot = {
   };
   operator: {
     activity: OwnerGenerationActivity | null;
+    alertEscalation: OpsAlertEscalation | null;
+    alertRouting: OpsAlertRouting | null;
+    alertSchedule: OpsAlertSchedule | null;
     captureAutomation: OpsCaptureAutomation | null;
     history: OwnerPersistedObservabilityHistory | null;
     observability: OpsOperatorObservability | null;
@@ -258,6 +319,19 @@ type LoadOpsRuntimeInput = {
     ownerUserId: string;
     rawEnvironment: NodeJS.ProcessEnv;
   }) => Promise<OwnerGenerationActivity>;
+  loadOperatorAlertRouting?: (input: {
+    ownerUserId: string;
+    rawEnvironment: NodeJS.ProcessEnv;
+  }) => Promise<OpsAlertRouting>;
+  loadOperatorAlertEscalation?: (input: {
+    ownerUserId: string;
+    rawEnvironment: NodeJS.ProcessEnv;
+  }) => Promise<OpsAlertEscalation>;
+  loadOperatorAlertSchedule?: (input: {
+    ownerUserId: string;
+    rawEnvironment: NodeJS.ProcessEnv;
+    referenceTime: Date;
+  }) => Promise<OpsAlertSchedule>;
   loadOperatorHistory?: (input: {
     ownerUserId: string;
     rawEnvironment: NodeJS.ProcessEnv;
@@ -297,6 +371,15 @@ type PersistedAlertDeliveryRepository = ReturnType<
 type PersistedAlertMuteRepository = ReturnType<
   typeof createOpsAlertMuteRepository
 >;
+type PersistedAlertEscalationPolicyRepository = ReturnType<
+  typeof createOpsAlertEscalationPolicyRepository
+>;
+type PersistedAlertRoutingPolicyRepository = ReturnType<
+  typeof createOpsAlertRoutingPolicyRepository
+>;
+type PersistedAlertSchedulePolicyRepository = ReturnType<
+  typeof createOpsAlertSchedulePolicyRepository
+>;
 type PersistedAlertStateRepository = ReturnType<
   typeof createOpsAlertStateRepository
 >;
@@ -313,6 +396,15 @@ type PersistedAlertDeliveryRecord = Awaited<
 type PersistedAlertMuteRecord = Awaited<
   ReturnType<PersistedAlertMuteRepository["listActiveByOwnerUserId"]>
 >[number];
+type PersistedAlertEscalationPolicyRecord = Awaited<
+  ReturnType<PersistedAlertEscalationPolicyRepository["findByOwnerUserId"]>
+>;
+type PersistedAlertRoutingPolicyRecord = Awaited<
+  ReturnType<PersistedAlertRoutingPolicyRepository["findByOwnerUserId"]>
+>;
+type PersistedAlertSchedulePolicyRecord = Awaited<
+  ReturnType<PersistedAlertSchedulePolicyRepository["findByOwnerUserId"]>
+>;
 type PersistedAlertStateRecord = Awaited<
   ReturnType<PersistedAlertStateRepository["listActiveByOwnerUserId"]>
 >[number];
@@ -549,6 +641,30 @@ function createPersistedAlertMuteRepository(rawEnvironment: NodeJS.ProcessEnv) {
   return createOpsAlertMuteRepository(getDatabaseClient(rawEnvironment));
 }
 
+function createPersistedAlertEscalationPolicyRepository(
+  rawEnvironment: NodeJS.ProcessEnv
+) {
+  return createOpsAlertEscalationPolicyRepository(
+    getDatabaseClient(rawEnvironment)
+  );
+}
+
+function createPersistedAlertRoutingPolicyRepository(
+  rawEnvironment: NodeJS.ProcessEnv
+) {
+  return createOpsAlertRoutingPolicyRepository(
+    getDatabaseClient(rawEnvironment)
+  );
+}
+
+function createPersistedAlertSchedulePolicyRepository(
+  rawEnvironment: NodeJS.ProcessEnv
+) {
+  return createOpsAlertSchedulePolicyRepository(
+    getDatabaseClient(rawEnvironment)
+  );
+}
+
 function createPersistedAlertStateRepository(
   rawEnvironment: NodeJS.ProcessEnv
 ) {
@@ -743,6 +859,284 @@ function serializeAlertMute(
     id: mute.id,
     mutedUntil: mute.mutedUntil.toISOString()
   });
+}
+
+function serializeAlertRoutingPolicy(
+  policy: PersistedAlertRoutingPolicyRecord
+): OpsAlertRoutingPolicySummary {
+  return opsAlertRoutingPolicySummarySchema.parse({
+    id: policy?.id ?? null,
+    source: policy ? "owner_override" : "default",
+    updatedAt: policy?.updatedAt.toISOString() ?? null,
+    webhookMode: policy
+      ? policy.webhookEnabled
+        ? policy.webhookMinimumSeverity === "critical"
+          ? "critical_only"
+          : "all"
+        : "disabled"
+      : "all"
+  });
+}
+
+function serializeAlertEscalationPolicy(
+  policy: PersistedAlertEscalationPolicyRecord
+): OpsAlertEscalationPolicySummary {
+  return opsAlertEscalationPolicySummarySchema.parse({
+    firstReminderDelayMinutes: policy?.firstReminderDelayMinutes ?? null,
+    id: policy?.id ?? null,
+    repeatReminderIntervalMinutes:
+      policy?.repeatReminderIntervalMinutes ?? null,
+    source: policy ? "owner_override" : "default",
+    updatedAt: policy?.updatedAt.toISOString() ?? null
+  });
+}
+
+function serializeAlertSchedulePolicy(
+  policy: PersistedAlertSchedulePolicyRecord
+): OpsAlertSchedulePolicySummary {
+  return opsAlertSchedulePolicySummarySchema.parse({
+    activeDays: policy ? parseOpsAlertScheduleDayMask(policy.activeDaysMask) : [],
+    endMinuteOfDay: policy?.endMinuteOfDay ?? null,
+    id: policy?.id ?? null,
+    source: policy ? "owner_override" : "default",
+    startMinuteOfDay: policy?.startMinuteOfDay ?? null,
+    timezone: policy?.timezone ?? null,
+    updatedAt: policy?.updatedAt.toISOString() ?? null
+  });
+}
+
+function formatAlertScheduleDayLabel(activeDays: OpsAlertScheduleDay[]) {
+  if (activeDays.length === 0) {
+    return "every day";
+  }
+
+  if (activeDays.length === 7) {
+    return "every day";
+  }
+
+  if (
+    activeDays.length === 5 &&
+    activeDays.join(",") === "mon,tue,wed,thu,fri"
+  ) {
+    return "weekdays";
+  }
+
+  return activeDays.join(", ");
+}
+
+function formatAlertEscalationMinutes(value: number) {
+  if (value < 60) {
+    return `${value} minute${value === 1 ? "" : "s"}`;
+  }
+
+  const hours = value / 60;
+
+  if (Number.isInteger(hours)) {
+    return `${hours} hour${hours === 1 ? "" : "s"}`;
+  }
+
+  return `${value} minutes`;
+}
+
+async function loadOwnerAlertRouting(input: {
+  ownerUserId: string;
+  rawEnvironment: NodeJS.ProcessEnv;
+}): Promise<OpsAlertRouting> {
+  try {
+    const workerEnv = parseWorkerEnv(input.rawEnvironment);
+    const policyRepository = createPersistedAlertRoutingPolicyRepository(
+      input.rawEnvironment
+    );
+    const policy = serializeAlertRoutingPolicy(
+      await policyRepository.findByOwnerUserId(input.ownerUserId)
+    );
+    const webhookConfigured =
+      workerEnv.OPS_ALERT_WEBHOOK_ENABLED &&
+      workerEnv.OPS_ALERT_WEBHOOK_URL !== undefined;
+
+    if (!webhookConfigured) {
+      return {
+        message:
+          "Worker webhook delivery is not configured. Audit-log delivery remains active, and any saved webhook routing preference will apply once the webhook is enabled again.",
+        policy,
+        status: "unconfigured",
+        webhookConfigured
+      };
+    }
+
+    return {
+      message:
+        policy.webhookMode === "disabled"
+          ? "Webhook delivery is disabled for this operator. Audit-log delivery remains active."
+          : policy.webhookMode === "critical_only"
+            ? "Webhook delivery is limited to critical alerts for this operator."
+            : "Webhook delivery is enabled for warning and critical alerts for this operator.",
+      policy,
+      status: "configured",
+      webhookConfigured
+    };
+  } catch (error) {
+    return {
+      message:
+        error instanceof Error
+          ? error.message
+          : "Alert routing policy could not be loaded.",
+      policy: serializeAlertRoutingPolicy(null),
+      status: "unreachable",
+      webhookConfigured: false
+    };
+  }
+}
+
+async function loadOwnerAlertEscalation(input: {
+  ownerUserId: string;
+  rawEnvironment: NodeJS.ProcessEnv;
+}): Promise<OpsAlertEscalation> {
+  try {
+    const workerEnv = parseWorkerEnv(input.rawEnvironment);
+    const policyRepository = createPersistedAlertEscalationPolicyRepository(
+      input.rawEnvironment
+    );
+    const policy = serializeAlertEscalationPolicy(
+      await policyRepository.findByOwnerUserId(input.ownerUserId)
+    );
+    const webhookConfigured =
+      workerEnv.OPS_ALERT_WEBHOOK_ENABLED &&
+      workerEnv.OPS_ALERT_WEBHOOK_URL !== undefined;
+
+    if (!webhookConfigured) {
+      return {
+        message:
+          "Worker webhook delivery is not configured. Audit-log delivery remains active, and any saved escalation policy will apply once the webhook is enabled again.",
+        policy,
+        status: "unconfigured",
+        webhookConfigured
+      };
+    }
+
+    if (
+      policy.source === "default" ||
+      policy.firstReminderDelayMinutes === null ||
+      policy.repeatReminderIntervalMinutes === null
+    ) {
+      return {
+        message:
+          "No escalation override is set. Unchanged active alerts will not resend webhook reminders after the first successful webhook delivery.",
+        policy,
+        status: "disabled",
+        webhookConfigured
+      };
+    }
+
+    return {
+      message: `Webhook reminders will resend active unacknowledged alerts after ${formatAlertEscalationMinutes(
+        policy.firstReminderDelayMinutes
+      )} and every ${formatAlertEscalationMinutes(
+        policy.repeatReminderIntervalMinutes
+      )} after that.`,
+      policy,
+      status: "configured",
+      webhookConfigured
+    };
+  } catch (error) {
+    return {
+      message:
+        error instanceof Error
+          ? error.message
+          : "Alert escalation policy could not be loaded.",
+      policy: serializeAlertEscalationPolicy(null),
+      status: "unreachable",
+      webhookConfigured: false
+    };
+  }
+}
+
+async function loadOwnerAlertSchedule(input: {
+  ownerUserId: string;
+  rawEnvironment: NodeJS.ProcessEnv;
+  referenceTime: Date;
+}): Promise<OpsAlertSchedule> {
+  try {
+    const workerEnv = parseWorkerEnv(input.rawEnvironment);
+    const policyRepository = createPersistedAlertSchedulePolicyRepository(
+      input.rawEnvironment
+    );
+    const policy = serializeAlertSchedulePolicy(
+      await policyRepository.findByOwnerUserId(input.ownerUserId)
+    );
+    const webhookConfigured =
+      workerEnv.OPS_ALERT_WEBHOOK_ENABLED &&
+      workerEnv.OPS_ALERT_WEBHOOK_URL !== undefined;
+    const localTimeLabel = policy.timezone
+      ? formatOpsAlertScheduleLocalTime({
+          referenceTime: input.referenceTime,
+          timezone: policy.timezone
+        })
+      : null;
+
+    if (!webhookConfigured) {
+      return {
+        localTimeLabel,
+        message:
+          "Worker webhook delivery is not configured. Audit-log delivery remains active, and any saved delivery schedule will apply once the webhook is enabled again.",
+        policy,
+        status: "unconfigured",
+        webhookConfigured
+      };
+    }
+
+    if (
+      policy.source === "default" ||
+      policy.timezone === null ||
+      policy.startMinuteOfDay === null ||
+      policy.endMinuteOfDay === null
+    ) {
+      return {
+        localTimeLabel,
+        message:
+          "No delivery schedule override is set. Webhook delivery may run at any time for this operator.",
+        policy,
+        status: "active",
+        webhookConfigured
+      };
+    }
+
+    const evaluation = evaluateOpsAlertSchedulePolicy({
+      activeDays: policy.activeDays,
+      endMinuteOfDay: policy.endMinuteOfDay,
+      referenceTime: input.referenceTime,
+      startMinuteOfDay: policy.startMinuteOfDay,
+      timezone: policy.timezone
+    });
+    const scheduleDescription = `${formatAlertScheduleDayLabel(
+      policy.activeDays
+    )} ${formatOpsAlertScheduleMinuteOfDay(
+      policy.startMinuteOfDay
+    )}-${formatOpsAlertScheduleMinuteOfDay(policy.endMinuteOfDay)} ${
+      policy.timezone
+    }`;
+
+    return {
+      localTimeLabel,
+      message: evaluation.active
+        ? `Webhook delivery is currently inside the scheduled window for this operator (${scheduleDescription}).`
+        : `Webhook delivery is currently outside the scheduled window for this operator (${scheduleDescription}).`,
+      policy,
+      status: evaluation.active ? "active" : "inactive",
+      webhookConfigured
+    };
+  } catch (error) {
+    return {
+      localTimeLabel: null,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Alert delivery schedule could not be loaded.",
+      policy: serializeAlertSchedulePolicy(null),
+      status: "unreachable",
+      webhookConfigured: false
+    };
+  }
 }
 
 async function loadOwnerGenerationActivity(input: {
@@ -1300,6 +1694,9 @@ export async function loadOpsRuntime(
 
   let operatorQueue: OpsQueueSnapshot | null = null;
   let operatorActivity: OwnerGenerationActivity | null = null;
+  let operatorAlertEscalation: OpsAlertEscalation | null = null;
+  let operatorAlertRouting: OpsAlertRouting | null = null;
+  let operatorAlertSchedule: OpsAlertSchedule | null = null;
   let operatorCaptureAutomation: OpsCaptureAutomation | null = null;
   let operatorHistory: OwnerPersistedObservabilityHistory | null = null;
   let operatorObservability: OpsOperatorObservability | null = null;
@@ -1308,12 +1705,25 @@ export async function loadOpsRuntime(
     const queueSnapshotLoader = input.loadQueueSnapshot ?? loadQueueSnapshot;
     const operatorActivityLoader =
       input.loadOperatorActivity ?? loadOwnerGenerationActivity;
+    const operatorAlertEscalationLoader =
+      input.loadOperatorAlertEscalation ?? loadOwnerAlertEscalation;
+    const operatorAlertRoutingLoader =
+      input.loadOperatorAlertRouting ?? loadOwnerAlertRouting;
+    const operatorAlertScheduleLoader =
+      input.loadOperatorAlertSchedule ?? loadOwnerAlertSchedule;
     const operatorHistoryLoader =
       input.loadOperatorHistory ?? loadOwnerPersistedObservabilityHistory;
     const operatorObservabilityLoader =
       input.loadOperatorObservability ?? loadOwnerGenerationObservability;
 
-    [operatorQueue, operatorActivity, operatorHistory] = await Promise.all([
+    [
+      operatorQueue,
+      operatorActivity,
+      operatorAlertEscalation,
+      operatorAlertRouting,
+      operatorAlertSchedule,
+      operatorHistory
+    ] = await Promise.all([
       queueSnapshotLoader({
         checkedAt,
         rawEnvironment
@@ -1321,6 +1731,19 @@ export async function loadOpsRuntime(
       operatorActivityLoader({
         ownerUserId: session.user.id,
         rawEnvironment
+      }),
+      operatorAlertEscalationLoader({
+        ownerUserId: session.user.id,
+        rawEnvironment
+      }),
+      operatorAlertRoutingLoader({
+        ownerUserId: session.user.id,
+        rawEnvironment
+      }),
+      operatorAlertScheduleLoader({
+        ownerUserId: session.user.id,
+        rawEnvironment,
+        referenceTime
       }),
       operatorHistoryLoader({
         ownerUserId: session.user.id,
@@ -1355,6 +1778,9 @@ export async function loadOpsRuntime(
     },
     operator: {
       activity: operatorActivity,
+      alertEscalation: operatorAlertEscalation,
+      alertRouting: operatorAlertRouting,
+      alertSchedule: operatorAlertSchedule,
       captureAutomation: operatorCaptureAutomation,
       history: operatorHistory,
       observability: operatorObservability,

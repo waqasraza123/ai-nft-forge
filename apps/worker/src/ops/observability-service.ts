@@ -1,6 +1,11 @@
 import type { Logger } from "../lib/logger.js";
 
-import { generationResultSummarySchema } from "@ai-nft-forge/shared";
+import {
+  evaluateOpsAlertEscalationPolicy,
+  evaluateOpsAlertSchedulePolicy,
+  generationResultSummarySchema,
+  parseOpsAlertScheduleDayMask
+} from "@ai-nft-forge/shared";
 
 type GenerationRequestStatus = "queued" | "running" | "succeeded" | "failed";
 
@@ -92,12 +97,32 @@ type AlertMuteRecord = {
   mutedUntil: Date;
 };
 
+type AlertRoutingPolicyRecord = {
+  webhookEnabled: boolean;
+  webhookMinimumSeverity: "critical" | "warning";
+};
+
+type AlertEscalationPolicyRecord = {
+  firstReminderDelayMinutes: number;
+  repeatReminderIntervalMinutes: number;
+};
+
+type AlertSchedulePolicyRecord = {
+  activeDaysMask: number;
+  endMinuteOfDay: number;
+  startMinuteOfDay: number;
+  timezone: string;
+};
+
 type AlertStateRecord = {
   acknowledgedAt: Date | null;
   acknowledgedByUserId: string | null;
   code: string;
+  firstWebhookDeliveredAt: Date | null;
   id: string;
+  lastAuditLogDeliveredAt: Date | null;
   lastDeliveredAt: Date | null;
+  lastWebhookDeliveredAt: Date | null;
   message: string;
   severity: "critical" | "warning";
   status: "active" | "resolved";
@@ -147,6 +172,21 @@ type OpsObservabilityCaptureServiceDependencies = {
       ownerUserId: string;
     }): Promise<AlertMuteRecord[]>;
   };
+  opsAlertRoutingPolicyRepository: {
+    findByOwnerUserId(
+      ownerUserId: string
+    ): Promise<AlertRoutingPolicyRecord | null>;
+  };
+  opsAlertEscalationPolicyRepository: {
+    findByOwnerUserId(
+      ownerUserId: string
+    ): Promise<AlertEscalationPolicyRecord | null>;
+  };
+  opsAlertSchedulePolicyRepository: {
+    findByOwnerUserId(
+      ownerUserId: string
+    ): Promise<AlertSchedulePolicyRecord | null>;
+  };
   opsAlertDeliveryRepository: {
     create(input: {
       alertStateId: string;
@@ -181,7 +221,9 @@ type OpsObservabilityCaptureServiceDependencies = {
       observedAt: Date;
     }): Promise<AlertStateRecord>;
     setLastDeliveredAt(input: {
+      deliveryChannel?: OpsAlertDeliveryChannel;
       deliveredAt: Date;
+      firstWebhookDeliveredAt?: Date;
       id: string;
     }): Promise<AlertStateRecord>;
     update(input: {
@@ -646,7 +688,7 @@ function createObservabilitySummary(input: {
   } as const;
 }
 
-function shouldDeliverAlert(input: {
+function hasAlertMaterialChanges(input: {
   alert: OpsOperatorAlertSummary;
   existingState: AlertStateRecord | undefined;
 }) {
@@ -658,14 +700,98 @@ function shouldDeliverAlert(input: {
     input.existingState.status !== "active" ||
     input.existingState.message !== input.alert.message ||
     input.existingState.title !== input.alert.title ||
-    input.existingState.severity !== input.alert.severity ||
-    (input.existingState.lastDeliveredAt === null &&
-      input.existingState.acknowledgedAt === null)
+    input.existingState.severity !== input.alert.severity
   );
 }
 
 function createDeliveryFailureMessage(error: unknown) {
   return error instanceof Error ? error.message : "Alert delivery failed.";
+}
+
+function shouldDeliverAuditLogAlert(input: {
+  alert: OpsOperatorAlertSummary;
+  existingState: AlertStateRecord | undefined;
+}) {
+  if (hasAlertMaterialChanges(input)) {
+    return true;
+  }
+
+  return (
+    input.existingState?.lastAuditLogDeliveredAt === null &&
+    input.existingState.acknowledgedAt === null
+  );
+}
+
+function shouldDeliverWebhookAlert(input: {
+  alert: OpsOperatorAlertSummary;
+  escalationPolicy: AlertEscalationPolicyRecord | null;
+  existingState: AlertStateRecord | undefined;
+  routingPolicy: AlertRoutingPolicyRecord | null;
+  schedulePolicy: AlertSchedulePolicyRecord | null;
+  referenceTime: Date;
+  webhookDeliveryEnabled: boolean;
+}) {
+  if (!input.webhookDeliveryEnabled) {
+    return false;
+  }
+
+  if (input.routingPolicy && !input.routingPolicy.webhookEnabled) {
+    return false;
+  }
+
+  if (
+    input.routingPolicy?.webhookMinimumSeverity === "critical" &&
+    input.alert.severity !== "critical"
+  ) {
+    return false;
+  }
+
+  if (input.schedulePolicy) {
+    const evaluation = evaluateOpsAlertSchedulePolicy({
+      activeDays: parseOpsAlertScheduleDayMask(
+        input.schedulePolicy.activeDaysMask
+      ),
+      endMinuteOfDay: input.schedulePolicy.endMinuteOfDay,
+      referenceTime: input.referenceTime,
+      startMinuteOfDay: input.schedulePolicy.startMinuteOfDay,
+      timezone: input.schedulePolicy.timezone
+    });
+
+    if (!evaluation.active) {
+      return false;
+    }
+  }
+
+  if (hasAlertMaterialChanges(input)) {
+    return true;
+  }
+
+  if (
+    input.existingState?.lastWebhookDeliveredAt === null &&
+    input.existingState?.acknowledgedAt === null
+  ) {
+    return true;
+  }
+
+  if (
+    !input.existingState ||
+    !input.escalationPolicy ||
+    input.existingState.firstWebhookDeliveredAt === null ||
+    input.existingState.lastWebhookDeliveredAt === null
+  ) {
+    return false;
+  }
+
+  return evaluateOpsAlertEscalationPolicy({
+    acknowledgedAt: input.existingState.acknowledgedAt,
+    firstReminderDelayMinutes:
+      input.escalationPolicy.firstReminderDelayMinutes,
+    firstWebhookDeliveredAt: input.existingState.firstWebhookDeliveredAt,
+    lastWebhookDeliveredAt: input.existingState.lastWebhookDeliveredAt,
+    referenceTime: input.referenceTime,
+    repeatReminderIntervalMinutes:
+      input.escalationPolicy.repeatReminderIntervalMinutes
+  }).active;
 }
 
 export function createOpsObservabilityCaptureService(
@@ -689,6 +815,18 @@ export function createOpsObservabilityCaptureService(
       };
 
       for (const ownerUserId of ownerUserIds) {
+        const routingPolicy =
+          await dependencies.opsAlertRoutingPolicyRepository.findByOwnerUserId(
+            ownerUserId
+          );
+        const escalationPolicy =
+          await dependencies.opsAlertEscalationPolicyRepository.findByOwnerUserId(
+            ownerUserId
+          );
+        const schedulePolicy =
+          await dependencies.opsAlertSchedulePolicyRepository.findByOwnerUserId(
+            ownerUserId
+          );
         const metrics = await loadOwnerGenerationMetrics(dependencies, {
           capturedAt,
           ownerUserId,
@@ -780,14 +918,28 @@ export function createOpsObservabilityCaptureService(
 
         for (const alert of alerts) {
           const existingState = existingStateByCode.get(alert.code);
-          const deliverAlert = shouldDeliverAlert({
+          const alertHasMaterialChanges = hasAlertMaterialChanges({
             alert,
             existingState
+          });
+          const deliverAuditLog = shouldDeliverAuditLogAlert({
+            alert,
+            existingState
+          });
+          const deliverWebhook = shouldDeliverWebhookAlert({
+            alert,
+            escalationPolicy,
+            existingState,
+            referenceTime,
+            routingPolicy,
+            schedulePolicy,
+            webhookDeliveryEnabled:
+              dependencies.alertWebhookDelivery?.enabled ?? false
           });
           const activeMute = activeMuteByCode.get(alert.code);
           const alertState = existingState
             ? await dependencies.opsAlertStateRepository.update({
-                ...(deliverAlert
+                ...(alertHasMaterialChanges
                   ? {
                       acknowledgedAt: null,
                       acknowledgedByUserId: null
@@ -809,11 +961,9 @@ export function createOpsObservabilityCaptureService(
                 title: alert.title
               });
 
-          if (!deliverAlert || activeMute) {
+          if ((!deliverAuditLog && !deliverWebhook) || activeMute) {
             continue;
           }
-
-          let deliveredAtLeastOnce = false;
 
           const attemptDelivery = async (input: {
             deliveryChannel: OpsAlertDeliveryChannel;
@@ -835,8 +985,18 @@ export function createOpsObservabilityCaptureService(
                 severity: alert.severity,
                 title: alert.title
               });
-              deliveredAtLeastOnce = true;
               summary.deliveredAlertCount += 1;
+              await dependencies.opsAlertStateRepository.setLastDeliveredAt({
+                deliveredAt: referenceTime,
+                deliveryChannel: input.deliveryChannel,
+                ...(input.deliveryChannel === "webhook" &&
+                alertState.firstWebhookDeliveredAt === null
+                  ? {
+                      firstWebhookDeliveredAt: referenceTime
+                    }
+                  : {}),
+                id: alertState.id
+              });
             } catch (error) {
               const failureMessage = createDeliveryFailureMessage(error);
 
@@ -862,28 +1022,30 @@ export function createOpsObservabilityCaptureService(
             }
           };
 
-          await attemptDelivery({
-            deliver: () =>
-              dependencies.auditLogRepository.create({
-                action: "ops.alert.delivered",
-                actorId: "worker",
-                actorType: "system",
-                entityId: ownerUserId,
-                entityType: "user",
-                metadataJson: {
-                  alertCode: alert.code,
-                  captureId: capture.id,
-                  deliveredAt: capturedAt,
-                  message: alert.message,
-                  severity: alert.severity,
-                  title: alert.title
-                }
-              }),
-            deliveryChannel: "audit_log",
-            failureLogMessage: "Ops audit-log alert delivery failed"
-          });
+          if (deliverAuditLog) {
+            await attemptDelivery({
+              deliver: () =>
+                dependencies.auditLogRepository.create({
+                  action: "ops.alert.delivered",
+                  actorId: "worker",
+                  actorType: "system",
+                  entityId: ownerUserId,
+                  entityType: "user",
+                  metadataJson: {
+                    alertCode: alert.code,
+                    captureId: capture.id,
+                    deliveredAt: capturedAt,
+                    message: alert.message,
+                    severity: alert.severity,
+                    title: alert.title
+                  }
+                }),
+              deliveryChannel: "audit_log",
+              failureLogMessage: "Ops audit-log alert delivery failed"
+            });
+          }
 
-          if (dependencies.alertWebhookDelivery?.enabled) {
+          if (deliverWebhook) {
             await attemptDelivery({
               deliver: () =>
                 dependencies.alertWebhookDelivery!.deliver({
@@ -894,13 +1056,6 @@ export function createOpsObservabilityCaptureService(
                 }),
               deliveryChannel: "webhook",
               failureLogMessage: "Ops webhook alert delivery failed"
-            });
-          }
-
-          if (deliveredAtLeastOnce) {
-            await dependencies.opsAlertStateRepository.setLastDeliveredAt({
-              deliveredAt: referenceTime,
-              id: alertState.id
             });
           }
         }

@@ -4,7 +4,10 @@ import { createAuthSessionRepository } from "./auth-session-repository.js";
 import { createGeneratedAssetRepository } from "./generated-asset-repository.js";
 import { createGenerationRequestRepository } from "./generation-request-repository.js";
 import { createOpsAlertDeliveryRepository } from "./ops-alert-delivery-repository.js";
+import { createOpsAlertEscalationPolicyRepository } from "./ops-alert-escalation-policy-repository.js";
 import { createOpsAlertMuteRepository } from "./ops-alert-mute-repository.js";
+import { createOpsAlertRoutingPolicyRepository } from "./ops-alert-routing-policy-repository.js";
+import { createOpsAlertSchedulePolicyRepository } from "./ops-alert-schedule-policy-repository.js";
 import { createOpsAlertStateRepository } from "./ops-alert-state-repository.js";
 import { createOpsObservabilityCaptureRepository } from "./ops-observability-capture-repository.js";
 import { createSourceAssetRepository } from "./source-asset-repository.js";
@@ -522,8 +525,11 @@ describe("database repositories", () => {
         acknowledgedAt: null,
         acknowledgedByUserId: null,
         code: "QUEUE_STALLED",
+        firstWebhookDeliveredAt: null,
         firstObservedAt: observedAt,
+        lastAuditLogDeliveredAt: null,
         lastObservedAt: observedAt,
+        lastWebhookDeliveredAt: null,
         message: "3 generation jobs are waiting while no jobs are active.",
         ownerUserId: "user_1",
         severity: "critical",
@@ -750,6 +756,190 @@ describe("database repositories", () => {
     expect(activeMute?.id).toBe("mute_1");
     expect(activeMutes[0]?.id).toBe("mute_1");
     expect(activeMutesByCode[0]?.id).toBe("mute_1");
+    expect(deleted.count).toBe(1);
+  });
+
+  it("delegates owner-scoped alert routing policy persistence through the routing policy repository", async () => {
+    const database = {
+      opsAlertRoutingPolicy: {
+        deleteMany: vi.fn().mockResolvedValue({
+          count: 1
+        }),
+        findUnique: vi.fn().mockResolvedValue({
+          id: "routing_1"
+        }),
+        upsert: vi.fn().mockResolvedValue({
+          id: "routing_1",
+          ownerUserId: "user_1",
+          webhookEnabled: false,
+          webhookMinimumSeverity: "critical"
+        })
+      }
+    };
+    const repository = createOpsAlertRoutingPolicyRepository(database as never);
+
+    const policy = await repository.upsert({
+      ownerUserId: "user_1",
+      webhookEnabled: false,
+      webhookMinimumSeverity: "critical"
+    });
+    const found = await repository.findByOwnerUserId("user_1");
+    const deleted = await repository.deleteByOwnerUserId({
+      ownerUserId: "user_1"
+    });
+
+    expect(database.opsAlertRoutingPolicy.upsert).toHaveBeenCalledWith({
+      create: {
+        ownerUserId: "user_1",
+        webhookEnabled: false,
+        webhookMinimumSeverity: "critical"
+      },
+      update: {
+        webhookEnabled: false,
+        webhookMinimumSeverity: "critical"
+      },
+      where: {
+        ownerUserId: "user_1"
+      }
+    });
+    expect(database.opsAlertRoutingPolicy.findUnique).toHaveBeenCalledWith({
+      where: {
+        ownerUserId: "user_1"
+      }
+    });
+    expect(database.opsAlertRoutingPolicy.deleteMany).toHaveBeenCalledWith({
+      where: {
+        ownerUserId: "user_1"
+      }
+    });
+    expect(policy.id).toBe("routing_1");
+    expect(found?.id).toBe("routing_1");
+    expect(deleted.count).toBe(1);
+  });
+
+  it("delegates owner-scoped alert escalation policy persistence through the escalation policy repository", async () => {
+    const database = {
+      opsAlertEscalationPolicy: {
+        deleteMany: vi.fn().mockResolvedValue({
+          count: 1
+        }),
+        findUnique: vi.fn().mockResolvedValue({
+          id: "escalation_1"
+        }),
+        upsert: vi.fn().mockResolvedValue({
+          firstReminderDelayMinutes: 60,
+          id: "escalation_1",
+          ownerUserId: "user_1",
+          repeatReminderIntervalMinutes: 180
+        })
+      }
+    };
+    const repository = createOpsAlertEscalationPolicyRepository(
+      database as never
+    );
+
+    const policy = await repository.upsert({
+      firstReminderDelayMinutes: 60,
+      ownerUserId: "user_1",
+      repeatReminderIntervalMinutes: 180
+    });
+    const found = await repository.findByOwnerUserId("user_1");
+    const deleted = await repository.deleteByOwnerUserId({
+      ownerUserId: "user_1"
+    });
+
+    expect(database.opsAlertEscalationPolicy.upsert).toHaveBeenCalledWith({
+      create: {
+        firstReminderDelayMinutes: 60,
+        ownerUserId: "user_1",
+        repeatReminderIntervalMinutes: 180
+      },
+      update: {
+        firstReminderDelayMinutes: 60,
+        repeatReminderIntervalMinutes: 180
+      },
+      where: {
+        ownerUserId: "user_1"
+      }
+    });
+    expect(database.opsAlertEscalationPolicy.findUnique).toHaveBeenCalledWith({
+      where: {
+        ownerUserId: "user_1"
+      }
+    });
+    expect(database.opsAlertEscalationPolicy.deleteMany).toHaveBeenCalledWith({
+      where: {
+        ownerUserId: "user_1"
+      }
+    });
+    expect(policy.id).toBe("escalation_1");
+    expect(found?.id).toBe("escalation_1");
+    expect(deleted.count).toBe(1);
+  });
+
+  it("delegates owner-scoped alert schedule policy persistence through the schedule policy repository", async () => {
+    const database = {
+      opsAlertSchedulePolicy: {
+        deleteMany: vi.fn().mockResolvedValue({
+          count: 1
+        }),
+        findUnique: vi.fn().mockResolvedValue({
+          id: "schedule_1"
+        }),
+        upsert: vi.fn().mockResolvedValue({
+          activeDaysMask: 62,
+          endMinuteOfDay: 1020,
+          id: "schedule_1",
+          ownerUserId: "user_1",
+          startMinuteOfDay: 540,
+          timezone: "America/New_York"
+        })
+      }
+    };
+    const repository = createOpsAlertSchedulePolicyRepository(database as never);
+
+    const policy = await repository.upsert({
+      activeDaysMask: 62,
+      endMinuteOfDay: 1020,
+      ownerUserId: "user_1",
+      startMinuteOfDay: 540,
+      timezone: "America/New_York"
+    });
+    const found = await repository.findByOwnerUserId("user_1");
+    const deleted = await repository.deleteByOwnerUserId({
+      ownerUserId: "user_1"
+    });
+
+    expect(database.opsAlertSchedulePolicy.upsert).toHaveBeenCalledWith({
+      create: {
+        activeDaysMask: 62,
+        endMinuteOfDay: 1020,
+        ownerUserId: "user_1",
+        startMinuteOfDay: 540,
+        timezone: "America/New_York"
+      },
+      update: {
+        activeDaysMask: 62,
+        endMinuteOfDay: 1020,
+        startMinuteOfDay: 540,
+        timezone: "America/New_York"
+      },
+      where: {
+        ownerUserId: "user_1"
+      }
+    });
+    expect(database.opsAlertSchedulePolicy.findUnique).toHaveBeenCalledWith({
+      where: {
+        ownerUserId: "user_1"
+      }
+    });
+    expect(database.opsAlertSchedulePolicy.deleteMany).toHaveBeenCalledWith({
+      where: {
+        ownerUserId: "user_1"
+      }
+    });
+    expect(policy.id).toBe("schedule_1");
+    expect(found?.id).toBe("schedule_1");
     expect(deleted.count).toBe(1);
   });
 });

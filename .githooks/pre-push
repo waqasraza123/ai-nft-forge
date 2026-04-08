@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if [[ "${SAFE_PUSH_SKIP_VERIFY:-0}" == "1" ]]; then
+  exit 0
+fi
+
+hook_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+repo_root="$(CDPATH= cd -- "${hook_dir}/.." && pwd)"
+
+"${repo_root}/scripts/verify-push.sh"
