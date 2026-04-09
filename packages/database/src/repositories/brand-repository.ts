@@ -32,6 +32,74 @@ export function createBrandRepository(database: BrandRepositoryDatabase) {
           }
         }
       });
+    },
+
+    findFirstByOwnerUserId(ownerUserId: string): Promise<Brand | null> {
+      return database.brand.findFirst({
+        orderBy: [
+          {
+            createdAt: "asc"
+          },
+          {
+            id: "asc"
+          }
+        ],
+        where: {
+          workspace: {
+            ownerUserId
+          }
+        }
+      });
+    },
+
+    findFirstBySlug(slug: string): Promise<Brand | null> {
+      return database.brand.findFirst({
+        orderBy: [
+          {
+            createdAt: "asc"
+          },
+          {
+            id: "asc"
+          }
+        ],
+        where: {
+          slug
+        }
+      });
+    },
+
+    updateByIdForOwner(input: {
+      customDomain?: string | null;
+      id: string;
+      name: string;
+      ownerUserId: string;
+      slug: string;
+      themeJson: Prisma.InputJsonValue;
+      workspaceId: string;
+    }): Promise<Brand> {
+      return database.brand
+        .updateMany({
+          data: {
+            customDomain: input.customDomain ?? null,
+            name: input.name,
+            slug: input.slug,
+            themeJson: input.themeJson,
+            workspaceId: input.workspaceId
+          },
+          where: {
+            id: input.id,
+            workspace: {
+              ownerUserId: input.ownerUserId
+            }
+          }
+        })
+        .then(() =>
+          database.brand.findUniqueOrThrow({
+            where: {
+              id: input.id
+            }
+          })
+        );
     }
   };
 }

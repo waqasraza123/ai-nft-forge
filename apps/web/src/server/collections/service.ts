@@ -1,0 +1,1305 @@
+import {
+  collectionDraftCreateRequestSchema,
+  collectionDraftItemReorderRequestSchema,
+  collectionDraftListResponseSchema,
+  collectionDraftPublishRequestSchema,
+  collectionPublicationMerchandisingRequestSchema,
+  collectionDraftResponseSchema,
+  collectionDraftUpdateRequestSchema,
+  sanitizeStorageFileName,
+  type CollectionDraftStatus
+} from "@ai-nft-forge/shared";
+
+import { CollectionDraftServiceError } from "./error";
+
+type GeneratedAssetCandidateRecord = {
+  contentType: string;
+  createdAt: Date;
+  generationRequest: {
+    id: string;
+    pipelineKey: string;
+    sourceAsset: {
+      id: string;
+      originalFilename: string;
+    };
+  };
+  id: string;
+  storageBucket: string;
+  storageObjectKey: string;
+  variantIndex: number;
+};
+
+type CollectionDraftItemRecord = {
+  generatedAsset: GeneratedAssetCandidateRecord;
+  id: string;
+  position: number;
+};
+
+type CollectionDraftRecord = {
+  createdAt: Date;
+  description: string | null;
+  id: string;
+  items: CollectionDraftItemRecord[];
+  slug: string;
+  status: CollectionDraftStatus;
+  title: string;
+  updatedAt: Date;
+};
+
+type PublishedCollectionRecord = {
+  brandName: string;
+  brandSlug: string;
+  displayOrder: number;
+  description: string | null;
+  id: string;
+  isFeatured: boolean;
+  publishedAt: Date;
+  slug: string;
+  sourceCollectionDraftId: string;
+  title: string;
+  updatedAt: Date;
+};
+
+type PublicationTargetRecord = {
+  name: string;
+  slug: string;
+};
+
+type CollectionDraftRepositorySet = {
+  collectionDraftItemRepository: {
+    create(input: {
+      collectionDraftId: string;
+      generatedAssetId: string;
+      position: number;
+    }): Promise<unknown>;
+    deleteByIdForDraftOwner(input: {
+      collectionDraftId: string;
+      id: string;
+      ownerUserId: string;
+    }): Promise<{ id: string } | null>;
+    findByGeneratedAssetIdForDraft(input: {
+      collectionDraftId: string;
+      generatedAssetId: string;
+    }): Promise<{ id: string } | null>;
+    listByCollectionDraftIdForOwner(input: {
+      collectionDraftId: string;
+      ownerUserId: string;
+    }): Promise<Array<{ id: string; position: number }>>;
+    updatePosition(input: { id: string; position: number }): Promise<unknown>;
+  };
+  brandRepository: {
+    findFirstByOwnerUserId(
+      ownerUserId: string
+    ): Promise<PublicationTargetRecord | null>;
+  };
+  collectionDraftRepository: {
+    create(input: {
+      description: string | null;
+      ownerUserId: string;
+      slug: string;
+      title: string;
+    }): Promise<{ id: string }>;
+    findByIdForOwner(input: { id: string; ownerUserId: string }): Promise<{
+      description: string | null;
+      id: string;
+      slug: string;
+      status: CollectionDraftStatus;
+      title: string;
+    } | null>;
+    findDetailedByIdForOwner(input: {
+      id: string;
+      ownerUserId: string;
+    }): Promise<CollectionDraftRecord | null>;
+    findBySlugForOwner(input: {
+      ownerUserId: string;
+      slug: string;
+    }): Promise<{ id: string } | null>;
+    listByOwnerUserId(ownerUserId: string): Promise<CollectionDraftRecord[]>;
+    updateByIdForOwner(input: {
+      description: string | null;
+      id: string;
+      ownerUserId: string;
+      slug: string;
+      status: CollectionDraftStatus;
+      title: string;
+    }): Promise<{ id: string }>;
+  };
+  generatedAssetRepository: {
+    findByIdForOwner(input: {
+      id: string;
+      ownerUserId: string;
+    }): Promise<{ id: string } | null>;
+    listRecentForOwnerUserId(input: {
+      limit: number;
+      ownerUserId: string;
+    }): Promise<GeneratedAssetCandidateRecord[]>;
+  };
+  publishedCollectionItemRepository: {
+    createMany(
+      inputs: Array<{
+        generatedAssetId: string;
+        position: number;
+        publicStorageBucket?: string | null;
+        publicStorageObjectKey?: string | null;
+        publishedCollectionId: string;
+      }>
+    ): Promise<unknown[]>;
+    listByPublishedCollectionId(
+      publishedCollectionId: string
+    ): Promise<
+      Array<{
+        id: string;
+        publicStorageBucket: string | null;
+        publicStorageObjectKey: string | null;
+      }>
+    >;
+    deleteByPublishedCollectionId(
+      publishedCollectionId: string
+    ): Promise<{ count: number }>;
+  };
+  publishedCollectionRepository: {
+    create(input: {
+      brandName: string;
+      brandSlug: string;
+      displayOrder: number;
+      description: string | null;
+      isFeatured: boolean;
+      ownerUserId: string;
+      publishedAt: Date;
+      slug: string;
+      sourceCollectionDraftId: string;
+      title: string;
+    }): Promise<{ id: string }>;
+    deleteByDraftIdForOwner(input: {
+      ownerUserId: string;
+      sourceCollectionDraftId: string;
+    }): Promise<PublishedCollectionRecord | null>;
+    findByBrandSlugAndCollectionSlug(input: {
+      brandSlug: string;
+      slug: string;
+    }): Promise<PublishedCollectionRecord | null>;
+    findByDraftIdForOwner(input: {
+      ownerUserId: string;
+      sourceCollectionDraftId: string;
+    }): Promise<PublishedCollectionRecord | null>;
+    listByOwnerUserId(
+      ownerUserId: string
+    ): Promise<PublishedCollectionRecord[]>;
+    updateByIdForOwner(input: {
+      brandName: string;
+      brandSlug: string;
+      displayOrder?: number;
+      description: string | null;
+      id: string;
+      isFeatured?: boolean;
+      ownerUserId: string;
+      slug: string;
+      title: string;
+    }): Promise<{ id: string }>;
+  };
+};
+
+type PublicPublicationAssetRecord = {
+  bucket: string;
+  key: string;
+};
+
+type CollectionDraftServiceDependencies = {
+  now: () => Date;
+  repositories: CollectionDraftRepositorySet;
+  runTransaction<T>(
+    operation: (repositories: CollectionDraftRepositorySet) => Promise<T>
+  ): Promise<T>;
+  storage: {
+    copyPublishedAsset(input: {
+      contentType: string;
+      destinationKey: string;
+      sourceBucket: string;
+      sourceKey: string;
+    }): Promise<PublicPublicationAssetRecord>;
+    deletePublishedAsset(input: PublicPublicationAssetRecord): Promise<void>;
+  };
+};
+
+const generatedAssetCandidateLimit = 48;
+
+function sanitizeCollectionDraftSlugPart(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-{2,}/g, "-");
+}
+
+function normalizeOptionalDescription(value: string | null | undefined) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalizedValue = value.trim();
+
+  return normalizedValue.length > 0 ? normalizedValue : null;
+}
+
+function serializePublication(publication: PublishedCollectionRecord) {
+  return {
+    brandName: publication.brandName,
+    brandSlug: publication.brandSlug,
+    collectionSlug: publication.slug,
+    displayOrder: publication.displayOrder,
+    id: publication.id,
+    isFeatured: publication.isFeatured,
+    publicPath: `/brands/${publication.brandSlug}/collections/${publication.slug}`,
+    publishedAt: publication.publishedAt.toISOString(),
+    updatedAt: publication.updatedAt.toISOString()
+  };
+}
+
+function serializePublicationTarget(target: PublicationTargetRecord) {
+  return {
+    brandName: target.name,
+    brandSlug: target.slug,
+    publicBrandPath: `/brands/${target.slug}`
+  };
+}
+
+async function createAvailableCollectionDraftSlug(input: {
+  ownerUserId: string;
+  repositories: Pick<CollectionDraftRepositorySet, "collectionDraftRepository">;
+  title: string;
+}) {
+  const baseSlug =
+    sanitizeCollectionDraftSlugPart(input.title) || "collection-draft";
+
+  for (let suffix = 0; suffix < 200; suffix += 1) {
+    const candidateSlug =
+      suffix === 0 ? baseSlug : `${baseSlug}-${(suffix + 1).toString()}`;
+    const existingDraft =
+      await input.repositories.collectionDraftRepository.findBySlugForOwner({
+        ownerUserId: input.ownerUserId,
+        slug: candidateSlug
+      });
+
+    if (!existingDraft) {
+      return candidateSlug;
+    }
+  }
+
+  throw new CollectionDraftServiceError(
+    "DRAFT_SLUG_CONFLICT",
+    "A unique collection draft slug could not be created.",
+    409
+  );
+}
+
+function serializeGeneratedAssetCandidate(
+  asset: GeneratedAssetCandidateRecord
+) {
+  return {
+    createdAt: asset.createdAt.toISOString(),
+    generatedAssetId: asset.id,
+    generationRequestId: asset.generationRequest.id,
+    pipelineKey: asset.generationRequest.pipelineKey,
+    sourceAssetId: asset.generationRequest.sourceAsset.id,
+    sourceAssetOriginalFilename:
+      asset.generationRequest.sourceAsset.originalFilename,
+    variantIndex: asset.variantIndex
+  };
+}
+
+function buildPublishedCollectionPublicObjectKey(input: {
+  generatedAssetId: string;
+  originalFilename: string;
+  position: number;
+  sourceCollectionDraftId: string;
+}) {
+  return `published-collections/${input.sourceCollectionDraftId}/items/${input.position.toString().padStart(3, "0")}-${input.generatedAssetId}-${sanitizeStorageFileName(
+    input.originalFilename
+  )}`;
+}
+
+function toPublicPublicationAssetRecord(input: {
+  publicStorageBucket: string | null;
+  publicStorageObjectKey: string | null;
+}): PublicPublicationAssetRecord | null {
+  if (!input.publicStorageBucket || !input.publicStorageObjectKey) {
+    return null;
+  }
+
+  return {
+    bucket: input.publicStorageBucket,
+    key: input.publicStorageObjectKey
+  };
+}
+
+function isPublicPublicationAssetRecord(
+  asset: PublicPublicationAssetRecord | null
+): asset is PublicPublicationAssetRecord {
+  return asset !== null;
+}
+
+async function deletePublishedAssetsBestEffort(
+  deletePublishedAsset: CollectionDraftServiceDependencies["storage"]["deletePublishedAsset"],
+  assets: PublicPublicationAssetRecord[]
+) {
+  const uniqueAssets = [...new Map(assets.map((asset) => [asset.key, asset])).values()];
+
+  await Promise.all(
+    uniqueAssets.map(async (asset) => {
+      try {
+        await deletePublishedAsset(asset);
+      } catch {
+        return null;
+      }
+    })
+  );
+}
+
+async function promoteDraftAssetsToPublicStorage(input: {
+  copyPublishedAsset: CollectionDraftServiceDependencies["storage"]["copyPublishedAsset"];
+  deletePublishedAsset: CollectionDraftServiceDependencies["storage"]["deletePublishedAsset"];
+  draft: CollectionDraftRecord;
+}) {
+  const copiedAssets: PublicPublicationAssetRecord[] = [];
+
+  try {
+    const promotedAssets = await Promise.all(
+      input.draft.items.map(async (item) => {
+        const publicAsset = await input.copyPublishedAsset({
+          contentType: item.generatedAsset.contentType,
+          destinationKey: buildPublishedCollectionPublicObjectKey({
+            generatedAssetId: item.generatedAsset.id,
+            originalFilename:
+              item.generatedAsset.generationRequest.sourceAsset
+                .originalFilename,
+            position: item.position,
+            sourceCollectionDraftId: input.draft.id
+          }),
+          sourceBucket: item.generatedAsset.storageBucket,
+          sourceKey: item.generatedAsset.storageObjectKey
+        });
+
+        copiedAssets.push(publicAsset);
+
+        return {
+          generatedAssetId: item.generatedAsset.id,
+          position: item.position,
+          publicStorageBucket: publicAsset.bucket,
+          publicStorageObjectKey: publicAsset.key
+        };
+      })
+    );
+
+    return {
+      copiedAssets,
+      promotedAssets
+    };
+  } catch (error) {
+    await deletePublishedAssetsBestEffort(
+      input.deletePublishedAsset,
+      copiedAssets
+    );
+    throw error;
+  }
+}
+
+function serializeCollectionDraft(input: {
+  draft: CollectionDraftRecord;
+  publication: PublishedCollectionRecord | null;
+}) {
+  return {
+    createdAt: input.draft.createdAt.toISOString(),
+    description: input.draft.description,
+    id: input.draft.id,
+    itemCount: input.draft.items.length,
+    items: input.draft.items.map((item) => ({
+      generatedAsset: serializeGeneratedAssetCandidate(item.generatedAsset),
+      id: item.id,
+      position: item.position
+    })),
+    publication: input.publication
+      ? serializePublication(input.publication)
+      : null,
+    slug: input.draft.slug,
+    status: input.draft.status,
+    title: input.draft.title,
+    updatedAt: input.draft.updatedAt.toISOString()
+  };
+}
+
+async function loadSerializedCollectionDraftList(
+  repositories: CollectionDraftRepositorySet,
+  ownerUserId: string
+) {
+  const [drafts, generatedAssetCandidates, publications, publicationTarget] =
+    await Promise.all([
+      repositories.collectionDraftRepository.listByOwnerUserId(ownerUserId),
+      repositories.generatedAssetRepository.listRecentForOwnerUserId({
+        limit: generatedAssetCandidateLimit,
+        ownerUserId
+      }),
+      repositories.publishedCollectionRepository.listByOwnerUserId(ownerUserId),
+      repositories.brandRepository.findFirstByOwnerUserId(ownerUserId)
+    ]);
+  const publicationByDraftId = new Map(
+    publications.map((publication) => [
+      publication.sourceCollectionDraftId,
+      publication
+    ])
+  );
+
+  return collectionDraftListResponseSchema.parse({
+    drafts: drafts.map((draft) =>
+      serializeCollectionDraft({
+        draft,
+        publication: publicationByDraftId.get(draft.id) ?? null
+      })
+    ),
+    generatedAssetCandidates: generatedAssetCandidates.map((asset) =>
+      serializeGeneratedAssetCandidate(asset)
+    ),
+    publicationTarget: publicationTarget
+      ? serializePublicationTarget(publicationTarget)
+      : null
+  });
+}
+
+async function loadCollectionDraftRecordById(input: {
+  collectionDraftId: string;
+  ownerUserId: string;
+  repositories: Pick<CollectionDraftRepositorySet, "collectionDraftRepository">;
+}) {
+  const draft =
+    await input.repositories.collectionDraftRepository.findDetailedByIdForOwner(
+      {
+        id: input.collectionDraftId,
+        ownerUserId: input.ownerUserId
+      }
+    );
+
+  if (!draft) {
+    throw new CollectionDraftServiceError(
+      "DRAFT_NOT_FOUND",
+      "Collection draft was not found.",
+      404
+    );
+  }
+
+  return draft;
+}
+
+async function loadSerializedCollectionDraftById(input: {
+  collectionDraftId: string;
+  ownerUserId: string;
+  repositories: Pick<
+    CollectionDraftRepositorySet,
+    "collectionDraftRepository" | "publishedCollectionRepository"
+  >;
+}) {
+  const [draft, publication] = await Promise.all([
+    loadCollectionDraftRecordById({
+      collectionDraftId: input.collectionDraftId,
+      ownerUserId: input.ownerUserId,
+      repositories: input.repositories
+    }),
+    input.repositories.publishedCollectionRepository.findByDraftIdForOwner({
+      ownerUserId: input.ownerUserId,
+      sourceCollectionDraftId: input.collectionDraftId
+    })
+  ]);
+
+  return collectionDraftResponseSchema.parse({
+    draft: serializeCollectionDraft({
+      draft,
+      publication
+    })
+  });
+}
+
+function assertDraftReadyForPublication(draft: CollectionDraftRecord) {
+  if (draft.status !== "review_ready" || draft.items.length === 0) {
+    throw new CollectionDraftServiceError(
+      "DRAFT_NOT_READY",
+      "Collection draft must be review-ready with at least one curated generated asset before publication.",
+      409
+    );
+  }
+}
+
+function sortPublicationsForMerchandising(
+  publications: PublishedCollectionRecord[]
+) {
+  return [...publications].sort((left, right) => {
+    if (left.isFeatured !== right.isFeatured) {
+      return left.isFeatured ? -1 : 1;
+    }
+
+    if (left.displayOrder !== right.displayOrder) {
+      return left.displayOrder - right.displayOrder;
+    }
+
+    const updatedAtDifference =
+      right.updatedAt.getTime() - left.updatedAt.getTime();
+
+    if (updatedAtDifference !== 0) {
+      return updatedAtDifference;
+    }
+
+    return right.id.localeCompare(left.id);
+  });
+}
+
+export function createCollectionDraftService(
+  dependencies: CollectionDraftServiceDependencies
+) {
+  return {
+    async addCollectionDraftItem(input: {
+      collectionDraftId: string;
+      generatedAssetId: string;
+      ownerUserId: string;
+    }) {
+      return dependencies.runTransaction(async (repositories) => {
+        const draft =
+          await repositories.collectionDraftRepository.findByIdForOwner({
+            id: input.collectionDraftId,
+            ownerUserId: input.ownerUserId
+          });
+
+        if (!draft) {
+          throw new CollectionDraftServiceError(
+            "DRAFT_NOT_FOUND",
+            "Collection draft was not found.",
+            404
+          );
+        }
+
+        const generatedAsset =
+          await repositories.generatedAssetRepository.findByIdForOwner({
+            id: input.generatedAssetId,
+            ownerUserId: input.ownerUserId
+          });
+
+        if (!generatedAsset) {
+          throw new CollectionDraftServiceError(
+            "GENERATED_ASSET_NOT_FOUND",
+            "Generated asset was not found.",
+            404
+          );
+        }
+
+        const existingDraftItem =
+          await repositories.collectionDraftItemRepository.findByGeneratedAssetIdForDraft(
+            {
+              collectionDraftId: input.collectionDraftId,
+              generatedAssetId: input.generatedAssetId
+            }
+          );
+
+        if (existingDraftItem) {
+          throw new CollectionDraftServiceError(
+            "GENERATED_ASSET_ALREADY_INCLUDED",
+            "Generated asset is already included in this collection draft.",
+            409
+          );
+        }
+
+        const existingItems =
+          await repositories.collectionDraftItemRepository.listByCollectionDraftIdForOwner(
+            {
+              collectionDraftId: input.collectionDraftId,
+              ownerUserId: input.ownerUserId
+            }
+          );
+
+        await repositories.collectionDraftItemRepository.create({
+          collectionDraftId: input.collectionDraftId,
+          generatedAssetId: input.generatedAssetId,
+          position: existingItems.length + 1
+        });
+
+        return loadSerializedCollectionDraftById({
+          collectionDraftId: input.collectionDraftId,
+          ownerUserId: input.ownerUserId,
+          repositories
+        });
+      });
+    },
+
+    async createCollectionDraft(input: {
+      description?: string | null;
+      ownerUserId: string;
+      title: string;
+    }) {
+      const parsedInput = collectionDraftCreateRequestSchema.parse(input);
+      const slug = await createAvailableCollectionDraftSlug({
+        ownerUserId: input.ownerUserId,
+        repositories: dependencies.repositories,
+        title: parsedInput.title
+      });
+      const createdDraft =
+        await dependencies.repositories.collectionDraftRepository.create({
+          description: normalizeOptionalDescription(parsedInput.description),
+          ownerUserId: input.ownerUserId,
+          slug,
+          title: parsedInput.title
+        });
+
+      return loadSerializedCollectionDraftById({
+        collectionDraftId: createdDraft.id,
+        ownerUserId: input.ownerUserId,
+        repositories: dependencies.repositories
+      });
+    },
+
+    async listCollectionDrafts(input: { ownerUserId: string }) {
+      return loadSerializedCollectionDraftList(
+        dependencies.repositories,
+        input.ownerUserId
+      );
+    },
+
+    async publishCollectionDraft(input: {
+      collectionDraftId: string;
+      ownerUserId: string;
+    }) {
+      collectionDraftPublishRequestSchema.parse({});
+      const draft = await loadCollectionDraftRecordById({
+        collectionDraftId: input.collectionDraftId,
+        ownerUserId: input.ownerUserId,
+        repositories: dependencies.repositories
+      });
+      const publicationTarget =
+        await dependencies.repositories.brandRepository.findFirstByOwnerUserId(
+          input.ownerUserId
+        );
+
+      if (!publicationTarget) {
+        throw new CollectionDraftServiceError(
+          "STUDIO_SETTINGS_REQUIRED",
+          "Studio settings must define a brand profile before collection publication.",
+          409
+        );
+      }
+
+      assertDraftReadyForPublication(draft);
+
+      const routeConflict =
+        await dependencies.repositories.publishedCollectionRepository.findByBrandSlugAndCollectionSlug(
+          {
+            brandSlug: publicationTarget.slug,
+            slug: draft.slug
+          }
+        );
+      const existingPublication =
+        await dependencies.repositories.publishedCollectionRepository.findByDraftIdForOwner(
+          {
+            ownerUserId: input.ownerUserId,
+            sourceCollectionDraftId: input.collectionDraftId
+          }
+        );
+      const ownerPublications =
+        await dependencies.repositories.publishedCollectionRepository.listByOwnerUserId(
+          input.ownerUserId
+        );
+      const existingPublicAssets = existingPublication
+        ? (
+            await dependencies.repositories.publishedCollectionItemRepository.listByPublishedCollectionId(
+              existingPublication.id
+            )
+          )
+            .map(toPublicPublicationAssetRecord)
+            .filter(isPublicPublicationAssetRecord)
+        : [];
+
+      if (
+        routeConflict &&
+        routeConflict.sourceCollectionDraftId !== input.collectionDraftId
+      ) {
+        throw new CollectionDraftServiceError(
+          "COLLECTION_PUBLICATION_CONFLICT",
+          "Another published collection already uses this public route.",
+          409
+        );
+      }
+
+      const { copiedAssets, promotedAssets } =
+        await promoteDraftAssetsToPublicStorage({
+          copyPublishedAsset: dependencies.storage.copyPublishedAsset,
+          deletePublishedAsset: dependencies.storage.deletePublishedAsset,
+          draft
+        });
+
+      try {
+        const result = await dependencies.runTransaction(async (repositories) => {
+          const publication =
+            existingPublication ??
+            (await repositories.publishedCollectionRepository.create({
+              brandName: publicationTarget.name,
+              brandSlug: publicationTarget.slug,
+              displayOrder:
+                (sortPublicationsForMerchandising(
+                  ownerPublications.filter(
+                    (publication) =>
+                      publication.brandSlug === publicationTarget.slug
+                  )
+                ).at(-1)?.displayOrder ?? -1) + 1,
+              description: draft.description,
+              isFeatured:
+                ownerPublications.filter(
+                  (publication) =>
+                    publication.brandSlug === publicationTarget.slug
+                ).length === 0,
+              ownerUserId: input.ownerUserId,
+              publishedAt: dependencies.now(),
+              slug: draft.slug,
+              sourceCollectionDraftId: draft.id,
+              title: draft.title
+            }));
+
+          if (existingPublication) {
+            await repositories.publishedCollectionRepository.updateByIdForOwner({
+              brandName: publicationTarget.name,
+              brandSlug: publicationTarget.slug,
+              description: draft.description,
+              id: existingPublication.id,
+              ownerUserId: input.ownerUserId,
+              slug: draft.slug,
+              title: draft.title
+            });
+            await repositories.publishedCollectionItemRepository.deleteByPublishedCollectionId(
+              existingPublication.id
+            );
+          }
+
+          await repositories.publishedCollectionItemRepository.createMany(
+            promotedAssets.map((asset) => ({
+              generatedAssetId: asset.generatedAssetId,
+              position: asset.position,
+              publicStorageBucket: asset.publicStorageBucket,
+              publicStorageObjectKey: asset.publicStorageObjectKey,
+              publishedCollectionId: publication.id
+            }))
+          );
+
+          return loadSerializedCollectionDraftById({
+            collectionDraftId: input.collectionDraftId,
+            ownerUserId: input.ownerUserId,
+            repositories
+          });
+        });
+
+        const copiedAssetKeySet = new Set(copiedAssets.map((asset) => asset.key));
+        await deletePublishedAssetsBestEffort(
+          dependencies.storage.deletePublishedAsset,
+          existingPublicAssets.filter((asset) => !copiedAssetKeySet.has(asset.key))
+        );
+
+        return result;
+      } catch (error) {
+        await deletePublishedAssetsBestEffort(
+          dependencies.storage.deletePublishedAsset,
+          copiedAssets
+        );
+        throw error;
+      }
+    },
+
+    async updateCollectionPublicationMerchandising(input: {
+      collectionDraftId: string;
+      displayOrder: number;
+      isFeatured: boolean;
+      ownerUserId: string;
+    }) {
+      const parsedInput = collectionPublicationMerchandisingRequestSchema.parse(
+        {
+          displayOrder: input.displayOrder,
+          isFeatured: input.isFeatured
+        }
+      );
+
+      return dependencies.runTransaction(async (repositories) => {
+        const draft =
+          await repositories.collectionDraftRepository.findByIdForOwner({
+            id: input.collectionDraftId,
+            ownerUserId: input.ownerUserId
+          });
+
+        if (!draft) {
+          throw new CollectionDraftServiceError(
+            "DRAFT_NOT_FOUND",
+            "Collection draft was not found.",
+            404
+          );
+        }
+
+        const publication =
+          await repositories.publishedCollectionRepository.findByDraftIdForOwner(
+            {
+              ownerUserId: input.ownerUserId,
+              sourceCollectionDraftId: input.collectionDraftId
+            }
+          );
+
+        if (!publication) {
+          throw new CollectionDraftServiceError(
+            "COLLECTION_PUBLICATION_NOT_FOUND",
+            "Published collection was not found for this draft.",
+            404
+          );
+        }
+
+        if (parsedInput.isFeatured) {
+          const ownerPublications =
+            await repositories.publishedCollectionRepository.listByOwnerUserId(
+              input.ownerUserId
+            );
+          const siblingFeaturedPublications = ownerPublications.filter(
+            (candidate) =>
+              candidate.id !== publication.id &&
+              candidate.brandSlug === publication.brandSlug &&
+              candidate.isFeatured
+          );
+
+          await Promise.all(
+            siblingFeaturedPublications.map((candidate) =>
+              repositories.publishedCollectionRepository.updateByIdForOwner({
+                brandName: candidate.brandName,
+                brandSlug: candidate.brandSlug,
+                description: candidate.description,
+                displayOrder: candidate.displayOrder,
+                id: candidate.id,
+                isFeatured: false,
+                ownerUserId: input.ownerUserId,
+                slug: candidate.slug,
+                title: candidate.title
+              })
+            )
+          );
+        }
+
+        await repositories.publishedCollectionRepository.updateByIdForOwner({
+          brandName: publication.brandName,
+          brandSlug: publication.brandSlug,
+          description: draft.description,
+          displayOrder: parsedInput.displayOrder,
+          id: publication.id,
+          isFeatured: parsedInput.isFeatured,
+          ownerUserId: input.ownerUserId,
+          slug: publication.slug,
+          title: draft.title
+        });
+
+        return loadSerializedCollectionDraftById({
+          collectionDraftId: input.collectionDraftId,
+          ownerUserId: input.ownerUserId,
+          repositories
+        });
+      });
+    },
+
+    async removeCollectionDraftItem(input: {
+      collectionDraftId: string;
+      itemId: string;
+      ownerUserId: string;
+    }) {
+      const deletedPublicAssets: PublicPublicationAssetRecord[] = [];
+      const result = await dependencies.runTransaction(async (repositories) => {
+        const draft =
+          await repositories.collectionDraftRepository.findByIdForOwner({
+            id: input.collectionDraftId,
+            ownerUserId: input.ownerUserId
+          });
+
+        if (!draft) {
+          throw new CollectionDraftServiceError(
+            "DRAFT_NOT_FOUND",
+            "Collection draft was not found.",
+            404
+          );
+        }
+
+        const deletedItem =
+          await repositories.collectionDraftItemRepository.deleteByIdForDraftOwner(
+            {
+              collectionDraftId: input.collectionDraftId,
+              id: input.itemId,
+              ownerUserId: input.ownerUserId
+            }
+          );
+
+        if (!deletedItem) {
+          throw new CollectionDraftServiceError(
+            "DRAFT_ITEM_NOT_FOUND",
+            "Collection draft item was not found.",
+            404
+          );
+        }
+
+        const remainingItems =
+          await repositories.collectionDraftItemRepository.listByCollectionDraftIdForOwner(
+            {
+              collectionDraftId: input.collectionDraftId,
+              ownerUserId: input.ownerUserId
+            }
+          );
+
+        await Promise.all(
+          remainingItems.map((item, index) =>
+            item.position === index + 1
+              ? Promise.resolve()
+              : repositories.collectionDraftItemRepository.updatePosition({
+                  id: item.id,
+                  position: index + 1
+                })
+          )
+        );
+
+        if (draft.status === "review_ready" && remainingItems.length === 0) {
+          const existingPublication =
+            await repositories.publishedCollectionRepository.findByDraftIdForOwner(
+              {
+                ownerUserId: input.ownerUserId,
+                sourceCollectionDraftId: input.collectionDraftId
+              }
+            );
+
+          if (existingPublication) {
+            deletedPublicAssets.push(
+              ...(
+                await repositories.publishedCollectionItemRepository.listByPublishedCollectionId(
+                  existingPublication.id
+                )
+              )
+                .map(toPublicPublicationAssetRecord)
+                .filter(isPublicPublicationAssetRecord)
+            );
+          }
+
+          await repositories.collectionDraftRepository.updateByIdForOwner({
+            description: draft.description,
+            id: input.collectionDraftId,
+            ownerUserId: input.ownerUserId,
+            slug: draft.slug,
+            status: "draft",
+            title: draft.title
+          });
+          await repositories.publishedCollectionRepository.deleteByDraftIdForOwner(
+            {
+              ownerUserId: input.ownerUserId,
+              sourceCollectionDraftId: input.collectionDraftId
+            }
+          );
+        }
+
+        return loadSerializedCollectionDraftById({
+          collectionDraftId: input.collectionDraftId,
+          ownerUserId: input.ownerUserId,
+          repositories
+        });
+      });
+
+      await deletePublishedAssetsBestEffort(
+        dependencies.storage.deletePublishedAsset,
+        deletedPublicAssets
+      );
+
+      return result;
+    },
+
+    async reorderCollectionDraftItems(input: {
+      collectionDraftId: string;
+      itemIds: string[];
+      ownerUserId: string;
+    }) {
+      const parsedInput = collectionDraftItemReorderRequestSchema.parse({
+        itemIds: input.itemIds
+      });
+
+      return dependencies.runTransaction(async (repositories) => {
+        const draft =
+          await repositories.collectionDraftRepository.findByIdForOwner({
+            id: input.collectionDraftId,
+            ownerUserId: input.ownerUserId
+          });
+
+        if (!draft) {
+          throw new CollectionDraftServiceError(
+            "DRAFT_NOT_FOUND",
+            "Collection draft was not found.",
+            404
+          );
+        }
+
+        const existingItems =
+          await repositories.collectionDraftItemRepository.listByCollectionDraftIdForOwner(
+            {
+              collectionDraftId: input.collectionDraftId,
+              ownerUserId: input.ownerUserId
+            }
+          );
+
+        if (existingItems.length !== parsedInput.itemIds.length) {
+          throw new CollectionDraftServiceError(
+            "DRAFT_REORDER_MISMATCH",
+            "Collection draft reorder payload does not match the current items.",
+            409
+          );
+        }
+
+        const existingItemIdSet = new Set(existingItems.map((item) => item.id));
+
+        if (
+          parsedInput.itemIds.some(
+            (itemId) => !existingItemIdSet.has(itemId)
+          ) ||
+          new Set(parsedInput.itemIds).size !== parsedInput.itemIds.length
+        ) {
+          throw new CollectionDraftServiceError(
+            "DRAFT_REORDER_MISMATCH",
+            "Collection draft reorder payload does not match the current items.",
+            409
+          );
+        }
+
+        await Promise.all(
+          parsedInput.itemIds.map((itemId, index) =>
+            repositories.collectionDraftItemRepository.updatePosition({
+              id: itemId,
+              position: index + 1
+            })
+          )
+        );
+
+        return loadSerializedCollectionDraftById({
+          collectionDraftId: input.collectionDraftId,
+          ownerUserId: input.ownerUserId,
+          repositories
+        });
+      });
+    },
+
+    async unpublishCollectionDraft(input: {
+      collectionDraftId: string;
+      ownerUserId: string;
+    }) {
+      const deletedPublicAssets: PublicPublicationAssetRecord[] = [];
+      const result = await dependencies.runTransaction(async (repositories) => {
+        const draft =
+          await repositories.collectionDraftRepository.findByIdForOwner({
+            id: input.collectionDraftId,
+            ownerUserId: input.ownerUserId
+          });
+
+        if (!draft) {
+          throw new CollectionDraftServiceError(
+            "DRAFT_NOT_FOUND",
+            "Collection draft was not found.",
+            404
+          );
+        }
+
+        const existingPublication =
+          await repositories.publishedCollectionRepository.findByDraftIdForOwner(
+            {
+              ownerUserId: input.ownerUserId,
+              sourceCollectionDraftId: input.collectionDraftId
+            }
+          );
+
+        if (existingPublication) {
+          deletedPublicAssets.push(
+            ...(
+              await repositories.publishedCollectionItemRepository.listByPublishedCollectionId(
+                existingPublication.id
+              )
+            )
+              .map(toPublicPublicationAssetRecord)
+              .filter(isPublicPublicationAssetRecord)
+          );
+        }
+
+        const deletedPublication =
+          await repositories.publishedCollectionRepository.deleteByDraftIdForOwner(
+            {
+              ownerUserId: input.ownerUserId,
+              sourceCollectionDraftId: input.collectionDraftId
+            }
+          );
+
+        if (!deletedPublication) {
+          throw new CollectionDraftServiceError(
+            "COLLECTION_PUBLICATION_NOT_FOUND",
+            "Published collection was not found for this draft.",
+            404
+          );
+        }
+
+        if (deletedPublication.isFeatured) {
+          const nextFeaturedPublication = sortPublicationsForMerchandising(
+            (
+              await repositories.publishedCollectionRepository.listByOwnerUserId(
+                input.ownerUserId
+              )
+            ).filter(
+              (publication) =>
+                publication.brandSlug === deletedPublication.brandSlug
+            )
+          )[0];
+
+          if (nextFeaturedPublication) {
+            await repositories.publishedCollectionRepository.updateByIdForOwner(
+              {
+                brandName: nextFeaturedPublication.brandName,
+                brandSlug: nextFeaturedPublication.brandSlug,
+                description: nextFeaturedPublication.description,
+                displayOrder: nextFeaturedPublication.displayOrder,
+                id: nextFeaturedPublication.id,
+                isFeatured: true,
+                ownerUserId: input.ownerUserId,
+                slug: nextFeaturedPublication.slug,
+                title: nextFeaturedPublication.title
+              }
+            );
+          }
+        }
+
+        return loadSerializedCollectionDraftById({
+          collectionDraftId: input.collectionDraftId,
+          ownerUserId: input.ownerUserId,
+          repositories
+        });
+      });
+
+      await deletePublishedAssetsBestEffort(
+        dependencies.storage.deletePublishedAsset,
+        deletedPublicAssets
+      );
+
+      return result;
+    },
+
+    async updateCollectionDraft(input: {
+      collectionDraftId: string;
+      description: string | null;
+      ownerUserId: string;
+      slug: string;
+      status: CollectionDraftStatus;
+      title: string;
+    }) {
+      const parsedInput = collectionDraftUpdateRequestSchema.parse({
+        description: input.description,
+        slug: input.slug,
+        status: input.status,
+        title: input.title
+      });
+      const existingDraft =
+        await dependencies.repositories.collectionDraftRepository.findByIdForOwner(
+          {
+            id: input.collectionDraftId,
+            ownerUserId: input.ownerUserId
+          }
+        );
+
+      if (!existingDraft) {
+        throw new CollectionDraftServiceError(
+          "DRAFT_NOT_FOUND",
+          "Collection draft was not found.",
+          404
+        );
+      }
+
+      const conflictingDraft =
+        await dependencies.repositories.collectionDraftRepository.findBySlugForOwner(
+          {
+            ownerUserId: input.ownerUserId,
+            slug: parsedInput.slug
+          }
+        );
+
+      if (conflictingDraft && conflictingDraft.id !== input.collectionDraftId) {
+        throw new CollectionDraftServiceError(
+          "DRAFT_SLUG_CONFLICT",
+          "Collection draft slug is already in use.",
+          409
+        );
+      }
+
+      if (parsedInput.status === "review_ready") {
+        const existingItems =
+          await dependencies.repositories.collectionDraftItemRepository.listByCollectionDraftIdForOwner(
+            {
+              collectionDraftId: input.collectionDraftId,
+              ownerUserId: input.ownerUserId
+            }
+          );
+
+        if (existingItems.length === 0) {
+          throw new CollectionDraftServiceError(
+            "DRAFT_NOT_READY",
+            "Collection draft needs at least one curated generated asset before it can be marked review-ready.",
+            409
+          );
+        }
+      }
+
+      const publication =
+        await dependencies.repositories.publishedCollectionRepository.findByDraftIdForOwner(
+          {
+            ownerUserId: input.ownerUserId,
+            sourceCollectionDraftId: input.collectionDraftId
+          }
+        );
+
+      if (publication) {
+        const routeConflict =
+          await dependencies.repositories.publishedCollectionRepository.findByBrandSlugAndCollectionSlug(
+            {
+              brandSlug: publication.brandSlug,
+              slug: parsedInput.slug
+            }
+          );
+
+        if (routeConflict && routeConflict.id !== publication.id) {
+          throw new CollectionDraftServiceError(
+            "COLLECTION_PUBLICATION_CONFLICT",
+            "Another published collection already uses this public route.",
+            409
+          );
+        }
+      }
+
+      await dependencies.repositories.collectionDraftRepository.updateByIdForOwner(
+        {
+          description: normalizeOptionalDescription(parsedInput.description),
+          id: input.collectionDraftId,
+          ownerUserId: input.ownerUserId,
+          slug: parsedInput.slug,
+          status: parsedInput.status,
+          title: parsedInput.title
+        }
+      );
+
+      if (publication) {
+        await dependencies.repositories.publishedCollectionRepository.updateByIdForOwner(
+          {
+            brandName: publication.brandName,
+            brandSlug: publication.brandSlug,
+            description: normalizeOptionalDescription(parsedInput.description),
+            displayOrder: publication.displayOrder,
+            id: publication.id,
+            isFeatured: publication.isFeatured,
+            ownerUserId: input.ownerUserId,
+            slug: parsedInput.slug,
+            title: parsedInput.title
+          }
+        );
+      }
+
+      return loadSerializedCollectionDraftById({
+        collectionDraftId: input.collectionDraftId,
+        ownerUserId: input.ownerUserId,
+        repositories: dependencies.repositories
+      });
+    }
+  };
+}

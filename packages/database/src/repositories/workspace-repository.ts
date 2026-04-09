@@ -27,6 +27,50 @@ export function createWorkspaceRepository(
           slug
         }
       });
+    },
+
+    findFirstByOwnerUserId(ownerUserId: string): Promise<Workspace | null> {
+      return database.workspace.findFirst({
+        orderBy: [
+          {
+            createdAt: "asc"
+          },
+          {
+            id: "asc"
+          }
+        ],
+        where: {
+          ownerUserId
+        }
+      });
+    },
+
+    updateByIdForOwner(input: {
+      id: string;
+      name: string;
+      ownerUserId: string;
+      slug: string;
+      status: WorkspaceStatus;
+    }): Promise<Workspace> {
+      return database.workspace
+        .updateMany({
+          data: {
+            name: input.name,
+            slug: input.slug,
+            status: input.status
+          },
+          where: {
+            id: input.id,
+            ownerUserId: input.ownerUserId
+          }
+        })
+        .then(() =>
+          database.workspace.findUniqueOrThrow({
+            where: {
+              id: input.id
+            }
+          })
+        );
     }
   };
 }

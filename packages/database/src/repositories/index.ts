@@ -15,6 +15,14 @@ export {
   type BrandRepository
 } from "./brand-repository.js";
 export {
+  createCollectionDraftItemRepository,
+  type CollectionDraftItemRepository
+} from "./collection-draft-item-repository.js";
+export {
+  createCollectionDraftRepository,
+  type CollectionDraftRepository
+} from "./collection-draft-repository.js";
+export {
   createGeneratedAssetRepository,
   type GeneratedAssetRepository
 } from "./generated-asset-repository.js";
@@ -46,6 +54,14 @@ export {
   createOpsAlertStateRepository,
   type OpsAlertStateRepository
 } from "./ops-alert-state-repository.js";
+export {
+  createPublishedCollectionItemRepository,
+  type PublishedCollectionItemRepository
+} from "./published-collection-item-repository.js";
+export {
+  createPublishedCollectionRepository,
+  type PublishedCollectionRepository
+} from "./published-collection-repository.js";
 export {
   createOpsObservabilityCaptureRepository,
   type OpsObservabilityCaptureRepository

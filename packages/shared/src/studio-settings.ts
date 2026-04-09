@@ -1,0 +1,120 @@
+import { z } from "zod";
+
+import {
+  collectionBrandNameSchema,
+  collectionBrandSlugSchema,
+  collectionDraftSlugSchema
+} from "./collections.js";
+
+export const studioWorkspaceNameSchema = z.string().trim().min(1).max(120);
+export const studioWorkspaceSlugSchema = collectionDraftSlugSchema;
+export const defaultStudioBrandAccentColor = "#8b5e34";
+export const defaultStudioBrandLandingHeadline =
+  "Published collection releases";
+export const defaultStudioBrandLandingDescription =
+  "Explore curated collection drops assembled from generated art variants and published as immutable releases.";
+export const defaultStudioFeaturedReleaseLabel = "Featured release";
+export const studioBrandAccentColorSchema = z
+  .string()
+  .regex(/^#[0-9a-f]{6}$/i, {
+    message: "Expected a six-digit hex color beginning with #."
+  });
+export const studioBrandLandingHeadlineSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(120);
+export const studioBrandLandingDescriptionSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(280);
+export const studioFeaturedReleaseLabelSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(40);
+export const studioCustomDomainSchema = z
+  .string()
+  .trim()
+  .max(253)
+  .regex(/^(?=.{1,253}$)(?!-)(?:[a-z0-9-]{1,63}\.)+[a-z]{2,63}$/i, {
+    message: "Expected a valid domain name."
+  });
+
+export const studioBrandThemeSchema = z.object({
+  accentColor: studioBrandAccentColorSchema,
+  featuredReleaseLabel: studioFeaturedReleaseLabelSchema.optional(),
+  landingDescription: studioBrandLandingDescriptionSchema.optional(),
+  landingHeadline: studioBrandLandingHeadlineSchema.optional()
+});
+
+export const studioWorkspaceSummarySchema = z.object({
+  id: z.string().min(1),
+  name: studioWorkspaceNameSchema,
+  slug: studioWorkspaceSlugSchema,
+  status: z.enum(["active", "suspended", "archived"])
+});
+
+export const studioBrandSummarySchema = z.object({
+  accentColor: studioBrandAccentColorSchema,
+  customDomain: studioCustomDomainSchema.nullable(),
+  featuredReleaseLabel: studioFeaturedReleaseLabelSchema,
+  id: z.string().min(1),
+  landingDescription: studioBrandLandingDescriptionSchema,
+  landingHeadline: studioBrandLandingHeadlineSchema,
+  name: collectionBrandNameSchema,
+  publicBrandPath: z.string().min(1),
+  slug: collectionBrandSlugSchema
+});
+
+export const studioSettingsSummarySchema = z.object({
+  brand: studioBrandSummarySchema,
+  workspace: studioWorkspaceSummarySchema
+});
+
+export const studioSettingsResponseSchema = z.object({
+  settings: studioSettingsSummarySchema.nullable()
+});
+
+export const studioSettingsUpdateRequestSchema = z.object({
+  accentColor: studioBrandAccentColorSchema,
+  brandName: collectionBrandNameSchema,
+  brandSlug: collectionBrandSlugSchema,
+  customDomain: studioCustomDomainSchema.nullish(),
+  featuredReleaseLabel: studioFeaturedReleaseLabelSchema,
+  landingDescription: studioBrandLandingDescriptionSchema,
+  landingHeadline: studioBrandLandingHeadlineSchema,
+  workspaceName: studioWorkspaceNameSchema,
+  workspaceSlug: studioWorkspaceSlugSchema
+});
+
+export const studioSettingsErrorResponseSchema = z.object({
+  error: z.object({
+    code: z.enum([
+      "BRAND_PUBLICATION_CONFLICT",
+      "BRAND_SLUG_CONFLICT",
+      "INVALID_REQUEST",
+      "INTERNAL_SERVER_ERROR",
+      "SESSION_REQUIRED",
+      "WORKSPACE_SLUG_CONFLICT"
+    ]),
+    message: z.string().min(1)
+  })
+});
+
+export type StudioBrandSummary = z.infer<typeof studioBrandSummarySchema>;
+export type StudioBrandTheme = z.infer<typeof studioBrandThemeSchema>;
+export type StudioSettingsErrorResponse = z.infer<
+  typeof studioSettingsErrorResponseSchema
+>;
+export type StudioSettingsResponse = z.infer<
+  typeof studioSettingsResponseSchema
+>;
+export type StudioSettingsSummary = z.infer<typeof studioSettingsSummarySchema>;
+export type StudioSettingsUpdateRequest = z.infer<
+  typeof studioSettingsUpdateRequestSchema
+>;
+export type StudioWorkspaceSummary = z.infer<
+  typeof studioWorkspaceSummarySchema
+>;

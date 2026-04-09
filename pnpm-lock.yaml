@@ -50,6 +50,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@ai-nft-forge/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@ai-nft-forge/database':
         specifier: workspace:*
         version: link:../../packages/database

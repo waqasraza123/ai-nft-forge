@@ -13,6 +13,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@ai-nft-forge/contracts": "workspace:*",
     "@ai-nft-forge/database": "workspace:*",
     "@ai-nft-forge/shared": "workspace:*",
     "@ai-nft-forge/ui": "workspace:*",

@@ -64,6 +64,11 @@ enum OpsAlertDeliveryState {
   failed
 }
 
+enum CollectionDraftStatus {
+  draft
+  review_ready
+}
+
 model User {
   id                 String              @id @default(cuid()) @map("id")
   walletAddress      String              @unique @map("wallet_address")
@@ -72,8 +77,10 @@ model User {
   createdAt          DateTime            @default(now()) @map("created_at")
   updatedAt          DateTime            @updatedAt @map("updated_at")
   authSessions       AuthSession[]
+  collectionDrafts   CollectionDraft[]   @relation("CollectionDraftOwner")
   generatedAssets    GeneratedAsset[]    @relation("GeneratedAssetOwner")
   generationRequests GenerationRequest[] @relation("GenerationRequestOwner")
+  publishedCollections PublishedCollection[] @relation("PublishedCollectionOwner")
   opsAlertDeliveries OpsAlertDelivery[]  @relation("OpsAlertDeliveryOwner")
   opsAlertMutes      OpsAlertMute[]      @relation("OpsAlertMuteOwner")
   opsAlertRoutingPolicies OpsAlertRoutingPolicy[] @relation("OpsAlertRoutingPolicyOwner")
@@ -221,6 +228,8 @@ model GeneratedAsset {
   byteSize            Int?              @map("byte_size")
   createdAt           DateTime          @default(now()) @map("created_at")
   updatedAt           DateTime          @updatedAt @map("updated_at")
+  collectionDraftItems CollectionDraftItem[]
+  publishedCollectionItems PublishedCollectionItem[]
   generationRequest   GenerationRequest @relation(fields: [generationRequestId], references: [id], onDelete: Cascade)
   ownerUser           User              @relation("GeneratedAssetOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
   sourceAsset         SourceAsset       @relation(fields: [sourceAssetId], references: [id], onDelete: Cascade)
@@ -230,6 +239,83 @@ model GeneratedAsset {
   @@index([sourceAssetId, createdAt], map: "generated_assets_source_asset_id_created_at_idx")
   @@index([generationRequestId, createdAt], map: "generated_assets_generation_request_id_created_at_idx")
   @@map("generated_assets")
+}
+
+model CollectionDraft {
+  id          String                @id @default(cuid()) @map("id")
+  ownerUserId String                @map("owner_user_id")
+  title       String                @map("title")
+  slug        String                @map("slug")
+  description String?               @map("description")
+  status      CollectionDraftStatus @default(draft) @map("status")
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+  items       CollectionDraftItem[]
+  publishedCollection PublishedCollection?
+  ownerUser   User                  @relation("CollectionDraftOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerUserId, slug], map: "collection_drafts_owner_user_id_slug_key")
+  @@index([ownerUserId, updatedAt], map: "collection_drafts_owner_user_id_updated_at_idx")
+  @@map("collection_drafts")
+}
+
+model CollectionDraftItem {
+  id                String          @id @default(cuid()) @map("id")
+  collectionDraftId String          @map("collection_draft_id")
+  generatedAssetId  String          @map("generated_asset_id")
+  position          Int             @map("position")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+  collectionDraft   CollectionDraft @relation(fields: [collectionDraftId], references: [id], onDelete: Cascade)
+  generatedAsset    GeneratedAsset  @relation(fields: [generatedAssetId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionDraftId, generatedAssetId], map: "collection_draft_items_draft_asset_key")
+  @@unique([collectionDraftId, position], map: "collection_draft_items_draft_position_key")
+  @@index([generatedAssetId], map: "collection_draft_items_generated_asset_id_idx")
+  @@map("collection_draft_items")
+}
+
+model PublishedCollection {
+  id                    String                    @id @default(cuid()) @map("id")
+  ownerUserId           String                    @map("owner_user_id")
+  sourceCollectionDraftId String                  @unique @map("source_collection_draft_id")
+  brandName             String                    @map("brand_name")
+  brandSlug             String                    @map("brand_slug")
+  isFeatured            Boolean                   @default(false) @map("is_featured")
+  displayOrder          Int                       @default(0) @map("display_order")
+  title                 String                    @map("title")
+  slug                  String                    @map("slug")
+  description           String?                   @map("description")
+  publishedAt           DateTime                  @map("published_at")
+  createdAt             DateTime                  @default(now()) @map("created_at")
+  updatedAt             DateTime                  @updatedAt @map("updated_at")
+  items                 PublishedCollectionItem[]
+  ownerUser             User                      @relation("PublishedCollectionOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  sourceCollectionDraft CollectionDraft           @relation(fields: [sourceCollectionDraftId], references: [id], onDelete: Cascade)
+
+  @@unique([brandSlug, slug], map: "published_collections_brand_slug_slug_key")
+  @@index([ownerUserId, updatedAt], map: "published_collections_owner_user_id_updated_at_idx")
+  @@index([brandSlug, isFeatured, displayOrder, updatedAt], map: "published_collections_brand_featured_order_updated_at_idx")
+  @@map("published_collections")
+}
+
+model PublishedCollectionItem {
+  id                   String              @id @default(cuid()) @map("id")
+  publishedCollectionId String             @map("published_collection_id")
+  generatedAssetId     String              @map("generated_asset_id")
+  position             Int                 @map("position")
+  publicStorageBucket  String?             @map("public_storage_bucket")
+  publicStorageObjectKey String?           @map("public_storage_object_key")
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
+  generatedAsset       GeneratedAsset      @relation(fields: [generatedAssetId], references: [id], onDelete: Cascade)
+  publishedCollection  PublishedCollection @relation(fields: [publishedCollectionId], references: [id], onDelete: Cascade)
+
+  @@unique([publishedCollectionId, generatedAssetId], map: "pub_collection_items_pub_asset_key")
+  @@unique([publishedCollectionId, position], map: "pub_collection_items_pub_position_key")
+  @@unique([publicStorageObjectKey], map: "pub_collection_items_public_object_key")
+  @@index([generatedAssetId], map: "published_collection_items_generated_asset_id_idx")
+  @@map("published_collection_items")
 }
 
 model OpsObservabilityCapture {

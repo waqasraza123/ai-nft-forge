@@ -217,3 +217,27 @@ export async function createSignedStorageDownload(input: {
     url
   };
 }
+
+export function createPublicStorageUrl(input: {
+  bucket: string;
+  endpoint: string;
+  forcePathStyle: boolean;
+  key: string;
+}) {
+  const normalizedKey = input.key
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+  const endpointUrl = new URL(input.endpoint);
+
+  if (input.forcePathStyle) {
+    endpointUrl.pathname = `/${input.bucket}/${normalizedKey}`;
+
+    return endpointUrl.toString();
+  }
+
+  endpointUrl.hostname = `${input.bucket}.${endpointUrl.hostname}`;
+  endpointUrl.pathname = `/${normalizedKey}`;
+
+  return endpointUrl.toString();
+}

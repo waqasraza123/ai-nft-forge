@@ -1,6 +1,6 @@
 # Routes And Jobs
 
-This document defines durable boundary expectations for the first implementation slices. The repository now has the initial web routes, auth and health endpoints, source asset intake routes, a browser-readable source asset list route with per-asset generation history, the generation dispatch route, the first protected generated-output retrieval route, and the first generation worker output-handling job family.
+This document defines durable boundary expectations for the first implementation slices. The repository now has the initial web routes, auth and health endpoints, source asset intake routes, a browser-readable source asset list route with per-asset generation history, owner-scoped collection draft routes for curated generated-asset assembly, publish/unpublish/merchandising controls for public collection snapshots, durable studio settings routes for owner-scoped workspace identity, brand identity, and saved public landing copy, public collection metadata plus contract/token-uri routes derived from published snapshots, the generation dispatch route, the first protected generated-output retrieval route, and the first generation worker output-handling job family.
 
 ## Current Route Surfaces
 
@@ -8,8 +8,15 @@ This document defines durable boundary expectations for the first implementation
 - `/sign-in`
 - `/studio`
 - `/studio/assets`
+- `/studio/collections`
+- `/studio/settings`
 - `/ops`
+- `/brands/[brandSlug]`
 - `/brands/[brandSlug]/collections/[collectionSlug]`
+- `/brands/[brandSlug]/collections/[collectionSlug]/contract`
+- `/brands/[brandSlug]/collections/[collectionSlug]/metadata`
+- `/brands/[brandSlug]/collections/[collectionSlug]/metadata/[editionNumber]`
+- `/brands/[brandSlug]/collections/[collectionSlug]/token-uri/[tokenId]`
 - `/api/health`
 - `/api/auth/nonce`
 - `/api/auth/verify`
@@ -18,6 +25,13 @@ This document defines durable boundary expectations for the first implementation
 - `/api/studio/assets`
 - `/api/studio/assets/upload-intents`
 - `/api/studio/assets/[assetId]/complete`
+- `/api/studio/collections`
+- `/api/studio/collections/[collectionDraftId]`
+- `/api/studio/collections/[collectionDraftId]/items`
+- `/api/studio/collections/[collectionDraftId]/items/[itemId]`
+- `/api/studio/collections/[collectionDraftId]/items/reorder`
+- `/api/studio/collections/[collectionDraftId]/publish`
+- `/api/studio/settings`
 - `/api/studio/generations`
 - `/api/studio/generations/[generationRequestId]/retry`
 - `/api/studio/generated-assets/[generatedAssetId]/download-intent`
@@ -33,7 +47,6 @@ This document defines durable boundary expectations for the first implementation
 - `/studio`
 - `/studio/assets`
 - `/studio/collections`
-- `/studio/settings`
 - `/collections/[slug]`
 - `/api/internal/*`
 

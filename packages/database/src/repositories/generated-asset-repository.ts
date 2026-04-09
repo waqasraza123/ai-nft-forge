@@ -66,6 +66,37 @@ export function createGeneratedAssetRepository(
           ownerUserId: input.ownerUserId
         }
       });
+    },
+
+    listRecentForOwnerUserId(input: { limit: number; ownerUserId: string }) {
+      return database.generatedAsset.findMany({
+        include: {
+          generationRequest: {
+            select: {
+              id: true,
+              pipelineKey: true,
+              sourceAsset: {
+                select: {
+                  id: true,
+                  originalFilename: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: [
+          {
+            createdAt: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        take: input.limit,
+        where: {
+          ownerUserId: input.ownerUserId
+        }
+      });
     }
   };
 }

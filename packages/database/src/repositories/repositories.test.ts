@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { createAuthSessionRepository } from "./auth-session-repository.js";
+import { createBrandRepository } from "./brand-repository.js";
+import { createCollectionDraftItemRepository } from "./collection-draft-item-repository.js";
+import { createCollectionDraftRepository } from "./collection-draft-repository.js";
 import { createGeneratedAssetRepository } from "./generated-asset-repository.js";
 import { createGenerationRequestRepository } from "./generation-request-repository.js";
 import { createOpsAlertDeliveryRepository } from "./ops-alert-delivery-repository.js";
@@ -10,8 +13,11 @@ import { createOpsAlertRoutingPolicyRepository } from "./ops-alert-routing-polic
 import { createOpsAlertSchedulePolicyRepository } from "./ops-alert-schedule-policy-repository.js";
 import { createOpsAlertStateRepository } from "./ops-alert-state-repository.js";
 import { createOpsObservabilityCaptureRepository } from "./ops-observability-capture-repository.js";
+import { createPublishedCollectionItemRepository } from "./published-collection-item-repository.js";
+import { createPublishedCollectionRepository } from "./published-collection-repository.js";
 import { createSourceAssetRepository } from "./source-asset-repository.js";
 import { createUserRepository } from "./user-repository.js";
+import { createWorkspaceRepository } from "./workspace-repository.js";
 
 describe("database repositories", () => {
   it("delegates wallet user upserts through the user repository", async () => {
@@ -96,6 +102,160 @@ describe("database repositories", () => {
       }
     });
     expect(result[0]?.id).toBe("asset_1");
+  });
+
+  it("delegates owner-scoped workspace lookup and update through the workspace repository", async () => {
+    const database = {
+      workspace: {
+        create: vi.fn(),
+        findFirst: vi.fn().mockResolvedValue({
+          id: "workspace_1"
+        }),
+        findUnique: vi.fn(),
+        findUniqueOrThrow: vi.fn().mockResolvedValue({
+          id: "workspace_1",
+          slug: "forge-ops"
+        }),
+        updateMany: vi.fn().mockResolvedValue({
+          count: 1
+        })
+      }
+    };
+    const repository = createWorkspaceRepository(database as never);
+
+    const workspace = await repository.findFirstByOwnerUserId("user_1");
+    const updatedWorkspace = await repository.updateByIdForOwner({
+      id: "workspace_1",
+      name: "Forge Ops",
+      ownerUserId: "user_1",
+      slug: "forge-ops",
+      status: "active"
+    });
+
+    expect(database.workspace.findFirst).toHaveBeenCalledWith({
+      orderBy: [
+        {
+          createdAt: "asc"
+        },
+        {
+          id: "asc"
+        }
+      ],
+      where: {
+        ownerUserId: "user_1"
+      }
+    });
+    expect(database.workspace.updateMany).toHaveBeenCalledWith({
+      data: {
+        name: "Forge Ops",
+        slug: "forge-ops",
+        status: "active"
+      },
+      where: {
+        id: "workspace_1",
+        ownerUserId: "user_1"
+      }
+    });
+    expect(database.workspace.findUniqueOrThrow).toHaveBeenCalledWith({
+      where: {
+        id: "workspace_1"
+      }
+    });
+    expect(workspace?.id).toBe("workspace_1");
+    expect(updatedWorkspace.slug).toBe("forge-ops");
+  });
+
+  it("delegates owner-scoped brand lookup and update through the brand repository", async () => {
+    const database = {
+      brand: {
+        create: vi.fn(),
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce({
+            id: "brand_1"
+          })
+          .mockResolvedValueOnce({
+            id: "brand_2"
+          }),
+        findUnique: vi.fn(),
+        findUniqueOrThrow: vi.fn().mockResolvedValue({
+          id: "brand_1",
+          slug: "forge-editions"
+        }),
+        updateMany: vi.fn().mockResolvedValue({
+          count: 1
+        })
+      }
+    };
+    const repository = createBrandRepository(database as never);
+
+    const ownerBrand = await repository.findFirstByOwnerUserId("user_1");
+    const slugBrand = await repository.findFirstBySlug("forge-editions");
+    const updatedBrand = await repository.updateByIdForOwner({
+      customDomain: "collections.example.com",
+      id: "brand_1",
+      name: "Forge Editions",
+      ownerUserId: "user_1",
+      slug: "forge-editions",
+      themeJson: {
+        accentColor: "#8b5e34"
+      },
+      workspaceId: "workspace_1"
+    });
+
+    expect(database.brand.findFirst).toHaveBeenNthCalledWith(1, {
+      orderBy: [
+        {
+          createdAt: "asc"
+        },
+        {
+          id: "asc"
+        }
+      ],
+      where: {
+        workspace: {
+          ownerUserId: "user_1"
+        }
+      }
+    });
+    expect(database.brand.findFirst).toHaveBeenNthCalledWith(2, {
+      orderBy: [
+        {
+          createdAt: "asc"
+        },
+        {
+          id: "asc"
+        }
+      ],
+      where: {
+        slug: "forge-editions"
+      }
+    });
+    expect(database.brand.updateMany).toHaveBeenCalledWith({
+      data: {
+        customDomain: "collections.example.com",
+        name: "Forge Editions",
+        slug: "forge-editions",
+        themeJson: {
+          accentColor: "#8b5e34"
+        },
+        workspaceId: "workspace_1"
+      },
+      where: {
+        id: "brand_1",
+        workspace: {
+          ownerUserId: "user_1"
+        }
+      }
+    });
+    expect(database.brand.findUniqueOrThrow).toHaveBeenCalledWith({
+      where: {
+        id: "brand_1"
+      }
+    });
+    expect(ownerBrand?.id).toBe("brand_1");
+    expect(slugBrand?.id).toBe("brand_2");
+    expect(updatedBrand.slug).toBe("forge-editions");
   });
 
   it("delegates active generation lookup through the generation request repository", async () => {
@@ -278,6 +438,412 @@ describe("database repositories", () => {
       }
     });
     expect(result[0]?.id).toBe("generation_3");
+  });
+
+  it("delegates owner-scoped collection draft detail lookup through the collection draft repository", async () => {
+    const database = {
+      collectionDraft: {
+        create: vi.fn(),
+        findFirst: vi.fn().mockResolvedValue({
+          id: "draft_1"
+        }),
+        findMany: vi.fn(),
+        findUnique: vi.fn(),
+        update: vi.fn()
+      }
+    };
+    const repository = createCollectionDraftRepository(database as never);
+
+    const result = await repository.findDetailedByIdForOwner({
+      id: "draft_1",
+      ownerUserId: "user_1"
+    });
+
+    expect(database.collectionDraft.findFirst).toHaveBeenCalledWith({
+      include: {
+        items: {
+          include: {
+            generatedAsset: {
+              include: {
+                generationRequest: {
+                  select: {
+                    id: true,
+                    pipelineKey: true,
+                    sourceAsset: {
+                      select: {
+                        id: true,
+                        originalFilename: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          orderBy: [
+            {
+              position: "asc"
+            },
+            {
+              id: "asc"
+            }
+          ]
+        }
+      },
+      where: {
+        id: "draft_1",
+        ownerUserId: "user_1"
+      }
+    });
+    expect(result?.id).toBe("draft_1");
+  });
+
+  it("delegates collection draft item deletion through the collection draft item repository", async () => {
+    const database = {
+      collectionDraftItem: {
+        create: vi.fn(),
+        delete: vi.fn().mockResolvedValue({
+          id: "draft_item_1"
+        }),
+        findFirst: vi.fn().mockResolvedValue({
+          id: "draft_item_1"
+        }),
+        findMany: vi.fn(),
+        findUnique: vi.fn(),
+        update: vi.fn()
+      }
+    };
+    const repository = createCollectionDraftItemRepository(database as never);
+
+    const result = await repository.deleteByIdForDraftOwner({
+      collectionDraftId: "draft_1",
+      id: "draft_item_1",
+      ownerUserId: "user_1"
+    });
+
+    expect(database.collectionDraftItem.findFirst).toHaveBeenCalledWith({
+      where: {
+        collectionDraft: {
+          ownerUserId: "user_1"
+        },
+        collectionDraftId: "draft_1",
+        id: "draft_item_1"
+      }
+    });
+    expect(database.collectionDraftItem.delete).toHaveBeenCalledWith({
+      where: {
+        id: "draft_item_1"
+      }
+    });
+    expect(result?.id).toBe("draft_item_1");
+  });
+
+  it("delegates recent owner-scoped generated asset lookup through the generated asset repository", async () => {
+    const database = {
+      generatedAsset: {
+        create: vi.fn(),
+        findFirst: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "generated_asset_2"
+          }
+        ])
+      }
+    };
+    const repository = createGeneratedAssetRepository(database as never);
+
+    const result = await repository.listRecentForOwnerUserId({
+      limit: 4,
+      ownerUserId: "user_1"
+    });
+
+    expect(database.generatedAsset.findMany).toHaveBeenCalledWith({
+      include: {
+        generationRequest: {
+          select: {
+            id: true,
+            pipelineKey: true,
+            sourceAsset: {
+              select: {
+                id: true,
+                originalFilename: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: [
+        {
+          createdAt: "desc"
+        },
+        {
+          id: "desc"
+        }
+      ],
+      take: 4,
+      where: {
+        ownerUserId: "user_1"
+      }
+    });
+    expect(result[0]?.id).toBe("generated_asset_2");
+  });
+
+  it("delegates published collection route lookup through the published collection repository", async () => {
+    const database = {
+      publishedCollection: {
+        create: vi.fn(),
+        delete: vi.fn(),
+        findFirst: vi.fn(),
+        findMany: vi.fn(),
+        findUnique: vi.fn().mockResolvedValue({
+          id: "published_collection_1"
+        }),
+        update: vi.fn()
+      }
+    };
+    const repository = createPublishedCollectionRepository(database as never);
+
+    const result = await repository.findDetailedByBrandSlugAndCollectionSlug({
+      brandSlug: "demo-studio",
+      slug: "foundation"
+    });
+
+    expect(database.publishedCollection.findUnique).toHaveBeenCalledWith({
+      include: {
+        items: {
+          include: {
+            generatedAsset: {
+              include: {
+                generationRequest: {
+                  select: {
+                    id: true,
+                    pipelineKey: true,
+                    sourceAsset: {
+                      select: {
+                        id: true,
+                        originalFilename: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          orderBy: [
+            {
+              position: "asc"
+            },
+            {
+              id: "asc"
+            }
+          ]
+        }
+      },
+      where: {
+        brandSlug_slug: {
+          brandSlug: "demo-studio",
+          slug: "foundation"
+        }
+      }
+    });
+    expect(result?.id).toBe("published_collection_1");
+  });
+
+  it("delegates published collection deletion through the published collection repository", async () => {
+    const database = {
+      publishedCollection: {
+        create: vi.fn(),
+        delete: vi.fn().mockResolvedValue({
+          id: "published_collection_1"
+        }),
+        findFirst: vi.fn().mockResolvedValue({
+          id: "published_collection_1"
+        }),
+        findMany: vi.fn(),
+        findUnique: vi.fn(),
+        update: vi.fn()
+      }
+    };
+    const repository = createPublishedCollectionRepository(database as never);
+
+    const result = await repository.deleteByDraftIdForOwner({
+      ownerUserId: "user_1",
+      sourceCollectionDraftId: "draft_1"
+    });
+
+    expect(database.publishedCollection.findFirst).toHaveBeenCalledWith({
+      where: {
+        ownerUserId: "user_1",
+        sourceCollectionDraftId: "draft_1"
+      }
+    });
+    expect(database.publishedCollection.delete).toHaveBeenCalledWith({
+      where: {
+        id: "published_collection_1"
+      }
+    });
+    expect(result?.id).toBe("published_collection_1");
+  });
+
+  it("delegates public brand preview listing through the published collection repository", async () => {
+    const database = {
+      publishedCollection: {
+        create: vi.fn(),
+        delete: vi.fn(),
+        findFirst: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "published_collection_2"
+          }
+        ]),
+        findUnique: vi.fn(),
+        update: vi.fn()
+      }
+    };
+    const repository = createPublishedCollectionRepository(database as never);
+
+    const result = await repository.listPreviewByBrandSlug("demo-studio");
+
+    expect(database.publishedCollection.findMany).toHaveBeenCalledWith({
+      include: {
+        _count: {
+          select: {
+            items: true
+          }
+        },
+        items: {
+          include: {
+            generatedAsset: {
+              include: {
+                generationRequest: {
+                  select: {
+                    pipelineKey: true,
+                    sourceAsset: {
+                      select: {
+                        originalFilename: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          orderBy: [
+            {
+              position: "asc"
+            },
+            {
+              id: "asc"
+            }
+          ],
+          take: 1
+        }
+      },
+      orderBy: [
+        {
+          updatedAt: "desc"
+        },
+        {
+          id: "desc"
+        }
+      ],
+      where: {
+        brandSlug: "demo-studio"
+      },
+      orderBy: [
+        {
+          isFeatured: "desc"
+        },
+        {
+          displayOrder: "asc"
+        },
+        {
+          updatedAt: "desc"
+        },
+        {
+          id: "desc"
+        }
+      ]
+    });
+    expect(result[0]?.id).toBe("published_collection_2");
+  });
+
+  it("delegates published collection item replacement through the published collection item repository", async () => {
+    const database = {
+      publishedCollectionItem: {
+        create: vi.fn().mockResolvedValue({
+          id: "published_item_1"
+        }),
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "published_item_1",
+            publicStorageBucket: "ai-nft-forge-public",
+            publicStorageObjectKey:
+              "published-collections/draft_1/items/001-generated_asset_1-portrait-1.png"
+          }
+        ]),
+        deleteMany: vi.fn().mockResolvedValue({
+          count: 1
+        })
+      }
+    };
+    const repository = createPublishedCollectionItemRepository(
+      database as never
+    );
+
+    const created = await repository.createMany([
+      {
+        generatedAssetId: "generated_asset_1",
+        position: 1,
+        publicStorageBucket: "ai-nft-forge-public",
+        publicStorageObjectKey:
+          "published-collections/draft_1/items/001-generated_asset_1-portrait-1.png",
+        publishedCollectionId: "published_collection_1"
+      }
+    ]);
+    const listed = await repository.listByPublishedCollectionId(
+      "published_collection_1"
+    );
+    const deleted = await repository.deleteByPublishedCollectionId(
+      "published_collection_1"
+    );
+
+    expect(database.publishedCollectionItem.create).toHaveBeenCalledWith({
+      data: {
+        generatedAssetId: "generated_asset_1",
+        position: 1,
+        publicStorageBucket: "ai-nft-forge-public",
+        publicStorageObjectKey:
+          "published-collections/draft_1/items/001-generated_asset_1-portrait-1.png",
+        publishedCollectionId: "published_collection_1"
+      }
+    });
+    expect(database.publishedCollectionItem.findMany).toHaveBeenCalledWith({
+      orderBy: [
+        {
+          position: "asc"
+        },
+        {
+          id: "asc"
+        }
+      ],
+      select: {
+        id: true,
+        publicStorageBucket: true,
+        publicStorageObjectKey: true
+      },
+      where: {
+        publishedCollectionId: "published_collection_1"
+      }
+    });
+    expect(database.publishedCollectionItem.deleteMany).toHaveBeenCalledWith({
+      where: {
+        publishedCollectionId: "published_collection_1"
+      }
+    });
+    expect(created[0]?.id).toBe("published_item_1");
+    expect(listed[0]?.publicStorageBucket).toBe("ai-nft-forge-public");
+    expect(deleted.count).toBe(1);
   });
 
   it("delegates oldest owner-scoped generation lookup through the generation request repository", async () => {
@@ -896,7 +1462,9 @@ describe("database repositories", () => {
         })
       }
     };
-    const repository = createOpsAlertSchedulePolicyRepository(database as never);
+    const repository = createOpsAlertSchedulePolicyRepository(
+      database as never
+    );
 
     const policy = await repository.upsert({
       activeDaysMask: 62,

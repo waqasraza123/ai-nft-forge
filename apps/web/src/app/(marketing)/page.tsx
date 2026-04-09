@@ -19,11 +19,8 @@ export default function MarketingPage() {
           <Link className="action-link" href="/studio">
             Open studio shell
           </Link>
-          <Link
-            className="inline-link"
-            href="/brands/demo-studio/collections/foundation"
-          >
-            Open public placeholder
+          <Link className="inline-link" href="/brands/demo-studio">
+            Open public brand route
           </Link>
         </>
       }
@@ -43,7 +40,7 @@ export default function MarketingPage() {
           title="Foundation is now carrying the first Phase 2 slice"
         />
         <SurfaceCard
-          body="The public surface is intentionally more atmospheric and presentation-led than the studio and ops areas."
+          body="The public surface is intentionally more atmospheric and presentation-led than the studio and ops areas, and it now includes a brand-level release directory."
           eyebrow="Public"
           footer={
             <div className="pill-row">
@@ -65,15 +62,15 @@ export default function MarketingPage() {
           title="Durable system edges"
         />
         <SurfaceCard
-          body="The repo now has foundation, auth, local infra, and the first source asset intake slice."
+          body="The repo now has foundation, auth, local infra, studio workflows, and the first real public brand presentation slice."
           eyebrow="Current state"
           span={8}
-          title="The visible shell is moving into product groundwork"
+          title="The visible shell is moving into a real product surface"
         >
           <div className="metric-list">
             <MetricTile label="Marketing" value="Ready" />
             <MetricTile label="Studio assets" value="/studio/assets" />
-            <MetricTile label="Health route" value="/api/health" />
+            <MetricTile label="Public brands" value="/brands/[brandSlug]" />
           </div>
         </SurfaceCard>
         <SurfaceCard
@@ -91,9 +88,9 @@ export default function MarketingPage() {
             </Link>
             <Link
               className="inline-link"
-              href="/brands/demo-studio/collections/foundation"
+              href="/brands/demo-studio"
             >
-              /brands/[brandSlug]/collections/[collectionSlug]
+              /brands/[brandSlug]
             </Link>
           </div>
         </SurfaceCard>
