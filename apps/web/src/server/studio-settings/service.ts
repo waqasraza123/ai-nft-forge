@@ -1,5 +1,6 @@
 import {
   defaultStudioBrandAccentColor,
+  defaultStudioBrandThemePreset,
   defaultStudioBrandLandingDescription,
   defaultStudioBrandLandingHeadline,
   defaultStudioFeaturedReleaseLabel,
@@ -114,6 +115,16 @@ function normalizeOptionalDomain(value: string | null | undefined) {
   return normalizedValue.length > 0 ? normalizedValue : null;
 }
 
+function normalizeOptionalText(value: string | null | undefined) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalizedValue = value.trim();
+
+  return normalizedValue.length > 0 ? normalizedValue : null;
+}
+
 function parseBrandTheme(themeJson: unknown) {
   const parsedTheme = studioBrandThemeSchema.safeParse(themeJson);
 
@@ -123,19 +134,34 @@ function parseBrandTheme(themeJson: unknown) {
       featuredReleaseLabel:
         parsedTheme.data.featuredReleaseLabel ??
         defaultStudioFeaturedReleaseLabel,
+      heroKicker: parsedTheme.data.heroKicker ?? null,
       landingDescription:
         parsedTheme.data.landingDescription ??
         defaultStudioBrandLandingDescription,
       landingHeadline:
-        parsedTheme.data.landingHeadline ?? defaultStudioBrandLandingHeadline
+        parsedTheme.data.landingHeadline ?? defaultStudioBrandLandingHeadline,
+      primaryCtaLabel: parsedTheme.data.primaryCtaLabel ?? null,
+      secondaryCtaLabel: parsedTheme.data.secondaryCtaLabel ?? null,
+      storyBody: parsedTheme.data.storyBody ?? null,
+      storyHeadline: parsedTheme.data.storyHeadline ?? null,
+      themePreset:
+        parsedTheme.data.themePreset ?? defaultStudioBrandThemePreset,
+      wordmark: parsedTheme.data.wordmark ?? null
     };
   }
 
   return {
     accentColor: defaultStudioBrandAccentColor,
     featuredReleaseLabel: defaultStudioFeaturedReleaseLabel,
+    heroKicker: null,
     landingDescription: defaultStudioBrandLandingDescription,
-    landingHeadline: defaultStudioBrandLandingHeadline
+    landingHeadline: defaultStudioBrandLandingHeadline,
+    primaryCtaLabel: null,
+    secondaryCtaLabel: null,
+    storyBody: null,
+    storyHeadline: null,
+    themePreset: defaultStudioBrandThemePreset,
+    wordmark: null
   };
 }
 
@@ -151,12 +177,19 @@ function serializeStudioSettings(input: {
         accentColor: theme.accentColor,
         customDomain: input.brand.customDomain,
         featuredReleaseLabel: theme.featuredReleaseLabel,
+        heroKicker: theme.heroKicker,
         id: input.brand.id,
         landingDescription: theme.landingDescription,
         landingHeadline: theme.landingHeadline,
         name: input.brand.name,
+        primaryCtaLabel: theme.primaryCtaLabel,
         publicBrandPath: `/brands/${input.brand.slug}`,
-        slug: input.brand.slug
+        secondaryCtaLabel: theme.secondaryCtaLabel,
+        slug: input.brand.slug,
+        storyBody: theme.storyBody,
+        storyHeadline: theme.storyHeadline,
+        themePreset: theme.themePreset,
+        wordmark: theme.wordmark
       },
       workspace: {
         id: input.workspace.id,
@@ -208,9 +241,16 @@ export function createStudioSettingsService(
       brandSlug: string;
       customDomain?: string | null;
       featuredReleaseLabel: string;
+      heroKicker?: string | null;
       landingDescription: string;
       landingHeadline: string;
       ownerUserId: string;
+      primaryCtaLabel?: string | null;
+      secondaryCtaLabel?: string | null;
+      storyBody?: string | null;
+      storyHeadline?: string | null;
+      themePreset: "editorial_warm" | "gallery_mono" | "midnight_launch";
+      wordmark?: string | null;
       workspaceName: string;
       workspaceSlug: string;
     }) {
@@ -220,8 +260,15 @@ export function createStudioSettingsService(
         brandSlug: input.brandSlug,
         customDomain: input.customDomain,
         featuredReleaseLabel: input.featuredReleaseLabel,
+        heroKicker: input.heroKicker,
         landingDescription: input.landingDescription,
         landingHeadline: input.landingHeadline,
+        primaryCtaLabel: input.primaryCtaLabel,
+        secondaryCtaLabel: input.secondaryCtaLabel,
+        storyBody: input.storyBody,
+        storyHeadline: input.storyHeadline,
+        themePreset: input.themePreset,
+        wordmark: input.wordmark,
         workspaceName: input.workspaceName,
         workspaceSlug: input.workspaceSlug
       });
@@ -313,8 +360,17 @@ export function createStudioSettingsService(
         const themeJson = {
           accentColor: parsedInput.accentColor,
           featuredReleaseLabel: parsedInput.featuredReleaseLabel,
+          heroKicker: normalizeOptionalText(parsedInput.heroKicker),
           landingDescription: parsedInput.landingDescription,
-          landingHeadline: parsedInput.landingHeadline
+          landingHeadline: parsedInput.landingHeadline,
+          primaryCtaLabel: normalizeOptionalText(parsedInput.primaryCtaLabel),
+          secondaryCtaLabel: normalizeOptionalText(
+            parsedInput.secondaryCtaLabel
+          ),
+          storyBody: normalizeOptionalText(parsedInput.storyBody),
+          storyHeadline: normalizeOptionalText(parsedInput.storyHeadline),
+          themePreset: parsedInput.themePreset,
+          wordmark: normalizeOptionalText(parsedInput.wordmark)
         };
         const brand =
           existingBrand ??

@@ -137,8 +137,45 @@ function createInitialPublicationMerchandisingState(
 ) {
   return {
     displayOrder: draft?.publication?.displayOrder ?? 0,
-    isFeatured: draft?.publication?.isFeatured ?? false
+    endAt: draft?.publication?.endAt
+      ? draft.publication.endAt.slice(0, 16)
+      : "",
+    heroGeneratedAssetId: draft?.publication?.heroGeneratedAssetId ?? "",
+    isFeatured: draft?.publication?.isFeatured ?? false,
+    launchAt: draft?.publication?.launchAt
+      ? draft.publication.launchAt.slice(0, 16)
+      : "",
+    priceLabel: draft?.publication?.priceLabel ?? "",
+    primaryCtaHref: draft?.publication?.primaryCtaHref ?? "",
+    primaryCtaLabel: draft?.publication?.primaryCtaLabel ?? "",
+    secondaryCtaHref: draft?.publication?.secondaryCtaHref ?? "",
+    secondaryCtaLabel: draft?.publication?.secondaryCtaLabel ?? "",
+    soldCount: draft?.publication?.soldCount.toString() ?? "0",
+    storefrontBody: draft?.publication?.storefrontBody ?? "",
+    storefrontHeadline: draft?.publication?.storefrontHeadline ?? "",
+    storefrontStatus: draft?.publication?.storefrontStatus ?? "ended",
+    totalSupply:
+      draft?.publication?.totalSupply !== null &&
+      draft?.publication?.totalSupply !== undefined
+        ? draft.publication.totalSupply.toString()
+        : ""
   };
+}
+
+function toOptionalIsoTimestamp(value: string) {
+  if (!value.trim()) {
+    return null;
+  }
+
+  return new Date(value).toISOString();
+}
+
+function toOptionalPositiveInteger(value: string) {
+  if (!value.trim()) {
+    return null;
+  }
+
+  return Number.parseInt(value, 10);
 }
 
 function buildPublishedCollectionMetadataPath(publicPath: string) {
@@ -464,7 +501,34 @@ export function StudioCollectionsClient({
         {
           body: JSON.stringify({
             displayOrder: publicationMerchandisingState.displayOrder,
-            isFeatured: publicationMerchandisingState.isFeatured
+            endAt: toOptionalIsoTimestamp(publicationMerchandisingState.endAt),
+            heroGeneratedAssetId:
+              publicationMerchandisingState.heroGeneratedAssetId || null,
+            isFeatured: publicationMerchandisingState.isFeatured,
+            launchAt: toOptionalIsoTimestamp(
+              publicationMerchandisingState.launchAt
+            ),
+            priceLabel: publicationMerchandisingState.priceLabel || null,
+            primaryCtaHref:
+              publicationMerchandisingState.primaryCtaHref || null,
+            primaryCtaLabel:
+              publicationMerchandisingState.primaryCtaLabel || null,
+            secondaryCtaHref:
+              publicationMerchandisingState.secondaryCtaHref || null,
+            secondaryCtaLabel:
+              publicationMerchandisingState.secondaryCtaLabel || null,
+            soldCount: Number.parseInt(
+              publicationMerchandisingState.soldCount || "0",
+              10
+            ),
+            storefrontBody:
+              publicationMerchandisingState.storefrontBody || null,
+            storefrontHeadline:
+              publicationMerchandisingState.storefrontHeadline || null,
+            storefrontStatus: publicationMerchandisingState.storefrontStatus,
+            totalSupply: toOptionalPositiveInteger(
+              publicationMerchandisingState.totalSupply
+            )
           }),
           headers: {
             "Content-Type": "application/json"
@@ -984,6 +1048,19 @@ export function StudioCollectionsClient({
                   <Pill>Featured release</Pill>
                 ) : null}
                 {selectedDraft.publication ? (
+                  <Pill>{selectedDraft.publication.storefrontStatus}</Pill>
+                ) : null}
+                {selectedDraft.publication?.priceLabel ? (
+                  <Pill>{selectedDraft.publication.priceLabel}</Pill>
+                ) : null}
+                {selectedDraft.publication?.totalSupply !== null &&
+                selectedDraft.publication?.totalSupply !== undefined ? (
+                  <Pill>
+                    {selectedDraft.publication.soldCount}/
+                    {selectedDraft.publication.totalSupply} claimed
+                  </Pill>
+                ) : null}
+                {selectedDraft.publication ? (
                   <Pill>
                     {buildPublishedCollectionMetadataPath(
                       selectedDraft.publication.publicPath
@@ -1108,6 +1185,28 @@ export function StudioCollectionsClient({
                   onSubmit={handleSavePublicationMerchandising}
                 >
                   <label className="field-stack">
+                    <span className="field-label">Storefront status</span>
+                    <select
+                      className="input-field"
+                      onChange={(event) => {
+                        setPublicationMerchandisingState((current) => ({
+                          ...current,
+                          storefrontStatus: event.target.value as
+                            | "upcoming"
+                            | "live"
+                            | "sold_out"
+                            | "ended"
+                        }));
+                      }}
+                      value={publicationMerchandisingState.storefrontStatus}
+                    >
+                      <option value="upcoming">Upcoming</option>
+                      <option value="live">Live</option>
+                      <option value="sold_out">Sold out</option>
+                      <option value="ended">Ended</option>
+                    </select>
+                  </label>
+                  <label className="field-stack">
                     <span className="field-label">Display order</span>
                     <input
                       className="input-field"
@@ -1123,6 +1222,192 @@ export function StudioCollectionsClient({
                       }}
                       type="number"
                       value={publicationMerchandisingState.displayOrder}
+                    />
+                  </label>
+                  <label className="field-stack">
+                    <span className="field-label">Launch time</span>
+                    <input
+                      className="input-field"
+                      onChange={(event) => {
+                        setPublicationMerchandisingState((current) => ({
+                          ...current,
+                          launchAt: event.target.value
+                        }));
+                      }}
+                      type="datetime-local"
+                      value={publicationMerchandisingState.launchAt}
+                    />
+                  </label>
+                  <label className="field-stack">
+                    <span className="field-label">End time</span>
+                    <input
+                      className="input-field"
+                      onChange={(event) => {
+                        setPublicationMerchandisingState((current) => ({
+                          ...current,
+                          endAt: event.target.value
+                        }));
+                      }}
+                      type="datetime-local"
+                      value={publicationMerchandisingState.endAt}
+                    />
+                  </label>
+                  <label className="field-stack">
+                    <span className="field-label">Price label</span>
+                    <input
+                      className="input-field"
+                      maxLength={60}
+                      onChange={(event) => {
+                        setPublicationMerchandisingState((current) => ({
+                          ...current,
+                          priceLabel: event.target.value
+                        }));
+                      }}
+                      placeholder="0.08 ETH"
+                      value={publicationMerchandisingState.priceLabel}
+                    />
+                  </label>
+                  <label className="field-stack">
+                    <span className="field-label">Total supply</span>
+                    <input
+                      className="input-field"
+                      min={1}
+                      onChange={(event) => {
+                        setPublicationMerchandisingState((current) => ({
+                          ...current,
+                          totalSupply: event.target.value
+                        }));
+                      }}
+                      type="number"
+                      value={publicationMerchandisingState.totalSupply}
+                    />
+                  </label>
+                  <label className="field-stack">
+                    <span className="field-label">Sold count</span>
+                    <input
+                      className="input-field"
+                      min={0}
+                      onChange={(event) => {
+                        setPublicationMerchandisingState((current) => ({
+                          ...current,
+                          soldCount: event.target.value
+                        }));
+                      }}
+                      type="number"
+                      value={publicationMerchandisingState.soldCount}
+                    />
+                  </label>
+                  <label className="field-stack">
+                    <span className="field-label">Hero asset</span>
+                    <select
+                      className="input-field"
+                      onChange={(event) => {
+                        setPublicationMerchandisingState((current) => ({
+                          ...current,
+                          heroGeneratedAssetId: event.target.value
+                        }));
+                      }}
+                      value={publicationMerchandisingState.heroGeneratedAssetId}
+                    >
+                      <option value="">Use first published item</option>
+                      {selectedDraft.items.map((item) => (
+                        <option
+                          key={item.generatedAsset.generatedAssetId}
+                          value={item.generatedAsset.generatedAssetId}
+                        >
+                          {formatCandidateLabel(item.generatedAsset)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="field-stack">
+                    <span className="field-label">Storefront headline</span>
+                    <input
+                      className="input-field"
+                      maxLength={120}
+                      onChange={(event) => {
+                        setPublicationMerchandisingState((current) => ({
+                          ...current,
+                          storefrontHeadline: event.target.value
+                        }));
+                      }}
+                      placeholder="A midnight launch built for collectors."
+                      value={publicationMerchandisingState.storefrontHeadline}
+                    />
+                  </label>
+                  <label className="field-stack">
+                    <span className="field-label">Storefront body</span>
+                    <textarea
+                      className="input-field input-field--multiline"
+                      maxLength={600}
+                      onChange={(event) => {
+                        setPublicationMerchandisingState((current) => ({
+                          ...current,
+                          storefrontBody: event.target.value
+                        }));
+                      }}
+                      rows={4}
+                      value={publicationMerchandisingState.storefrontBody}
+                    />
+                  </label>
+                  <label className="field-stack">
+                    <span className="field-label">Primary CTA label</span>
+                    <input
+                      className="input-field"
+                      maxLength={40}
+                      onChange={(event) => {
+                        setPublicationMerchandisingState((current) => ({
+                          ...current,
+                          primaryCtaLabel: event.target.value
+                        }));
+                      }}
+                      placeholder="Join the launch"
+                      value={publicationMerchandisingState.primaryCtaLabel}
+                    />
+                  </label>
+                  <label className="field-stack">
+                    <span className="field-label">Primary CTA URL</span>
+                    <input
+                      className="input-field"
+                      onChange={(event) => {
+                        setPublicationMerchandisingState((current) => ({
+                          ...current,
+                          primaryCtaHref: event.target.value
+                        }));
+                      }}
+                      placeholder="https://launch.example.com"
+                      type="url"
+                      value={publicationMerchandisingState.primaryCtaHref}
+                    />
+                  </label>
+                  <label className="field-stack">
+                    <span className="field-label">Secondary CTA label</span>
+                    <input
+                      className="input-field"
+                      maxLength={40}
+                      onChange={(event) => {
+                        setPublicationMerchandisingState((current) => ({
+                          ...current,
+                          secondaryCtaLabel: event.target.value
+                        }));
+                      }}
+                      placeholder="Read the story"
+                      value={publicationMerchandisingState.secondaryCtaLabel}
+                    />
+                  </label>
+                  <label className="field-stack">
+                    <span className="field-label">Secondary CTA URL</span>
+                    <input
+                      className="input-field"
+                      onChange={(event) => {
+                        setPublicationMerchandisingState((current) => ({
+                          ...current,
+                          secondaryCtaHref: event.target.value
+                        }));
+                      }}
+                      placeholder="https://launch.example.com/story"
+                      type="url"
+                      value={publicationMerchandisingState.secondaryCtaHref}
                     />
                   </label>
                   <label className="toggle-field">

@@ -29,10 +29,9 @@ export function createPublishedCollectionItemRepository(
       );
     },
 
-    listByPublishedCollectionId(
-      publishedCollectionId: string
-    ): Promise<
+    listByPublishedCollectionId(publishedCollectionId: string): Promise<
       Array<{
+        generatedAssetId: string;
         id: string;
         publicStorageBucket: string | null;
         publicStorageObjectKey: string | null;
@@ -48,6 +47,7 @@ export function createPublishedCollectionItemRepository(
           }
         ],
         select: {
+          generatedAssetId: true,
           id: true,
           publicStorageBucket: true,
           publicStorageObjectKey: true

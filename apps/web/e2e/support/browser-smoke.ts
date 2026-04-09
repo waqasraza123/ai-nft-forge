@@ -38,6 +38,13 @@ export type BrowserSmokeSeededState = {
   runningAssetFilename: string;
 };
 
+export type BrowserSmokeStorefrontState = {
+  brandPath: string;
+  brandSlug: string;
+  collectionPath: string;
+  collectionSlug: string;
+};
+
 function createBrowserSmokePrefix() {
   const storagePrefix = process.env.BROWSER_SMOKE_STORAGE_PREFIX?.trim();
 
@@ -48,21 +55,20 @@ function createBrowserSmokePrefix() {
   return `${storagePrefix}/${crypto.randomUUID()}`;
 }
 
-async function clearBrowserSmokeStoragePrefix() {
+async function clearBrowserSmokeStorageBucketPrefix(input: { bucket: string }) {
   const storagePrefix = process.env.BROWSER_SMOKE_STORAGE_PREFIX?.trim();
 
   if (!storagePrefix) {
     throw new Error("BROWSER_SMOKE_STORAGE_PREFIX is required.");
   }
 
-  const storageConfig = getStorageConfig(process.env);
   const storageClient = createObjectStorageClient(process.env);
   let continuationToken: string | undefined;
 
   do {
     const response = await storageClient.send(
       new ListObjectsV2Command({
-        Bucket: storageConfig.S3_BUCKET_PRIVATE,
+        Bucket: input.bucket,
         ContinuationToken: continuationToken,
         Prefix: `${storagePrefix}/`
       })
@@ -75,7 +81,7 @@ async function clearBrowserSmokeStoragePrefix() {
     if (objectIdentifiers.length > 0) {
       await storageClient.send(
         new DeleteObjectsCommand({
-          Bucket: storageConfig.S3_BUCKET_PRIVATE,
+          Bucket: input.bucket,
           Delete: {
             Objects: objectIdentifiers,
             Quiet: true
@@ -90,10 +96,27 @@ async function clearBrowserSmokeStoragePrefix() {
   } while (continuationToken);
 }
 
+async function clearBrowserSmokeStoragePrefix() {
+  const storageConfig = getStorageConfig(process.env);
+
+  await clearBrowserSmokeStorageBucketPrefix({
+    bucket: storageConfig.S3_BUCKET_PRIVATE
+  });
+  await clearBrowserSmokeStorageBucketPrefix({
+    bucket: storageConfig.S3_BUCKET_PUBLIC
+  });
+}
+
 async function clearBrowserSmokeDatabase() {
   const databaseClient = createDatabaseClient(process.env);
 
   try {
+    await databaseClient.publishedCollectionItem.deleteMany();
+    await databaseClient.publishedCollection.deleteMany();
+    await databaseClient.collectionDraftItem.deleteMany();
+    await databaseClient.collectionDraft.deleteMany();
+    await databaseClient.brand.deleteMany();
+    await databaseClient.workspace.deleteMany();
     await databaseClient.generatedAsset.deleteMany();
     await databaseClient.generationRequest.deleteMany();
     await databaseClient.sourceAsset.deleteMany();
@@ -124,23 +147,46 @@ async function clearBrowserSmokeQueue() {
   }
 }
 
-async function storePrivateObject(input: { contentType: string; key: string }) {
-  const storageConfig = getStorageConfig(process.env);
+async function storeObject(input: {
+  bucket: string;
+  contentType: string;
+  key: string;
+}) {
   const storageClient = createObjectStorageClient(process.env);
 
   await putStorageObject({
     body: pngFixtureBytes,
-    bucket: storageConfig.S3_BUCKET_PRIVATE,
+    bucket: input.bucket,
     client: storageClient,
     contentType: input.contentType,
     key: input.key
   });
 
   return {
-    bucket: storageConfig.S3_BUCKET_PRIVATE,
+    bucket: input.bucket,
     byteSize: pngFixtureBytes.byteLength,
     key: input.key
   };
+}
+
+async function storePrivateObject(input: { contentType: string; key: string }) {
+  const storageConfig = getStorageConfig(process.env);
+
+  return storeObject({
+    bucket: storageConfig.S3_BUCKET_PRIVATE,
+    contentType: input.contentType,
+    key: input.key
+  });
+}
+
+async function storePublicObject(input: { contentType: string; key: string }) {
+  const storageConfig = getStorageConfig(process.env);
+
+  return storeObject({
+    bucket: storageConfig.S3_BUCKET_PUBLIC,
+    contentType: input.contentType,
+    key: input.key
+  });
 }
 
 export async function resetBrowserSmokeState() {
@@ -391,6 +437,202 @@ export async function seedBrowserSmokeData(input: {
       mainAssetFilename,
       mainFailedGenerationId: mainFailedGeneration.id,
       runningAssetFilename
+    };
+  } finally {
+    await databaseClient.$disconnect();
+  }
+}
+
+export async function seedPublicStorefrontData(input: {
+  userId: string;
+}): Promise<BrowserSmokeStorefrontState> {
+  const databaseClient = createDatabaseClient(process.env);
+  const prefix = createBrowserSmokePrefix();
+  const now = Date.now();
+  const contentType = "image/png";
+  const brandSlug = "demo-launch";
+  const collectionSlug = "midnight-portraits";
+
+  try {
+    const sourceAsset = await storePrivateObject({
+      contentType,
+      key: `${prefix}/storefront/source/portrait-main.png`
+    });
+    const generation = await databaseClient.generationRequest.create({
+      data: {
+        completedAt: new Date(now - 62 * 60 * 1000),
+        createdAt: new Date(now - 65 * 60 * 1000),
+        ownerUserId: input.userId,
+        pipelineKey: "collectible-portrait-v1",
+        queueJobId: "browser-smoke-storefront-succeeded",
+        requestedVariantCount: 2,
+        resultJson: {
+          generatedVariantCount: 2,
+          storedAssetCount: 2
+        },
+        sourceAsset: {
+          create: {
+            byteSize: sourceAsset.byteSize,
+            contentType,
+            createdAt: new Date(now - 66 * 60 * 1000),
+            originalFilename: "storefront-source.png",
+            ownerUserId: input.userId,
+            status: "uploaded",
+            storageBucket: sourceAsset.bucket,
+            storageObjectKey: sourceAsset.key,
+            uploadedAt: new Date(now - 66 * 60 * 1000)
+          }
+        },
+        startedAt: new Date(now - 64 * 60 * 1000),
+        status: "succeeded"
+      },
+      include: {
+        sourceAsset: true
+      }
+    });
+    const publicVariantOne = await storePublicObject({
+      contentType,
+      key: `${prefix}/storefront/public/variant-1.png`
+    });
+    const publicVariantTwo = await storePublicObject({
+      contentType,
+      key: `${prefix}/storefront/public/variant-2.png`
+    });
+    const privateVariantOne = await storePrivateObject({
+      contentType,
+      key: `${prefix}/storefront/private/variant-1.png`
+    });
+    const privateVariantTwo = await storePrivateObject({
+      contentType,
+      key: `${prefix}/storefront/private/variant-2.png`
+    });
+    const generatedAssets = await Promise.all([
+      databaseClient.generatedAsset.create({
+        data: {
+          byteSize: privateVariantOne.byteSize,
+          contentType,
+          generationRequestId: generation.id,
+          ownerUserId: input.userId,
+          sourceAssetId: generation.sourceAssetId,
+          storageBucket: privateVariantOne.bucket,
+          storageObjectKey: privateVariantOne.key,
+          variantIndex: 1
+        }
+      }),
+      databaseClient.generatedAsset.create({
+        data: {
+          byteSize: privateVariantTwo.byteSize,
+          contentType,
+          generationRequestId: generation.id,
+          ownerUserId: input.userId,
+          sourceAssetId: generation.sourceAssetId,
+          storageBucket: privateVariantTwo.bucket,
+          storageObjectKey: privateVariantTwo.key,
+          variantIndex: 2
+        }
+      })
+    ]);
+    const workspace = await databaseClient.workspace.create({
+      data: {
+        name: "Demo Launch Workspace",
+        ownerUserId: input.userId,
+        slug: "demo-launch-workspace",
+        status: "active"
+      }
+    });
+    const brand = await databaseClient.brand.create({
+      data: {
+        customDomain: null,
+        name: "Demo Launch",
+        slug: brandSlug,
+        themeJson: {
+          accentColor: "#f58a44",
+          featuredReleaseLabel: "Featured launch",
+          heroKicker: "Phase 5 smoke test",
+          landingDescription:
+            "A branded storefront smoke fixture seeded directly into the published snapshot boundary.",
+          landingHeadline: "Curated launch storefront",
+          primaryCtaLabel: "Open featured release",
+          secondaryCtaLabel: "Browse archive",
+          storyBody:
+            "This seed proves the public routes render from saved brand configuration and published collection data only.",
+          storyHeadline: "Published storefront data only.",
+          themePreset: "midnight_launch",
+          wordmark: "Demo Launch"
+        },
+        workspaceId: workspace.id
+      }
+    });
+    const draft = await databaseClient.collectionDraft.create({
+      data: {
+        description: "A launch-ready portrait release for browser smoke.",
+        ownerUserId: input.userId,
+        slug: collectionSlug,
+        status: "review_ready",
+        title: "Midnight Portraits"
+      }
+    });
+
+    await databaseClient.collectionDraftItem.createMany({
+      data: generatedAssets.map((asset, index) => ({
+        collectionDraftId: draft.id,
+        generatedAssetId: asset.id,
+        position: index + 1
+      }))
+    });
+
+    const publication = await databaseClient.publishedCollection.create({
+      data: {
+        brandName: brand.name,
+        brandSlug: brand.slug,
+        description: draft.description,
+        displayOrder: 0,
+        heroGeneratedAssetId: generatedAssets[1]!.id,
+        isFeatured: true,
+        launchAt: new Date("2026-04-10T12:00:00.000Z"),
+        ownerUserId: input.userId,
+        priceLabel: "0.18 ETH",
+        primaryCtaHref: "https://example.com/mint",
+        primaryCtaLabel: "Enter mint",
+        publishedAt: new Date(now - 45 * 60 * 1000),
+        secondaryCtaHref: "https://example.com/lookbook",
+        secondaryCtaLabel: "View lookbook",
+        slug: collectionSlug,
+        soldCount: 2,
+        sourceCollectionDraftId: draft.id,
+        storefrontBody:
+          "This public collection page is seeded for browser smoke coverage.",
+        storefrontHeadline: "Midnight Portraits",
+        storefrontStatus: "live",
+        title: draft.title,
+        totalSupply: 8
+      }
+    });
+
+    await databaseClient.publishedCollectionItem.createMany({
+      data: [
+        {
+          generatedAssetId: generatedAssets[0]!.id,
+          position: 1,
+          publicStorageBucket: publicVariantOne.bucket,
+          publicStorageObjectKey: publicVariantOne.key,
+          publishedCollectionId: publication.id
+        },
+        {
+          generatedAssetId: generatedAssets[1]!.id,
+          position: 2,
+          publicStorageBucket: publicVariantTwo.bucket,
+          publicStorageObjectKey: publicVariantTwo.key,
+          publishedCollectionId: publication.id
+        }
+      ]
+    });
+
+    return {
+      brandPath: `/brands/${brandSlug}`,
+      brandSlug,
+      collectionPath: `/brands/${brandSlug}/collections/${collectionSlug}`,
+      collectionSlug
     };
   } finally {
     await databaseClient.$disconnect();

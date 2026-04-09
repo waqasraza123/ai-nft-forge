@@ -69,6 +69,13 @@ enum CollectionDraftStatus {
   review_ready
 }
 
+enum PublishedCollectionStorefrontStatus {
+  upcoming
+  live
+  sold_out
+  ended
+}
+
 model User {
   id                 String              @id @default(cuid()) @map("id")
   walletAddress      String              @unique @map("wallet_address")
@@ -229,6 +236,7 @@ model GeneratedAsset {
   createdAt           DateTime          @default(now()) @map("created_at")
   updatedAt           DateTime          @updatedAt @map("updated_at")
   collectionDraftItems CollectionDraftItem[]
+  storefrontHeroPublishedCollections PublishedCollection[] @relation("PublishedCollectionHeroGeneratedAsset")
   publishedCollectionItems PublishedCollectionItem[]
   generationRequest   GenerationRequest @relation(fields: [generationRequestId], references: [id], onDelete: Cascade)
   ownerUser           User              @relation("GeneratedAssetOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
@@ -283,6 +291,19 @@ model PublishedCollection {
   brandSlug             String                    @map("brand_slug")
   isFeatured            Boolean                   @default(false) @map("is_featured")
   displayOrder          Int                       @default(0) @map("display_order")
+  storefrontStatus      PublishedCollectionStorefrontStatus @default(ended) @map("storefront_status")
+  launchAt              DateTime?                 @map("launch_at")
+  endAt                 DateTime?                 @map("end_at")
+  totalSupply           Int?                      @map("total_supply")
+  soldCount             Int                       @default(0) @map("sold_count")
+  priceLabel            String?                   @map("price_label")
+  heroGeneratedAssetId  String?                   @map("hero_generated_asset_id")
+  storefrontHeadline    String?                   @map("storefront_headline")
+  storefrontBody        String?                   @map("storefront_body")
+  primaryCtaLabel       String?                   @map("primary_cta_label")
+  primaryCtaHref        String?                   @map("primary_cta_href")
+  secondaryCtaLabel     String?                   @map("secondary_cta_label")
+  secondaryCtaHref      String?                   @map("secondary_cta_href")
   title                 String                    @map("title")
   slug                  String                    @map("slug")
   description           String?                   @map("description")
@@ -292,10 +313,12 @@ model PublishedCollection {
   items                 PublishedCollectionItem[]
   ownerUser             User                      @relation("PublishedCollectionOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
   sourceCollectionDraft CollectionDraft           @relation(fields: [sourceCollectionDraftId], references: [id], onDelete: Cascade)
+  heroGeneratedAsset    GeneratedAsset?           @relation("PublishedCollectionHeroGeneratedAsset", fields: [heroGeneratedAssetId], references: [id], onDelete: SetNull)
 
   @@unique([brandSlug, slug], map: "published_collections_brand_slug_slug_key")
   @@index([ownerUserId, updatedAt], map: "published_collections_owner_user_id_updated_at_idx")
   @@index([brandSlug, isFeatured, displayOrder, updatedAt], map: "published_collections_brand_featured_order_updated_at_idx")
+  @@index([brandSlug, storefrontStatus, displayOrder, updatedAt], map: "published_collections_brand_status_order_updated_at_idx")
   @@map("published_collections")
 }
 

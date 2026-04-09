@@ -11,6 +11,7 @@ import {
 
 import {
   defaultStudioBrandAccentColor,
+  defaultStudioBrandThemePreset,
   defaultStudioBrandLandingDescription,
   defaultStudioBrandLandingHeadline,
   defaultStudioFeaturedReleaseLabel,
@@ -81,11 +82,18 @@ function createInitialEditorState(settings: StudioSettingsSummary | null) {
     customDomain: settings?.brand.customDomain ?? "",
     featuredReleaseLabel:
       settings?.brand.featuredReleaseLabel ?? defaultStudioFeaturedReleaseLabel,
+    heroKicker: settings?.brand.heroKicker ?? "",
     landingDescription:
       settings?.brand.landingDescription ??
       defaultStudioBrandLandingDescription,
     landingHeadline:
       settings?.brand.landingHeadline ?? defaultStudioBrandLandingHeadline,
+    primaryCtaLabel: settings?.brand.primaryCtaLabel ?? "",
+    secondaryCtaLabel: settings?.brand.secondaryCtaLabel ?? "",
+    storyBody: settings?.brand.storyBody ?? "",
+    storyHeadline: settings?.brand.storyHeadline ?? "",
+    themePreset: settings?.brand.themePreset ?? defaultStudioBrandThemePreset,
+    wordmark: settings?.brand.wordmark ?? "",
     workspaceName: settings?.workspace.name ?? "",
     workspaceSlug: settings?.workspace.slug ?? ""
   };
@@ -242,6 +250,9 @@ export function StudioSettingsClient({
             <Pill>
               {settings?.brand.accentColor ?? defaultStudioBrandAccentColor}
             </Pill>
+            <Pill>
+              {settings?.brand.themePreset ?? defaultStudioBrandThemePreset}
+            </Pill>
           </div>
         </SurfaceCard>
         <SurfaceCard
@@ -333,6 +344,26 @@ export function StudioSettingsClient({
               />
             </label>
             <label className="field-stack">
+              <span className="field-label">Theme preset</span>
+              <select
+                className="input-field"
+                onChange={(event) => {
+                  setEditorState((current) => ({
+                    ...current,
+                    themePreset: event.target.value as
+                      | "editorial_warm"
+                      | "gallery_mono"
+                      | "midnight_launch"
+                  }));
+                }}
+                value={editorState.themePreset}
+              >
+                <option value="editorial_warm">Editorial warm</option>
+                <option value="gallery_mono">Gallery mono</option>
+                <option value="midnight_launch">Midnight launch</option>
+              </select>
+            </label>
+            <label className="field-stack">
               <span className="field-label">Landing headline</span>
               <input
                 className="input-field"
@@ -364,6 +395,66 @@ export function StudioSettingsClient({
               />
             </label>
             <label className="field-stack">
+              <span className="field-label">Wordmark</span>
+              <input
+                className="input-field"
+                maxLength={40}
+                onChange={(event) => {
+                  setEditorState((current) => ({
+                    ...current,
+                    wordmark: event.target.value
+                  }));
+                }}
+                placeholder="Forge Editions"
+                value={editorState.wordmark}
+              />
+            </label>
+            <label className="field-stack">
+              <span className="field-label">Hero kicker</span>
+              <input
+                className="input-field"
+                maxLength={60}
+                onChange={(event) => {
+                  setEditorState((current) => ({
+                    ...current,
+                    heroKicker: event.target.value
+                  }));
+                }}
+                placeholder="Season three launch"
+                value={editorState.heroKicker}
+              />
+            </label>
+            <label className="field-stack">
+              <span className="field-label">Story headline</span>
+              <input
+                className="input-field"
+                maxLength={120}
+                onChange={(event) => {
+                  setEditorState((current) => ({
+                    ...current,
+                    storyHeadline: event.target.value
+                  }));
+                }}
+                placeholder="A collectible portrait program built for premium launches."
+                value={editorState.storyHeadline}
+              />
+            </label>
+            <label className="field-stack">
+              <span className="field-label">Story body</span>
+              <textarea
+                className="input-field input-field--multiline"
+                maxLength={600}
+                onChange={(event) => {
+                  setEditorState((current) => ({
+                    ...current,
+                    storyBody: event.target.value
+                  }));
+                }}
+                rows={5}
+                value={editorState.storyBody}
+              />
+            </label>
+            <label className="field-stack">
               <span className="field-label">Featured release label</span>
               <input
                 className="input-field"
@@ -377,6 +468,36 @@ export function StudioSettingsClient({
                 placeholder="Featured release"
                 required
                 value={editorState.featuredReleaseLabel}
+              />
+            </label>
+            <label className="field-stack">
+              <span className="field-label">Primary CTA label</span>
+              <input
+                className="input-field"
+                maxLength={40}
+                onChange={(event) => {
+                  setEditorState((current) => ({
+                    ...current,
+                    primaryCtaLabel: event.target.value
+                  }));
+                }}
+                placeholder="View featured release"
+                value={editorState.primaryCtaLabel}
+              />
+            </label>
+            <label className="field-stack">
+              <span className="field-label">Secondary CTA label</span>
+              <input
+                className="input-field"
+                maxLength={40}
+                onChange={(event) => {
+                  setEditorState((current) => ({
+                    ...current,
+                    secondaryCtaLabel: event.target.value
+                  }));
+                }}
+                placeholder="Browse archive"
+                value={editorState.secondaryCtaLabel}
               />
             </label>
             <label className="field-stack">
@@ -436,12 +557,27 @@ export function StudioSettingsClient({
             />
             <div className="settings-preview-card__copy">
               <strong>
+                {editorState.wordmark || editorState.brandName || "Wordmark"}
+              </strong>
+              <span>{editorState.heroKicker || "Hero kicker"}</span>
+              <span>{editorState.themePreset.replaceAll("_", " ")}</span>
+            </div>
+            <div className="settings-preview-card__copy">
+              <strong>
                 {editorState.landingHeadline || "Landing headline"}
               </strong>
               <span>{editorState.landingDescription}</span>
               <span>
                 {editorState.featuredReleaseLabel ||
                   defaultStudioFeaturedReleaseLabel}
+              </span>
+            </div>
+            <div className="settings-preview-card__copy">
+              <strong>{editorState.storyHeadline || "Story headline"}</strong>
+              <span>{editorState.storyBody || "Story body preview"}</span>
+              <span>
+                {editorState.primaryCtaLabel || "Primary CTA"} /{" "}
+                {editorState.secondaryCtaLabel || "Secondary CTA"}
               </span>
             </div>
             <div className="settings-preview-card__copy">
@@ -460,6 +596,7 @@ export function StudioSettingsClient({
             <Pill>{editorState.workspaceSlug || "workspace-slug"}</Pill>
             <Pill>{editorState.brandSlug || "brand-slug"}</Pill>
             <Pill>{editorState.accentColor}</Pill>
+            <Pill>{editorState.themePreset.replaceAll("_", " ")}</Pill>
             <Pill>
               {editorState.featuredReleaseLabel ||
                 defaultStudioFeaturedReleaseLabel}

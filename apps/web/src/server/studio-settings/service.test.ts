@@ -276,6 +276,7 @@ describe("createStudioSettingsService", () => {
         "A release-led storefront for collectible portraits and premium client launches.",
       landingHeadline: "Curated collectible releases",
       ownerUserId: "user_1",
+      themePreset: "editorial_warm",
       workspaceName: "Forge Operations",
       workspaceSlug: "forge-operations"
     });
@@ -302,6 +303,7 @@ describe("createStudioSettingsService", () => {
         "A release-led storefront for collectible portraits and premium client launches.",
       landingHeadline: "Curated collectible releases",
       ownerUserId: "user_1",
+      themePreset: "editorial_warm",
       workspaceName: "Forge Operations",
       workspaceSlug: "forge-operations"
     });
@@ -327,6 +329,7 @@ describe("createStudioSettingsService", () => {
         "Updated public landing copy for premium collectible drops.",
       landingHeadline: "Premium release directory",
       ownerUserId: "user_1",
+      themePreset: "gallery_mono",
       workspaceName: "Forge Operations",
       workspaceSlug: "forge-operations"
     });
@@ -352,6 +355,7 @@ describe("createStudioSettingsService", () => {
         "A release-led storefront for collectible portraits and premium client launches.",
       landingHeadline: "Curated collectible releases",
       ownerUserId: "user_1",
+      themePreset: "editorial_warm",
       workspaceName: "Forge Operations",
       workspaceSlug: "forge-operations"
     });
@@ -363,6 +367,7 @@ describe("createStudioSettingsService", () => {
       landingDescription: "North storefront copy.",
       landingHeadline: "North releases",
       ownerUserId: "user_2",
+      themePreset: "editorial_warm",
       workspaceName: "North Operations",
       workspaceSlug: "north-operations"
     });
@@ -399,6 +404,7 @@ describe("createStudioSettingsService", () => {
           "A release-led storefront for collectible portraits and premium client launches.",
         landingHeadline: "Curated collectible releases",
         ownerUserId: "user_1",
+        themePreset: "editorial_warm",
         workspaceName: "Forge Operations",
         workspaceSlug: "forge-operations"
       })
@@ -443,5 +449,7 @@ describe("createStudioSettingsService", () => {
     expect(result.settings?.brand.featuredReleaseLabel).toBe(
       "Featured release"
     );
+    expect(result.settings?.brand.themePreset).toBe("editorial_warm");
+    expect(result.settings?.brand.wordmark).toBeNull();
   });
 });

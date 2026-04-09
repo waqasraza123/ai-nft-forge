@@ -735,20 +735,8 @@ describe("database repositories", () => {
             {
               id: "asc"
             }
-          ],
-          take: 1
+          ]
         }
-      },
-      orderBy: [
-        {
-          updatedAt: "desc"
-        },
-        {
-          id: "desc"
-        }
-      ],
-      where: {
-        brandSlug: "demo-studio"
       },
       orderBy: [
         {
@@ -763,7 +751,10 @@ describe("database repositories", () => {
         {
           id: "desc"
         }
-      ]
+      ],
+      where: {
+        brandSlug: "demo-studio"
+      }
     });
     expect(result[0]?.id).toBe("published_collection_2");
   });
@@ -828,6 +819,7 @@ describe("database repositories", () => {
         }
       ],
       select: {
+        generatedAssetId: true,
         id: true,
         publicStorageBucket: true,
         publicStorageObjectKey: true

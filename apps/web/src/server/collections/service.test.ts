@@ -3,6 +3,24 @@ import { describe, expect, it } from "vitest";
 import { CollectionDraftServiceError } from "./error";
 import { createCollectionDraftService } from "./service";
 
+function createDefaultPublicationStorefrontState() {
+  return {
+    endAt: null,
+    heroGeneratedAssetId: null,
+    launchAt: null,
+    priceLabel: null,
+    primaryCtaHref: null,
+    primaryCtaLabel: null,
+    secondaryCtaHref: null,
+    secondaryCtaLabel: null,
+    soldCount: 0,
+    storefrontBody: null,
+    storefrontHeadline: null,
+    storefrontStatus: "ended" as const,
+    totalSupply: null
+  };
+}
+
 function createCollectionDraftHarness() {
   const nowValues = [
     "2026-04-08T00:00:00.000Z",
@@ -55,12 +73,25 @@ function createCollectionDraftHarness() {
       createdAt: Date;
       displayOrder: number;
       description: string | null;
+      endAt: Date | null;
+      heroGeneratedAssetId: string | null;
       id: string;
       isFeatured: boolean;
+      launchAt: Date | null;
       ownerUserId: string;
+      priceLabel: string | null;
+      primaryCtaHref: string | null;
+      primaryCtaLabel: string | null;
       publishedAt: Date;
+      secondaryCtaHref: string | null;
+      secondaryCtaLabel: string | null;
       slug: string;
+      soldCount: number;
       sourceCollectionDraftId: string;
+      storefrontBody: string | null;
+      storefrontHeadline: string | null;
+      storefrontStatus: "ended" | "live" | "sold_out" | "upcoming";
+      totalSupply: number | null;
       title: string;
       updatedAt: Date;
     }
@@ -145,8 +176,7 @@ function createCollectionDraftHarness() {
         id: "generated_asset_1",
         ownerUserId: "user_1",
         storageBucket: "ai-nft-forge-private",
-        storageObjectKey:
-          "generated-assets/user_1/generation_1/variant-01.png",
+        storageObjectKey: "generated-assets/user_1/generation_1/variant-01.png",
         variantIndex: 1
       }
     ],
@@ -166,8 +196,7 @@ function createCollectionDraftHarness() {
         id: "generated_asset_2",
         ownerUserId: "user_1",
         storageBucket: "ai-nft-forge-private",
-        storageObjectKey:
-          "generated-assets/user_1/generation_2/variant-02.png",
+        storageObjectKey: "generated-assets/user_1/generation_2/variant-02.png",
         variantIndex: 2
       }
     ],
@@ -187,8 +216,7 @@ function createCollectionDraftHarness() {
         id: "generated_asset_3",
         ownerUserId: "user_2",
         storageBucket: "ai-nft-forge-private",
-        storageObjectKey:
-          "generated-assets/user_2/generation_3/variant-01.png",
+        storageObjectKey: "generated-assets/user_2/generation_3/variant-01.png",
         variantIndex: 1
       }
     ]
@@ -502,9 +530,12 @@ function createCollectionDraftHarness() {
 
       async listByPublishedCollectionId(publishedCollectionId: string) {
         return [...publicationItems.values()]
-          .filter((item) => item.publishedCollectionId === publishedCollectionId)
+          .filter(
+            (item) => item.publishedCollectionId === publishedCollectionId
+          )
           .sort((left, right) => left.position - right.position)
           .map((item) => ({
+            generatedAssetId: item.generatedAssetId,
             id: item.id,
             publicStorageBucket: item.publicStorageBucket,
             publicStorageObjectKey: item.publicStorageObjectKey
@@ -532,11 +563,24 @@ function createCollectionDraftHarness() {
         brandSlug: string;
         displayOrder: number;
         description: string | null;
+        endAt?: Date | null;
+        heroGeneratedAssetId?: string | null;
         isFeatured: boolean;
+        launchAt?: Date | null;
         ownerUserId: string;
+        priceLabel?: string | null;
+        primaryCtaHref?: string | null;
+        primaryCtaLabel?: string | null;
         publishedAt: Date;
+        secondaryCtaHref?: string | null;
+        secondaryCtaLabel?: string | null;
         slug: string;
+        soldCount?: number;
         sourceCollectionDraftId: string;
+        storefrontBody?: string | null;
+        storefrontHeadline?: string | null;
+        storefrontStatus?: "ended" | "live" | "sold_out" | "upcoming";
+        totalSupply?: number | null;
         title: string;
       }) {
         publicationIndex += 1;
@@ -546,12 +590,26 @@ function createCollectionDraftHarness() {
           createdAt: nextDate(),
           displayOrder: input.displayOrder,
           description: input.description,
+          ...createDefaultPublicationStorefrontState(),
+          endAt: input.endAt ?? null,
+          heroGeneratedAssetId: input.heroGeneratedAssetId ?? null,
           id: `published_collection_${publicationIndex}`,
           isFeatured: input.isFeatured,
+          launchAt: input.launchAt ?? null,
           ownerUserId: input.ownerUserId,
+          priceLabel: input.priceLabel ?? null,
+          primaryCtaHref: input.primaryCtaHref ?? null,
+          primaryCtaLabel: input.primaryCtaLabel ?? null,
           publishedAt: input.publishedAt,
+          secondaryCtaHref: input.secondaryCtaHref ?? null,
+          secondaryCtaLabel: input.secondaryCtaLabel ?? null,
           slug: input.slug,
+          soldCount: input.soldCount ?? 0,
           sourceCollectionDraftId: input.sourceCollectionDraftId,
+          storefrontBody: input.storefrontBody ?? null,
+          storefrontHeadline: input.storefrontHeadline ?? null,
+          storefrontStatus: input.storefrontStatus ?? "ended",
+          totalSupply: input.totalSupply ?? null,
           title: input.title,
           updatedAt: nextDate()
         };
@@ -622,10 +680,23 @@ function createCollectionDraftHarness() {
         brandSlug: string;
         displayOrder?: number;
         description: string | null;
+        endAt?: Date | null;
+        heroGeneratedAssetId?: string | null;
         id: string;
         isFeatured?: boolean;
+        launchAt?: Date | null;
         ownerUserId: string;
+        priceLabel?: string | null;
+        primaryCtaHref?: string | null;
+        primaryCtaLabel?: string | null;
+        secondaryCtaHref?: string | null;
+        secondaryCtaLabel?: string | null;
         slug: string;
+        soldCount?: number;
+        storefrontBody?: string | null;
+        storefrontHeadline?: string | null;
+        storefrontStatus?: "ended" | "live" | "sold_out" | "upcoming";
+        totalSupply?: number | null;
         title: string;
       }) {
         const publication = publications.get(input.id);
@@ -642,9 +713,56 @@ function createCollectionDraftHarness() {
           brandSlug: input.brandSlug,
           displayOrder: input.displayOrder ?? publication.displayOrder,
           description: input.description,
+          endAt: input.endAt === undefined ? publication.endAt : input.endAt,
+          heroGeneratedAssetId:
+            input.heroGeneratedAssetId === undefined
+              ? publication.heroGeneratedAssetId
+              : input.heroGeneratedAssetId,
           slug: input.slug,
           title: input.title,
           isFeatured: input.isFeatured ?? publication.isFeatured,
+          launchAt:
+            input.launchAt === undefined
+              ? publication.launchAt
+              : input.launchAt,
+          priceLabel:
+            input.priceLabel === undefined
+              ? publication.priceLabel
+              : input.priceLabel,
+          primaryCtaHref:
+            input.primaryCtaHref === undefined
+              ? publication.primaryCtaHref
+              : input.primaryCtaHref,
+          primaryCtaLabel:
+            input.primaryCtaLabel === undefined
+              ? publication.primaryCtaLabel
+              : input.primaryCtaLabel,
+          secondaryCtaHref:
+            input.secondaryCtaHref === undefined
+              ? publication.secondaryCtaHref
+              : input.secondaryCtaHref,
+          secondaryCtaLabel:
+            input.secondaryCtaLabel === undefined
+              ? publication.secondaryCtaLabel
+              : input.secondaryCtaLabel,
+          soldCount:
+            input.soldCount === undefined
+              ? publication.soldCount
+              : input.soldCount,
+          storefrontBody:
+            input.storefrontBody === undefined
+              ? publication.storefrontBody
+              : input.storefrontBody,
+          storefrontHeadline:
+            input.storefrontHeadline === undefined
+              ? publication.storefrontHeadline
+              : input.storefrontHeadline,
+          storefrontStatus:
+            input.storefrontStatus ?? publication.storefrontStatus,
+          totalSupply:
+            input.totalSupply === undefined
+              ? publication.totalSupply
+              : input.totalSupply,
           updatedAt: nextDate()
         };
 
@@ -842,7 +960,9 @@ describe("createCollectionDraftService", () => {
     expect(harness.publications.size).toBe(1);
     expect(harness.publicationItems.size).toBe(1);
     expect(harness.copiedPublishedAssets.size).toBe(1);
-    expect([...harness.publicationItems.values()][0]?.publicStorageObjectKey).toBe(
+    expect(
+      [...harness.publicationItems.values()][0]?.publicStorageObjectKey
+    ).toBe(
       "published-collections/draft_1/items/001-generated_asset_1-portrait-1.png"
     );
   });
@@ -1063,6 +1183,131 @@ describe("createCollectionDraftService", () => {
         "STUDIO_SETTINGS_REQUIRED",
         "Studio settings must define a brand profile before collection publication.",
         409
+      )
+    );
+  });
+
+  it("stores storefront merchandising on the published snapshot", async () => {
+    const harness = createCollectionDraftHarness();
+    const createdDraft = await harness.service.createCollectionDraft({
+      ownerUserId: "user_1",
+      title: "Genesis Portrait Set"
+    });
+
+    await harness.service.addCollectionDraftItem({
+      collectionDraftId: createdDraft.draft.id,
+      generatedAssetId: "generated_asset_1",
+      ownerUserId: "user_1"
+    });
+    await harness.service.addCollectionDraftItem({
+      collectionDraftId: createdDraft.draft.id,
+      generatedAssetId: "generated_asset_2",
+      ownerUserId: "user_1"
+    });
+    await harness.service.updateCollectionDraft({
+      collectionDraftId: createdDraft.draft.id,
+      description: "Release candidate set",
+      ownerUserId: "user_1",
+      slug: createdDraft.draft.slug,
+      status: "review_ready",
+      title: createdDraft.draft.title
+    });
+    await harness.service.publishCollectionDraft({
+      collectionDraftId: createdDraft.draft.id,
+      ownerUserId: "user_1"
+    });
+
+    const result =
+      await harness.service.updateCollectionPublicationMerchandising({
+        collectionDraftId: createdDraft.draft.id,
+        displayOrder: 4,
+        endAt: "2026-04-20T12:00:00.000Z",
+        heroGeneratedAssetId: "generated_asset_2",
+        isFeatured: true,
+        launchAt: "2026-04-10T12:00:00.000Z",
+        ownerUserId: "user_1",
+        priceLabel: "0.18 ETH",
+        primaryCtaHref: "https://example.com/mint",
+        primaryCtaLabel: "Enter mint",
+        secondaryCtaHref: "https://example.com/lookbook",
+        secondaryCtaLabel: "View lookbook",
+        soldCount: 3,
+        storefrontBody: "Launch-ready collectible release.",
+        storefrontHeadline: "Genesis Portrait Set",
+        storefrontStatus: "live",
+        totalSupply: 10
+      });
+
+    expect(result.draft.publication).toMatchObject({
+      displayOrder: 4,
+      heroGeneratedAssetId: "generated_asset_2",
+      isFeatured: true,
+      priceLabel: "0.18 ETH",
+      primaryCtaLabel: "Enter mint",
+      remainingSupply: 7,
+      secondaryCtaLabel: "View lookbook",
+      soldCount: 3,
+      storefrontHeadline: "Genesis Portrait Set",
+      storefrontStatus: "live",
+      totalSupply: 10
+    });
+    expect(harness.publications.values().next().value).toMatchObject({
+      heroGeneratedAssetId: "generated_asset_2",
+      soldCount: 3,
+      storefrontStatus: "live"
+    });
+  });
+
+  it("rejects a storefront hero asset that is not part of the published snapshot", async () => {
+    const harness = createCollectionDraftHarness();
+    const createdDraft = await harness.service.createCollectionDraft({
+      ownerUserId: "user_1",
+      title: "Genesis Portrait Set"
+    });
+
+    await harness.service.addCollectionDraftItem({
+      collectionDraftId: createdDraft.draft.id,
+      generatedAssetId: "generated_asset_1",
+      ownerUserId: "user_1"
+    });
+    await harness.service.updateCollectionDraft({
+      collectionDraftId: createdDraft.draft.id,
+      description: null,
+      ownerUserId: "user_1",
+      slug: createdDraft.draft.slug,
+      status: "review_ready",
+      title: createdDraft.draft.title
+    });
+    await harness.service.publishCollectionDraft({
+      collectionDraftId: createdDraft.draft.id,
+      ownerUserId: "user_1"
+    });
+
+    await expect(
+      harness.service.updateCollectionPublicationMerchandising({
+        collectionDraftId: createdDraft.draft.id,
+        displayOrder: 0,
+        endAt: null,
+        heroGeneratedAssetId: "generated_asset_missing",
+        isFeatured: false,
+        launchAt: null,
+        ownerUserId: "user_1",
+        priceLabel: null,
+        primaryCtaHref: null,
+        primaryCtaLabel: null,
+        secondaryCtaHref: null,
+        secondaryCtaLabel: null,
+        soldCount: 0,
+        storefrontBody: null,
+        storefrontHeadline: null,
+        storefrontStatus: "ended",
+        totalSupply: null
+      })
+    ).rejects.toEqual(
+      new CollectionDraftServiceError(
+        "INVALID_REQUEST",
+        "Selected storefront hero asset is not part of the published collection snapshot.",
+        400
       )
     );
   });

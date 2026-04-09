@@ -16,6 +16,22 @@ export const collectionBrandSlugSchema = collectionDraftSlugSchema;
 export const collectionBrandNameSchema = z.string().trim().min(1).max(120);
 export const collectionDraftTitleSchema = z.string().trim().min(1).max(120);
 export const collectionDraftDescriptionSchema = z.string().trim().max(1000);
+export const collectionStorefrontStatusSchema = z.enum([
+  "upcoming",
+  "live",
+  "sold_out",
+  "ended"
+]);
+export const collectionStorefrontPriceLabelSchema = z.string().trim().max(60);
+export const collectionStorefrontHeadlineSchema = z.string().trim().max(120);
+export const collectionStorefrontBodySchema = z.string().trim().max(600);
+export const collectionStorefrontCtaLabelSchema = z.string().trim().max(40);
+export const collectionStorefrontCtaHrefSchema = z.string().trim().url();
+export const collectionThemePresetSchema = z.enum([
+  "editorial_warm",
+  "gallery_mono",
+  "midnight_launch"
+]);
 
 export const collectionGeneratedAssetCandidateSchema = z.object({
   createdAt: z.string().datetime(),
@@ -32,11 +48,39 @@ export const collectionPublicationSummarySchema = z.object({
   brandSlug: collectionBrandSlugSchema,
   collectionSlug: collectionDraftSlugSchema,
   displayOrder: z.number().int().min(0),
+  endAt: z.string().datetime().nullable(),
+  heroGeneratedAssetId: z.string().min(1).nullable(),
   id: z.string().min(1),
   isFeatured: z.boolean(),
+  launchAt: z.string().datetime().nullable(),
+  priceLabel: collectionStorefrontPriceLabelSchema.nullable(),
+  primaryCtaHref: collectionStorefrontCtaHrefSchema.nullable(),
+  primaryCtaLabel: collectionStorefrontCtaLabelSchema.nullable(),
   publicPath: z.string().min(1),
   publishedAt: z.string().datetime(),
+  remainingSupply: z.number().int().min(0).nullable(),
+  secondaryCtaHref: collectionStorefrontCtaHrefSchema.nullable(),
+  secondaryCtaLabel: collectionStorefrontCtaLabelSchema.nullable(),
+  soldCount: z.number().int().min(0),
+  storefrontBody: collectionStorefrontBodySchema.nullable(),
+  storefrontHeadline: collectionStorefrontHeadlineSchema.nullable(),
+  storefrontStatus: collectionStorefrontStatusSchema,
+  totalSupply: z.number().int().positive().nullable(),
   updatedAt: z.string().datetime()
+});
+
+export const collectionPublicBrandThemeSchema = z.object({
+  accentColor: z.string().regex(/^#[0-9a-f]{6}$/i),
+  featuredReleaseLabel: z.string().min(1).max(40),
+  heroKicker: z.string().max(60).nullable(),
+  landingDescription: z.string().min(1).max(280),
+  landingHeadline: collectionDraftTitleSchema,
+  primaryCtaLabel: z.string().max(40).nullable(),
+  secondaryCtaLabel: z.string().max(40).nullable(),
+  storyBody: z.string().max(600).nullable(),
+  storyHeadline: z.string().max(120).nullable(),
+  themePreset: collectionThemePresetSchema,
+  wordmark: z.string().max(40).nullable()
 });
 
 export const collectionDraftItemSummarySchema = z.object({
@@ -69,12 +113,41 @@ export const collectionPublicItemSchema = z.object({
 });
 
 export const collectionPublicPageSchema = z.object({
+  availabilityLabel: z.string().min(1),
+  brandPublicPath: z.string().min(1),
+  brandTheme: collectionPublicBrandThemeSchema,
   brandName: collectionBrandNameSchema,
   brandSlug: collectionBrandSlugSchema,
   collectionSlug: collectionDraftSlugSchema,
   description: z.string().max(1000).nullable(),
+  endAt: z.string().datetime().nullable(),
+  heroGeneratedAssetId: z.string().min(1).nullable(),
+  heroImageUrl: z.string().url().nullable(),
+  heroImageUrlExpiresAt: z.string().datetime().nullable(),
   items: z.array(collectionPublicItemSchema),
+  launchAt: z.string().datetime().nullable(),
+  priceLabel: collectionStorefrontPriceLabelSchema.nullable(),
+  primaryCtaHref: collectionStorefrontCtaHrefSchema.nullable(),
+  primaryCtaLabel: collectionStorefrontCtaLabelSchema.nullable(),
   publishedAt: z.string().datetime(),
+  relatedCollections: z.array(
+    z.object({
+      collectionSlug: collectionDraftSlugSchema,
+      displayOrder: z.number().int().min(0),
+      isFeatured: z.boolean(),
+      publicPath: z.string().min(1),
+      storefrontStatus: collectionStorefrontStatusSchema,
+      title: collectionDraftTitleSchema
+    })
+  ),
+  remainingSupply: z.number().int().min(0).nullable(),
+  secondaryCtaHref: collectionStorefrontCtaHrefSchema.nullable(),
+  secondaryCtaLabel: collectionStorefrontCtaLabelSchema.nullable(),
+  soldCount: z.number().int().min(0),
+  storefrontBody: collectionStorefrontBodySchema.nullable(),
+  storefrontHeadline: collectionStorefrontHeadlineSchema.nullable(),
+  storefrontStatus: collectionStorefrontStatusSchema,
+  totalSupply: z.number().int().positive().nullable(),
   title: collectionDraftTitleSchema,
   updatedAt: z.string().datetime()
 });
@@ -131,30 +204,42 @@ export const collectionPublicMetadataItemSchema = z.object({
 
 export const collectionPublicBrandPreviewSchema = z.object({
   collectionSlug: collectionDraftSlugSchema,
-  coverImageUrl: z.string().url().nullable(),
-  coverImageUrlExpiresAt: z.string().datetime().nullable(),
+  availabilityLabel: z.string().min(1),
   description: z.string().max(1000).nullable(),
   displayOrder: z.number().int().min(0),
+  endAt: z.string().datetime().nullable(),
+  heroGeneratedAssetId: z.string().min(1).nullable(),
+  heroImageUrl: z.string().url().nullable(),
+  heroImageUrlExpiresAt: z.string().datetime().nullable(),
   itemCount: z.number().int().positive(),
   isFeatured: z.boolean(),
+  launchAt: z.string().datetime().nullable(),
+  priceLabel: collectionStorefrontPriceLabelSchema.nullable(),
   previewPipelineKey: z.string().min(1).nullable(),
   previewSourceAssetOriginalFilename: z.string().min(1).nullable(),
   previewVariantIndex: z.number().int().positive().nullable(),
   publicPath: z.string().min(1),
   publishedAt: z.string().datetime(),
+  remainingSupply: z.number().int().min(0).nullable(),
+  soldCount: z.number().int().min(0),
+  storefrontHeadline: collectionStorefrontHeadlineSchema.nullable(),
+  storefrontStatus: collectionStorefrontStatusSchema,
+  totalSupply: z.number().int().positive().nullable(),
   title: collectionDraftTitleSchema,
   updatedAt: z.string().datetime()
 });
 
 export const collectionPublicBrandPageSchema = z.object({
-  accentColor: z.string().regex(/^#[0-9a-f]{6}$/i),
   brandName: collectionBrandNameSchema,
   brandSlug: collectionBrandSlugSchema,
+  collectionCount: z.number().int().min(0),
   collections: z.array(collectionPublicBrandPreviewSchema),
   customDomain: z.string().min(1).nullable(),
-  featuredReleaseLabel: z.string().min(1).max(40),
-  landingDescription: z.string().min(1).max(280),
-  landingHeadline: collectionDraftTitleSchema,
+  featuredRelease: collectionPublicBrandPreviewSchema.nullable(),
+  liveReleases: z.array(collectionPublicBrandPreviewSchema),
+  theme: collectionPublicBrandThemeSchema,
+  upcomingReleases: z.array(collectionPublicBrandPreviewSchema),
+  archiveReleases: z.array(collectionPublicBrandPreviewSchema),
   latestPublishedAt: z.string().datetime().nullable(),
   publicPath: z.string().min(1)
 });
@@ -173,10 +258,73 @@ export const collectionDraftUpdateRequestSchema = z.object({
 
 export const collectionDraftPublishRequestSchema = z.object({});
 
-export const collectionPublicationMerchandisingRequestSchema = z.object({
-  displayOrder: z.number().int().min(0).max(9999),
-  isFeatured: z.boolean()
-});
+export const collectionPublicationMerchandisingRequestSchema = z
+  .object({
+    displayOrder: z.number().int().min(0).max(9999),
+    endAt: z.string().datetime().nullable().optional(),
+    heroGeneratedAssetId: z.string().min(1).nullable().optional(),
+    isFeatured: z.boolean(),
+    launchAt: z.string().datetime().nullable().optional(),
+    priceLabel: collectionStorefrontPriceLabelSchema.nullable().optional(),
+    primaryCtaHref: collectionStorefrontCtaHrefSchema.nullable().optional(),
+    primaryCtaLabel: collectionStorefrontCtaLabelSchema.nullable().optional(),
+    secondaryCtaHref: collectionStorefrontCtaHrefSchema.nullable().optional(),
+    secondaryCtaLabel: collectionStorefrontCtaLabelSchema.nullable().optional(),
+    soldCount: z.number().int().min(0),
+    storefrontBody: collectionStorefrontBodySchema.nullable().optional(),
+    storefrontHeadline: collectionStorefrontHeadlineSchema
+      .nullable()
+      .optional(),
+    storefrontStatus: collectionStorefrontStatusSchema,
+    totalSupply: z.number().int().positive().nullable().optional()
+  })
+  .superRefine((value, context) => {
+    if (value.totalSupply !== null && value.totalSupply !== undefined) {
+      if (value.soldCount > value.totalSupply) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Sold count cannot exceed total supply.",
+          path: ["soldCount"]
+        });
+      }
+    }
+
+    if (value.launchAt && value.endAt) {
+      if (
+        new Date(value.launchAt).getTime() > new Date(value.endAt).getTime()
+      ) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Launch time must not be after the end time.",
+          path: ["endAt"]
+        });
+      }
+    }
+
+    const primaryPair =
+      (value.primaryCtaLabel ? 1 : 0) + (value.primaryCtaHref ? 1 : 0);
+
+    if (primaryPair === 1) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Primary CTA label and URL must be provided together.",
+        path: value.primaryCtaLabel ? ["primaryCtaHref"] : ["primaryCtaLabel"]
+      });
+    }
+
+    const secondaryPair =
+      (value.secondaryCtaLabel ? 1 : 0) + (value.secondaryCtaHref ? 1 : 0);
+
+    if (secondaryPair === 1) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Secondary CTA label and URL must be provided together.",
+        path: value.secondaryCtaLabel
+          ? ["secondaryCtaHref"]
+          : ["secondaryCtaLabel"]
+      });
+    }
+  });
 
 export const collectionDraftItemAddRequestSchema = z.object({
   generatedAssetId: z.string().min(1)
@@ -240,6 +388,9 @@ export const collectionDraftErrorResponseSchema = z.object({
 });
 
 export type CollectionDraftStatus = z.infer<typeof collectionDraftStatusSchema>;
+export type CollectionStorefrontStatus = z.infer<
+  typeof collectionStorefrontStatusSchema
+>;
 export type CollectionPublicationSummary = z.infer<
   typeof collectionPublicationSummarySchema
 >;
@@ -257,6 +408,9 @@ export type CollectionMetadataAttribute = z.infer<
 >;
 export type CollectionPublicBrandPage = z.infer<
   typeof collectionPublicBrandPageSchema
+>;
+export type CollectionPublicBrandTheme = z.infer<
+  typeof collectionPublicBrandThemeSchema
 >;
 export type CollectionPublicBrandPreview = z.infer<
   typeof collectionPublicBrandPreviewSchema

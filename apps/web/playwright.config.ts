@@ -56,7 +56,7 @@ export default defineConfig({
     },
     {
       command:
-        "pnpm --filter @ai-nft-forge/web start -- --hostname 127.0.0.1 --port 3100",
+        "pnpm --filter @ai-nft-forge/web start --hostname 127.0.0.1 --port 3100",
       cwd: repoRoot,
       env: browserSmokeEnvironment,
       reuseExistingServer: !process.env.CI,

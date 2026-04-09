@@ -7,7 +7,8 @@ import {
   collectionDraftResponseSchema,
   collectionDraftUpdateRequestSchema,
   sanitizeStorageFileName,
-  type CollectionDraftStatus
+  type CollectionDraftStatus,
+  type CollectionStorefrontStatus
 } from "@ai-nft-forge/shared";
 
 import { CollectionDraftServiceError } from "./error";
@@ -51,11 +52,24 @@ type PublishedCollectionRecord = {
   brandSlug: string;
   displayOrder: number;
   description: string | null;
+  endAt: Date | null;
+  heroGeneratedAssetId: string | null;
   id: string;
   isFeatured: boolean;
+  launchAt: Date | null;
+  priceLabel: string | null;
+  primaryCtaHref: string | null;
+  primaryCtaLabel: string | null;
   publishedAt: Date;
+  secondaryCtaHref: string | null;
+  secondaryCtaLabel: string | null;
   slug: string;
+  soldCount: number;
   sourceCollectionDraftId: string;
+  storefrontBody: string | null;
+  storefrontHeadline: string | null;
+  storefrontStatus: CollectionStorefrontStatus;
+  totalSupply: number | null;
   title: string;
   updatedAt: Date;
 };
@@ -144,10 +158,9 @@ type CollectionDraftRepositorySet = {
         publishedCollectionId: string;
       }>
     ): Promise<unknown[]>;
-    listByPublishedCollectionId(
-      publishedCollectionId: string
-    ): Promise<
+    listByPublishedCollectionId(publishedCollectionId: string): Promise<
       Array<{
+        generatedAssetId: string;
         id: string;
         publicStorageBucket: string | null;
         publicStorageObjectKey: string | null;
@@ -163,11 +176,24 @@ type CollectionDraftRepositorySet = {
       brandSlug: string;
       displayOrder: number;
       description: string | null;
+      endAt?: Date | null;
+      heroGeneratedAssetId?: string | null;
       isFeatured: boolean;
+      launchAt?: Date | null;
       ownerUserId: string;
+      priceLabel?: string | null;
+      primaryCtaHref?: string | null;
+      primaryCtaLabel?: string | null;
       publishedAt: Date;
+      secondaryCtaHref?: string | null;
+      secondaryCtaLabel?: string | null;
       slug: string;
+      soldCount?: number;
       sourceCollectionDraftId: string;
+      storefrontBody?: string | null;
+      storefrontHeadline?: string | null;
+      storefrontStatus?: CollectionStorefrontStatus;
+      totalSupply?: number | null;
       title: string;
     }): Promise<{ id: string }>;
     deleteByDraftIdForOwner(input: {
@@ -190,10 +216,23 @@ type CollectionDraftRepositorySet = {
       brandSlug: string;
       displayOrder?: number;
       description: string | null;
+      endAt?: Date | null;
+      heroGeneratedAssetId?: string | null;
       id: string;
       isFeatured?: boolean;
+      launchAt?: Date | null;
       ownerUserId: string;
+      priceLabel?: string | null;
+      primaryCtaHref?: string | null;
+      primaryCtaLabel?: string | null;
+      secondaryCtaHref?: string | null;
+      secondaryCtaLabel?: string | null;
       slug: string;
+      soldCount?: number;
+      storefrontBody?: string | null;
+      storefrontHeadline?: string | null;
+      storefrontStatus?: CollectionStorefrontStatus;
+      totalSupply?: number | null;
       title: string;
     }): Promise<{ id: string }>;
   };
@@ -241,16 +280,53 @@ function normalizeOptionalDescription(value: string | null | undefined) {
   return normalizedValue.length > 0 ? normalizedValue : null;
 }
 
+function normalizeOptionalText(value: string | null | undefined) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalizedValue = value.trim();
+
+  return normalizedValue.length > 0 ? normalizedValue : null;
+}
+
+function resolveRemainingSupply(totalSupply: number | null, soldCount: number) {
+  if (typeof totalSupply !== "number") {
+    return null;
+  }
+
+  return Math.max(0, totalSupply - soldCount);
+}
+
 function serializePublication(publication: PublishedCollectionRecord) {
+  const remainingSupply = resolveRemainingSupply(
+    publication.totalSupply,
+    publication.soldCount
+  );
+
   return {
     brandName: publication.brandName,
     brandSlug: publication.brandSlug,
     collectionSlug: publication.slug,
     displayOrder: publication.displayOrder,
+    endAt: publication.endAt?.toISOString() ?? null,
+    heroGeneratedAssetId: publication.heroGeneratedAssetId,
     id: publication.id,
     isFeatured: publication.isFeatured,
+    launchAt: publication.launchAt?.toISOString() ?? null,
+    priceLabel: publication.priceLabel,
+    primaryCtaHref: publication.primaryCtaHref,
+    primaryCtaLabel: publication.primaryCtaLabel,
     publicPath: `/brands/${publication.brandSlug}/collections/${publication.slug}`,
     publishedAt: publication.publishedAt.toISOString(),
+    remainingSupply,
+    secondaryCtaHref: publication.secondaryCtaHref,
+    secondaryCtaLabel: publication.secondaryCtaLabel,
+    soldCount: publication.soldCount,
+    storefrontBody: publication.storefrontBody,
+    storefrontHeadline: publication.storefrontHeadline,
+    storefrontStatus: publication.storefrontStatus,
+    totalSupply: publication.totalSupply,
     updatedAt: publication.updatedAt.toISOString()
   };
 }
@@ -342,7 +418,9 @@ async function deletePublishedAssetsBestEffort(
   deletePublishedAsset: CollectionDraftServiceDependencies["storage"]["deletePublishedAsset"],
   assets: PublicPublicationAssetRecord[]
 ) {
-  const uniqueAssets = [...new Map(assets.map((asset) => [asset.key, asset])).values()];
+  const uniqueAssets = [
+    ...new Map(assets.map((asset) => [asset.key, asset])).values()
+  ];
 
   await Promise.all(
     uniqueAssets.map(async (asset) => {
@@ -730,68 +808,99 @@ export function createCollectionDraftService(
         });
 
       try {
-        const result = await dependencies.runTransaction(async (repositories) => {
-          const publication =
-            existingPublication ??
-            (await repositories.publishedCollectionRepository.create({
-              brandName: publicationTarget.name,
-              brandSlug: publicationTarget.slug,
-              displayOrder:
-                (sortPublicationsForMerchandising(
+        const result = await dependencies.runTransaction(
+          async (repositories) => {
+            const nextHeroGeneratedAssetId =
+              existingPublication?.heroGeneratedAssetId &&
+              draft.items.some(
+                (item) =>
+                  item.generatedAsset.id ===
+                  existingPublication.heroGeneratedAssetId
+              )
+                ? existingPublication.heroGeneratedAssetId
+                : null;
+            const publication =
+              existingPublication ??
+              (await repositories.publishedCollectionRepository.create({
+                brandName: publicationTarget.name,
+                brandSlug: publicationTarget.slug,
+                displayOrder:
+                  (sortPublicationsForMerchandising(
+                    ownerPublications.filter(
+                      (publication) =>
+                        publication.brandSlug === publicationTarget.slug
+                    )
+                  ).at(-1)?.displayOrder ?? -1) + 1,
+                description: draft.description,
+                endAt: null,
+                heroGeneratedAssetId: null,
+                isFeatured:
                   ownerPublications.filter(
                     (publication) =>
                       publication.brandSlug === publicationTarget.slug
-                  )
-                ).at(-1)?.displayOrder ?? -1) + 1,
-              description: draft.description,
-              isFeatured:
-                ownerPublications.filter(
-                  (publication) =>
-                    publication.brandSlug === publicationTarget.slug
-                ).length === 0,
-              ownerUserId: input.ownerUserId,
-              publishedAt: dependencies.now(),
-              slug: draft.slug,
-              sourceCollectionDraftId: draft.id,
-              title: draft.title
-            }));
+                  ).length === 0,
+                launchAt: null,
+                ownerUserId: input.ownerUserId,
+                priceLabel: null,
+                primaryCtaHref: null,
+                primaryCtaLabel: null,
+                publishedAt: dependencies.now(),
+                secondaryCtaHref: null,
+                secondaryCtaLabel: null,
+                slug: draft.slug,
+                soldCount: 0,
+                sourceCollectionDraftId: draft.id,
+                storefrontBody: null,
+                storefrontHeadline: null,
+                storefrontStatus: "ended",
+                totalSupply: null,
+                title: draft.title
+              }));
 
-          if (existingPublication) {
-            await repositories.publishedCollectionRepository.updateByIdForOwner({
-              brandName: publicationTarget.name,
-              brandSlug: publicationTarget.slug,
-              description: draft.description,
-              id: existingPublication.id,
-              ownerUserId: input.ownerUserId,
-              slug: draft.slug,
-              title: draft.title
-            });
-            await repositories.publishedCollectionItemRepository.deleteByPublishedCollectionId(
-              existingPublication.id
+            if (existingPublication) {
+              await repositories.publishedCollectionRepository.updateByIdForOwner(
+                {
+                  brandName: publicationTarget.name,
+                  brandSlug: publicationTarget.slug,
+                  description: draft.description,
+                  heroGeneratedAssetId: nextHeroGeneratedAssetId,
+                  id: existingPublication.id,
+                  ownerUserId: input.ownerUserId,
+                  slug: draft.slug,
+                  title: draft.title
+                }
+              );
+              await repositories.publishedCollectionItemRepository.deleteByPublishedCollectionId(
+                existingPublication.id
+              );
+            }
+
+            await repositories.publishedCollectionItemRepository.createMany(
+              promotedAssets.map((asset) => ({
+                generatedAssetId: asset.generatedAssetId,
+                position: asset.position,
+                publicStorageBucket: asset.publicStorageBucket,
+                publicStorageObjectKey: asset.publicStorageObjectKey,
+                publishedCollectionId: publication.id
+              }))
             );
+
+            return loadSerializedCollectionDraftById({
+              collectionDraftId: input.collectionDraftId,
+              ownerUserId: input.ownerUserId,
+              repositories
+            });
           }
+        );
 
-          await repositories.publishedCollectionItemRepository.createMany(
-            promotedAssets.map((asset) => ({
-              generatedAssetId: asset.generatedAssetId,
-              position: asset.position,
-              publicStorageBucket: asset.publicStorageBucket,
-              publicStorageObjectKey: asset.publicStorageObjectKey,
-              publishedCollectionId: publication.id
-            }))
-          );
-
-          return loadSerializedCollectionDraftById({
-            collectionDraftId: input.collectionDraftId,
-            ownerUserId: input.ownerUserId,
-            repositories
-          });
-        });
-
-        const copiedAssetKeySet = new Set(copiedAssets.map((asset) => asset.key));
+        const copiedAssetKeySet = new Set(
+          copiedAssets.map((asset) => asset.key)
+        );
         await deletePublishedAssetsBestEffort(
           dependencies.storage.deletePublishedAsset,
-          existingPublicAssets.filter((asset) => !copiedAssetKeySet.has(asset.key))
+          existingPublicAssets.filter(
+            (asset) => !copiedAssetKeySet.has(asset.key)
+          )
         );
 
         return result;
@@ -807,13 +916,39 @@ export function createCollectionDraftService(
     async updateCollectionPublicationMerchandising(input: {
       collectionDraftId: string;
       displayOrder: number;
+      endAt: string | null;
+      heroGeneratedAssetId: string | null;
       isFeatured: boolean;
+      launchAt: string | null;
       ownerUserId: string;
+      priceLabel: string | null;
+      primaryCtaHref: string | null;
+      primaryCtaLabel: string | null;
+      secondaryCtaHref: string | null;
+      secondaryCtaLabel: string | null;
+      soldCount: number;
+      storefrontBody: string | null;
+      storefrontHeadline: string | null;
+      storefrontStatus: CollectionStorefrontStatus;
+      totalSupply: number | null;
     }) {
       const parsedInput = collectionPublicationMerchandisingRequestSchema.parse(
         {
           displayOrder: input.displayOrder,
-          isFeatured: input.isFeatured
+          endAt: input.endAt,
+          heroGeneratedAssetId: input.heroGeneratedAssetId,
+          isFeatured: input.isFeatured,
+          launchAt: input.launchAt,
+          priceLabel: input.priceLabel,
+          primaryCtaHref: input.primaryCtaHref,
+          primaryCtaLabel: input.primaryCtaLabel,
+          secondaryCtaHref: input.secondaryCtaHref,
+          secondaryCtaLabel: input.secondaryCtaLabel,
+          soldCount: input.soldCount,
+          storefrontBody: input.storefrontBody,
+          storefrontHeadline: input.storefrontHeadline,
+          storefrontStatus: input.storefrontStatus,
+          totalSupply: input.totalSupply
         }
       );
 
@@ -845,6 +980,24 @@ export function createCollectionDraftService(
             "COLLECTION_PUBLICATION_NOT_FOUND",
             "Published collection was not found for this draft.",
             404
+          );
+        }
+
+        const publicationItems =
+          await repositories.publishedCollectionItemRepository.listByPublishedCollectionId(
+            publication.id
+          );
+
+        if (
+          parsedInput.heroGeneratedAssetId &&
+          !publicationItems.some(
+            (item) => item.generatedAssetId === parsedInput.heroGeneratedAssetId
+          )
+        ) {
+          throw new CollectionDraftServiceError(
+            "INVALID_REQUEST",
+            "Selected storefront hero asset is not part of the published collection snapshot.",
+            400
           );
         }
 
@@ -882,10 +1035,29 @@ export function createCollectionDraftService(
           brandSlug: publication.brandSlug,
           description: draft.description,
           displayOrder: parsedInput.displayOrder,
+          endAt: parsedInput.endAt ? new Date(parsedInput.endAt) : null,
+          heroGeneratedAssetId: parsedInput.heroGeneratedAssetId ?? null,
           id: publication.id,
           isFeatured: parsedInput.isFeatured,
+          launchAt: parsedInput.launchAt
+            ? new Date(parsedInput.launchAt)
+            : null,
           ownerUserId: input.ownerUserId,
+          priceLabel: normalizeOptionalText(parsedInput.priceLabel),
+          primaryCtaHref: normalizeOptionalText(parsedInput.primaryCtaHref),
+          primaryCtaLabel: normalizeOptionalText(parsedInput.primaryCtaLabel),
+          secondaryCtaHref: normalizeOptionalText(parsedInput.secondaryCtaHref),
+          secondaryCtaLabel: normalizeOptionalText(
+            parsedInput.secondaryCtaLabel
+          ),
+          soldCount: parsedInput.soldCount,
           slug: publication.slug,
+          storefrontBody: normalizeOptionalText(parsedInput.storefrontBody),
+          storefrontHeadline: normalizeOptionalText(
+            parsedInput.storefrontHeadline
+          ),
+          storefrontStatus: parsedInput.storefrontStatus,
+          totalSupply: parsedInput.totalSupply ?? null,
           title: draft.title
         });
 

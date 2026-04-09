@@ -58,8 +58,21 @@ export async function PATCH(request: Request, context: RouteContext) {
         {
           collectionDraftId,
           displayOrder: body.displayOrder,
+          endAt: body.endAt ?? null,
+          heroGeneratedAssetId: body.heroGeneratedAssetId ?? null,
           isFeatured: body.isFeatured,
-          ownerUserId: session.user.id
+          launchAt: body.launchAt ?? null,
+          ownerUserId: session.user.id,
+          priceLabel: body.priceLabel ?? null,
+          primaryCtaHref: body.primaryCtaHref ?? null,
+          primaryCtaLabel: body.primaryCtaLabel ?? null,
+          secondaryCtaHref: body.secondaryCtaHref ?? null,
+          secondaryCtaLabel: body.secondaryCtaLabel ?? null,
+          soldCount: body.soldCount,
+          storefrontBody: body.storefrontBody ?? null,
+          storefrontHeadline: body.storefrontHeadline ?? null,
+          storefrontStatus: body.storefrontStatus,
+          totalSupply: body.totalSupply ?? null
         }
       );
 

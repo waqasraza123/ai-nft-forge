@@ -63,8 +63,7 @@ const publishedCollectionPreviewInclude = {
         }
       }
     },
-    orderBy: publishedCollectionItemOrderBy,
-    take: 1
+    orderBy: publishedCollectionItemOrderBy
   }
 };
 
@@ -77,11 +76,24 @@ export function createPublishedCollectionRepository(
       brandSlug: string;
       displayOrder: number;
       description: string | null;
+      endAt?: Date | null;
+      heroGeneratedAssetId?: string | null;
       isFeatured: boolean;
+      launchAt?: Date | null;
       ownerUserId: string;
+      priceLabel?: string | null;
+      primaryCtaHref?: string | null;
+      primaryCtaLabel?: string | null;
       publishedAt: Date;
+      secondaryCtaHref?: string | null;
+      secondaryCtaLabel?: string | null;
       slug: string;
+      soldCount?: number;
       sourceCollectionDraftId: string;
+      storefrontBody?: string | null;
+      storefrontHeadline?: string | null;
+      storefrontStatus?: "ended" | "live" | "sold_out" | "upcoming";
+      totalSupply?: number | null;
       title: string;
     }): Promise<PublishedCollection> {
       return database.publishedCollection.create({
@@ -198,10 +210,23 @@ export function createPublishedCollectionRepository(
       brandSlug: string;
       displayOrder?: number;
       description: string | null;
+      endAt?: Date | null;
+      heroGeneratedAssetId?: string | null;
       id: string;
       isFeatured?: boolean;
+      launchAt?: Date | null;
       ownerUserId: string;
+      priceLabel?: string | null;
+      primaryCtaHref?: string | null;
+      primaryCtaLabel?: string | null;
+      secondaryCtaHref?: string | null;
+      secondaryCtaLabel?: string | null;
       slug: string;
+      soldCount?: number;
+      storefrontBody?: string | null;
+      storefrontHeadline?: string | null;
+      storefrontStatus?: "ended" | "live" | "sold_out" | "upcoming";
+      totalSupply?: number | null;
       title: string;
     }): Promise<PublishedCollection> {
       return database.publishedCollection
@@ -222,8 +247,56 @@ export function createPublishedCollectionRepository(
               brandSlug: input.brandSlug,
               displayOrder: input.displayOrder ?? publication.displayOrder,
               description: input.description,
+              endAt:
+                input.endAt === undefined ? publication.endAt : input.endAt,
+              heroGeneratedAssetId:
+                input.heroGeneratedAssetId === undefined
+                  ? publication.heroGeneratedAssetId
+                  : input.heroGeneratedAssetId,
               isFeatured: input.isFeatured ?? publication.isFeatured,
+              launchAt:
+                input.launchAt === undefined
+                  ? publication.launchAt
+                  : input.launchAt,
+              priceLabel:
+                input.priceLabel === undefined
+                  ? publication.priceLabel
+                  : input.priceLabel,
+              primaryCtaHref:
+                input.primaryCtaHref === undefined
+                  ? publication.primaryCtaHref
+                  : input.primaryCtaHref,
+              primaryCtaLabel:
+                input.primaryCtaLabel === undefined
+                  ? publication.primaryCtaLabel
+                  : input.primaryCtaLabel,
+              secondaryCtaHref:
+                input.secondaryCtaHref === undefined
+                  ? publication.secondaryCtaHref
+                  : input.secondaryCtaHref,
+              secondaryCtaLabel:
+                input.secondaryCtaLabel === undefined
+                  ? publication.secondaryCtaLabel
+                  : input.secondaryCtaLabel,
               slug: input.slug,
+              soldCount:
+                input.soldCount === undefined
+                  ? publication.soldCount
+                  : input.soldCount,
+              storefrontBody:
+                input.storefrontBody === undefined
+                  ? publication.storefrontBody
+                  : input.storefrontBody,
+              storefrontHeadline:
+                input.storefrontHeadline === undefined
+                  ? publication.storefrontHeadline
+                  : input.storefrontHeadline,
+              storefrontStatus:
+                input.storefrontStatus ?? publication.storefrontStatus,
+              totalSupply:
+                input.totalSupply === undefined
+                  ? publication.totalSupply
+                  : input.totalSupply,
               title: input.title
             },
             where: {

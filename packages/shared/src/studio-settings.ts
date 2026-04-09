@@ -9,11 +9,17 @@ import {
 export const studioWorkspaceNameSchema = z.string().trim().min(1).max(120);
 export const studioWorkspaceSlugSchema = collectionDraftSlugSchema;
 export const defaultStudioBrandAccentColor = "#8b5e34";
+export const defaultStudioBrandThemePreset = "editorial_warm";
 export const defaultStudioBrandLandingHeadline =
   "Published collection releases";
 export const defaultStudioBrandLandingDescription =
   "Explore curated collection drops assembled from generated art variants and published as immutable releases.";
 export const defaultStudioFeaturedReleaseLabel = "Featured release";
+export const studioBrandThemePresetSchema = z.enum([
+  "editorial_warm",
+  "gallery_mono",
+  "midnight_launch"
+]);
 export const studioBrandAccentColorSchema = z
   .string()
   .regex(/^#[0-9a-f]{6}$/i, {
@@ -34,6 +40,11 @@ export const studioFeaturedReleaseLabelSchema = z
   .trim()
   .min(1)
   .max(40);
+export const studioBrandWordmarkSchema = z.string().trim().max(40);
+export const studioBrandHeroKickerSchema = z.string().trim().max(60);
+export const studioBrandStoryHeadlineSchema = z.string().trim().max(120);
+export const studioBrandStoryBodySchema = z.string().trim().max(600);
+export const studioBrandCtaLabelSchema = z.string().trim().max(40);
 export const studioCustomDomainSchema = z
   .string()
   .trim()
@@ -44,9 +55,16 @@ export const studioCustomDomainSchema = z
 
 export const studioBrandThemeSchema = z.object({
   accentColor: studioBrandAccentColorSchema,
-  featuredReleaseLabel: studioFeaturedReleaseLabelSchema.optional(),
-  landingDescription: studioBrandLandingDescriptionSchema.optional(),
-  landingHeadline: studioBrandLandingHeadlineSchema.optional()
+  featuredReleaseLabel: studioFeaturedReleaseLabelSchema.nullish(),
+  heroKicker: studioBrandHeroKickerSchema.nullish(),
+  landingDescription: studioBrandLandingDescriptionSchema.nullish(),
+  landingHeadline: studioBrandLandingHeadlineSchema.nullish(),
+  primaryCtaLabel: studioBrandCtaLabelSchema.nullish(),
+  secondaryCtaLabel: studioBrandCtaLabelSchema.nullish(),
+  storyBody: studioBrandStoryBodySchema.nullish(),
+  storyHeadline: studioBrandStoryHeadlineSchema.nullish(),
+  themePreset: studioBrandThemePresetSchema.nullish(),
+  wordmark: studioBrandWordmarkSchema.nullish()
 });
 
 export const studioWorkspaceSummarySchema = z.object({
@@ -60,12 +78,19 @@ export const studioBrandSummarySchema = z.object({
   accentColor: studioBrandAccentColorSchema,
   customDomain: studioCustomDomainSchema.nullable(),
   featuredReleaseLabel: studioFeaturedReleaseLabelSchema,
+  heroKicker: studioBrandHeroKickerSchema.nullable(),
   id: z.string().min(1),
   landingDescription: studioBrandLandingDescriptionSchema,
   landingHeadline: studioBrandLandingHeadlineSchema,
   name: collectionBrandNameSchema,
+  primaryCtaLabel: studioBrandCtaLabelSchema.nullable(),
   publicBrandPath: z.string().min(1),
-  slug: collectionBrandSlugSchema
+  secondaryCtaLabel: studioBrandCtaLabelSchema.nullable(),
+  slug: collectionBrandSlugSchema,
+  storyBody: studioBrandStoryBodySchema.nullable(),
+  storyHeadline: studioBrandStoryHeadlineSchema.nullable(),
+  themePreset: studioBrandThemePresetSchema,
+  wordmark: studioBrandWordmarkSchema.nullable()
 });
 
 export const studioSettingsSummarySchema = z.object({
@@ -83,8 +108,15 @@ export const studioSettingsUpdateRequestSchema = z.object({
   brandSlug: collectionBrandSlugSchema,
   customDomain: studioCustomDomainSchema.nullish(),
   featuredReleaseLabel: studioFeaturedReleaseLabelSchema,
+  heroKicker: studioBrandHeroKickerSchema.nullish(),
   landingDescription: studioBrandLandingDescriptionSchema,
   landingHeadline: studioBrandLandingHeadlineSchema,
+  primaryCtaLabel: studioBrandCtaLabelSchema.nullish(),
+  secondaryCtaLabel: studioBrandCtaLabelSchema.nullish(),
+  storyBody: studioBrandStoryBodySchema.nullish(),
+  storyHeadline: studioBrandStoryHeadlineSchema.nullish(),
+  themePreset: studioBrandThemePresetSchema,
+  wordmark: studioBrandWordmarkSchema.nullish(),
   workspaceName: studioWorkspaceNameSchema,
   workspaceSlug: studioWorkspaceSlugSchema
 });

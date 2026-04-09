@@ -17,9 +17,11 @@ import {
   collectionPublicMetadataManifestResponseSchema,
   collectionPublicPageResponseSchema,
   defaultStudioBrandAccentColor,
+  defaultStudioBrandThemePreset,
   defaultStudioBrandLandingDescription,
   defaultStudioBrandLandingHeadline,
   defaultStudioFeaturedReleaseLabel,
+  type CollectionStorefrontStatus,
   studioBrandThemeSchema
 } from "@ai-nft-forge/shared";
 
@@ -34,6 +36,8 @@ type PublishedCollectionDetailRecord = {
   brandName: string;
   brandSlug: string;
   description: string | null;
+  endAt: Date | null;
+  heroGeneratedAssetId: string | null;
   items: Array<{
     generatedAsset: {
       generationRequest: {
@@ -51,8 +55,19 @@ type PublishedCollectionDetailRecord = {
     publicStorageBucket: string | null;
     publicStorageObjectKey: string | null;
   }>;
+  launchAt: Date | null;
+  priceLabel: string | null;
+  primaryCtaHref: string | null;
+  primaryCtaLabel: string | null;
   publishedAt: Date;
+  secondaryCtaHref: string | null;
+  secondaryCtaLabel: string | null;
   slug: string;
+  soldCount: number;
+  storefrontBody: string | null;
+  storefrontHeadline: string | null;
+  storefrontStatus: CollectionStorefrontStatus;
+  totalSupply: number | null;
   title: string;
   updatedAt: Date;
 };
@@ -63,11 +78,14 @@ type PublishedCollectionPreviewRecord = {
   };
   displayOrder: number;
   description: string | null;
+  endAt: Date | null;
+  heroGeneratedAssetId: string | null;
   isFeatured: boolean;
   items: Array<{
     publicStorageBucket: string | null;
     publicStorageObjectKey: string | null;
     generatedAsset: {
+      id: string;
       generationRequest: {
         pipelineKey: string;
         sourceAsset: {
@@ -79,8 +97,14 @@ type PublishedCollectionPreviewRecord = {
       variantIndex: number;
     };
   }>;
+  launchAt: Date | null;
+  priceLabel: string | null;
   publishedAt: Date;
+  soldCount: number;
   slug: string;
+  storefrontHeadline: string | null;
+  storefrontStatus: CollectionStorefrontStatus;
+  totalSupply: number | null;
   title: string;
   updatedAt: Date;
 };
@@ -197,19 +221,190 @@ function parseBrandTheme(themeJson: unknown) {
       featuredReleaseLabel:
         parsedTheme.data.featuredReleaseLabel ??
         defaultStudioFeaturedReleaseLabel,
+      heroKicker: parsedTheme.data.heroKicker ?? null,
       landingDescription:
         parsedTheme.data.landingDescription ??
         defaultStudioBrandLandingDescription,
       landingHeadline:
-        parsedTheme.data.landingHeadline ?? defaultStudioBrandLandingHeadline
+        parsedTheme.data.landingHeadline ?? defaultStudioBrandLandingHeadline,
+      primaryCtaLabel: parsedTheme.data.primaryCtaLabel ?? null,
+      secondaryCtaLabel: parsedTheme.data.secondaryCtaLabel ?? null,
+      storyBody: parsedTheme.data.storyBody ?? null,
+      storyHeadline: parsedTheme.data.storyHeadline ?? null,
+      themePreset:
+        parsedTheme.data.themePreset ?? defaultStudioBrandThemePreset,
+      wordmark: parsedTheme.data.wordmark ?? null
     };
   }
 
   return {
     accentColor: defaultStudioBrandAccentColor,
     featuredReleaseLabel: defaultStudioFeaturedReleaseLabel,
+    heroKicker: null,
     landingDescription: defaultStudioBrandLandingDescription,
-    landingHeadline: defaultStudioBrandLandingHeadline
+    landingHeadline: defaultStudioBrandLandingHeadline,
+    primaryCtaLabel: null,
+    secondaryCtaLabel: null,
+    storyBody: null,
+    storyHeadline: null,
+    themePreset: defaultStudioBrandThemePreset,
+    wordmark: null
+  };
+}
+
+function resolveRemainingSupply(totalSupply: number | null, soldCount: number) {
+  if (typeof totalSupply !== "number") {
+    return null;
+  }
+
+  return Math.max(0, totalSupply - soldCount);
+}
+
+function createAvailabilityLabel(input: {
+  launchAt: Date | null;
+  priceLabel: string | null;
+  remainingSupply: number | null;
+  soldCount: number;
+  storefrontStatus: CollectionStorefrontStatus;
+  totalSupply: number | null;
+}) {
+  switch (input.storefrontStatus) {
+    case "upcoming":
+      return input.launchAt
+        ? `Launches ${input.launchAt.toLocaleString("en-US", {
+            dateStyle: "medium",
+            timeStyle: "short"
+          })}`
+        : "Upcoming release";
+    case "live":
+      if (input.remainingSupply !== null && input.totalSupply !== null) {
+        return `${input.remainingSupply.toString()} remaining of ${input.totalSupply.toString()}`;
+      }
+
+      return input.priceLabel
+        ? `Available now · ${input.priceLabel}`
+        : "Available now";
+    case "sold_out":
+      if (input.totalSupply !== null) {
+        return `Sold out · ${input.soldCount.toString()} of ${input.totalSupply.toString()} claimed`;
+      }
+
+      return "Sold out";
+    case "ended":
+    default:
+      return "Archived release";
+  }
+}
+
+function resolveHeroPreviewItem(
+  publication:
+    | PublishedCollectionPreviewRecord
+    | PublishedCollectionDetailRecord
+) {
+  return (
+    publication.items.find(
+      (item) => item.generatedAsset.id === publication.heroGeneratedAssetId
+    ) ??
+    publication.items[0] ??
+    null
+  );
+}
+
+async function serializeBrandPreview(input: {
+  brandSlug: string;
+  createDownloadDescriptor: PublicCollectionStorageBoundary["createDownloadDescriptor"];
+  createPublicUrl: PublicCollectionStorageBoundary["createPublicUrl"];
+  publication: PublishedCollectionPreviewRecord;
+}) {
+  const heroItem = resolveHeroPreviewItem(input.publication);
+  const remainingSupply = resolveRemainingSupply(
+    input.publication.totalSupply,
+    input.publication.soldCount
+  );
+
+  if (!heroItem) {
+    return {
+      availabilityLabel: createAvailabilityLabel({
+        launchAt: input.publication.launchAt,
+        priceLabel: input.publication.priceLabel,
+        remainingSupply,
+        soldCount: input.publication.soldCount,
+        storefrontStatus: input.publication.storefrontStatus,
+        totalSupply: input.publication.totalSupply
+      }),
+      collectionSlug: input.publication.slug,
+      description: input.publication.description,
+      displayOrder: input.publication.displayOrder,
+      endAt: input.publication.endAt?.toISOString() ?? null,
+      heroGeneratedAssetId: input.publication.heroGeneratedAssetId,
+      heroImageUrl: null,
+      heroImageUrlExpiresAt: null,
+      itemCount: input.publication._count.items,
+      isFeatured: input.publication.isFeatured,
+      launchAt: input.publication.launchAt?.toISOString() ?? null,
+      previewPipelineKey: null,
+      previewSourceAssetOriginalFilename: null,
+      previewVariantIndex: null,
+      priceLabel: input.publication.priceLabel,
+      publicPath: buildCollectionPublicPath({
+        brandSlug: input.brandSlug,
+        collectionSlug: input.publication.slug
+      }),
+      publishedAt: input.publication.publishedAt.toISOString(),
+      remainingSupply,
+      soldCount: input.publication.soldCount,
+      storefrontHeadline: input.publication.storefrontHeadline,
+      storefrontStatus: input.publication.storefrontStatus,
+      title: input.publication.title,
+      totalSupply: input.publication.totalSupply,
+      updatedAt: input.publication.updatedAt.toISOString()
+    };
+  }
+
+  const heroImage = await resolveCollectionImageAccess({
+    createDownloadDescriptor: input.createDownloadDescriptor,
+    createPublicUrl: input.createPublicUrl,
+    generatedAsset: heroItem.generatedAsset,
+    publicStorageBucket: heroItem.publicStorageBucket,
+    publicStorageObjectKey: heroItem.publicStorageObjectKey
+  });
+
+  return {
+    availabilityLabel: createAvailabilityLabel({
+      launchAt: input.publication.launchAt,
+      priceLabel: input.publication.priceLabel,
+      remainingSupply,
+      soldCount: input.publication.soldCount,
+      storefrontStatus: input.publication.storefrontStatus,
+      totalSupply: input.publication.totalSupply
+    }),
+    collectionSlug: input.publication.slug,
+    description: input.publication.description,
+    displayOrder: input.publication.displayOrder,
+    endAt: input.publication.endAt?.toISOString() ?? null,
+    heroGeneratedAssetId: input.publication.heroGeneratedAssetId,
+    heroImageUrl: heroImage.url,
+    heroImageUrlExpiresAt: heroImage.expiresAt,
+    itemCount: input.publication._count.items,
+    isFeatured: input.publication.isFeatured,
+    launchAt: input.publication.launchAt?.toISOString() ?? null,
+    previewPipelineKey: heroItem.generatedAsset.generationRequest.pipelineKey,
+    previewSourceAssetOriginalFilename:
+      heroItem.generatedAsset.generationRequest.sourceAsset.originalFilename,
+    previewVariantIndex: heroItem.generatedAsset.variantIndex,
+    priceLabel: input.publication.priceLabel,
+    publicPath: buildCollectionPublicPath({
+      brandSlug: input.brandSlug,
+      collectionSlug: input.publication.slug
+    }),
+    publishedAt: input.publication.publishedAt.toISOString(),
+    remainingSupply,
+    soldCount: input.publication.soldCount,
+    storefrontHeadline: input.publication.storefrontHeadline,
+    storefrontStatus: input.publication.storefrontStatus,
+    title: input.publication.title,
+    totalSupply: input.publication.totalSupply,
+    updatedAt: input.publication.updatedAt.toISOString()
   };
 }
 
@@ -235,63 +430,20 @@ export function createPublicCollectionService(
         );
 
       const collections = await Promise.all(
-        publications.map(async (publication) => {
-          const previewItem = publication.items[0] ?? null;
-
-          if (!previewItem) {
-            return {
-              collectionSlug: publication.slug,
-              coverImageUrl: null,
-              coverImageUrlExpiresAt: null,
-              description: publication.description,
-              displayOrder: publication.displayOrder,
-              itemCount: publication._count.items,
-              isFeatured: publication.isFeatured,
-              previewPipelineKey: null,
-              previewSourceAssetOriginalFilename: null,
-              previewVariantIndex: null,
-              publicPath: buildCollectionPublicPath({
-                brandSlug: input.brandSlug,
-                collectionSlug: publication.slug
-              }),
-              publishedAt: publication.publishedAt.toISOString(),
-              title: publication.title,
-              updatedAt: publication.updatedAt.toISOString()
-            };
-          }
-
-          const previewImage = await resolveCollectionImageAccess({
+        publications.map((publication) =>
+          serializeBrandPreview({
+            brandSlug: input.brandSlug,
             createDownloadDescriptor:
               dependencies.storage.createDownloadDescriptor,
             createPublicUrl: dependencies.storage.createPublicUrl,
-            generatedAsset: previewItem.generatedAsset,
-            publicStorageBucket: previewItem.publicStorageBucket,
-            publicStorageObjectKey: previewItem.publicStorageObjectKey
-          });
-
-          return {
-            collectionSlug: publication.slug,
-            coverImageUrl: previewImage.url,
-            coverImageUrlExpiresAt: previewImage.expiresAt,
-            description: publication.description,
-            displayOrder: publication.displayOrder,
-            itemCount: publication._count.items,
-            isFeatured: publication.isFeatured,
-            previewPipelineKey:
-              previewItem.generatedAsset.generationRequest.pipelineKey,
-            previewSourceAssetOriginalFilename:
-              previewItem.generatedAsset.generationRequest.sourceAsset
-                .originalFilename,
-            previewVariantIndex: previewItem.generatedAsset.variantIndex,
-            publicPath: buildCollectionPublicPath({
-              brandSlug: input.brandSlug,
-              collectionSlug: publication.slug
-            }),
-            publishedAt: publication.publishedAt.toISOString(),
-            title: publication.title,
-            updatedAt: publication.updatedAt.toISOString()
-          };
-        })
+            publication
+          })
+        )
+      );
+      const featuredRelease =
+        collections.find((collection) => collection.isFeatured) ?? null;
+      const nonFeaturedCollections = collections.filter(
+        (collection) => collection.publicPath !== featuredRelease?.publicPath
       );
 
       const latestPublishedAt = publications.reduce<string | null>(
@@ -309,14 +461,34 @@ export function createPublicCollectionService(
 
       return collectionPublicBrandPageResponseSchema.parse({
         brand: {
-          accentColor: theme.accentColor,
           brandName: brand.name,
           brandSlug: brand.slug,
+          collectionCount: collections.length,
           collections,
           customDomain: brand.customDomain,
-          featuredReleaseLabel: theme.featuredReleaseLabel,
-          landingDescription: theme.landingDescription,
-          landingHeadline: theme.landingHeadline,
+          featuredRelease,
+          liveReleases: nonFeaturedCollections.filter(
+            (collection) => collection.storefrontStatus === "live"
+          ),
+          theme: {
+            accentColor: theme.accentColor,
+            featuredReleaseLabel: theme.featuredReleaseLabel,
+            heroKicker: theme.heroKicker,
+            landingDescription: theme.landingDescription,
+            landingHeadline: theme.landingHeadline,
+            primaryCtaLabel: theme.primaryCtaLabel,
+            secondaryCtaLabel: theme.secondaryCtaLabel,
+            storyBody: theme.storyBody,
+            storyHeadline: theme.storyHeadline,
+            themePreset: theme.themePreset,
+            wordmark: theme.wordmark
+          },
+          upcomingReleases: nonFeaturedCollections.filter(
+            (collection) => collection.storefrontStatus === "upcoming"
+          ),
+          archiveReleases: nonFeaturedCollections.filter((collection) =>
+            ["ended", "sold_out"].includes(collection.storefrontStatus)
+          ),
           latestPublishedAt,
           publicPath: `/brands/${brand.slug}`
         }
@@ -363,15 +535,92 @@ export function createPublicCollectionService(
           };
         })
       );
+      const heroItem = resolveHeroPreviewItem(publication);
+      const heroImage = heroItem
+        ? await resolveCollectionImageAccess({
+            createDownloadDescriptor:
+              dependencies.storage.createDownloadDescriptor,
+            createPublicUrl: dependencies.storage.createPublicUrl,
+            generatedAsset: heroItem.generatedAsset,
+            publicStorageBucket: heroItem.publicStorageBucket,
+            publicStorageObjectKey: heroItem.publicStorageObjectKey
+          })
+        : null;
+      const relatedCollections = (
+        await dependencies.repositories.publishedCollectionRepository.listPreviewByBrandSlug(
+          publication.brandSlug
+        )
+      )
+        .filter((candidate) => candidate.slug !== publication.slug)
+        .slice(0, 3)
+        .map((candidate) => ({
+          collectionSlug: candidate.slug,
+          displayOrder: candidate.displayOrder,
+          isFeatured: candidate.isFeatured,
+          publicPath: buildCollectionPublicPath({
+            brandSlug: publication.brandSlug,
+            collectionSlug: candidate.slug
+          }),
+          storefrontStatus: candidate.storefrontStatus,
+          title: candidate.title
+        }));
+      const brand =
+        await dependencies.repositories.brandRepository.findFirstBySlug(
+          publication.brandSlug
+        );
+      const theme = parseBrandTheme(brand?.themeJson ?? null);
+      const remainingSupply = resolveRemainingSupply(
+        publication.totalSupply,
+        publication.soldCount
+      );
 
       return collectionPublicPageResponseSchema.parse({
         collection: {
+          availabilityLabel: createAvailabilityLabel({
+            launchAt: publication.launchAt,
+            priceLabel: publication.priceLabel,
+            remainingSupply,
+            soldCount: publication.soldCount,
+            storefrontStatus: publication.storefrontStatus,
+            totalSupply: publication.totalSupply
+          }),
+          brandPublicPath: `/brands/${publication.brandSlug}`,
+          brandTheme: {
+            accentColor: theme.accentColor,
+            featuredReleaseLabel: theme.featuredReleaseLabel,
+            heroKicker: theme.heroKicker,
+            landingDescription: theme.landingDescription,
+            landingHeadline: theme.landingHeadline,
+            primaryCtaLabel: theme.primaryCtaLabel,
+            secondaryCtaLabel: theme.secondaryCtaLabel,
+            storyBody: theme.storyBody,
+            storyHeadline: theme.storyHeadline,
+            themePreset: theme.themePreset,
+            wordmark: theme.wordmark
+          },
           brandName: publication.brandName,
           brandSlug: publication.brandSlug,
           collectionSlug: publication.slug,
           description: publication.description,
+          endAt: publication.endAt?.toISOString() ?? null,
+          heroGeneratedAssetId: publication.heroGeneratedAssetId,
+          heroImageUrl: heroImage?.url ?? null,
+          heroImageUrlExpiresAt: heroImage?.expiresAt ?? null,
           items,
+          launchAt: publication.launchAt?.toISOString() ?? null,
+          priceLabel: publication.priceLabel,
+          primaryCtaHref: publication.primaryCtaHref,
+          primaryCtaLabel: publication.primaryCtaLabel,
           publishedAt: publication.publishedAt.toISOString(),
+          relatedCollections,
+          remainingSupply,
+          secondaryCtaHref: publication.secondaryCtaHref,
+          secondaryCtaLabel: publication.secondaryCtaLabel,
+          soldCount: publication.soldCount,
+          storefrontBody: publication.storefrontBody,
+          storefrontHeadline: publication.storefrontHeadline,
+          storefrontStatus: publication.storefrontStatus,
+          totalSupply: publication.totalSupply,
           title: publication.title,
           updatedAt: publication.updatedAt.toISOString()
         }
