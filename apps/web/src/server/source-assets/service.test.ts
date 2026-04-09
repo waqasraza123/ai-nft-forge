@@ -232,6 +232,8 @@ describe("createSourceAssetService", () => {
         createdAt: new Date("2026-04-05T00:31:00.000Z"),
         generationRequestId: "generation_2",
         id: "generated_asset_1",
+        moderatedAt: new Date("2026-04-05T00:33:00.000Z"),
+        moderationStatus: "approved" as const,
         sourceAssetId: "asset_1",
         storageBucket: "ai-nft-forge-private",
         storageObjectKey:
@@ -244,6 +246,8 @@ describe("createSourceAssetService", () => {
         createdAt: new Date("2026-04-05T00:32:00.000Z"),
         generationRequestId: "generation_2",
         id: "generated_asset_2",
+        moderatedAt: null,
+        moderationStatus: "pending_review" as const,
         sourceAssetId: "asset_1",
         storageBucket: "ai-nft-forge-private",
         storageObjectKey:
@@ -317,6 +321,12 @@ describe("createSourceAssetService", () => {
     expect(result.assets[0]?.latestGeneratedAssets[0]?.id).toBe(
       "generated_asset_1"
     );
+    expect(
+      result.assets[0]?.latestGeneration?.generatedAssets[0]?.moderationStatus
+    ).toBe("approved");
+    expect(
+      result.assets[0]?.latestGeneration?.generatedAssets[1]?.moderationStatus
+    ).toBe("pending_review");
     expect(
       result.assets[0]?.generationHistory[1]?.generatedAssets
     ).toHaveLength(0);

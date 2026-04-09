@@ -19,6 +19,7 @@ export function createRuntimeGeneratedAssetService(
   const storageConfig = getStorageConfig(rawEnvironment);
 
   return createGeneratedAssetService({
+    now: () => new Date(),
     repositories: {
       generatedAssetRepository: createGeneratedAssetRepository(databaseClient)
     },

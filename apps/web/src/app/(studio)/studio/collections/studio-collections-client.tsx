@@ -18,7 +18,8 @@ import {
   collectionDraftResponseSchema,
   type CollectionDraftStatus,
   type CollectionDraftSummary,
-  type CollectionGeneratedAssetCandidate
+  type CollectionGeneratedAssetCandidate,
+  type GeneratedAssetModerationStatus
 } from "@ai-nft-forge/shared";
 import {
   MetricTile,
@@ -121,6 +122,17 @@ function formatCandidateTimestamp(value: string) {
     dateStyle: "medium",
     timeStyle: "short"
   }).format(new Date(value));
+}
+
+function formatModerationStatus(status: GeneratedAssetModerationStatus) {
+  switch (status) {
+    case "approved":
+      return "Approved";
+    case "rejected":
+      return "Rejected";
+    default:
+      return "Pending review";
+  }
 }
 
 function createInitialEditorState(draft: CollectionDraftSummary | null) {
@@ -730,6 +742,9 @@ export function StudioCollectionsClient({
     (count, draft) => count + draft.itemCount,
     0
   );
+  const approvedCandidateCount = generatedAssetCandidates.filter(
+    (candidate) => candidate.moderationStatus === "approved"
+  ).length;
 
   return (
     <PageShell
@@ -763,7 +778,7 @@ export function StudioCollectionsClient({
     >
       <SurfaceGrid>
         <SurfaceCard
-          body="Drafts are still owner-scoped at this stage, which keeps the collection workflow concrete before brand publication and storefront release land."
+          body="Drafts are still owner-scoped at this stage, and collection curation is now gated to approved generated outputs so review-ready and publication flows inherit a moderation safeguard."
           eyebrow="Phase 3"
           span={12}
           title="Collection draft foundation"
@@ -789,6 +804,7 @@ export function StudioCollectionsClient({
             <Pill>
               {generatedAssetCandidates.length} recent generated assets
             </Pill>
+            <Pill>{approvedCandidateCount} approved for curation</Pill>
             <Pill>/studio/collections</Pill>
           </div>
         </SurfaceCard>
@@ -1444,7 +1460,7 @@ export function StudioCollectionsClient({
           )}
         </SurfaceCard>
         <SurfaceCard
-          body="The ordered item list is the curated backbone for this draft. Review-ready status requires at least one included generated asset."
+          body="The ordered item list is the curated backbone for this draft. Review-ready status requires at least one included generated asset, and every included asset must remain approved."
           eyebrow="Curated order"
           span={6}
           title="Draft items"
@@ -1472,6 +1488,11 @@ export function StudioCollectionsClient({
                       </span>
                     </div>
                     <div className="collection-item-card__actions">
+                      <Pill>
+                        {formatModerationStatus(
+                          item.generatedAsset.moderationStatus
+                        )}
+                      </Pill>
                       <button
                         className="button-action"
                         disabled={
@@ -1525,7 +1546,7 @@ export function StudioCollectionsClient({
           )}
         </SurfaceCard>
         <SurfaceCard
-          body="Recent generated outputs stay available as curation candidates so the operator can turn generation throughput into a deliberate collection."
+          body="Recent generated outputs stay available as curation candidates so the operator can turn generation throughput into a deliberate collection, but only approved outputs can be added."
           eyebrow="Candidates"
           span={12}
           title="Recent generated assets"
@@ -1541,6 +1562,8 @@ export function StudioCollectionsClient({
                 const isIncluded = includedGeneratedAssetIds.has(
                   candidate.generatedAssetId
                 );
+                const isApproved =
+                  candidate.moderationStatus === "approved";
 
                 return (
                   <div
@@ -1553,13 +1576,20 @@ export function StudioCollectionsClient({
                       <span>
                         {formatCandidateTimestamp(candidate.createdAt)}
                       </span>
+                      <span>
+                        {formatModerationStatus(candidate.moderationStatus)}
+                      </span>
                     </div>
                     <div className="candidate-card__actions">
                       <Pill>Source {candidate.sourceAssetId}</Pill>
+                      <Pill>
+                        {formatModerationStatus(candidate.moderationStatus)}
+                      </Pill>
                       <button
                         className="button-action"
                         disabled={
                           !selectedDraft ||
+                          !isApproved ||
                           isIncluded ||
                           busyItemKey !== null ||
                           savingDraftId !== null
@@ -1571,7 +1601,11 @@ export function StudioCollectionsClient({
                         }}
                         type="button"
                       >
-                        {isIncluded ? "Included" : "Add to selected draft"}
+                        {isIncluded
+                          ? "Included"
+                          : isApproved
+                            ? "Add to selected draft"
+                            : "Awaiting approval"}
                       </button>
                     </div>
                   </div>

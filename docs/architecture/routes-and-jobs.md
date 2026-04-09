@@ -1,6 +1,6 @@
 # Routes And Jobs
 
-This document defines durable boundary expectations for the first implementation slices. The repository now has the initial web routes, auth and health endpoints, source asset intake routes, a browser-readable source asset list route with per-asset generation history, owner-scoped collection draft routes for curated generated-asset assembly, publish/unpublish/merchandising controls for public collection snapshots, durable studio settings routes for owner-scoped workspace identity, brand identity, and saved public storefront theme data, public brand and collection launch routes derived from published snapshots, public collection metadata plus contract/token-uri routes derived from published snapshots, the generation dispatch route, the first protected generated-output retrieval route, and the first generation worker output-handling job family.
+This document defines durable boundary expectations for the first implementation slices. The repository now has the initial web routes, auth and health endpoints, source asset intake routes, a browser-readable source asset list route with per-asset generation history, owner-scoped collection draft routes for curated generated-asset assembly, publish/unpublish/merchandising controls for public collection snapshots, durable studio settings routes for owner-scoped workspace identity, brand identity, and saved public storefront theme data, public brand and collection launch routes derived from published snapshots, public collection metadata plus contract/token-uri routes derived from published snapshots, the generation dispatch route, protected generated-output retrieval plus moderation routes, and the first generation worker output-handling job family.
 
 ## Current Route Surfaces
 
@@ -35,6 +35,7 @@ This document defines durable boundary expectations for the first implementation
 - `/api/studio/generations`
 - `/api/studio/generations/[generationRequestId]/retry`
 - `/api/studio/generated-assets/[generatedAssetId]/download-intent`
+- `/api/studio/generated-assets/[generatedAssetId]/moderation`
 
 ## Planned Surface Areas
 
@@ -65,5 +66,6 @@ This document defines durable boundary expectations for the first implementation
 - Long-running and retryable work belongs in jobs, not request handlers.
 - Public collection delivery should stay distinct from studio operations.
 - Public storefront presentation should continue to resolve only from saved brand settings plus immutable published collection snapshots.
+- Generated-asset moderation should remain a protected studio-only control-plane action and should not leak mutable moderation state into public storefront read models.
 - Internal APIs should support the web app and workers without exposing operational controls publicly.
 - Route and job design should preserve the B2B white-label model and future multi-tenant concerns.

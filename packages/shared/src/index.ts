@@ -267,10 +267,17 @@ export {
   generatedAssetDownloadDescriptorSchema,
   generatedAssetDownloadIntentResponseSchema,
   generatedAssetErrorResponseSchema,
+  generatedAssetModerationResponseSchema,
+  generatedAssetModerationStatusSchema,
+  generatedAssetModerationStatusValues,
+  generatedAssetModerationUpdateRequestSchema,
   generatedAssetSummarySchema,
   type GeneratedAssetDownloadDescriptor,
   type GeneratedAssetDownloadIntentResponse,
   type GeneratedAssetErrorResponse,
+  type GeneratedAssetModerationResponse,
+  type GeneratedAssetModerationStatus,
+  type GeneratedAssetModerationUpdateRequest,
   type GeneratedAssetSummary
 } from "./generated-assets.js";
 export {

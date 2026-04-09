@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { generatedAssetModerationStatusSchema } from "./generated-assets.js";
+
 export const collectionDraftStatusSchema = z.enum(["draft", "review_ready"]);
 
 export const collectionDraftSlugSchema = z
@@ -37,6 +39,8 @@ export const collectionGeneratedAssetCandidateSchema = z.object({
   createdAt: z.string().datetime(),
   generatedAssetId: z.string().min(1),
   generationRequestId: z.string().min(1),
+  moderatedAt: z.string().datetime().nullable(),
+  moderationStatus: generatedAssetModerationStatusSchema,
   pipelineKey: z.string().min(1),
   sourceAssetId: z.string().min(1),
   sourceAssetOriginalFilename: z.string().min(1),
@@ -378,6 +382,7 @@ export const collectionDraftErrorResponseSchema = z.object({
       "DRAFT_SLUG_CONFLICT",
       "GENERATED_ASSET_ALREADY_INCLUDED",
       "GENERATED_ASSET_NOT_FOUND",
+      "GENERATED_ASSET_NOT_APPROVED",
       "INVALID_REQUEST",
       "INTERNAL_SERVER_ERROR",
       "STUDIO_SETTINGS_REQUIRED",

@@ -8,7 +8,8 @@ import {
   collectionDraftUpdateRequestSchema,
   sanitizeStorageFileName,
   type CollectionDraftStatus,
-  type CollectionStorefrontStatus
+  type CollectionStorefrontStatus,
+  type GeneratedAssetModerationStatus
 } from "@ai-nft-forge/shared";
 
 import { CollectionDraftServiceError } from "./error";
@@ -25,6 +26,8 @@ type GeneratedAssetCandidateRecord = {
     };
   };
   id: string;
+  moderatedAt: Date | null;
+  moderationStatus: GeneratedAssetModerationStatus;
   storageBucket: string;
   storageObjectKey: string;
   variantIndex: number;
@@ -142,7 +145,10 @@ type CollectionDraftRepositorySet = {
     findByIdForOwner(input: {
       id: string;
       ownerUserId: string;
-    }): Promise<{ id: string } | null>;
+    }): Promise<{
+      id: string;
+      moderationStatus: GeneratedAssetModerationStatus;
+    } | null>;
     listRecentForOwnerUserId(input: {
       limit: number;
       ownerUserId: string;
@@ -375,6 +381,8 @@ function serializeGeneratedAssetCandidate(
     createdAt: asset.createdAt.toISOString(),
     generatedAssetId: asset.id,
     generationRequestId: asset.generationRequest.id,
+    moderatedAt: asset.moderatedAt?.toISOString() ?? null,
+    moderationStatus: asset.moderationStatus,
     pipelineKey: asset.generationRequest.pipelineKey,
     sourceAssetId: asset.generationRequest.sourceAsset.id,
     sourceAssetOriginalFilename:
@@ -602,6 +610,18 @@ function assertDraftReadyForPublication(draft: CollectionDraftRecord) {
       409
     );
   }
+
+  if (
+    draft.items.some(
+      (item) => item.generatedAsset.moderationStatus !== "approved"
+    )
+  ) {
+    throw new CollectionDraftServiceError(
+      "GENERATED_ASSET_NOT_APPROVED",
+      "Only approved generated assets can be published in a collection.",
+      409
+    );
+  }
 }
 
 function sortPublicationsForMerchandising(
@@ -662,6 +682,14 @@ export function createCollectionDraftService(
             "GENERATED_ASSET_NOT_FOUND",
             "Generated asset was not found.",
             404
+          );
+        }
+
+        if (generatedAsset.moderationStatus !== "approved") {
+          throw new CollectionDraftServiceError(
+            "GENERATED_ASSET_NOT_APPROVED",
+            "Only approved generated assets can be added to a collection draft.",
+            409
           );
         }
 
@@ -1397,18 +1425,30 @@ export function createCollectionDraftService(
       }
 
       if (parsedInput.status === "review_ready") {
-        const existingItems =
-          await dependencies.repositories.collectionDraftItemRepository.listByCollectionDraftIdForOwner(
+        const detailedDraft =
+          await dependencies.repositories.collectionDraftRepository.findDetailedByIdForOwner(
             {
-              collectionDraftId: input.collectionDraftId,
+              id: input.collectionDraftId,
               ownerUserId: input.ownerUserId
             }
           );
 
-        if (existingItems.length === 0) {
+        if (!detailedDraft || detailedDraft.items.length === 0) {
           throw new CollectionDraftServiceError(
             "DRAFT_NOT_READY",
             "Collection draft needs at least one curated generated asset before it can be marked review-ready.",
+            409
+          );
+        }
+
+        if (
+          detailedDraft.items.some(
+            (item) => item.generatedAsset.moderationStatus !== "approved"
+          )
+        ) {
+          throw new CollectionDraftServiceError(
+            "GENERATED_ASSET_NOT_APPROVED",
+            "Only approved generated assets can move a collection draft to review-ready.",
             409
           );
         }

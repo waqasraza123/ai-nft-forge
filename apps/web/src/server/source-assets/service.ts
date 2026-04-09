@@ -50,6 +50,8 @@ type GeneratedAssetRecord = {
   createdAt: Date;
   generationRequestId: string;
   id: string;
+  moderatedAt: Date | null;
+  moderationStatus: "pending_review" | "approved" | "rejected";
   sourceAssetId: string;
   storageBucket: string;
   storageObjectKey: string;
@@ -160,6 +162,8 @@ function serializeGeneratedAsset(asset: GeneratedAssetRecord) {
     createdAt: asset.createdAt.toISOString(),
     generationRequestId: asset.generationRequestId,
     id: asset.id,
+    moderatedAt: asset.moderatedAt?.toISOString() ?? null,
+    moderationStatus: asset.moderationStatus,
     sourceAssetId: asset.sourceAssetId,
     storageBucket: asset.storageBucket,
     storageObjectKey: asset.storageObjectKey,

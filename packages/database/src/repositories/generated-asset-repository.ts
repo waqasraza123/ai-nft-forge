@@ -1,4 +1,7 @@
-import type { GeneratedAsset } from "@prisma/client";
+import type {
+  GeneratedAsset,
+  GeneratedAssetModerationStatus
+} from "@prisma/client";
 
 import type { DatabaseExecutor } from "../client.js";
 
@@ -66,6 +69,36 @@ export function createGeneratedAssetRepository(
           ownerUserId: input.ownerUserId
         }
       });
+    },
+
+    updateModerationByIdForOwner(input: {
+      id: string;
+      moderatedAt: Date | null;
+      moderationStatus: GeneratedAssetModerationStatus;
+      ownerUserId: string;
+    }): Promise<GeneratedAsset | null> {
+      return database.generatedAsset
+        .findFirst({
+          where: {
+            id: input.id,
+            ownerUserId: input.ownerUserId
+          }
+        })
+        .then((asset) => {
+          if (!asset) {
+            return null;
+          }
+
+          return database.generatedAsset.update({
+            data: {
+              moderatedAt: input.moderatedAt,
+              moderationStatus: input.moderationStatus
+            },
+            where: {
+              id: asset.id
+            }
+          });
+        });
     },
 
     listRecentForOwnerUserId(input: { limit: number; ownerUserId: string }) {

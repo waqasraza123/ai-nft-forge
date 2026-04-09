@@ -154,6 +154,8 @@ function createCollectionDraftHarness() {
         };
       };
       id: string;
+      moderatedAt: Date | null;
+      moderationStatus: "approved" | "pending_review" | "rejected";
       ownerUserId: string;
       storageBucket: string;
       storageObjectKey: string;
@@ -174,6 +176,8 @@ function createCollectionDraftHarness() {
           }
         },
         id: "generated_asset_1",
+        moderatedAt: new Date("2026-04-08T00:04:00.000Z"),
+        moderationStatus: "approved" as const,
         ownerUserId: "user_1",
         storageBucket: "ai-nft-forge-private",
         storageObjectKey: "generated-assets/user_1/generation_1/variant-01.png",
@@ -194,6 +198,8 @@ function createCollectionDraftHarness() {
           }
         },
         id: "generated_asset_2",
+        moderatedAt: new Date("2026-04-08T00:05:00.000Z"),
+        moderationStatus: "approved" as const,
         ownerUserId: "user_1",
         storageBucket: "ai-nft-forge-private",
         storageObjectKey: "generated-assets/user_1/generation_2/variant-02.png",
@@ -214,6 +220,8 @@ function createCollectionDraftHarness() {
           }
         },
         id: "generated_asset_3",
+        moderatedAt: new Date("2026-04-08T00:06:00.000Z"),
+        moderationStatus: "approved" as const,
         ownerUserId: "user_2",
         storageBucket: "ai-nft-forge-private",
         storageObjectKey: "generated-assets/user_2/generation_3/variant-01.png",
@@ -807,6 +815,23 @@ function createCollectionDraftHarness() {
     publicationItems,
     publicationTargets,
     publications,
+    setGeneratedAssetModeration(
+      generatedAssetId: string,
+      moderationStatus: "approved" | "pending_review" | "rejected"
+    ) {
+      const asset = generatedAssets.get(generatedAssetId);
+
+      if (!asset) {
+        throw new Error("Generated asset was not found in the test harness.");
+      }
+
+      generatedAssets.set(generatedAssetId, {
+        ...asset,
+        moderatedAt:
+          moderationStatus === "pending_review" ? null : nextDate(),
+        moderationStatus
+      });
+    },
     setPublicationTarget(
       ownerUserId: string,
       target: {
@@ -858,11 +883,41 @@ describe("createCollectionDraftService", () => {
     expect(result.generatedAssetCandidates[0]?.generatedAssetId).toBe(
       "generated_asset_2"
     );
+    expect(result.generatedAssetCandidates[0]?.moderationStatus).toBe(
+      "approved"
+    );
     expect(result.publicationTarget).toEqual({
       brandName: "Demo Studio",
       brandSlug: "demo-studio",
       publicBrandPath: "/brands/demo-studio"
     });
+  });
+
+  it("rejects curation for generated assets that are still pending review", async () => {
+    const harness = createCollectionDraftHarness();
+    const draft = await harness.service.createCollectionDraft({
+      ownerUserId: "user_1",
+      title: "Genesis Portrait Set"
+    });
+
+    harness.setGeneratedAssetModeration(
+      "generated_asset_1",
+      "pending_review"
+    );
+
+    await expect(
+      harness.service.addCollectionDraftItem({
+        collectionDraftId: draft.draft.id,
+        generatedAssetId: "generated_asset_1",
+        ownerUserId: "user_1"
+      })
+    ).rejects.toEqual(
+      new CollectionDraftServiceError(
+        "GENERATED_ASSET_NOT_APPROVED",
+        "Only approved generated assets can be added to a collection draft.",
+        409
+      )
+    );
   });
 
   it("requires at least one curated generated asset before review-ready status", async () => {
@@ -928,6 +983,38 @@ describe("createCollectionDraftService", () => {
     expect(updatedDraft.draft.itemCount).toBe(2);
   });
 
+  it("blocks review-ready transitions when curated assets are no longer approved", async () => {
+    const harness = createCollectionDraftHarness();
+    const createdDraft = await harness.service.createCollectionDraft({
+      ownerUserId: "user_1",
+      title: "Genesis Portrait Set"
+    });
+
+    await harness.service.addCollectionDraftItem({
+      collectionDraftId: createdDraft.draft.id,
+      generatedAssetId: "generated_asset_1",
+      ownerUserId: "user_1"
+    });
+    harness.setGeneratedAssetModeration("generated_asset_1", "rejected");
+
+    await expect(
+      harness.service.updateCollectionDraft({
+        collectionDraftId: createdDraft.draft.id,
+        description: null,
+        ownerUserId: "user_1",
+        slug: createdDraft.draft.slug,
+        status: "review_ready",
+        title: createdDraft.draft.title
+      })
+    ).rejects.toEqual(
+      new CollectionDraftServiceError(
+        "GENERATED_ASSET_NOT_APPROVED",
+        "Only approved generated assets can move a collection draft to review-ready.",
+        409
+      )
+    );
+  });
+
   it("publishes a review-ready draft to a public route snapshot", async () => {
     const harness = createCollectionDraftHarness();
     const createdDraft = await harness.service.createCollectionDraft({
@@ -964,6 +1051,42 @@ describe("createCollectionDraftService", () => {
       [...harness.publicationItems.values()][0]?.publicStorageObjectKey
     ).toBe(
       "published-collections/draft_1/items/001-generated_asset_1-portrait-1.png"
+    );
+  });
+
+  it("blocks publication when a curated generated asset is no longer approved", async () => {
+    const harness = createCollectionDraftHarness();
+    const createdDraft = await harness.service.createCollectionDraft({
+      ownerUserId: "user_1",
+      title: "Genesis Portrait Set"
+    });
+
+    await harness.service.addCollectionDraftItem({
+      collectionDraftId: createdDraft.draft.id,
+      generatedAssetId: "generated_asset_1",
+      ownerUserId: "user_1"
+    });
+    await harness.service.updateCollectionDraft({
+      collectionDraftId: createdDraft.draft.id,
+      description: "Release candidate set",
+      ownerUserId: "user_1",
+      slug: createdDraft.draft.slug,
+      status: "review_ready",
+      title: createdDraft.draft.title
+    });
+    harness.setGeneratedAssetModeration("generated_asset_1", "rejected");
+
+    await expect(
+      harness.service.publishCollectionDraft({
+        collectionDraftId: createdDraft.draft.id,
+        ownerUserId: "user_1"
+      })
+    ).rejects.toEqual(
+      new CollectionDraftServiceError(
+        "GENERATED_ASSET_NOT_APPROVED",
+        "Only approved generated assets can be published in a collection.",
+        409
+      )
     );
   });
 

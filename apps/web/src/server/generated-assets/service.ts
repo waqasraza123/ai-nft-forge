@@ -1,4 +1,9 @@
-import { generatedAssetDownloadIntentResponseSchema } from "@ai-nft-forge/shared";
+import {
+  generatedAssetDownloadIntentResponseSchema,
+  generatedAssetModerationResponseSchema,
+  generatedAssetModerationUpdateRequestSchema,
+  type GeneratedAssetModerationStatus
+} from "@ai-nft-forge/shared";
 
 import { GeneratedAssetServiceError } from "./error";
 
@@ -8,6 +13,8 @@ type GeneratedAssetRecord = {
   createdAt: Date;
   generationRequestId: string;
   id: string;
+  moderatedAt: Date | null;
+  moderationStatus: GeneratedAssetModerationStatus;
   sourceAssetId: string;
   storageBucket: string;
   storageObjectKey: string;
@@ -18,6 +25,12 @@ type GeneratedAssetRepositorySet = {
   generatedAssetRepository: {
     findByIdForOwner(input: {
       id: string;
+      ownerUserId: string;
+    }): Promise<GeneratedAssetRecord | null>;
+    updateModerationByIdForOwner(input: {
+      id: string;
+      moderatedAt: Date | null;
+      moderationStatus: GeneratedAssetModerationStatus;
       ownerUserId: string;
     }): Promise<GeneratedAssetRecord | null>;
   };
@@ -36,6 +49,7 @@ type GeneratedAssetStorageBoundary = {
 };
 
 type GeneratedAssetServiceDependencies = {
+  now: () => Date;
   repositories: GeneratedAssetRepositorySet;
   storage: GeneratedAssetStorageBoundary;
 };
@@ -47,6 +61,8 @@ function serializeGeneratedAsset(asset: GeneratedAssetRecord) {
     createdAt: asset.createdAt.toISOString(),
     generationRequestId: asset.generationRequestId,
     id: asset.id,
+    moderatedAt: asset.moderatedAt?.toISOString() ?? null,
+    moderationStatus: asset.moderationStatus,
     sourceAssetId: asset.sourceAssetId,
     storageBucket: asset.storageBucket,
     storageObjectKey: asset.storageObjectKey,
@@ -103,6 +119,40 @@ export function createGeneratedAssetService(
           contentType: objectHead.contentType ?? asset.contentType
         }),
         download
+      });
+    },
+
+    async updateModeration(input: {
+      generatedAssetId: string;
+      moderationStatus: GeneratedAssetModerationStatus;
+      ownerUserId: string;
+    }) {
+      const parsedInput = generatedAssetModerationUpdateRequestSchema.parse({
+        moderationStatus: input.moderationStatus
+      });
+      const updatedAsset =
+        await dependencies.repositories.generatedAssetRepository.updateModerationByIdForOwner(
+          {
+            id: input.generatedAssetId,
+            moderatedAt:
+              parsedInput.moderationStatus === "pending_review"
+                ? null
+                : dependencies.now(),
+            moderationStatus: parsedInput.moderationStatus,
+            ownerUserId: input.ownerUserId
+          }
+        );
+
+      if (!updatedAsset) {
+        throw new GeneratedAssetServiceError(
+          "GENERATED_ASSET_NOT_FOUND",
+          "Generated asset was not found.",
+          404
+        );
+      }
+
+      return generatedAssetModerationResponseSchema.parse({
+        asset: serializeGeneratedAsset(updatedAsset)
       });
     }
   };

@@ -952,6 +952,48 @@ describe("database repositories", () => {
     expect(result?.id).toBe("generated_asset_2");
   });
 
+  it("delegates generated asset moderation updates through the generated asset repository", async () => {
+    const database = {
+      generatedAsset: {
+        create: vi.fn(),
+        findFirst: vi.fn().mockResolvedValue({
+          id: "generated_asset_2"
+        }),
+        findMany: vi.fn(),
+        update: vi.fn().mockResolvedValue({
+          id: "generated_asset_2",
+          moderationStatus: "approved"
+        })
+      }
+    };
+    const repository = createGeneratedAssetRepository(database as never);
+    const moderatedAt = new Date("2026-04-09T00:10:00.000Z");
+
+    const result = await repository.updateModerationByIdForOwner({
+      id: "generated_asset_2",
+      moderatedAt,
+      moderationStatus: "approved",
+      ownerUserId: "user_1"
+    });
+
+    expect(database.generatedAsset.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: "generated_asset_2",
+        ownerUserId: "user_1"
+      }
+    });
+    expect(database.generatedAsset.update).toHaveBeenCalledWith({
+      data: {
+        moderatedAt,
+        moderationStatus: "approved"
+      },
+      where: {
+        id: "generated_asset_2"
+      }
+    });
+    expect(result?.moderationStatus).toBe("approved");
+  });
+
   it("delegates observability capture creation through the ops capture repository", async () => {
     const database = {
       opsObservabilityCapture: {

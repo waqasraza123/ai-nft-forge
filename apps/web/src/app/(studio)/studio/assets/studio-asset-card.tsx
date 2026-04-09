@@ -1,4 +1,5 @@
 import {
+  type GeneratedAssetModerationStatus,
   type GenerationRequestSummary,
   type StudioSourceAssetSummary
 } from "@ai-nft-forge/shared";
@@ -10,12 +11,17 @@ type StudioAssetCardProps = {
   downloadingGeneratedAssetId: string | null;
   generationVariantCount: number;
   isDispatchingGeneration: boolean;
+  moderatingGeneratedAssetId: string | null;
   retryingGenerationRequestId: string | null;
   retryGeneration: (generationRequestId: string) => Promise<void>;
   selectedGenerationId: string | null;
   setGenerationVariantCount: (variantCount: number) => void;
   setSelectedGenerationId: (generationRequestId: string) => void;
   startGeneration: (assetId: string, variantCount: number) => Promise<void>;
+  updateGeneratedAssetModeration: (
+    generatedAssetId: string,
+    moderationStatus: GeneratedAssetModerationStatus
+  ) => Promise<void>;
 };
 
 function formatAssetByteSize(byteSize: number | null) {
@@ -140,18 +146,31 @@ function resolveOutputPlaceholderMessage(
   return "This generation run completed without any stored outputs.";
 }
 
+function formatModerationStatus(status: GeneratedAssetModerationStatus) {
+  switch (status) {
+    case "approved":
+      return "Approved";
+    case "rejected":
+      return "Rejected";
+    default:
+      return "Pending review";
+  }
+}
+
 export function StudioAssetCard({
   asset,
   downloadGeneratedAsset,
   downloadingGeneratedAssetId,
   generationVariantCount,
   isDispatchingGeneration,
+  moderatingGeneratedAssetId,
   retryingGenerationRequestId,
   retryGeneration,
   selectedGenerationId,
   setGenerationVariantCount,
   setSelectedGenerationId,
-  startGeneration
+  startGeneration,
+  updateGeneratedAssetModeration
 }: StudioAssetCardProps) {
   const generationStatusLabel = asset.latestGeneration
     ? `Generation ${asset.latestGeneration.status}`
@@ -382,6 +401,8 @@ export function StudioAssetCard({
                   {selectedGeneration.generatedAssets.map((generatedAsset) => {
                     const isDownloading =
                       downloadingGeneratedAssetId === generatedAsset.id;
+                    const isModerating =
+                      moderatingGeneratedAssetId === generatedAsset.id;
 
                     return (
                       <div
@@ -393,20 +414,87 @@ export function StudioAssetCard({
                           <span>
                             {formatAssetByteSize(generatedAsset.byteSize)}
                           </span>
+                          <span>
+                            {formatModerationStatus(
+                              generatedAsset.moderationStatus
+                            )}
+                          </span>
+                          {generatedAsset.moderatedAt ? (
+                            <span>
+                              Reviewed{" "}
+                              {formatIsoDateTime(generatedAsset.moderatedAt)}
+                            </span>
+                          ) : null}
                           <span className="asset-output-key">
                             {generatedAsset.storageObjectKey}
                           </span>
                         </div>
-                        <button
-                          className="button-action"
-                          disabled={isDownloading}
-                          onClick={() =>
-                            void downloadGeneratedAsset(generatedAsset.id)
-                          }
-                          type="button"
-                        >
-                          {isDownloading ? "Preparing..." : "Download"}
-                        </button>
+                        <div className="candidate-card__actions">
+                          <Pill>
+                            {formatModerationStatus(
+                              generatedAsset.moderationStatus
+                            )}
+                          </Pill>
+                          <button
+                            className="button-action"
+                            disabled={isModerating}
+                            onClick={() =>
+                              void updateGeneratedAssetModeration(
+                                generatedAsset.id,
+                                "approved"
+                              )
+                            }
+                            type="button"
+                          >
+                            {isModerating &&
+                            generatedAsset.moderationStatus !== "approved"
+                              ? "Saving..."
+                              : "Approve"}
+                          </button>
+                          <button
+                            className="button-action"
+                            disabled={isModerating}
+                            onClick={() =>
+                              void updateGeneratedAssetModeration(
+                                generatedAsset.id,
+                                "rejected"
+                              )
+                            }
+                            type="button"
+                          >
+                            {isModerating &&
+                            generatedAsset.moderationStatus !== "rejected"
+                              ? "Saving..."
+                              : "Reject"}
+                          </button>
+                          <button
+                            className="button-action"
+                            disabled={isModerating}
+                            onClick={() =>
+                              void updateGeneratedAssetModeration(
+                                generatedAsset.id,
+                                "pending_review"
+                              )
+                            }
+                            type="button"
+                          >
+                            {isModerating &&
+                            generatedAsset.moderationStatus !==
+                              "pending_review"
+                              ? "Saving..."
+                              : "Reset"}
+                          </button>
+                          <button
+                            className="button-action"
+                            disabled={isDownloading}
+                            onClick={() =>
+                              void downloadGeneratedAsset(generatedAsset.id)
+                            }
+                            type="button"
+                          >
+                            {isDownloading ? "Preparing..." : "Download"}
+                          </button>
+                        </div>
                       </div>
                     );
                   })}

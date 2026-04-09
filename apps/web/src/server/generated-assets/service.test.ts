@@ -12,6 +12,8 @@ function createGeneratedAssetHarness() {
       createdAt: Date;
       generationRequestId: string;
       id: string;
+      moderatedAt: Date | null;
+      moderationStatus: "approved" | "pending_review" | "rejected";
       ownerUserId: string;
       sourceAssetId: string;
       storageBucket: string;
@@ -27,6 +29,8 @@ function createGeneratedAssetHarness() {
         createdAt: new Date("2026-04-06T00:00:00.000Z"),
         generationRequestId: "generation_1",
         id: "generated_asset_1",
+        moderatedAt: null,
+        moderationStatus: "pending_review" as const,
         ownerUserId: "user_1",
         sourceAssetId: "asset_1",
         storageBucket: "ai-nft-forge-private",
@@ -51,6 +55,7 @@ function createGeneratedAssetHarness() {
     ]
   ]);
   const service = createGeneratedAssetService({
+    now: () => new Date("2026-04-06T00:10:00.000Z"),
     repositories: {
       generatedAssetRepository: {
         async findByIdForOwner(input) {
@@ -61,6 +66,23 @@ function createGeneratedAssetHarness() {
           }
 
           return asset;
+        },
+        async updateModerationByIdForOwner(input) {
+          const asset = assets.get(input.id);
+
+          if (!asset || asset.ownerUserId !== input.ownerUserId) {
+            return null;
+          }
+
+          const updatedAsset = {
+            ...asset,
+            moderatedAt: input.moderatedAt,
+            moderationStatus: input.moderationStatus
+          };
+
+          assets.set(updatedAsset.id, updatedAsset);
+
+          return updatedAsset;
         }
       }
     },
@@ -135,5 +157,36 @@ describe("createGeneratedAssetService", () => {
         404
       )
     );
+  });
+
+  it("updates moderation state for an owned generated asset", async () => {
+    const harness = createGeneratedAssetHarness();
+
+    const result = await harness.service.updateModeration({
+      generatedAssetId: "generated_asset_1",
+      moderationStatus: "approved",
+      ownerUserId: "user_1"
+    });
+
+    expect(result.asset.moderationStatus).toBe("approved");
+    expect(result.asset.moderatedAt).toBe("2026-04-06T00:10:00.000Z");
+  });
+
+  it("resets moderation state back to pending review", async () => {
+    const harness = createGeneratedAssetHarness();
+
+    await harness.service.updateModeration({
+      generatedAssetId: "generated_asset_1",
+      moderationStatus: "approved",
+      ownerUserId: "user_1"
+    });
+    const result = await harness.service.updateModeration({
+      generatedAssetId: "generated_asset_1",
+      moderationStatus: "pending_review",
+      ownerUserId: "user_1"
+    });
+
+    expect(result.asset.moderationStatus).toBe("pending_review");
+    expect(result.asset.moderatedAt).toBeNull();
   });
 });

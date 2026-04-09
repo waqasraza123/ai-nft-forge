@@ -25,6 +25,12 @@ enum GenerationRequestStatus {
   failed
 }
 
+enum GeneratedAssetModerationStatus {
+  pending_review
+  approved
+  rejected
+}
+
 enum OpsQueueStatus {
   ok
   unreachable
@@ -233,6 +239,8 @@ model GeneratedAsset {
   storageBucket       String            @map("storage_bucket")
   storageObjectKey    String            @unique @map("storage_object_key")
   byteSize            Int?              @map("byte_size")
+  moderationStatus    GeneratedAssetModerationStatus @default(pending_review) @map("moderation_status")
+  moderatedAt         DateTime?         @map("moderated_at")
   createdAt           DateTime          @default(now()) @map("created_at")
   updatedAt           DateTime          @updatedAt @map("updated_at")
   collectionDraftItems CollectionDraftItem[]
@@ -244,6 +252,7 @@ model GeneratedAsset {
 
   @@unique([generationRequestId, variantIndex], map: "generated_assets_generation_request_id_variant_index_key")
   @@index([ownerUserId, createdAt], map: "generated_assets_owner_user_id_created_at_idx")
+  @@index([ownerUserId, moderationStatus, createdAt], map: "generated_assets_owner_user_id_moderation_status_created_at_idx")
   @@index([sourceAssetId, createdAt], map: "generated_assets_source_asset_id_created_at_idx")
   @@index([generationRequestId, createdAt], map: "generated_assets_generation_request_id_created_at_idx")
   @@map("generated_assets")

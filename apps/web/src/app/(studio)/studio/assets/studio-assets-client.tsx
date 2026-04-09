@@ -13,10 +13,12 @@ import {
 
 import {
   generatedAssetDownloadIntentResponseSchema,
+  generatedAssetModerationResponseSchema,
   generationRequestCreateResponseSchema,
   sourceAssetCompletionResponseSchema,
   sourceAssetContentTypeValues,
   sourceAssetListResponseSchema,
+  type GeneratedAssetModerationStatus,
   sourceAssetUploadIntentResponseSchema,
   type SourceAssetContentType,
   type StudioSourceAssetSummary
@@ -243,6 +245,17 @@ function reconcileSelectedGenerationIds(input: {
   return hasChanged ? next : input.current;
 }
 
+function formatModerationStatus(status: GeneratedAssetModerationStatus) {
+  switch (status) {
+    case "approved":
+      return "Approved";
+    case "rejected":
+      return "Rejected";
+    default:
+      return "Pending review";
+  }
+}
+
 export function StudioAssetsClient({
   initialAssets,
   ownerWalletAddress
@@ -259,6 +272,9 @@ export function StudioAssetsClient({
   );
   const [downloadingGeneratedAssetId, setDownloadingGeneratedAssetId] =
     useState<string | null>(null);
+  const [moderatingGeneratedAssetId, setModeratingGeneratedAssetId] = useState<
+    string | null
+  >(null);
   const [retryingGenerationRequestId, setRetryingGenerationRequestId] =
     useState<string | null>(null);
   const [
@@ -302,6 +318,46 @@ export function StudioAssetsClient({
       asset.generationHistory.reduce(
         (assetCount, generation) =>
           assetCount + generation.generatedAssets.length,
+        0
+      ),
+    0
+  );
+  const pendingReviewOutputCount = assets.reduce(
+    (count, asset) =>
+      count +
+      asset.generationHistory.reduce(
+        (assetCount, generation) =>
+          assetCount +
+          generation.generatedAssets.filter(
+            (generatedAsset) =>
+              generatedAsset.moderationStatus === "pending_review"
+          ).length,
+        0
+      ),
+    0
+  );
+  const approvedOutputCount = assets.reduce(
+    (count, asset) =>
+      count +
+      asset.generationHistory.reduce(
+        (assetCount, generation) =>
+          assetCount +
+          generation.generatedAssets.filter(
+            (generatedAsset) => generatedAsset.moderationStatus === "approved"
+          ).length,
+        0
+      ),
+    0
+  );
+  const rejectedOutputCount = assets.reduce(
+    (count, asset) =>
+      count +
+      asset.generationHistory.reduce(
+        (assetCount, generation) =>
+          assetCount +
+          generation.generatedAssets.filter(
+            (generatedAsset) => generatedAsset.moderationStatus === "rejected"
+          ).length,
         0
       ),
     0
@@ -675,6 +731,58 @@ export function StudioAssetsClient({
     }
   };
 
+  const updateGeneratedAssetModeration = async (
+    generatedAssetId: string,
+    moderationStatus: GeneratedAssetModerationStatus
+  ) => {
+    setModeratingGeneratedAssetId(generatedAssetId);
+    setNotice({
+      message: `Setting output moderation to ${formatModerationStatus(
+        moderationStatus
+      ).toLowerCase()}.`,
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch(
+        `/api/studio/generated-assets/${generatedAssetId}/moderation`,
+        {
+          body: JSON.stringify({
+            moderationStatus
+          }),
+          headers: {
+            "Content-Type": "application/json"
+          },
+          method: "PATCH"
+        }
+      );
+      const result = await parseJsonResponse({
+        response,
+        schema: generatedAssetModerationResponseSchema
+      });
+
+      await refreshAssets({
+        silent: true
+      });
+      setNotice({
+        message: `Variant ${result.asset.variantIndex} is now ${formatModerationStatus(
+          result.asset.moderationStatus
+        ).toLowerCase()}.`,
+        tone: "success"
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Generated asset moderation could not be updated.",
+        tone: "error"
+      });
+    } finally {
+      setModeratingGeneratedAssetId(null);
+    }
+  };
+
   return (
     <PageShell
       eyebrow="Studio assets"
@@ -770,7 +878,7 @@ export function StudioAssetsClient({
           ) : null}
         </SurfaceCard>
         <SurfaceCard
-          body="Uploads are owner-scoped and private. Generations dispatch per asset, polling only runs while work is queued or running, retries stay bound to explicit failed runs, and every asset now retains its full generation history."
+          body="Uploads are owner-scoped and private. Generations dispatch per asset, polling only runs while work is queued or running, retries stay bound to explicit failed runs, every asset retains full generation history, and generated outputs now move through explicit moderation before collection curation."
           eyebrow="Workflow"
           span={4}
           title="Operator guardrails"
@@ -812,10 +920,22 @@ export function StudioAssetsClient({
               label="Generated outputs"
               value={String(generatedOutputCount)}
             />
+            <MetricTile
+              label="Pending review"
+              value={String(pendingReviewOutputCount)}
+            />
+            <MetricTile
+              label="Approved outputs"
+              value={String(approvedOutputCount)}
+            />
+            <MetricTile
+              label="Rejected outputs"
+              value={String(rejectedOutputCount)}
+            />
           </div>
         </SurfaceCard>
         <SurfaceCard
-          body="The route surface now supports not only upload, dispatch, retry, and protected retrieval, but also a richer studio read model where assets carry generation history suitable for in-browser comparison."
+          body="The route surface now supports upload, dispatch, retry, protected retrieval, and owner-scoped moderation updates on generated outputs, all backed by the richer studio read model."
           eyebrow="Routes"
           span={4}
           title="Live browser boundary"
@@ -831,6 +951,9 @@ export function StudioAssetsClient({
             <Pill>
               POST
               /api/studio/generated-assets/[generatedAssetId]/download-intent
+            </Pill>
+            <Pill>
+              PATCH /api/studio/generated-assets/[generatedAssetId]/moderation
             </Pill>
           </div>
         </SurfaceCard>
@@ -864,6 +987,7 @@ export function StudioAssetsClient({
               }
               isDispatchingGeneration={dispatchingAssetId === asset.id}
               key={asset.id}
+              moderatingGeneratedAssetId={moderatingGeneratedAssetId}
               retryGeneration={retryGeneration}
               retryingGenerationRequestId={retryingGenerationRequestId}
               selectedGenerationId={
@@ -886,6 +1010,7 @@ export function StudioAssetsClient({
                 )
               }
               startGeneration={startGeneration}
+              updateGeneratedAssetModeration={updateGeneratedAssetModeration}
             />
           ))
         )}
