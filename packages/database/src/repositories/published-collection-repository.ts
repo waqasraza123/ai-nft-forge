@@ -103,6 +103,7 @@ export function createPublishedCollectionRepository(
       contractChainKey?: string | null;
       contractDeployTxHash?: string | null;
       contractDeployedAt?: Date | null;
+      contractTokenUriBaseUrl?: string | null;
       ownerUserId: string;
       priceLabel?: string | null;
       primaryCtaHref?: string | null;
@@ -286,6 +287,7 @@ export function createPublishedCollectionRepository(
       contractChainKey?: string | null;
       contractDeployTxHash?: string | null;
       contractDeployedAt?: Date | null;
+      contractTokenUriBaseUrl?: string | null;
       ownerUserId: string;
       priceLabel?: string | null;
       primaryCtaHref?: string | null;
@@ -332,6 +334,10 @@ export function createPublishedCollectionRepository(
                 input.contractDeployedAt === undefined
                   ? publication.contractDeployedAt
                   : input.contractDeployedAt,
+              contractTokenUriBaseUrl:
+                input.contractTokenUriBaseUrl === undefined
+                  ? publication.contractTokenUriBaseUrl
+                  : input.contractTokenUriBaseUrl,
               displayOrder: input.displayOrder ?? publication.displayOrder,
               description: input.description,
               endAt:

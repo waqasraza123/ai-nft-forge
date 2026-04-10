@@ -7,7 +7,8 @@ import {
   opsAlertSchedulePolicyResponseSchema,
   createOpsAlertScheduleDayMask,
   opsAlertUnmuteResponseSchema,
-  parseOpsAlertScheduleDayMask
+  parseOpsAlertScheduleDayMask,
+  type OpsReconciliationIssueKind
 } from "@ai-nft-forge/shared";
 
 import { OpsServiceError } from "./error";
@@ -57,6 +58,45 @@ type AlertStateRecord = {
 
 type OpsServiceDependencies = {
   now: () => Date;
+  onchain?: {
+    inspectPublishedCollectionState(input: {
+      ownerWalletAddress: string;
+      publication: {
+        brandName: string;
+        brandSlug: string;
+        contractAddress: string | null;
+        contractChainKey: string | null;
+        contractDeployTxHash: string | null;
+        contractTokenUriBaseUrl: string | null;
+        heroGeneratedAssetId: string | null;
+        id: string;
+        items: Array<{
+          generatedAssetId: string;
+          id: string;
+          position: number;
+          publicStorageBucket: string | null;
+          publicStorageObjectKey: string | null;
+        }>;
+        mints: Array<{
+          id: string;
+          recipientWalletAddress: string;
+          tokenId: number;
+          txHash: string;
+        }>;
+        slug: string;
+        sourceCollectionDraftId: string;
+        title: string;
+      };
+    }): Promise<
+      Array<{
+        detail: Record<string, string | number | boolean | null>;
+        kind: OpsReconciliationIssueKind;
+        message: string;
+        severity: "critical" | "warning";
+        title: string;
+      }>
+    >;
+  };
   repositories: {
     opsAlertMuteRepository: {
       deleteByOwnerUserIdAndCode(input: {
@@ -171,13 +211,7 @@ type OpsServiceDependencies = {
         firstDetectedAt: Date;
         id: string;
         ignoredAt: Date | null;
-        kind:
-          | "draft_contains_unapproved_asset"
-          | "generated_asset_object_missing"
-          | "published_hero_asset_missing_from_snapshot"
-          | "published_public_asset_missing"
-          | "review_ready_draft_invalid"
-          | "source_asset_object_missing";
+        kind: OpsReconciliationIssueKind;
         lastDetectedAt: Date;
         latestRunId: string;
         message: string;
@@ -197,13 +231,7 @@ type OpsServiceDependencies = {
         firstDetectedAt: Date;
         id: string;
         ignoredAt: Date | null;
-        kind:
-          | "draft_contains_unapproved_asset"
-          | "generated_asset_object_missing"
-          | "published_hero_asset_missing_from_snapshot"
-          | "published_public_asset_missing"
-          | "review_ready_draft_invalid"
-          | "source_asset_object_missing";
+        kind: OpsReconciliationIssueKind;
         lastDetectedAt: Date;
         latestRunId: string;
         message: string;
@@ -224,13 +252,7 @@ type OpsServiceDependencies = {
         firstDetectedAt: Date;
         id: string;
         ignoredAt: Date | null;
-        kind:
-          | "draft_contains_unapproved_asset"
-          | "generated_asset_object_missing"
-          | "published_hero_asset_missing_from_snapshot"
-          | "published_public_asset_missing"
-          | "review_ready_draft_invalid"
-          | "source_asset_object_missing";
+        kind: OpsReconciliationIssueKind;
         lastDetectedAt: Date;
         latestRunId: string;
         message: string;
@@ -243,13 +265,7 @@ type OpsServiceDependencies = {
       upsertObserved(input: {
         detailJson: Record<string, string | number | boolean | null>;
         fingerprint: string;
-        kind:
-          | "draft_contains_unapproved_asset"
-          | "generated_asset_object_missing"
-          | "published_hero_asset_missing_from_snapshot"
-          | "published_public_asset_missing"
-          | "review_ready_draft_invalid"
-          | "source_asset_object_missing";
+        kind: OpsReconciliationIssueKind;
         lastDetectedAt: Date;
         latestRunId: string;
         message: string;
@@ -262,13 +278,7 @@ type OpsServiceDependencies = {
         firstDetectedAt: Date;
         id: string;
         ignoredAt: Date | null;
-        kind:
-          | "draft_contains_unapproved_asset"
-          | "generated_asset_object_missing"
-          | "published_hero_asset_missing_from_snapshot"
-          | "published_public_asset_missing"
-          | "review_ready_draft_invalid"
-          | "source_asset_object_missing";
+        kind: OpsReconciliationIssueKind;
         lastDetectedAt: Date;
         latestRunId: string;
         message: string;
@@ -322,14 +332,40 @@ type OpsServiceDependencies = {
         id: string;
         ownerUserId: string;
       }): Promise<{
+        brandName: string;
+        brandSlug: string;
+        contractAddress: string | null;
+        contractChainKey: string | null;
+        contractDeployTxHash: string | null;
+        contractTokenUriBaseUrl: string | null;
+        heroGeneratedAssetId: string | null;
         id: string;
+        mints: Array<{
+          id: string;
+          recipientWalletAddress: string;
+          tokenId: number;
+          txHash: string;
+        }>;
         slug: string;
         sourceCollectionDraftId: string;
+        title: string;
       } | null>;
       listDetailedByOwnerUserId(ownerUserId: string): Promise<
         Array<{
+          brandName: string;
+          brandSlug: string;
+          contractAddress: string | null;
+          contractChainKey: string | null;
+          contractDeployTxHash: string | null;
+          contractTokenUriBaseUrl: string | null;
           heroGeneratedAssetId: string | null;
           id: string;
+          mints: Array<{
+            id: string;
+            recipientWalletAddress: string;
+            tokenId: number;
+            txHash: string;
+          }>;
           items: Array<{
             generatedAssetId: string;
             id: string;
@@ -358,6 +394,12 @@ type OpsServiceDependencies = {
           storageObjectKey: string;
         }>
       >;
+    };
+    userRepository?: {
+      findById(id: string): Promise<{
+        id: string;
+        walletAddress: string;
+      } | null>;
     };
   };
   storage?: {
@@ -475,7 +517,8 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
       opsReconciliationRunRepository,
       publishedCollectionItemRepository,
       publishedCollectionRepository,
-      sourceAssetRepository
+      sourceAssetRepository,
+      userRepository
     } = dependencies.repositories;
 
     if (
@@ -486,6 +529,8 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
       !publishedCollectionItemRepository ||
       !publishedCollectionRepository ||
       !sourceAssetRepository ||
+      !userRepository ||
+      !dependencies.onchain ||
       !dependencies.storage
     ) {
       throw new OpsServiceError(
@@ -504,9 +549,11 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
         opsReconciliationRunRepository,
         publishedCollectionItemRepository,
         publishedCollectionRepository,
-        sourceAssetRepository
+        sourceAssetRepository,
+        userRepository
       },
-      storage: dependencies.storage
+      storage: dependencies.storage,
+      onchain: dependencies.onchain
     });
   };
 

@@ -93,6 +93,12 @@ enum OpsReconciliationIssueKind {
   draft_contains_unapproved_asset
   review_ready_draft_invalid
   published_hero_asset_missing_from_snapshot
+  published_contract_deployment_unverified
+  published_contract_missing_onchain
+  published_contract_owner_mismatch
+  published_contract_metadata_mismatch
+  published_token_mint_unverified
+  published_token_owner_mismatch
 }
 
 enum CollectionDraftStatus {
@@ -337,6 +343,7 @@ model PublishedCollection {
   contractAddress       String?                   @map("contract_address")
   contractDeployTxHash  String?                   @map("contract_deploy_tx_hash")
   contractDeployedAt    DateTime?                 @map("contract_deployed_at")
+  contractTokenUriBaseUrl String?                 @map("contract_token_uri_base_url")
   priceLabel            String?                   @map("price_label")
   heroGeneratedAssetId  String?                   @map("hero_generated_asset_id")
   storefrontHeadline    String?                   @map("storefront_headline")

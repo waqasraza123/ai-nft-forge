@@ -26,7 +26,13 @@ export const opsReconciliationIssueKindSchema = z.enum([
   "published_public_asset_missing",
   "draft_contains_unapproved_asset",
   "review_ready_draft_invalid",
-  "published_hero_asset_missing_from_snapshot"
+  "published_hero_asset_missing_from_snapshot",
+  "published_contract_deployment_unverified",
+  "published_contract_missing_onchain",
+  "published_contract_owner_mismatch",
+  "published_contract_metadata_mismatch",
+  "published_token_mint_unverified",
+  "published_token_owner_mismatch"
 ]);
 const opsAlertEscalationDelayMinutesSchema = z.number().int().min(1).max(10080);
 export const opsAlertScheduleDayValues = [

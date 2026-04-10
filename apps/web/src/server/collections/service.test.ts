@@ -75,6 +75,7 @@ function createCollectionDraftHarness() {
       contractChainKey: string | null;
       contractDeployedAt: Date | null;
       contractDeployTxHash: string | null;
+      contractTokenUriBaseUrl: string | null;
       createdAt: Date;
       displayOrder: number;
       description: string | null;
@@ -147,6 +148,16 @@ function createCollectionDraftHarness() {
     recipientWalletAddress: string;
     tokenId: number;
     txHash: `0x${string}`;
+  }> = [];
+  const openReconciliationIssues: Array<{
+    detailJson: unknown;
+    kind:
+      | "published_contract_deployment_unverified"
+      | "published_contract_metadata_mismatch"
+      | "published_contract_missing_onchain"
+      | "published_contract_owner_mismatch"
+      | "published_token_mint_unverified"
+      | "published_token_owner_mismatch";
   }> = [];
   const publicationTargets = new Map<
     string,
@@ -537,6 +548,12 @@ function createCollectionDraftHarness() {
       }
     },
 
+    opsReconciliationIssueRepository: {
+      async listOpenByOwnerUserId() {
+        return openReconciliationIssues;
+      }
+    },
+
     publishedCollectionItemRepository: {
       async createMany(
         inputs: Array<{
@@ -616,6 +633,7 @@ function createCollectionDraftHarness() {
         contractChainKey?: string | null;
         contractDeployedAt?: Date | null;
         contractDeployTxHash?: string | null;
+        contractTokenUriBaseUrl?: string | null;
         displayOrder: number;
         description: string | null;
         endAt?: Date | null;
@@ -646,6 +664,7 @@ function createCollectionDraftHarness() {
           contractChainKey: input.contractChainKey ?? null,
           contractDeployedAt: input.contractDeployedAt ?? null,
           contractDeployTxHash: input.contractDeployTxHash ?? null,
+          contractTokenUriBaseUrl: input.contractTokenUriBaseUrl ?? null,
           createdAt: nextDate(),
           displayOrder: input.displayOrder,
           description: input.description,
@@ -742,6 +761,7 @@ function createCollectionDraftHarness() {
         contractChainKey?: string | null;
         contractDeployedAt?: Date | null;
         contractDeployTxHash?: string | null;
+        contractTokenUriBaseUrl?: string | null;
         displayOrder?: number;
         description: string | null;
         endAt?: Date | null;
@@ -791,6 +811,10 @@ function createCollectionDraftHarness() {
             input.contractDeployTxHash === undefined
               ? publication.contractDeployTxHash
               : input.contractDeployTxHash,
+          contractTokenUriBaseUrl:
+            input.contractTokenUriBaseUrl === undefined
+              ? publication.contractTokenUriBaseUrl
+              : input.contractTokenUriBaseUrl,
           displayOrder: input.displayOrder ?? publication.displayOrder,
           description: input.description,
           endAt: input.endAt === undefined ? publication.endAt : input.endAt,
@@ -949,6 +973,7 @@ function createCollectionDraftHarness() {
     copiedPublishedAssets,
     draftItems,
     drafts,
+    openReconciliationIssues,
     publicationItems,
     publicationTargets,
     publications,
@@ -984,6 +1009,18 @@ function createCollectionDraftHarness() {
       }
 
       publicationTargets.set(ownerUserId, target);
+    },
+    pushOpenOnchainIssue(issue: {
+      detailJson: unknown;
+      kind:
+        | "published_contract_deployment_unverified"
+        | "published_contract_metadata_mismatch"
+        | "published_contract_missing_onchain"
+        | "published_contract_owner_mismatch"
+        | "published_token_mint_unverified"
+        | "published_token_owner_mismatch";
+    }) {
+      openReconciliationIssues.push(issue);
     },
     service
   };
@@ -1585,6 +1622,124 @@ describe("createCollectionDraftService", () => {
     });
     expect(harness.verifiedMintTransactions[0]?.expectedMintData).toBe(
       intent.mint.transaction.data
+    );
+  });
+
+  it("blocks mint intent while open onchain reconciliation issues exist", async () => {
+    const harness = createCollectionDraftHarness();
+    const createdDraft = await harness.service.createCollectionDraft({
+      ownerUserId: "user_1",
+      title: "Genesis Portrait Set"
+    });
+
+    await harness.service.addCollectionDraftItem({
+      collectionDraftId: createdDraft.draft.id,
+      generatedAssetId: "generated_asset_1",
+      ownerUserId: "user_1"
+    });
+    await harness.service.updateCollectionDraft({
+      collectionDraftId: createdDraft.draft.id,
+      description: null,
+      ownerUserId: "user_1",
+      slug: createdDraft.draft.slug,
+      status: "review_ready",
+      title: createdDraft.draft.title
+    });
+    await harness.service.publishCollectionDraft({
+      collectionDraftId: createdDraft.draft.id,
+      ownerUserId: "user_1"
+    });
+    await harness.service.recordCollectionContractDeployment({
+      chainKey: "base-sepolia",
+      collectionDraftId: createdDraft.draft.id,
+      deployTxHash: `0x${"d".repeat(64)}`,
+      origin: "https://forge.example",
+      ownerUserId: "user_1",
+      ownerWalletAddress: "0x1111111111111111111111111111111111111111"
+    });
+
+    const publication = [...harness.publications.values()][0]!;
+
+    harness.pushOpenOnchainIssue({
+      detailJson: {
+        publishedCollectionId: publication.id
+      },
+      kind: "published_contract_missing_onchain"
+    });
+
+    await expect(
+      harness.service.createCollectionContractMintIntent({
+        collectionDraftId: createdDraft.draft.id,
+        ownerUserId: "user_1",
+        recipientWalletAddress: "0x2222222222222222222222222222222222222222",
+        tokenId: 1
+      })
+    ).rejects.toEqual(
+      new CollectionDraftServiceError(
+        "ONCHAIN_RECONCILIATION_REQUIRED",
+        "Resolve the open onchain reconciliation issues for this published collection before minting additional tokens.",
+        409
+      )
+    );
+  });
+
+  it("blocks mint recording while open onchain reconciliation issues exist", async () => {
+    const harness = createCollectionDraftHarness();
+    const createdDraft = await harness.service.createCollectionDraft({
+      ownerUserId: "user_1",
+      title: "Genesis Portrait Set"
+    });
+
+    await harness.service.addCollectionDraftItem({
+      collectionDraftId: createdDraft.draft.id,
+      generatedAssetId: "generated_asset_1",
+      ownerUserId: "user_1"
+    });
+    await harness.service.updateCollectionDraft({
+      collectionDraftId: createdDraft.draft.id,
+      description: null,
+      ownerUserId: "user_1",
+      slug: createdDraft.draft.slug,
+      status: "review_ready",
+      title: createdDraft.draft.title
+    });
+    await harness.service.publishCollectionDraft({
+      collectionDraftId: createdDraft.draft.id,
+      ownerUserId: "user_1"
+    });
+    await harness.service.recordCollectionContractDeployment({
+      chainKey: "base-sepolia",
+      collectionDraftId: createdDraft.draft.id,
+      deployTxHash: `0x${"e".repeat(64)}`,
+      origin: "https://forge.example",
+      ownerUserId: "user_1",
+      ownerWalletAddress: "0x1111111111111111111111111111111111111111"
+    });
+
+    const publication = [...harness.publications.values()][0]!;
+
+    harness.pushOpenOnchainIssue({
+      detailJson: {
+        publishedCollectionId: publication.id
+      },
+      kind: "published_contract_owner_mismatch"
+    });
+
+    await expect(
+      harness.service.recordCollectionContractMint({
+        collectionDraftId: createdDraft.draft.id,
+        ownerUserId: "user_1",
+        ownerWalletAddress: "0x1111111111111111111111111111111111111111",
+        recipientWalletAddress: "0x2222222222222222222222222222222222222222",
+        tokenId: 1,
+        txHash: `0x${"f".repeat(64)}`
+      })
+    ).rejects.toEqual(
+      new CollectionDraftServiceError(
+        "ONCHAIN_RECONCILIATION_REQUIRED",
+        "Resolve the open onchain reconciliation issues for this published collection before minting additional tokens.",
+        409
+      )
     );
   });
 

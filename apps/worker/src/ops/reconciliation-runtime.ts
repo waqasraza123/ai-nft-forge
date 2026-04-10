@@ -20,6 +20,7 @@ import {
 } from "@ai-nft-forge/shared";
 
 import { createLogger, type Logger } from "../lib/logger.js";
+import { createPublishedCollectionOnchainInspector } from "./onchain-reconciliation.js";
 
 type ReconcileRuntimeInput = {
   databaseClient: DatabaseClient;
@@ -43,8 +44,11 @@ export async function reconcileRuntimeOpsWithDependencies({
   const storageConfig = getStorageConfig(rawEnvironment);
   const userRepository = createUserRepository(databaseClient);
   const ownerUserIds = await userRepository.listIds();
+  const onchainInspector =
+    createPublishedCollectionOnchainInspector(rawEnvironment);
   const service = createOpsReconciliationService({
     now: () => new Date(),
+    onchain: onchainInspector,
     repositories: {
       collectionDraftRepository: createCollectionDraftRepository(databaseClient),
       generatedAssetRepository: createGeneratedAssetRepository(databaseClient),
@@ -56,7 +60,8 @@ export async function reconcileRuntimeOpsWithDependencies({
         createPublishedCollectionItemRepository(databaseClient),
       publishedCollectionRepository:
         createPublishedCollectionRepository(databaseClient),
-      sourceAssetRepository: createSourceAssetRepository(databaseClient)
+      sourceAssetRepository: createSourceAssetRepository(databaseClient),
+      userRepository
     },
     storage: {
       copyPublishedAsset: async (input) => {

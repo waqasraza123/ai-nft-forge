@@ -179,6 +179,7 @@ export {
 } from "./object-storage.js";
 export {
   createOpsReconciliationService,
+  isOnchainReconciliationIssueKind,
   isRepairableOpsReconciliationIssueKind
 } from "./ops-reconciliation-service.js";
 export {

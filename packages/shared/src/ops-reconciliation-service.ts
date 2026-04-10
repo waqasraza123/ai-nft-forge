@@ -49,8 +49,20 @@ type CollectionDraftRecord = {
 };
 
 type PublishedCollectionRecord = {
+  brandName: string;
+  brandSlug: string;
+  contractAddress: string | null;
+  contractChainKey: string | null;
+  contractDeployTxHash: string | null;
+  contractTokenUriBaseUrl: string | null;
   heroGeneratedAssetId: string | null;
   id: string;
+  mints: Array<{
+    id: string;
+    recipientWalletAddress: string;
+    tokenId: number;
+    txHash: string;
+  }>;
   slug: string;
   sourceCollectionDraftId: string;
   title: string;
@@ -102,6 +114,12 @@ type ReconciliationIssueCandidate = {
 
 type CreateOpsReconciliationServiceDependencies = {
   now: () => Date;
+  onchain?: {
+    inspectPublishedCollectionState(input: {
+      ownerWalletAddress: string;
+      publication: PublishedCollectionRecord;
+    }): Promise<Array<Omit<ReconciliationIssueCandidate, "fingerprint">>>;
+  };
   repositories: {
     collectionDraftRepository: {
       listByOwnerUserId(ownerUserId: string): Promise<CollectionDraftRecord[]>;
@@ -192,6 +210,11 @@ type CreateOpsReconciliationServiceDependencies = {
       findById(id: string): Promise<SourceAssetRecord | null>;
       listByOwnerUserId(ownerUserId: string): Promise<SourceAssetRecord[]>;
     };
+    userRepository?: {
+      findById(
+        id: string
+      ): Promise<{ id: string; walletAddress: string } | null>;
+    };
   };
   storage: {
     copyPublishedAsset(input: {
@@ -244,6 +267,19 @@ export function isRepairableOpsReconciliationIssueKind(
     kind === "published_public_asset_missing" ||
     kind === "draft_contains_unapproved_asset" ||
     kind === "review_ready_draft_invalid"
+  );
+}
+
+export function isOnchainReconciliationIssueKind(
+  kind: OpsReconciliationIssueKind
+) {
+  return (
+    kind === "published_contract_deployment_unverified" ||
+    kind === "published_contract_metadata_mismatch" ||
+    kind === "published_contract_missing_onchain" ||
+    kind === "published_contract_owner_mismatch" ||
+    kind === "published_token_mint_unverified" ||
+    kind === "published_token_owner_mismatch"
   );
 }
 
@@ -321,6 +357,12 @@ export function createOpsReconciliationService(
               input.ownerUserId
             )
           ]);
+        const ownerUser =
+          dependencies.onchain && dependencies.repositories.userRepository
+            ? await dependencies.repositories.userRepository.findById(
+                input.ownerUserId
+              )
+            : null;
         const completedAt = dependencies.now();
         const issues: ReconciliationIssueCandidate[] = [];
 
@@ -470,6 +512,24 @@ export function createOpsReconciliationService(
               severity: "critical",
               title: "Published public asset missing"
             });
+          }
+
+          if (dependencies.onchain) {
+            if (!ownerUser?.walletAddress) {
+              throw new Error(
+                "The owner wallet address is required for onchain reconciliation."
+              );
+            }
+
+            const onchainIssues =
+              await dependencies.onchain.inspectPublishedCollectionState({
+                ownerWalletAddress: ownerUser.walletAddress,
+                publication
+              });
+
+            for (const issue of onchainIssues) {
+              addIssue(issues, issue);
+            }
           }
         }
 

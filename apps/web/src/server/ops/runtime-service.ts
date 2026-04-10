@@ -11,6 +11,7 @@ import {
   createPublishedCollectionItemRepository,
   createPublishedCollectionRepository,
   createSourceAssetRepository,
+  createUserRepository,
   getDatabaseClient
 } from "@ai-nft-forge/database";
 import {
@@ -21,6 +22,7 @@ import {
 } from "@ai-nft-forge/shared";
 
 import { createOpsService } from "./service";
+import { createPublishedCollectionOnchainInspector } from "./onchain-reconciliation";
 
 export function createRuntimeOpsService(
   rawEnvironment: NodeJS.ProcessEnv = process.env
@@ -28,9 +30,12 @@ export function createRuntimeOpsService(
   const databaseClient = getDatabaseClient(rawEnvironment);
   const objectStorageClient = createObjectStorageClient(rawEnvironment);
   const storageConfig = getStorageConfig(rawEnvironment);
+  const onchainInspector =
+    createPublishedCollectionOnchainInspector(rawEnvironment);
 
   return createOpsService({
     now: () => new Date(),
+    onchain: onchainInspector,
     repositories: {
       collectionDraftRepository: createCollectionDraftRepository(databaseClient),
       generatedAssetRepository: createGeneratedAssetRepository(databaseClient),
@@ -50,7 +55,8 @@ export function createRuntimeOpsService(
         createPublishedCollectionItemRepository(databaseClient),
       publishedCollectionRepository:
         createPublishedCollectionRepository(databaseClient),
-      sourceAssetRepository: createSourceAssetRepository(databaseClient)
+      sourceAssetRepository: createSourceAssetRepository(databaseClient),
+      userRepository: createUserRepository(databaseClient)
     },
     storage: {
       copyPublishedAsset: async (input) => {

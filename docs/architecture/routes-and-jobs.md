@@ -1,6 +1,6 @@
 # Routes And Jobs
 
-This document defines durable boundary expectations for the implemented web, worker, and public release surfaces. The repository now has auth and health endpoints, source asset intake routes, owner-scoped collection draft and publication routes, owner-signed onchain deployment/mint control routes, durable studio settings, protected generated-output retrieval plus moderation routes, public brand and collection launch routes derived from published snapshots, public collection metadata plus contract/token-uri routes, authenticated ops alert and reconciliation controls, generation dispatch, and worker-owned observability/reconciliation job families.
+This document defines durable boundary expectations for the implemented web, worker, and public release surfaces. The repository now has auth and health endpoints, source asset intake routes, owner-scoped collection draft and publication routes, owner-signed onchain deployment/mint control routes, durable studio settings, protected generated-output retrieval plus moderation routes, public brand and collection launch routes derived from published snapshots, public collection metadata plus contract/token-uri routes, authenticated ops alert and reconciliation controls, generation dispatch, and worker-owned observability/reconciliation job families including onchain drift verification.
 
 ## Current Route Surfaces
 
@@ -84,7 +84,8 @@ This document defines durable boundary expectations for the implemented web, wor
 - Public storefront presentation should continue to resolve only from saved brand settings plus immutable published collection snapshots.
 - Onchain deployment and mint control routes should remain authenticated, owner-scoped, wallet-driven, and intent-based; transaction signing stays outside the server boundary and the server should only persist results after verifying the submitted hash onchain.
 - Generated-asset moderation should remain a protected studio-only control-plane action and should not leak mutable moderation state into public storefront read models.
-- Reconciliation runs, issue persistence, and repair actions should remain authenticated and owner-scoped, with automated execution owned by the worker rather than the web app.
+- Reconciliation runs, issue persistence, and repair actions should remain authenticated and owner-scoped, with automated execution owned by the worker rather than the web app, and recorded onchain deployments/mints should be re-verified there against live chain state.
 - Once deployment or mint activity is recorded for a published collection, subsequent publication-boundary mutations should remain blocked to preserve immutable onchain release semantics.
+- Additional minting should remain blocked whenever open onchain reconciliation issues exist for that published collection.
 - Internal APIs should support the web app and workers without exposing operational controls publicly.
 - Route and job design should preserve the B2B white-label model and future multi-tenant concerns.

@@ -3,6 +3,7 @@ import {
   createCollectionDraftItemRepository,
   createCollectionDraftRepository,
   createGeneratedAssetRepository,
+  createOpsReconciliationIssueRepository,
   createPublishedCollectionItemRepository,
   createPublishedCollectionMintRepository,
   createPublishedCollectionRepository,
@@ -30,6 +31,8 @@ function createCollectionRepositories(database: DatabaseExecutor) {
       createCollectionDraftItemRepository(database),
     collectionDraftRepository: createCollectionDraftRepository(database),
     generatedAssetRepository: createGeneratedAssetRepository(database),
+    opsReconciliationIssueRepository:
+      createOpsReconciliationIssueRepository(database),
     publishedCollectionItemRepository:
       createPublishedCollectionItemRepository(database),
     publishedCollectionMintRepository:

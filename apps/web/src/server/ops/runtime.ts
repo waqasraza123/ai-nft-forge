@@ -26,6 +26,7 @@ import {
   generationBackendReadinessResponseSchema,
   generationQueueNames,
   generationResultSummarySchema,
+  isRepairableOpsReconciliationIssueKind,
   parseOpsAlertScheduleDayMask,
   parseWorkerEnv,
   type AuthSessionResponse,
@@ -812,10 +813,7 @@ function serializeReconciliationIssue(issue: PersistedReconciliationIssueRecord)
     latestRunId: issue.latestRunId,
     message: issue.message,
     repairMessage: issue.repairMessage,
-    repairable:
-      issue.kind === "draft_contains_unapproved_asset" ||
-      issue.kind === "published_public_asset_missing" ||
-      issue.kind === "review_ready_draft_invalid",
+    repairable: isRepairableOpsReconciliationIssueKind(issue.kind),
     repairedAt: issue.repairedAt?.toISOString() ?? null,
     severity: issue.severity,
     status: issue.status,

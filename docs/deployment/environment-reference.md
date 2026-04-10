@@ -34,7 +34,7 @@ This document is the durable source of truth for runtime environment variables a
 - `ONCHAIN_BASE_SEPOLIA_RPC_URL`
 - `ONCHAIN_BASE_RPC_URL`
 
-These are used by the web app to verify deployment and mint receipts against Base Sepolia or Base before it records onchain activity back into a published collection. They may point at public RPC endpoints for local work, but self-host deployments should prefer a stable provider URL.
+These are used by the web app to verify deployment and mint receipts against Base Sepolia or Base before it records onchain activity back into a published collection, and by reconciliation to recheck recorded deployments and mints against live chain state. They may point at public RPC endpoints for local work, but self-host deployments should prefer a stable provider URL.
 
 ## Worker concurrency and naming
 

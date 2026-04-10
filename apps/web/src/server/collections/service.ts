@@ -18,8 +18,10 @@ import {
   collectionDraftResponseSchema,
   collectionDraftUpdateRequestSchema,
   sanitizeStorageFileName,
+  isOnchainReconciliationIssueKind,
   type CollectionContractChainKey,
   type CollectionDraftStatus,
+  type OpsReconciliationIssueKind,
   type CollectionStorefrontStatus,
   type GeneratedAssetModerationStatus
 } from "@ai-nft-forge/shared";
@@ -70,6 +72,7 @@ type PublishedCollectionRecord = {
   contractChainKey: string | null;
   contractDeployedAt: Date | null;
   contractDeployTxHash: string | null;
+  contractTokenUriBaseUrl: string | null;
   displayOrder: number;
   description: string | null;
   endAt: Date | null;
@@ -218,6 +221,7 @@ type CollectionDraftRepositorySet = {
       contractChainKey?: string | null;
       contractDeployedAt?: Date | null;
       contractDeployTxHash?: string | null;
+      contractTokenUriBaseUrl?: string | null;
       ownerUserId: string;
       priceLabel?: string | null;
       primaryCtaHref?: string | null;
@@ -263,6 +267,7 @@ type CollectionDraftRepositorySet = {
       contractChainKey?: string | null;
       contractDeployedAt?: Date | null;
       contractDeployTxHash?: string | null;
+      contractTokenUriBaseUrl?: string | null;
       ownerUserId: string;
       priceLabel?: string | null;
       primaryCtaHref?: string | null;
@@ -292,6 +297,14 @@ type CollectionDraftRepositorySet = {
       publishedCollectionId: string;
       tokenId: number;
     }): Promise<{ id: string } | null>;
+  };
+  opsReconciliationIssueRepository?: {
+    listOpenByOwnerUserId(ownerUserId: string): Promise<
+      Array<{
+        detailJson: unknown;
+        kind: OpsReconciliationIssueKind;
+      }>
+    >;
   };
 };
 
@@ -831,6 +844,47 @@ function publicationHasOnchainActivity(publication: PublishedCollectionRecord) {
   return Boolean(publication.contractAddress) || countMintedTokens(publication) > 0;
 }
 
+function parseReconciliationDetail(detailJson: unknown) {
+  if (!detailJson || typeof detailJson !== "object" || Array.isArray(detailJson)) {
+    return {};
+  }
+
+  return detailJson as Record<string, string | number | boolean | null>;
+}
+
+async function assertPublicationOnchainReconciled(input: {
+  ownerUserId: string;
+  publication: PublishedCollectionRecord;
+  repositories: Pick<CollectionDraftRepositorySet, "opsReconciliationIssueRepository">;
+}) {
+  const issueRepository = input.repositories.opsReconciliationIssueRepository;
+
+  if (!issueRepository) {
+    return;
+  }
+
+  const openIssues = await issueRepository.listOpenByOwnerUserId(input.ownerUserId);
+  const hasOpenOnchainIssue = openIssues.some((issue) => {
+    if (!isOnchainReconciliationIssueKind(issue.kind)) {
+      return false;
+    }
+
+    const detail = parseReconciliationDetail(issue.detailJson);
+
+    return detail.publishedCollectionId === input.publication.id;
+  });
+
+  if (!hasOpenOnchainIssue) {
+    return;
+  }
+
+  throw new CollectionDraftServiceError(
+    "ONCHAIN_RECONCILIATION_REQUIRED",
+    "Resolve the open onchain reconciliation issues for this published collection before minting additional tokens.",
+    409
+  );
+}
+
 function assertPublicationMutable(publication: PublishedCollectionRecord) {
   if (!publicationHasOnchainActivity(publication)) {
     return;
@@ -1082,6 +1136,7 @@ export function createCollectionDraftService(
                 storefrontHeadline: null,
                 storefrontStatus: "ended",
                 totalSupply: null,
+                contractTokenUriBaseUrl: null,
                 title: draft.title
               }));
 
@@ -1439,6 +1494,7 @@ export function createCollectionDraftService(
           contractChainKey: chain.key,
           contractDeployedAt: verifiedDeployment.deployedAt,
           contractDeployTxHash: verifiedDeployment.deployTxHash,
+          contractTokenUriBaseUrl: deploymentContext.tokenUriBaseUrl,
           description: publication.description,
           displayOrder: publication.displayOrder,
           endAt: publication.endAt,
@@ -1504,6 +1560,12 @@ export function createCollectionDraftService(
           409
         );
       }
+
+      await assertPublicationOnchainReconciled({
+        ownerUserId: input.ownerUserId,
+        publication,
+        repositories: dependencies.repositories
+      });
 
       const publicationItem =
         await dependencies.repositories.publishedCollectionItemRepository.findByPositionForPublishedCollection(
@@ -1594,6 +1656,12 @@ export function createCollectionDraftService(
           409
         );
       }
+
+      await assertPublicationOnchainReconciled({
+        ownerUserId: input.ownerUserId,
+        publication,
+        repositories: dependencies.repositories
+      });
 
       const publicationItem =
         await dependencies.repositories.publishedCollectionItemRepository.findByPositionForPublishedCollection(
