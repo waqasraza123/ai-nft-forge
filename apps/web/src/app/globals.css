@@ -1168,6 +1168,70 @@ select {
   gap: 14px;
 }
 
+.storefront-commerce-panel,
+.storefront-checkout-panel,
+.storefront-checkout-artwork {
+  display: grid;
+  gap: 14px;
+}
+
+.storefront-commerce-meta,
+.storefront-checkout-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.storefront-commerce-form {
+  display: grid;
+  gap: 14px;
+}
+
+.storefront-commerce-field {
+  display: grid;
+  gap: 8px;
+  color: var(--storefront-muted);
+  font-size: 0.95rem;
+}
+
+.storefront-commerce-input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--storefront-border);
+  border-radius: 18px;
+  background: var(--storefront-panel-strong);
+  color: var(--storefront-text);
+}
+
+.storefront-commerce-input::placeholder {
+  color: var(--storefront-muted);
+}
+
+.storefront-commerce-empty,
+.storefront-commerce-error {
+  padding: 16px 18px;
+  border: 1px solid var(--storefront-border);
+  border-radius: 18px;
+  background: var(--storefront-panel-strong);
+  color: var(--storefront-muted);
+  line-height: 1.6;
+}
+
+.storefront-commerce-error {
+  border-color: color-mix(in srgb, #8d3b31 38%, var(--storefront-border));
+  color: color-mix(in srgb, #8d3b31 70%, var(--storefront-text));
+}
+
+.storefront-checkout-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.storefront-checkout-artwork {
+  align-content: start;
+}
+
 .storefront-related-card {
   display: grid;
   gap: 10px;
@@ -1201,7 +1265,8 @@ select {
   .storefront-release-rail,
   .storefront-archive-grid,
   .storefront-gallery-grid,
-  .storefront-related-grid {
+  .storefront-related-grid,
+  .storefront-checkout-detail-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1256,6 +1321,7 @@ select {
   .storefront-archive-grid,
   .storefront-gallery-grid,
   .storefront-related-grid,
+  .storefront-checkout-detail-grid,
   .storefront-story__stats,
   .storefront-stat-grid {
     grid-template-columns: 1fr;

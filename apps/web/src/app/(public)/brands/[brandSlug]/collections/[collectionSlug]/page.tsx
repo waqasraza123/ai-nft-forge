@@ -10,6 +10,8 @@ import type { CollectionPublicBrandTheme } from "@ai-nft-forge/shared";
 
 import { createRuntimePublicCollectionService } from "../../../../../../server/collections/runtime";
 
+import { PurchasePanel } from "./purchase-panel";
+
 type CollectionPageProps = {
   params: Promise<{
     brandSlug: string;
@@ -258,6 +260,19 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
             ) : null}
           </div>
         </article>
+
+        <PurchasePanel
+          activeReservationCount={collection.commerce.activeReservationCount}
+          availableEditionCount={collection.commerce.availableEditionCount}
+          brandSlug={collection.brandSlug}
+          checkoutEnabled={collection.commerce.checkoutEnabled}
+          collectionSlug={collection.collectionSlug}
+          nextAvailableEditionNumber={
+            collection.commerce.nextAvailableEditionNumber
+          }
+          priceLabel={collection.priceLabel}
+          providerMode={collection.commerce.providerMode}
+        />
       </section>
 
       <section className="storefront-section">

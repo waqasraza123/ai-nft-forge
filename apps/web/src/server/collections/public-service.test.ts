@@ -116,8 +116,10 @@ function createDetailedRecord(input?: {
       input?.heroGeneratedAssetId === undefined
         ? "generated_asset_2"
         : input.heroGeneratedAssetId,
+    id: "publication_1",
     items: [
       {
+        id: "published_item_1",
         generatedAsset: {
           generationRequest: {
             pipelineKey: "collectible-portrait-v1",
@@ -137,6 +139,7 @@ function createDetailedRecord(input?: {
           "published-collections/draft_1/items/001-generated_asset_1-portrait-1.png"
       },
       {
+        id: "published_item_2",
         generatedAsset: {
           generationRequest: {
             pipelineKey: "collectible-portrait-v1",
@@ -232,6 +235,7 @@ function createPublicCollectionHarness() {
   ];
 
   const service = createPublicCollectionService({
+    checkoutProviderMode: "manual",
     repositories: {
       brandRepository: {
         async findFirstBySlug(slug) {
@@ -261,6 +265,11 @@ function createPublicCollectionHarness() {
           };
         }
       },
+      publishedCollectionReservationRepository: {
+        async listByPublishedCollectionIdAndStatuses() {
+          return [];
+        }
+      },
       publishedCollectionRepository: {
         async findDetailedByBrandSlugAndCollectionSlug(input) {
           if (
@@ -282,6 +291,7 @@ function createPublicCollectionHarness() {
         }
       }
     },
+    reservationTtlSeconds: 900,
     storage: {
       async createDownloadDescriptor(input) {
         return {
@@ -342,6 +352,7 @@ describe("createPublicCollectionService", () => {
 
   it("falls back to default storefront copy for older brand themes", async () => {
     const service = createPublicCollectionService({
+      checkoutProviderMode: "manual",
       repositories: {
         brandRepository: {
           async findFirstBySlug() {
@@ -355,6 +366,11 @@ describe("createPublicCollectionService", () => {
             };
           }
         },
+        publishedCollectionReservationRepository: {
+          async listByPublishedCollectionIdAndStatuses() {
+            return [];
+          }
+        },
         publishedCollectionRepository: {
           async findDetailedByBrandSlugAndCollectionSlug() {
             return null;
@@ -364,6 +380,7 @@ describe("createPublicCollectionService", () => {
           }
         }
       },
+      reservationTtlSeconds: 900,
       storage: {
         async createDownloadDescriptor(input) {
           return {
@@ -408,6 +425,8 @@ describe("createPublicCollectionService", () => {
     expect(result?.collection.secondaryCtaHref).toBe(
       "https://example.com/lookbook"
     );
+    expect(result?.collection.commerce.checkoutEnabled).toBe(true);
+    expect(result?.collection.commerce.nextAvailableEditionNumber).toBe(1);
     expect(result?.collection.relatedCollections).toHaveLength(3);
     expect(result?.collection.relatedCollections[0]?.collectionSlug).toBe(
       "night-run"
@@ -416,6 +435,7 @@ describe("createPublicCollectionService", () => {
 
   it("falls back to the first published item when no explicit hero asset is stored", async () => {
     const service = createPublicCollectionService({
+      checkoutProviderMode: "manual",
       repositories: {
         brandRepository: {
           async findFirstBySlug() {
@@ -427,6 +447,11 @@ describe("createPublicCollectionService", () => {
                 accentColor: "#244f3c"
               }
             };
+          }
+        },
+        publishedCollectionReservationRepository: {
+          async listByPublishedCollectionIdAndStatuses() {
+            return [];
           }
         },
         publishedCollectionRepository: {
@@ -446,6 +471,7 @@ describe("createPublicCollectionService", () => {
           }
         }
       },
+      reservationTtlSeconds: 900,
       storage: {
         async createDownloadDescriptor(input) {
           return {
@@ -501,6 +527,7 @@ describe("createPublicCollectionService", () => {
 
   it("falls back to signed private URLs when a legacy publication has no public asset copy", async () => {
     const service = createPublicCollectionService({
+      checkoutProviderMode: "manual",
       repositories: {
         brandRepository: {
           async findFirstBySlug() {
@@ -512,6 +539,11 @@ describe("createPublicCollectionService", () => {
                 accentColor: "#1f4a6b"
               }
             };
+          }
+        },
+        publishedCollectionReservationRepository: {
+          async listByPublishedCollectionIdAndStatuses() {
+            return [];
           }
         },
         publishedCollectionRepository: {
@@ -529,8 +561,10 @@ describe("createPublicCollectionService", () => {
               }),
               brandName: "Legacy Studio",
               brandSlug: "legacy-studio",
+              id: "publication_legacy",
               items: [
                 {
+                  id: "published_item_legacy",
                   generatedAsset: {
                     generationRequest: {
                       pipelineKey: "collectible-portrait-v1",
@@ -557,6 +591,7 @@ describe("createPublicCollectionService", () => {
           }
         }
       },
+      reservationTtlSeconds: 900,
       storage: {
         async createDownloadDescriptor(input) {
           return {

@@ -16,6 +16,7 @@ import {
   collectionPublicMetadataItemResponseSchema,
   collectionPublicMetadataManifestResponseSchema,
   collectionPublicPageResponseSchema,
+  type CommerceCheckoutProviderMode,
   defaultStudioBrandAccentColor,
   defaultStudioBrandThemePreset,
   defaultStudioBrandLandingDescription,
@@ -24,6 +25,8 @@ import {
   type CollectionStorefrontStatus,
   studioBrandThemeSchema
 } from "@ai-nft-forge/shared";
+
+import { createCollectionCommerceAvailability } from "../commerce/availability";
 
 type BrandRecord = {
   customDomain: string | null;
@@ -42,7 +45,9 @@ type PublishedCollectionDetailRecord = {
   description: string | null;
   endAt: Date | null;
   heroGeneratedAssetId: string | null;
+  id: string;
   items: Array<{
+    id: string;
     generatedAsset: {
       generationRequest: {
         pipelineKey: string;
@@ -75,6 +80,7 @@ type PublishedCollectionDetailRecord = {
   title: string;
   updatedAt: Date;
   mints?: Array<{
+    publishedCollectionItemId: string;
     tokenId: number;
   }>;
 };
@@ -125,6 +131,18 @@ type PublicCollectionRepositorySet = {
   brandRepository: {
     findFirstBySlug(slug: string): Promise<BrandRecord | null>;
   };
+  publishedCollectionReservationRepository: {
+    listByPublishedCollectionIdAndStatuses(input: {
+      publishedCollectionId: string;
+      statuses: Array<"pending" | "completed" | "expired" | "canceled">;
+    }): Promise<
+      Array<{
+        id: string;
+        publishedCollectionItemId: string;
+        status: "pending" | "completed" | "expired" | "canceled";
+      }>
+    >;
+  };
   publishedCollectionRepository: {
     findDetailedByBrandSlugAndCollectionSlug(input: {
       brandSlug: string;
@@ -146,7 +164,9 @@ type PublicCollectionStorageBoundary = {
 };
 
 type PublicCollectionServiceDependencies = {
+  checkoutProviderMode: CommerceCheckoutProviderMode;
   repositories: PublicCollectionRepositorySet;
+  reservationTtlSeconds: number;
   storage: PublicCollectionStorageBoundary;
 };
 
@@ -616,10 +636,28 @@ export function createPublicCollectionService(
           publication.brandSlug
         );
       const theme = parseBrandTheme(brand?.themeJson ?? null);
+      const reservations =
+        await dependencies.repositories.publishedCollectionReservationRepository.listByPublishedCollectionIdAndStatuses(
+          {
+            publishedCollectionId: publication.id,
+            statuses: ["pending", "completed"]
+          }
+        );
       const remainingSupply = resolveRemainingSupply(
         publication.totalSupply,
         publication.soldCount
       );
+      const commerce = createCollectionCommerceAvailability({
+        items: publication.items.map((item) => ({
+          id: item.id,
+          position: item.position
+        })),
+        mints: publication.mints ?? [],
+        providerMode: dependencies.checkoutProviderMode,
+        reservations,
+        reservationTtlSeconds: dependencies.reservationTtlSeconds,
+        storefrontStatus: publication.storefrontStatus
+      });
 
       return collectionPublicPageResponseSchema.parse({
         collection: {
@@ -649,6 +687,7 @@ export function createPublicCollectionService(
           brandName: publication.brandName,
           brandSlug: publication.brandSlug,
           collectionSlug: publication.slug,
+          commerce: commerce.availability,
           description: publication.description,
           endAt: publication.endAt?.toISOString() ?? null,
           heroGeneratedAssetId: publication.heroGeneratedAssetId,

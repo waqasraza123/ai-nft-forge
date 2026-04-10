@@ -397,6 +397,30 @@ export function createPublishedCollectionRepository(
             }
           });
         });
+    },
+
+    updateCommerceById(input: {
+      id: string;
+      soldCount: number;
+      storefrontStatus?: "ended" | "live" | "sold_out" | "upcoming";
+    }): Promise<PublishedCollection> {
+      const data: {
+        soldCount: number;
+        storefrontStatus?: "ended" | "live" | "sold_out" | "upcoming";
+      } = {
+        soldCount: input.soldCount
+      };
+
+      if (input.storefrontStatus !== undefined) {
+        data.storefrontStatus = input.storefrontStatus;
+      }
+
+      return database.publishedCollection.update({
+        data,
+        where: {
+          id: input.id
+        }
+      });
     }
   };
 }

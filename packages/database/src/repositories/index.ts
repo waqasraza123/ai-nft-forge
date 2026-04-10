@@ -1,4 +1,8 @@
 export {
+  createCommerceCheckoutSessionRepository,
+  type CommerceCheckoutSessionRepository
+} from "./commerce-checkout-session-repository.js";
+export {
   createAuditLogRepository,
   type AuditLogRepository
 } from "./audit-log-repository.js";
@@ -70,6 +74,10 @@ export {
   createPublishedCollectionMintRepository,
   type PublishedCollectionMintRepository
 } from "./published-collection-mint-repository.js";
+export {
+  createPublishedCollectionReservationRepository,
+  type PublishedCollectionReservationRepository
+} from "./published-collection-reservation-repository.js";
 export {
   createPublishedCollectionRepository,
   type PublishedCollectionRepository

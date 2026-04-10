@@ -113,6 +113,24 @@ enum PublishedCollectionStorefrontStatus {
   ended
 }
 
+enum PublishedCollectionReservationStatus {
+  pending
+  completed
+  expired
+  canceled
+}
+
+enum CommerceCheckoutSessionStatus {
+  open
+  completed
+  expired
+  canceled
+}
+
+enum CommerceCheckoutProviderKind {
+  manual
+}
+
 model User {
   id                 String              @id @default(cuid()) @map("id")
   walletAddress      String              @unique @map("wallet_address")
@@ -137,6 +155,8 @@ model User {
   opsReconciliationRuns OpsReconciliationRun[] @relation("OpsReconciliationRunOwner")
   opsReconciliationIssues OpsReconciliationIssue[] @relation("OpsReconciliationIssueOwner")
   publishedCollectionMints PublishedCollectionMint[] @relation("PublishedCollectionMintOwner")
+  publishedCollectionReservations PublishedCollectionReservation[] @relation("PublishedCollectionReservationOwner")
+  commerceCheckoutSessions CommerceCheckoutSession[] @relation("CommerceCheckoutSessionOwner")
   ownedSourceAssets SourceAsset[] @relation("SourceAssetOwner")
   ownedWorkspaces    Workspace[]         @relation("WorkspaceOwner")
 
@@ -360,6 +380,8 @@ model PublishedCollection {
   updatedAt             DateTime                  @updatedAt @map("updated_at")
   items                 PublishedCollectionItem[]
   mints                 PublishedCollectionMint[]
+  reservations          PublishedCollectionReservation[]
+  checkoutSessions      CommerceCheckoutSession[]
   ownerUser             User                      @relation("PublishedCollectionOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
   sourceCollectionDraft CollectionDraft           @relation(fields: [sourceCollectionDraftId], references: [id], onDelete: Cascade)
   heroGeneratedAsset    GeneratedAsset?           @relation("PublishedCollectionHeroGeneratedAsset", fields: [heroGeneratedAssetId], references: [id], onDelete: SetNull)
@@ -384,6 +406,7 @@ model PublishedCollectionItem {
   updatedAt            DateTime            @updatedAt @map("updated_at")
   generatedAsset       GeneratedAsset      @relation(fields: [generatedAssetId], references: [id], onDelete: Cascade)
   mints                PublishedCollectionMint[]
+  reservations         PublishedCollectionReservation[]
   publishedCollection  PublishedCollection @relation(fields: [publishedCollectionId], references: [id], onDelete: Cascade)
 
   @@unique([publishedCollectionId, generatedAssetId], map: "pub_collection_items_pub_asset_key")
@@ -413,6 +436,55 @@ model PublishedCollectionMint {
   @@index([publishedCollectionId, mintedAt], map: "published_collection_mints_collection_id_minted_at_idx")
   @@index([publishedCollectionItemId], map: "published_collection_mints_item_id_idx")
   @@map("published_collection_mints")
+}
+
+model PublishedCollectionReservation {
+  id                        String                            @id @default(cuid()) @map("id")
+  publicId                  String                            @unique @map("public_id")
+  ownerUserId               String                            @map("owner_user_id")
+  publishedCollectionId     String                            @map("published_collection_id")
+  publishedCollectionItemId String                            @map("published_collection_item_id")
+  status                    PublishedCollectionReservationStatus @default(pending) @map("status")
+  buyerDisplayName          String?                           @map("buyer_display_name")
+  buyerEmail                String                            @map("buyer_email")
+  buyerWalletAddress        String?                           @map("buyer_wallet_address")
+  expiresAt                 DateTime                          @map("expires_at")
+  completedAt               DateTime?                         @map("completed_at")
+  canceledAt                DateTime?                         @map("canceled_at")
+  createdAt                 DateTime                          @default(now()) @map("created_at")
+  updatedAt                 DateTime                          @updatedAt @map("updated_at")
+  checkoutSession           CommerceCheckoutSession?
+  ownerUser                 User                              @relation("PublishedCollectionReservationOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  publishedCollection       PublishedCollection               @relation(fields: [publishedCollectionId], references: [id], onDelete: Cascade)
+  publishedCollectionItem   PublishedCollectionItem           @relation(fields: [publishedCollectionItemId], references: [id], onDelete: Cascade)
+
+  @@index([ownerUserId, createdAt], map: "pub_coll_res_owner_created_idx")
+  @@index([publishedCollectionId, status, expiresAt], map: "pub_coll_res_collection_status_exp_idx")
+  @@index([publishedCollectionItemId, status, expiresAt], map: "pub_coll_res_item_status_exp_idx")
+  @@map("published_collection_reservations")
+}
+
+model CommerceCheckoutSession {
+  id                    String                       @id @default(cuid()) @map("id")
+  publicId              String                       @unique @map("public_id")
+  reservationId         String                       @unique @map("reservation_id")
+  ownerUserId           String                       @map("owner_user_id")
+  publishedCollectionId String                       @map("published_collection_id")
+  providerKind          CommerceCheckoutProviderKind @map("provider_kind")
+  status                CommerceCheckoutSessionStatus @default(open) @map("status")
+  checkoutUrl           String                       @map("checkout_url")
+  expiresAt             DateTime                     @map("expires_at")
+  completedAt           DateTime?                    @map("completed_at")
+  canceledAt            DateTime?                    @map("canceled_at")
+  createdAt             DateTime                     @default(now()) @map("created_at")
+  updatedAt             DateTime                     @updatedAt @map("updated_at")
+  ownerUser             User                         @relation("CommerceCheckoutSessionOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  publishedCollection   PublishedCollection          @relation(fields: [publishedCollectionId], references: [id], onDelete: Cascade)
+  reservation           PublishedCollectionReservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  @@index([ownerUserId, createdAt], map: "commerce_checkout_owner_created_idx")
+  @@index([publishedCollectionId, status, expiresAt], map: "commerce_checkout_collection_status_exp_idx")
+  @@map("commerce_checkout_sessions")
 }
 
 model OpsObservabilityCapture {

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { collectionCommerceAvailabilitySchema } from "./commerce.js";
 import { generatedAssetModerationStatusSchema } from "./generated-assets.js";
 import {
   collectionOnchainDeploymentSummarySchema,
@@ -131,6 +132,7 @@ export const collectionPublicPageSchema = z.object({
   brandName: collectionBrandNameSchema,
   brandSlug: collectionBrandSlugSchema,
   collectionSlug: collectionDraftSlugSchema,
+  commerce: collectionCommerceAvailabilitySchema,
   description: z.string().max(1000).nullable(),
   endAt: z.string().datetime().nullable(),
   heroGeneratedAssetId: z.string().min(1).nullable(),

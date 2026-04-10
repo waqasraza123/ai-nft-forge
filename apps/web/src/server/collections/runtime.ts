@@ -1,4 +1,5 @@
 import {
+  createCommerceCheckoutSessionRepository,
   createBrandRepository,
   createCollectionDraftItemRepository,
   createCollectionDraftRepository,
@@ -6,6 +7,7 @@ import {
   createOpsReconciliationIssueRepository,
   createPublishedCollectionItemRepository,
   createPublishedCollectionMintRepository,
+  createPublishedCollectionReservationRepository,
   createPublishedCollectionRepository,
   getDatabaseClient,
   runDatabaseTransaction,
@@ -17,7 +19,8 @@ import {
   createObjectStorageClient,
   createSignedStorageDownload,
   deleteStorageObject,
-  getStorageConfig
+  getStorageConfig,
+  parseCommerceEnv
 } from "@ai-nft-forge/shared";
 
 import { createPublicCollectionService } from "./public-service";
@@ -37,6 +40,10 @@ function createCollectionRepositories(database: DatabaseExecutor) {
       createPublishedCollectionItemRepository(database),
     publishedCollectionMintRepository:
       createPublishedCollectionMintRepository(database),
+    publishedCollectionReservationRepository:
+      createPublishedCollectionReservationRepository(database),
+    commerceCheckoutSessionRepository:
+      createCommerceCheckoutSessionRepository(database),
     publishedCollectionRepository: createPublishedCollectionRepository(database)
   };
 }
@@ -88,14 +95,19 @@ export function createRuntimePublicCollectionService(
 ) {
   const databaseClient = getDatabaseClient(rawEnvironment);
   const objectStorageClient = createObjectStorageClient(rawEnvironment);
+  const commerceEnv = parseCommerceEnv(rawEnvironment);
   const storageConfig = getStorageConfig(rawEnvironment);
 
   return createPublicCollectionService({
     repositories: {
       brandRepository: createBrandRepository(databaseClient),
+      publishedCollectionReservationRepository:
+        createPublishedCollectionReservationRepository(databaseClient),
       publishedCollectionRepository:
         createPublishedCollectionRepository(databaseClient)
     },
+    reservationTtlSeconds: commerceEnv.COMMERCE_RESERVATION_TTL_SECONDS,
+    checkoutProviderMode: commerceEnv.COMMERCE_CHECKOUT_PROVIDER_MODE,
     storage: {
       createDownloadDescriptor: (input) =>
         createSignedStorageDownload({
