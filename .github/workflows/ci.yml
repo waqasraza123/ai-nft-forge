@@ -34,6 +34,14 @@ jobs:
         run: pnpm build
       - name: Worker Health
         run: pnpm worker:health
+      - name: Compose Config
+        run: pnpm infra:selfhost:config
+      - name: Build Web Image
+        run: docker build -f apps/web/Dockerfile .
+      - name: Build Worker Image
+        run: docker build -f apps/worker/Dockerfile .
+      - name: Build Generation Backend Image
+        run: docker build -f apps/generation-backend/Dockerfile .
   browser-smoke:
     needs: verify
     runs-on: ubuntu-latest

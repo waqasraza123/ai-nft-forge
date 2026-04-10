@@ -23,8 +23,10 @@
 13. `pnpm --filter @ai-nft-forge/worker build`
 14. `pnpm --filter @ai-nft-forge/worker start`
 15. Leave `OPS_OBSERVABILITY_CAPTURE_SCHEDULE_ENABLED=false` when you want fully manual capture runs, or enable it to let the worker persist `/ops` history on an interval with Redis lease coordination.
-16. Run `pnpm --filter @ai-nft-forge/worker ops:capture` manually when you want an immediate persisted `/ops` capture outside the automated cadence.
-17. Set `OPS_ALERT_WEBHOOK_ENABLED=true` plus `OPS_ALERT_WEBHOOK_URL` when you want the worker to POST operator alerts to an external webhook in addition to the built-in audit-log delivery record.
+16. Leave `OPS_RECONCILIATION_SCHEDULE_ENABLED=false` when you want manual reconciliation only, or enable it to let the worker keep `/ops` reconciliation state fresh on an interval.
+17. Run `pnpm --filter @ai-nft-forge/worker ops:capture` manually when you want an immediate persisted `/ops` capture outside the automated cadence.
+18. Run `pnpm --filter @ai-nft-forge/worker reconcile` manually when you want an immediate reconciliation pass outside the automated cadence.
+19. Set `OPS_ALERT_WEBHOOK_ENABLED=true` plus `OPS_ALERT_WEBHOOK_URL` when you want the worker to POST operator alerts to an external webhook in addition to the built-in audit-log delivery record.
 
 ## Local Services
 
@@ -40,6 +42,7 @@
 - `pnpm --filter @ai-nft-forge/web exec playwright install chromium`
 - `pnpm test:smoke`
 - `pnpm --filter @ai-nft-forge/worker ops:capture`
+- `pnpm --filter @ai-nft-forge/worker reconcile`
 - `DATABASE_URL='postgresql://ai_nft_forge:ai_nft_forge@127.0.0.1:55432/ai_nft_forge?schema=public' pnpm db:migrate:status`
 - `curl http://127.0.0.1:3000/api/health`
 - `pnpm worker:health`

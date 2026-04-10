@@ -7,6 +7,27 @@ export const opsAlertRoutingWebhookModeSchema = z.enum([
   "critical_only",
   "disabled"
 ]);
+export const opsReconciliationRunStatusSchema = z.enum([
+  "succeeded",
+  "failed"
+]);
+export const opsReconciliationIssueStatusSchema = z.enum([
+  "open",
+  "repaired",
+  "ignored"
+]);
+export const opsReconciliationIssueSeveritySchema = z.enum([
+  "warning",
+  "critical"
+]);
+export const opsReconciliationIssueKindSchema = z.enum([
+  "source_asset_object_missing",
+  "generated_asset_object_missing",
+  "published_public_asset_missing",
+  "draft_contains_unapproved_asset",
+  "review_ready_draft_invalid",
+  "published_hero_asset_missing_from_snapshot"
+]);
 const opsAlertEscalationDelayMinutesSchema = z.number().int().min(1).max(10080);
 export const opsAlertScheduleDayValues = [
   "sun",
@@ -40,11 +61,50 @@ const opsAlertScheduleTimeZoneSchema = z
 
 const opsAlertScheduleMinuteOfDaySchema = z.number().int().min(0).max(1439);
 const opsAlertScheduleEndMinuteOfDaySchema = z.number().int().min(1).max(1440);
+const opsReconciliationIssueDetailValueSchema = z.union([
+  z.string(),
+  z.number(),
+  z.boolean(),
+  z.null()
+]);
+export const opsReconciliationIssueDetailSchema = z.record(
+  z.string(),
+  opsReconciliationIssueDetailValueSchema
+);
 
 export const opsAlertMuteSummarySchema = z.object({
   code: z.string().min(1),
   id: z.string().min(1),
   mutedUntil: z.string().datetime()
+});
+
+export const opsReconciliationRunSummarySchema = z.object({
+  completedAt: z.string().datetime(),
+  criticalIssueCount: z.number().int().min(0),
+  id: z.string().min(1),
+  issueCount: z.number().int().min(0),
+  message: z.string().min(1).nullable(),
+  startedAt: z.string().datetime(),
+  status: opsReconciliationRunStatusSchema,
+  warningIssueCount: z.number().int().min(0)
+});
+
+export const opsReconciliationIssueSummarySchema = z.object({
+  detail: opsReconciliationIssueDetailSchema,
+  fingerprint: z.string().min(1),
+  firstDetectedAt: z.string().datetime(),
+  id: z.string().min(1),
+  ignoredAt: z.string().datetime().nullable(),
+  kind: opsReconciliationIssueKindSchema,
+  lastDetectedAt: z.string().datetime(),
+  latestRunId: z.string().min(1),
+  message: z.string().min(1),
+  repairMessage: z.string().min(1).nullable(),
+  repairable: z.boolean(),
+  repairedAt: z.string().datetime().nullable(),
+  severity: opsReconciliationIssueSeveritySchema,
+  status: opsReconciliationIssueStatusSchema,
+  title: z.string().min(1)
 });
 
 export const opsAlertStateSummarySchema = z.object({
@@ -149,6 +209,14 @@ export const opsAlertUnmuteResponseSchema = z.object({
   removed: z.boolean()
 });
 
+export const opsReconciliationRunResponseSchema = z.object({
+  run: opsReconciliationRunSummarySchema
+});
+
+export const opsReconciliationIssueRepairResponseSchema = z.object({
+  issue: opsReconciliationIssueSummarySchema
+});
+
 export const opsErrorResponseSchema = z.object({
   error: z.object({
     code: z.string().min(1),
@@ -157,6 +225,27 @@ export const opsErrorResponseSchema = z.object({
 });
 
 export type OpsAlertMuteSummary = z.infer<typeof opsAlertMuteSummarySchema>;
+export type OpsReconciliationRunStatus = z.infer<
+  typeof opsReconciliationRunStatusSchema
+>;
+export type OpsReconciliationIssueStatus = z.infer<
+  typeof opsReconciliationIssueStatusSchema
+>;
+export type OpsReconciliationIssueSeverity = z.infer<
+  typeof opsReconciliationIssueSeveritySchema
+>;
+export type OpsReconciliationIssueKind = z.infer<
+  typeof opsReconciliationIssueKindSchema
+>;
+export type OpsReconciliationIssueDetail = z.infer<
+  typeof opsReconciliationIssueDetailSchema
+>;
+export type OpsReconciliationRunSummary = z.infer<
+  typeof opsReconciliationRunSummarySchema
+>;
+export type OpsReconciliationIssueSummary = z.infer<
+  typeof opsReconciliationIssueSummarySchema
+>;
 export type OpsAlertScheduleDay = z.infer<typeof opsAlertScheduleDaySchema>;
 export type OpsAlertSchedulePolicySummary = z.infer<
   typeof opsAlertSchedulePolicySummarySchema
@@ -193,6 +282,12 @@ export type OpsAlertRoutingPolicyResponse = z.infer<
 export type OpsAlertMuteResponse = z.infer<typeof opsAlertMuteResponseSchema>;
 export type OpsAlertUnmuteResponse = z.infer<
   typeof opsAlertUnmuteResponseSchema
+>;
+export type OpsReconciliationRunResponse = z.infer<
+  typeof opsReconciliationRunResponseSchema
+>;
+export type OpsReconciliationIssueRepairResponse = z.infer<
+  typeof opsReconciliationIssueRepairResponseSchema
 >;
 export type OpsErrorResponse = z.infer<typeof opsErrorResponseSchema>;
 

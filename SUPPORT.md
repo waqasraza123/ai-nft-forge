@@ -12,6 +12,7 @@ Useful support requests include:
 
 - the exact command that failed
 - the relevant package or app
+- whether you were using local development or `infra/docker/docker-compose.selfhost.yml`
 - the observed error output
 - recent changes or branch context
 - steps already attempted

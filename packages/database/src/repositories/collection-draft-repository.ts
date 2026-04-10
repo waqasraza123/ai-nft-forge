@@ -145,6 +145,34 @@ export function createCollectionDraftRepository(
             }
           });
         });
+    },
+
+    updateStatusByIdForOwner(input: {
+      id: string;
+      ownerUserId: string;
+      status: CollectionDraftStatus;
+    }): Promise<CollectionDraft | null> {
+      return database.collectionDraft
+        .findFirst({
+          where: {
+            id: input.id,
+            ownerUserId: input.ownerUserId
+          }
+        })
+        .then((draft) => {
+          if (!draft) {
+            return null;
+          }
+
+          return database.collectionDraft.update({
+            data: {
+              status: input.status
+            },
+            where: {
+              id: draft.id
+            }
+          });
+        });
     }
   };
 }

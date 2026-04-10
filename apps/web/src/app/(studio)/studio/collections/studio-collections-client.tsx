@@ -243,6 +243,13 @@ export function StudioCollectionsClient({
 
   const selectedDraft =
     drafts.find((draft) => draft.id === selectedDraftId) ?? drafts[0] ?? null;
+  const selectedDraftInvalidItems =
+    selectedDraft?.items.filter(
+      (item) => item.generatedAsset.moderationStatus !== "approved"
+    ) ?? [];
+  const selectedDraftHasInvalidItems = selectedDraftInvalidItems.length > 0;
+  const selectedDraftNeedsRepairDowngrade =
+    selectedDraft?.status === "review_ready" && selectedDraftHasInvalidItems;
   const includedGeneratedAssetIds = new Set(
     selectedDraft?.items.map((item) => item.generatedAsset.generatedAssetId) ??
       []
@@ -980,6 +987,12 @@ export function StudioCollectionsClient({
               <div className="pill-row">
                 <Pill>{formatDraftStatus(selectedDraft.status)}</Pill>
                 <Pill>{selectedDraft.itemCount} curated assets</Pill>
+                {selectedDraftHasInvalidItems ? (
+                  <Pill>
+                    {selectedDraftInvalidItems.length} invalid curated asset
+                    {selectedDraftInvalidItems.length === 1 ? "" : "s"}
+                  </Pill>
+                ) : null}
                 {selectedDraft.publication ? <Pill>Published</Pill> : null}
                 {selectedDraft.publication?.isFeatured ? (
                   <Pill>Featured release</Pill>
@@ -988,6 +1001,20 @@ export function StudioCollectionsClient({
                   Updated {formatCandidateTimestamp(selectedDraft.updatedAt)}
                 </Pill>
               </div>
+              {selectedDraftHasInvalidItems ? (
+                <div className="status-banner status-banner--error">
+                  <strong>
+                    {selectedDraftNeedsRepairDowngrade
+                      ? "Review-ready draft is no longer valid"
+                      : "Draft contains unapproved assets"}
+                  </strong>
+                  <span>
+                    {selectedDraftNeedsRepairDowngrade
+                      ? "At least one curated asset was later rejected or reset, so this draft should be returned to draft before publication."
+                      : "One or more curated assets are no longer approved. Replace them or remove them before moving this draft forward."}
+                  </span>
+                </div>
+              ) : null}
               <div className="studio-action-row">
                 <button
                   className="button-action button-action--accent"
@@ -1195,6 +1222,16 @@ export function StudioCollectionsClient({
                   </Link>
                 ) : null}
               </div>
+              {selectedDraftHasInvalidItems ? (
+                <div className="status-banner status-banner--error">
+                  <strong>Publication warning</strong>
+                  <span>
+                    This draft has curated assets that are no longer approved.
+                    Reconciliation will flag it, and review-ready publication
+                    should be downgraded until the invalid items are fixed.
+                  </span>
+                </div>
+              ) : null}
               {selectedDraft.publication ? (
                 <form
                   className="studio-form publication-merchandising-form"

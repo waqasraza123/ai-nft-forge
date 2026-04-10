@@ -1,0 +1,17 @@
+.git
+.github
+.next
+coverage
+dist
+docs/_local
+node_modules
+playwright-report
+test-results
+tmp
+**/.DS_Store
+**/.next
+**/coverage
+**/dist
+**/node_modules
+**/playwright-report
+**/test-results

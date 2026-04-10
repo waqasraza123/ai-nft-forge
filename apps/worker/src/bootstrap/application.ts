@@ -17,7 +17,11 @@ import { createGenerationAdapter } from "../generation/factory.js";
 import { createLogger, type Logger } from "../lib/logger.js";
 import { createRedisConnection } from "../lib/redis.js";
 import { captureRuntimeOpsObservabilityWithDependencies } from "../ops/runtime.js";
-import { startOpsObservabilityCaptureScheduler } from "../ops/scheduler.js";
+import { reconcileRuntimeOpsWithDependencies } from "../ops/reconciliation-runtime.js";
+import {
+  startOpsObservabilityCaptureScheduler,
+  startOpsReconciliationScheduler
+} from "../ops/scheduler.js";
 import {
   createQueueRegistry,
   type WorkerQueueRegistry
@@ -29,6 +33,9 @@ export type WorkerApplication = {
   env: WorkerEnv;
   logger: Logger;
   opsObservabilityCaptureScheduler: {
+    close: () => Promise<void>;
+  };
+  opsReconciliationScheduler: {
     close: () => Promise<void>;
   };
   queueRegistry: WorkerQueueRegistry;
@@ -91,6 +98,17 @@ export async function bootstrapWorkerApplication(
       logger,
       redisConnection
     });
+  const opsReconciliationScheduler = startOpsReconciliationScheduler({
+    env,
+    logger,
+    reconcile: () =>
+      reconcileRuntimeOpsWithDependencies({
+        databaseClient,
+        logger,
+        rawEnvironment
+      }),
+    redisConnection
+  });
 
   let isClosed = false;
 
@@ -102,6 +120,7 @@ export async function bootstrapWorkerApplication(
     isClosed = true;
 
     await opsObservabilityCaptureScheduler.close();
+    await opsReconciliationScheduler.close();
     await Promise.all(
       queueRegistry.workers.map(async (worker) => worker.close())
     );
@@ -121,6 +140,7 @@ export async function bootstrapWorkerApplication(
     env,
     logger,
     opsObservabilityCaptureScheduler,
+    opsReconciliationScheduler,
     queueRegistry,
     redisConnection
   };

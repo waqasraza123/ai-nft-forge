@@ -55,6 +55,14 @@ export {
   type OpsAlertStateRepository
 } from "./ops-alert-state-repository.js";
 export {
+  createOpsReconciliationIssueRepository,
+  type OpsReconciliationIssueRepository
+} from "./ops-reconciliation-issue-repository.js";
+export {
+  createOpsReconciliationRunRepository,
+  type OpsReconciliationRunRepository
+} from "./ops-reconciliation-run-repository.js";
+export {
   createPublishedCollectionItemRepository,
   type PublishedCollectionItemRepository
 } from "./published-collection-item-repository.js";

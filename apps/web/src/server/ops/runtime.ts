@@ -5,6 +5,8 @@ import {
   createOpsAlertRoutingPolicyRepository,
   createOpsAlertSchedulePolicyRepository,
   createOpsAlertStateRepository,
+  createOpsReconciliationIssueRepository,
+  createOpsReconciliationRunRepository,
   createGenerationRequestRepository,
   createOpsObservabilityCaptureRepository,
   getDatabaseClient
@@ -12,6 +14,8 @@ import {
 import {
   opsAlertEscalationPolicySummarySchema,
   opsAlertMuteSummarySchema,
+  opsReconciliationIssueSummarySchema,
+  opsReconciliationRunSummarySchema,
   opsAlertRoutingPolicySummarySchema,
   opsAlertSchedulePolicySummarySchema,
   opsAlertStateSummarySchema,
@@ -280,6 +284,27 @@ export type OpsCaptureAutomation = {
   status: "disabled" | "healthy" | "stale" | "unreachable";
 };
 
+export type OpsReconciliationSummary = {
+  lastRun: ReturnType<typeof opsReconciliationRunSummarySchema.parse> | null;
+  message: string;
+  openCriticalIssueCount: number;
+  openIssues: Array<ReturnType<typeof opsReconciliationIssueSummarySchema.parse>>;
+  openWarningIssueCount: number;
+  status: "healthy" | "stale" | "unreachable" | "warning";
+};
+
+export type OpsReconciliationAutomation = {
+  enabled: boolean;
+  intervalSeconds: number | null;
+  jitterSeconds: number | null;
+  lastRunAgeSeconds: number | null;
+  lastRunAt: string | null;
+  lockTtlSeconds: number | null;
+  message: string;
+  runOnStart: boolean | null;
+  status: "disabled" | "healthy" | "stale" | "unreachable" | "warning";
+};
+
 type OwnerPersistedObservabilityHistory = {
   activeAlerts: OpsAlertStateSummary[];
   activeMutes: OpsAlertMuteSummary[];
@@ -308,6 +333,8 @@ export type OpsRuntimeSnapshot = {
     history: OwnerPersistedObservabilityHistory | null;
     observability: OpsOperatorObservability | null;
     queue: OpsQueueSnapshot | null;
+    reconciliation: OpsReconciliationSummary | null;
+    reconciliationAutomation: OpsReconciliationAutomation | null;
     session: CurrentSession;
   };
   web: HealthPayload;
@@ -336,6 +363,11 @@ type LoadOpsRuntimeInput = {
     ownerUserId: string;
     rawEnvironment: NodeJS.ProcessEnv;
   }) => Promise<OwnerPersistedObservabilityHistory>;
+  loadOperatorReconciliation?: (input: {
+    ownerUserId: string;
+    rawEnvironment: NodeJS.ProcessEnv;
+    referenceTime: Date;
+  }) => Promise<OpsReconciliationSummary>;
   loadOperatorObservability?: (input: {
     checkedAt: string;
     generationBackendReadiness: GenerationBackendReadinessState;
@@ -383,6 +415,12 @@ type PersistedAlertSchedulePolicyRepository = ReturnType<
 type PersistedAlertStateRepository = ReturnType<
   typeof createOpsAlertStateRepository
 >;
+type PersistedReconciliationRunRepository = ReturnType<
+  typeof createOpsReconciliationRunRepository
+>;
+type PersistedReconciliationIssueRepository = ReturnType<
+  typeof createOpsReconciliationIssueRepository
+>;
 
 type GenerationActivityRecord = Awaited<
   ReturnType<GenerationActivityRepository["listRecentForOwnerUserId"]>
@@ -407,6 +445,12 @@ type PersistedAlertSchedulePolicyRecord = Awaited<
 >;
 type PersistedAlertStateRecord = Awaited<
   ReturnType<PersistedAlertStateRepository["listActiveByOwnerUserId"]>
+>[number];
+type PersistedReconciliationRunRecord = Awaited<
+  ReturnType<PersistedReconciliationRunRepository["findLatestByOwnerUserId"]>
+>;
+type PersistedReconciliationIssueRecord = Awaited<
+  ReturnType<PersistedReconciliationIssueRepository["listOpenByOwnerUserId"]>
 >[number];
 
 type OwnerGenerationMetrics = {
@@ -671,6 +715,20 @@ function createPersistedAlertStateRepository(
   return createOpsAlertStateRepository(getDatabaseClient(rawEnvironment));
 }
 
+function createPersistedReconciliationRunRepository(
+  rawEnvironment: NodeJS.ProcessEnv
+) {
+  return createOpsReconciliationRunRepository(getDatabaseClient(rawEnvironment));
+}
+
+function createPersistedReconciliationIssueRepository(
+  rawEnvironment: NodeJS.ProcessEnv
+) {
+  return createOpsReconciliationIssueRepository(
+    getDatabaseClient(rawEnvironment)
+  );
+}
+
 function createPercentage(numerator: number, denominator: number) {
   if (denominator <= 0) {
     return null;
@@ -717,6 +775,52 @@ function createAgeSeconds(from: Date, referenceTime: Date) {
   );
 
   return Math.max(0, ageSeconds);
+}
+
+function parseReconciliationDetail(detailJson: unknown) {
+  const parsedDetail = opsReconciliationIssueSummarySchema.shape.detail.safeParse(
+    detailJson
+  );
+
+  return parsedDetail.success ? parsedDetail.data : {};
+}
+
+function serializeReconciliationRun(
+  run: NonNullable<PersistedReconciliationRunRecord>
+) {
+  return opsReconciliationRunSummarySchema.parse({
+    completedAt: run.completedAt.toISOString(),
+    criticalIssueCount: run.criticalIssueCount,
+    id: run.id,
+    issueCount: run.issueCount,
+    message: run.message,
+    startedAt: run.startedAt.toISOString(),
+    status: run.status,
+    warningIssueCount: run.warningIssueCount
+  });
+}
+
+function serializeReconciliationIssue(issue: PersistedReconciliationIssueRecord) {
+  return opsReconciliationIssueSummarySchema.parse({
+    detail: parseReconciliationDetail(issue.detailJson),
+    fingerprint: issue.fingerprint,
+    firstDetectedAt: issue.firstDetectedAt.toISOString(),
+    id: issue.id,
+    ignoredAt: issue.ignoredAt?.toISOString() ?? null,
+    kind: issue.kind,
+    lastDetectedAt: issue.lastDetectedAt.toISOString(),
+    latestRunId: issue.latestRunId,
+    message: issue.message,
+    repairMessage: issue.repairMessage,
+    repairable:
+      issue.kind === "draft_contains_unapproved_asset" ||
+      issue.kind === "published_public_asset_missing" ||
+      issue.kind === "review_ready_draft_invalid",
+    repairedAt: issue.repairedAt?.toISOString() ?? null,
+    severity: issue.severity,
+    status: issue.status,
+    title: issue.title
+  });
 }
 
 function createGenerationWindowSummary(input: {
@@ -1632,6 +1736,198 @@ function loadOpsCaptureAutomation(input: {
   }
 }
 
+async function loadOwnerReconciliation(input: {
+  ownerUserId: string;
+  rawEnvironment: NodeJS.ProcessEnv;
+  referenceTime: Date;
+}): Promise<OpsReconciliationSummary> {
+  try {
+    const [lastRun, openIssues] = await Promise.all([
+      createPersistedReconciliationRunRepository(
+        input.rawEnvironment
+      ).findLatestByOwnerUserId(input.ownerUserId),
+      createPersistedReconciliationIssueRepository(
+        input.rawEnvironment
+      ).listOpenByOwnerUserId(input.ownerUserId)
+    ]);
+    const openCriticalIssueCount = openIssues.filter(
+      (issue) => issue.severity === "critical"
+    ).length;
+    const openWarningIssueCount = openIssues.length - openCriticalIssueCount;
+
+    if (!lastRun) {
+      return {
+        lastRun: null,
+        message: "No reconciliation run has been recorded for this operator yet.",
+        openCriticalIssueCount,
+        openIssues: openIssues.map(serializeReconciliationIssue),
+        openWarningIssueCount,
+        status: "stale"
+      };
+    }
+
+    if (lastRun.status === "failed") {
+      return {
+        lastRun: serializeReconciliationRun(lastRun),
+        message:
+          lastRun.message ??
+          "The latest reconciliation run failed and needs operator attention.",
+        openCriticalIssueCount,
+        openIssues: openIssues.map(serializeReconciliationIssue),
+        openWarningIssueCount,
+        status: "warning"
+      };
+    }
+
+    if (openCriticalIssueCount > 0 || openWarningIssueCount > 0) {
+      return {
+        lastRun: serializeReconciliationRun(lastRun),
+        message:
+          openCriticalIssueCount > 0
+            ? "Reconciliation has open critical issues."
+            : "Reconciliation has open warning issues.",
+        openCriticalIssueCount,
+        openIssues: openIssues.map(serializeReconciliationIssue),
+        openWarningIssueCount,
+        status: "warning"
+      };
+    }
+
+    return {
+      lastRun: serializeReconciliationRun(lastRun),
+      message: "Reconciliation is current and no open issues are recorded.",
+      openCriticalIssueCount,
+      openIssues: [],
+      openWarningIssueCount,
+      status: "healthy"
+    };
+  } catch (error) {
+    return {
+      lastRun: null,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Reconciliation state could not be loaded.",
+      openCriticalIssueCount: 0,
+      openIssues: [],
+      openWarningIssueCount: 0,
+      status: "unreachable"
+    };
+  }
+}
+
+function loadOpsReconciliationAutomation(input: {
+  reconciliation: OpsReconciliationSummary | null;
+  rawEnvironment: NodeJS.ProcessEnv;
+  referenceTime: Date;
+}): OpsReconciliationAutomation {
+  try {
+    const workerEnv = parseWorkerEnv(input.rawEnvironment);
+
+    if (!workerEnv.OPS_RECONCILIATION_SCHEDULE_ENABLED) {
+      return {
+        enabled: false,
+        intervalSeconds: null,
+        jitterSeconds: null,
+        lastRunAgeSeconds: input.reconciliation?.lastRun
+          ? createAgeSeconds(
+              new Date(input.reconciliation.lastRun.completedAt),
+              input.referenceTime
+            )
+          : null,
+        lastRunAt: input.reconciliation?.lastRun?.completedAt ?? null,
+        lockTtlSeconds: null,
+        message: "Automatic reconciliation scheduling is disabled.",
+        runOnStart: null,
+        status: "disabled"
+      };
+    }
+
+    const lastRunAt = input.reconciliation?.lastRun?.completedAt ?? null;
+
+    if (!lastRunAt) {
+      return {
+        enabled: true,
+        intervalSeconds: workerEnv.OPS_RECONCILIATION_INTERVAL_SECONDS,
+        jitterSeconds: workerEnv.OPS_RECONCILIATION_JITTER_SECONDS,
+        lastRunAgeSeconds: null,
+        lastRunAt: null,
+        lockTtlSeconds: workerEnv.OPS_RECONCILIATION_LOCK_TTL_SECONDS,
+        message:
+          "Automatic reconciliation scheduling is enabled, but no run has been recorded yet.",
+        runOnStart: workerEnv.OPS_RECONCILIATION_RUN_ON_START,
+        status: "stale"
+      };
+    }
+
+    const lastRunAgeSeconds = createAgeSeconds(
+      new Date(lastRunAt),
+      input.referenceTime
+    );
+    const staleThresholdSeconds =
+      workerEnv.OPS_RECONCILIATION_INTERVAL_SECONDS +
+      workerEnv.OPS_RECONCILIATION_JITTER_SECONDS +
+      Math.max(60, Math.round(workerEnv.OPS_RECONCILIATION_INTERVAL_SECONDS / 2));
+
+    if (lastRunAgeSeconds > staleThresholdSeconds) {
+      return {
+        enabled: true,
+        intervalSeconds: workerEnv.OPS_RECONCILIATION_INTERVAL_SECONDS,
+        jitterSeconds: workerEnv.OPS_RECONCILIATION_JITTER_SECONDS,
+        lastRunAgeSeconds,
+        lastRunAt,
+        lockTtlSeconds: workerEnv.OPS_RECONCILIATION_LOCK_TTL_SECONDS,
+        message: `Automatic reconciliation scheduling is enabled, but the most recent run is ${lastRunAgeSeconds}s old.`,
+        runOnStart: workerEnv.OPS_RECONCILIATION_RUN_ON_START,
+        status: "stale"
+      };
+    }
+
+    if (input.reconciliation?.status === "warning") {
+      return {
+        enabled: true,
+        intervalSeconds: workerEnv.OPS_RECONCILIATION_INTERVAL_SECONDS,
+        jitterSeconds: workerEnv.OPS_RECONCILIATION_JITTER_SECONDS,
+        lastRunAgeSeconds,
+        lastRunAt,
+        lockTtlSeconds: workerEnv.OPS_RECONCILIATION_LOCK_TTL_SECONDS,
+        message:
+          "Automatic reconciliation scheduling is active, but open issues still need operator attention.",
+        runOnStart: workerEnv.OPS_RECONCILIATION_RUN_ON_START,
+        status: "warning"
+      };
+    }
+
+    return {
+      enabled: true,
+      intervalSeconds: workerEnv.OPS_RECONCILIATION_INTERVAL_SECONDS,
+      jitterSeconds: workerEnv.OPS_RECONCILIATION_JITTER_SECONDS,
+      lastRunAgeSeconds,
+      lastRunAt,
+      lockTtlSeconds: workerEnv.OPS_RECONCILIATION_LOCK_TTL_SECONDS,
+      message:
+        "Automatic reconciliation scheduling is active and recent runs are arriving on schedule.",
+      runOnStart: workerEnv.OPS_RECONCILIATION_RUN_ON_START,
+      status: "healthy"
+    };
+  } catch (error) {
+    return {
+      enabled: false,
+      intervalSeconds: null,
+      jitterSeconds: null,
+      lastRunAgeSeconds: null,
+      lastRunAt: null,
+      lockTtlSeconds: null,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Reconciliation automation could not be evaluated.",
+      runOnStart: null,
+      status: "unreachable"
+    };
+  }
+}
+
 async function loadQueueSnapshot(input: {
   checkedAt: string;
   rawEnvironment: NodeJS.ProcessEnv;
@@ -1700,6 +1996,8 @@ export async function loadOpsRuntime(
   let operatorCaptureAutomation: OpsCaptureAutomation | null = null;
   let operatorHistory: OwnerPersistedObservabilityHistory | null = null;
   let operatorObservability: OpsOperatorObservability | null = null;
+  let operatorReconciliation: OpsReconciliationSummary | null = null;
+  let operatorReconciliationAutomation: OpsReconciliationAutomation | null = null;
 
   if (session?.user.id) {
     const queueSnapshotLoader = input.loadQueueSnapshot ?? loadQueueSnapshot;
@@ -1713,6 +2011,8 @@ export async function loadOpsRuntime(
       input.loadOperatorAlertSchedule ?? loadOwnerAlertSchedule;
     const operatorHistoryLoader =
       input.loadOperatorHistory ?? loadOwnerPersistedObservabilityHistory;
+    const operatorReconciliationLoader =
+      input.loadOperatorReconciliation ?? loadOwnerReconciliation;
     const operatorObservabilityLoader =
       input.loadOperatorObservability ?? loadOwnerGenerationObservability;
 
@@ -1722,7 +2022,8 @@ export async function loadOpsRuntime(
       operatorAlertEscalation,
       operatorAlertRouting,
       operatorAlertSchedule,
-      operatorHistory
+      operatorHistory,
+      operatorReconciliation
     ] = await Promise.all([
       queueSnapshotLoader({
         checkedAt,
@@ -1748,6 +2049,11 @@ export async function loadOpsRuntime(
       operatorHistoryLoader({
         ownerUserId: session.user.id,
         rawEnvironment
+      }),
+      operatorReconciliationLoader({
+        ownerUserId: session.user.id,
+        rawEnvironment,
+        referenceTime
       })
     ]);
 
@@ -1762,6 +2068,11 @@ export async function loadOpsRuntime(
     operatorCaptureAutomation = loadOpsCaptureAutomation({
       history: operatorHistory,
       rawEnvironment,
+      referenceTime
+    });
+    operatorReconciliationAutomation = loadOpsReconciliationAutomation({
+      rawEnvironment,
+      reconciliation: operatorReconciliation,
       referenceTime
     });
   }
@@ -1785,6 +2096,8 @@ export async function loadOpsRuntime(
       history: operatorHistory,
       observability: operatorObservability,
       queue: operatorQueue,
+      reconciliation: operatorReconciliation,
+      reconciliationAutomation: operatorReconciliationAutomation,
       session
     },
     web: createHealthPayload()

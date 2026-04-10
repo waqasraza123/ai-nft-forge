@@ -12,6 +12,24 @@ type UpsertWalletUserInput = {
 
 export function createUserRepository(database: UserRepositoryDatabase) {
   return {
+    listIds(): Promise<string[]> {
+      return database.user
+        .findMany({
+          orderBy: [
+            {
+              createdAt: "asc"
+            },
+            {
+              id: "asc"
+            }
+          ],
+          select: {
+            id: true
+          }
+        })
+        .then((users) => users.map((user) => user.id));
+    },
+
     findById(id: string): Promise<User | null> {
       return database.user.findUnique({
         where: {

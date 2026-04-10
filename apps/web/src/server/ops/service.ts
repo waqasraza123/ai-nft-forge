@@ -1,12 +1,13 @@
 import {
+  createOpsReconciliationService,
   opsAlertAcknowledgeResponseSchema,
   opsAlertEscalationPolicyResponseSchema,
   opsAlertMuteResponseSchema,
-  opsAlertSchedulePolicyResponseSchema,
   opsAlertRoutingPolicyResponseSchema,
+  opsAlertSchedulePolicyResponseSchema,
   createOpsAlertScheduleDayMask,
-  parseOpsAlertScheduleDayMask,
-  opsAlertUnmuteResponseSchema
+  opsAlertUnmuteResponseSchema,
+  parseOpsAlertScheduleDayMask
 } from "@ai-nft-forge/shared";
 
 import { OpsServiceError } from "./error";
@@ -116,6 +117,267 @@ type OpsServiceDependencies = {
         ownerUserId: string;
       }): Promise<AlertStateRecord | null>;
     };
+    collectionDraftRepository?: {
+      listByOwnerUserId(ownerUserId: string): Promise<
+        Array<{
+          id: string;
+          items: Array<{
+            generatedAsset: {
+              id: string;
+              moderationStatus: "approved" | "pending_review" | "rejected";
+            };
+          }>;
+          slug: string;
+          status: "draft" | "review_ready";
+          title: string;
+        }>
+      >;
+      updateStatusByIdForOwner(input: {
+        id: string;
+        ownerUserId: string;
+        status: "draft" | "review_ready";
+      }): Promise<{ id: string } | null>;
+    };
+    generatedAssetRepository?: {
+      findByIdForOwner(input: {
+        id: string;
+        ownerUserId: string;
+      }): Promise<{
+        contentType: string;
+        id: string;
+        moderationStatus: "approved" | "pending_review" | "rejected";
+        sourceAssetId: string;
+        storageBucket: string;
+        storageObjectKey: string;
+      } | null>;
+      listByOwnerUserId(ownerUserId: string): Promise<
+        Array<{
+          contentType: string;
+          id: string;
+          moderationStatus: "approved" | "pending_review" | "rejected";
+          sourceAssetId: string;
+          storageBucket: string;
+          storageObjectKey: string;
+        }>
+      >;
+    };
+    opsReconciliationIssueRepository?: {
+      findByIdForOwner(input: {
+        id: string;
+        ownerUserId: string;
+      }): Promise<{
+        detailJson: unknown;
+        fingerprint: string;
+        firstDetectedAt: Date;
+        id: string;
+        ignoredAt: Date | null;
+        kind:
+          | "draft_contains_unapproved_asset"
+          | "generated_asset_object_missing"
+          | "published_hero_asset_missing_from_snapshot"
+          | "published_public_asset_missing"
+          | "review_ready_draft_invalid"
+          | "source_asset_object_missing";
+        lastDetectedAt: Date;
+        latestRunId: string;
+        message: string;
+        repairMessage: string | null;
+        repairedAt: Date | null;
+        severity: "critical" | "warning";
+        status: "ignored" | "open" | "repaired";
+        title: string;
+      } | null>;
+      markIgnored(input: {
+        id: string;
+        ignoredAt: Date;
+        ownerUserId: string;
+      }): Promise<{
+        detailJson: unknown;
+        fingerprint: string;
+        firstDetectedAt: Date;
+        id: string;
+        ignoredAt: Date | null;
+        kind:
+          | "draft_contains_unapproved_asset"
+          | "generated_asset_object_missing"
+          | "published_hero_asset_missing_from_snapshot"
+          | "published_public_asset_missing"
+          | "review_ready_draft_invalid"
+          | "source_asset_object_missing";
+        lastDetectedAt: Date;
+        latestRunId: string;
+        message: string;
+        repairMessage: string | null;
+        repairedAt: Date | null;
+        severity: "critical" | "warning";
+        status: "ignored" | "open" | "repaired";
+        title: string;
+      } | null>;
+      markRepaired(input: {
+        id: string;
+        ownerUserId: string;
+        repairedAt: Date;
+        repairMessage: string;
+      }): Promise<{
+        detailJson: unknown;
+        fingerprint: string;
+        firstDetectedAt: Date;
+        id: string;
+        ignoredAt: Date | null;
+        kind:
+          | "draft_contains_unapproved_asset"
+          | "generated_asset_object_missing"
+          | "published_hero_asset_missing_from_snapshot"
+          | "published_public_asset_missing"
+          | "review_ready_draft_invalid"
+          | "source_asset_object_missing";
+        lastDetectedAt: Date;
+        latestRunId: string;
+        message: string;
+        repairMessage: string | null;
+        repairedAt: Date | null;
+        severity: "critical" | "warning";
+        status: "ignored" | "open" | "repaired";
+        title: string;
+      } | null>;
+      upsertObserved(input: {
+        detailJson: Record<string, string | number | boolean | null>;
+        fingerprint: string;
+        kind:
+          | "draft_contains_unapproved_asset"
+          | "generated_asset_object_missing"
+          | "published_hero_asset_missing_from_snapshot"
+          | "published_public_asset_missing"
+          | "review_ready_draft_invalid"
+          | "source_asset_object_missing";
+        lastDetectedAt: Date;
+        latestRunId: string;
+        message: string;
+        ownerUserId: string;
+        severity: "critical" | "warning";
+        title: string;
+      }): Promise<{
+        detailJson: unknown;
+        fingerprint: string;
+        firstDetectedAt: Date;
+        id: string;
+        ignoredAt: Date | null;
+        kind:
+          | "draft_contains_unapproved_asset"
+          | "generated_asset_object_missing"
+          | "published_hero_asset_missing_from_snapshot"
+          | "published_public_asset_missing"
+          | "review_ready_draft_invalid"
+          | "source_asset_object_missing";
+        lastDetectedAt: Date;
+        latestRunId: string;
+        message: string;
+        repairMessage: string | null;
+        repairedAt: Date | null;
+        severity: "critical" | "warning";
+        status: "ignored" | "open" | "repaired";
+        title: string;
+      }>;
+    };
+    opsReconciliationRunRepository?: {
+      create(input: {
+        completedAt: Date;
+        criticalIssueCount: number;
+        issueCount: number;
+        message?: string | null;
+        ownerUserId: string;
+        startedAt: Date;
+        status: "failed" | "succeeded";
+        warningIssueCount: number;
+      }): Promise<{
+        completedAt: Date;
+        criticalIssueCount: number;
+        id: string;
+        issueCount: number;
+        message: string | null;
+        startedAt: Date;
+        status: "failed" | "succeeded";
+        warningIssueCount: number;
+      }>;
+    };
+    publishedCollectionItemRepository?: {
+      findByGeneratedAssetIdForPublishedCollection(input: {
+        generatedAssetId: string;
+        publishedCollectionId: string;
+      }): Promise<{
+        generatedAssetId: string;
+        id: string;
+        position: number;
+        publicStorageBucket: string | null;
+        publicStorageObjectKey: string | null;
+      } | null>;
+      updatePublicStorageById(input: {
+        id: string;
+        publicStorageBucket: string | null;
+        publicStorageObjectKey: string | null;
+      }): Promise<{ id: string }>;
+    };
+    publishedCollectionRepository?: {
+      findByIdForOwner(input: {
+        id: string;
+        ownerUserId: string;
+      }): Promise<{
+        id: string;
+        slug: string;
+        sourceCollectionDraftId: string;
+      } | null>;
+      listDetailedByOwnerUserId(ownerUserId: string): Promise<
+        Array<{
+          heroGeneratedAssetId: string | null;
+          id: string;
+          items: Array<{
+            generatedAssetId: string;
+            id: string;
+            position: number;
+            publicStorageBucket: string | null;
+            publicStorageObjectKey: string | null;
+          }>;
+          slug: string;
+          sourceCollectionDraftId: string;
+          title: string;
+        }>
+      >;
+    };
+    sourceAssetRepository?: {
+      findById(id: string): Promise<{
+        id: string;
+        originalFilename: string;
+        storageBucket: string;
+        storageObjectKey: string;
+      } | null>;
+      listByOwnerUserId(ownerUserId: string): Promise<
+        Array<{
+          id: string;
+          originalFilename: string;
+          storageBucket: string;
+          storageObjectKey: string;
+        }>
+      >;
+    };
+  };
+  storage?: {
+    copyPublishedAsset(input: {
+      contentType: string;
+      destinationKey: string;
+      sourceBucket: string;
+      sourceKey: string;
+    }): Promise<{
+      bucket: string;
+      key: string;
+    }>;
+    headPrivateObject(input: {
+      bucket: string;
+      key: string;
+    }): Promise<{ byteSize: number | null; contentType: string | null } | null>;
+    headPublicObject(input: {
+      bucket: string;
+      key: string;
+    }): Promise<{ byteSize: number | null; contentType: string | null } | null>;
   };
 };
 
@@ -205,6 +467,49 @@ function serializeAlertState(
 }
 
 export function createOpsService(dependencies: OpsServiceDependencies) {
+  const getReconciliationService = () => {
+    const {
+      collectionDraftRepository,
+      generatedAssetRepository,
+      opsReconciliationIssueRepository,
+      opsReconciliationRunRepository,
+      publishedCollectionItemRepository,
+      publishedCollectionRepository,
+      sourceAssetRepository
+    } = dependencies.repositories;
+
+    if (
+      !collectionDraftRepository ||
+      !generatedAssetRepository ||
+      !opsReconciliationIssueRepository ||
+      !opsReconciliationRunRepository ||
+      !publishedCollectionItemRepository ||
+      !publishedCollectionRepository ||
+      !sourceAssetRepository ||
+      !dependencies.storage
+    ) {
+      throw new OpsServiceError(
+        "RECONCILIATION_UNAVAILABLE",
+        "Reconciliation dependencies are not configured for this runtime.",
+        500
+      );
+    }
+
+    return createOpsReconciliationService({
+      now: dependencies.now,
+      repositories: {
+        collectionDraftRepository,
+        generatedAssetRepository,
+        opsReconciliationIssueRepository,
+        opsReconciliationRunRepository,
+        publishedCollectionItemRepository,
+        publishedCollectionRepository,
+        sourceAssetRepository
+      },
+      storage: dependencies.storage
+    });
+  };
+
   return {
     async acknowledgeAlert(input: {
       alertStateId: string;
@@ -445,6 +750,58 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
       return opsAlertSchedulePolicyResponseSchema.parse({
         policy: serializeAlertSchedulePolicy(null)
       });
+    },
+
+    async runReconciliation(input: { ownerUserId: string }) {
+      return getReconciliationService().run({
+        ownerUserId: input.ownerUserId
+      });
+    },
+
+    async repairReconciliationIssue(input: {
+      issueId: string;
+      ownerUserId: string;
+    }) {
+      try {
+        return await getReconciliationService().repairIssue({
+          issueId: input.issueId,
+          ownerUserId: input.ownerUserId
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Unexpected repair error.";
+
+        if (message.includes("not found")) {
+          throw new OpsServiceError("RECONCILIATION_ISSUE_NOT_FOUND", message, 404);
+        }
+
+        throw new OpsServiceError(
+          "RECONCILIATION_REPAIR_FAILED",
+          message,
+          409
+        );
+      }
+    },
+
+    async ignoreReconciliationIssue(input: {
+      issueId: string;
+      ownerUserId: string;
+    }) {
+      try {
+        return await getReconciliationService().ignoreIssue({
+          issueId: input.issueId,
+          ownerUserId: input.ownerUserId
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Unexpected ignore error.";
+
+        throw new OpsServiceError(
+          "RECONCILIATION_ISSUE_NOT_FOUND",
+          message,
+          404
+        );
+      }
     }
   };
 }

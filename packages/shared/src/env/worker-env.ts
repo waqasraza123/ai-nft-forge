@@ -85,6 +85,28 @@ export const workerEnvSchema = z
       booleanEnvironmentValueSchema.default(true),
     OPS_OBSERVABILITY_CAPTURE_SCHEDULE_ENABLED:
       booleanEnvironmentValueSchema.default(false),
+    OPS_RECONCILIATION_INTERVAL_SECONDS: z.coerce
+      .number()
+      .int()
+      .min(60)
+      .max(86400)
+      .default(300),
+    OPS_RECONCILIATION_JITTER_SECONDS: z.coerce
+      .number()
+      .int()
+      .min(0)
+      .max(3600)
+      .default(15),
+    OPS_RECONCILIATION_LOCK_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .min(60)
+      .max(86400)
+      .default(600),
+    OPS_RECONCILIATION_RUN_ON_START:
+      booleanEnvironmentValueSchema.default(true),
+    OPS_RECONCILIATION_SCHEDULE_ENABLED:
+      booleanEnvironmentValueSchema.default(false),
     REDIS_URL: z.string().url().default("redis://127.0.0.1:56379"),
     WORKER_SERVICE_NAME: z.string().trim().min(1).default("ai-nft-forge-worker")
   })

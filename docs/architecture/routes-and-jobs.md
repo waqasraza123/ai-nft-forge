@@ -1,6 +1,6 @@
 # Routes And Jobs
 
-This document defines durable boundary expectations for the first implementation slices. The repository now has the initial web routes, auth and health endpoints, source asset intake routes, a browser-readable source asset list route with per-asset generation history, owner-scoped collection draft routes for curated generated-asset assembly, publish/unpublish/merchandising controls for public collection snapshots, durable studio settings routes for owner-scoped workspace identity, brand identity, and saved public storefront theme data, public brand and collection launch routes derived from published snapshots, public collection metadata plus contract/token-uri routes derived from published snapshots, the generation dispatch route, protected generated-output retrieval plus moderation routes, and the first generation worker output-handling job family.
+This document defines durable boundary expectations for the implemented web, worker, and public release surfaces. The repository now has auth and health endpoints, source asset intake routes, owner-scoped collection draft and publication routes, durable studio settings, protected generated-output retrieval plus moderation routes, public brand and collection launch routes derived from published snapshots, public collection metadata plus contract/token-uri routes, authenticated ops alert and reconciliation controls, generation dispatch, and worker-owned observability/reconciliation job families.
 
 ## Current Route Surfaces
 
@@ -22,6 +22,15 @@ This document defines durable boundary expectations for the first implementation
 - `/api/auth/verify`
 - `/api/auth/logout`
 - `/api/auth/session`
+- `/api/ops/alert-escalation`
+- `/api/ops/alert-mutes/[code]`
+- `/api/ops/alert-routing`
+- `/api/ops/alert-schedule`
+- `/api/ops/alerts/[alertStateId]/acknowledge`
+- `/api/ops/alerts/[alertStateId]/mute`
+- `/api/ops/reconciliation/run`
+- `/api/ops/reconciliation/issues/[issueId]/repair`
+- `/api/ops/reconciliation/issues/[issueId]/ignore`
 - `/api/studio/assets`
 - `/api/studio/assets/upload-intents`
 - `/api/studio/assets/[assetId]/complete`
@@ -37,29 +46,32 @@ This document defines durable boundary expectations for the first implementation
 - `/api/studio/generated-assets/[generatedAssetId]/download-intent`
 - `/api/studio/generated-assets/[generatedAssetId]/moderation`
 
-## Planned Surface Areas
+## Implemented Surface Areas
 
-- Studio web surface for client operations, curation, and collection drafting
-- Public web surface for branded collection pages
-- Worker surface for asynchronous processing and reconciliation
+- Studio web surface for client operations, curation, moderation, collection drafting, and publication
+- Public web surface for branded collection pages, storefront launches, metadata, and contract artifacts
+- Worker surface for asynchronous processing, observability capture, alert delivery, and reconciliation
+- Single-node self-host packaging surface through Docker Compose
 
-## Planned Route Groups
+## Durable Route Groups
 
 - `/studio`
 - `/studio/assets`
 - `/studio/collections`
-- `/collections/[slug]`
-- `/api/internal/*`
+- `/studio/settings`
+- `/ops`
+- `/brands/[brandSlug]`
+- `/brands/[brandSlug]/collections/[collectionSlug]`
 
-## Planned Job Families
+## Current Job Families
 
 - asset ingestion
 - generation dispatch
 - generation result normalization
 - derivative asset preparation
 - collection publication preparation
-- contract publication later
-- reconciliation later
+- observability capture and alert delivery
+- reconciliation
 
 ## Boundary Rules
 
@@ -67,5 +79,6 @@ This document defines durable boundary expectations for the first implementation
 - Public collection delivery should stay distinct from studio operations.
 - Public storefront presentation should continue to resolve only from saved brand settings plus immutable published collection snapshots.
 - Generated-asset moderation should remain a protected studio-only control-plane action and should not leak mutable moderation state into public storefront read models.
+- Reconciliation runs, issue persistence, and repair actions should remain authenticated and owner-scoped, with automated execution owned by the worker rather than the web app.
 - Internal APIs should support the web app and workers without exposing operational controls publicly.
 - Route and job design should preserve the B2B white-label model and future multi-tenant concerns.

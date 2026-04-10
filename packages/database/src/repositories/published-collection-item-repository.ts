@@ -58,6 +58,34 @@ export function createPublishedCollectionItemRepository(
       });
     },
 
+    findByGeneratedAssetIdForPublishedCollection(input: {
+      generatedAssetId: string;
+      publishedCollectionId: string;
+    }): Promise<PublishedCollectionItem | null> {
+      return database.publishedCollectionItem.findFirst({
+        where: {
+          generatedAssetId: input.generatedAssetId,
+          publishedCollectionId: input.publishedCollectionId
+        }
+      });
+    },
+
+    updatePublicStorageById(input: {
+      id: string;
+      publicStorageBucket: string | null;
+      publicStorageObjectKey: string | null;
+    }): Promise<PublishedCollectionItem> {
+      return database.publishedCollectionItem.update({
+        data: {
+          publicStorageBucket: input.publicStorageBucket,
+          publicStorageObjectKey: input.publicStorageObjectKey
+        },
+        where: {
+          id: input.id
+        }
+      });
+    },
+
     deleteByPublishedCollectionId(
       publishedCollectionId: string
     ): Promise<{ count: number }> {

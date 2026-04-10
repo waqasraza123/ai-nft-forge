@@ -22,6 +22,8 @@ import type {
   OpsGenerationWindowSummary,
   OpsGenerationActivitySummary,
   OpsPersistedCaptureSummary,
+  OpsReconciliationAutomation,
+  OpsReconciliationSummary,
   OpsRuntimeSnapshot
 } from "../../../server/ops/runtime";
 
@@ -149,6 +151,34 @@ function resolveStatusBannerTone(
 }
 
 function resolveAutomationBannerTone(status: OpsCaptureAutomation["status"]) {
+  if (status === "healthy") {
+    return "success";
+  }
+
+  if (status === "disabled") {
+    return "info";
+  }
+
+  return "error";
+}
+
+function resolveReconciliationBannerTone(
+  status: OpsReconciliationSummary["status"]
+) {
+  if (status === "healthy") {
+    return "success";
+  }
+
+  if (status === "stale") {
+    return "info";
+  }
+
+  return "error";
+}
+
+function resolveReconciliationAutomationTone(
+  status: OpsReconciliationAutomation["status"]
+) {
   if (status === "healthy") {
     return "success";
   }
@@ -669,6 +699,11 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
   const [mutingAlertStateId, setMutingAlertStateId] = useState<string | null>(
     null
   );
+  const [repairingReconciliationIssueId, setRepairingReconciliationIssueId] =
+    useState<string | null>(null);
+  const [ignoringReconciliationIssueId, setIgnoringReconciliationIssueId] =
+    useState<string | null>(null);
+  const [runningReconciliation, setRunningReconciliation] = useState(false);
   const [retryingGenerationRequestId, setRetryingGenerationRequestId] =
     useState<string | null>(null);
 
@@ -972,6 +1007,120 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
     }
   };
 
+  const runReconciliation = async () => {
+    setRunningReconciliation(true);
+    setNotice(null);
+
+    try {
+      const response = await fetch("/api/ops/reconciliation/run", {
+        method: "POST"
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          typeof payload?.error?.message === "string"
+            ? payload.error.message
+            : "Reconciliation could not be started."
+        );
+      }
+
+      setNotice({
+        message: "Reconciliation run completed from the ops surface.",
+        tone: "success"
+      });
+      router.refresh();
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Reconciliation could not be started.",
+        tone: "error"
+      });
+    } finally {
+      setRunningReconciliation(false);
+    }
+  };
+
+  const repairReconciliationIssue = async (issueId: string) => {
+    setRepairingReconciliationIssueId(issueId);
+    setNotice(null);
+
+    try {
+      const response = await fetch(
+        `/api/ops/reconciliation/issues/${issueId}/repair`,
+        {
+          method: "POST"
+        }
+      );
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          typeof payload?.error?.message === "string"
+            ? payload.error.message
+            : "Reconciliation repair could not be completed."
+        );
+      }
+
+      setNotice({
+        message: "Reconciliation repair completed from the ops surface.",
+        tone: "success"
+      });
+      router.refresh();
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Reconciliation repair could not be completed.",
+        tone: "error"
+      });
+    } finally {
+      setRepairingReconciliationIssueId(null);
+    }
+  };
+
+  const ignoreReconciliationIssue = async (issueId: string) => {
+    setIgnoringReconciliationIssueId(issueId);
+    setNotice(null);
+
+    try {
+      const response = await fetch(
+        `/api/ops/reconciliation/issues/${issueId}/ignore`,
+        {
+          method: "POST"
+        }
+      );
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          typeof payload?.error?.message === "string"
+            ? payload.error.message
+            : "Reconciliation issue could not be ignored."
+        );
+      }
+
+      setNotice({
+        message: "Reconciliation issue was ignored from the ops surface.",
+        tone: "success"
+      });
+      router.refresh();
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Reconciliation issue could not be ignored.",
+        tone: "error"
+      });
+    } finally {
+      setIgnoringReconciliationIssueId(null);
+    }
+  };
+
   const updateAlertEscalationPolicy = async () => {
     const firstReminderDelayMinutes = Number.parseInt(
       alertEscalationDraft.firstReminderDelayMinutes,
@@ -1213,6 +1362,8 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
   const captureAutomation = operator.captureAutomation;
   const history = operator.history;
   const observability = operator.observability;
+  const reconciliation = operator.reconciliation;
+  const reconciliationAutomation = operator.reconciliationAutomation;
   const observabilityTone = resolveStatusBannerTone(
     observability?.status ?? "unreachable"
   );
@@ -1227,6 +1378,12 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
   );
   const captureAutomationTone = resolveAutomationBannerTone(
     captureAutomation?.status ?? "unreachable"
+  );
+  const reconciliationTone = resolveReconciliationBannerTone(
+    reconciliation?.status ?? "unreachable"
+  );
+  const reconciliationAutomationTone = resolveReconciliationAutomationTone(
+    reconciliationAutomation?.status ?? "unreachable"
   );
 
   return (
@@ -1773,6 +1930,182 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
             </div>
           </>
         ) : null}
+      </SurfaceCard>
+      <SurfaceCard
+        body={
+          reconciliationAutomation
+            ? "Worker-owned reconciliation now tracks missing private/public objects and moderation-driven draft drift on a recurring cadence with the same lease-protected automation model."
+            : "Reconciliation automation is only evaluated after the operator session resolves."
+        }
+        eyebrow={reconciliationAutomation?.status ?? "unreachable"}
+        span={6}
+        title="Reconciliation automation"
+      >
+        {reconciliationAutomation ? (
+          <>
+            <div
+              className={`status-banner status-banner--${reconciliationAutomationTone}`}
+            >
+              <strong>{reconciliationAutomation.status}</strong>
+              <span>{reconciliationAutomation.message}</span>
+            </div>
+            <div className="pill-row">
+              <Pill>
+                Interval{" "}
+                {reconciliationAutomation.intervalSeconds !== null
+                  ? formatDurationSeconds(reconciliationAutomation.intervalSeconds)
+                  : "n/a"}
+              </Pill>
+              <Pill>
+                Jitter{" "}
+                {reconciliationAutomation.jitterSeconds !== null
+                  ? formatDurationSeconds(reconciliationAutomation.jitterSeconds)
+                  : "n/a"}
+              </Pill>
+              <Pill>
+                Lock TTL{" "}
+                {reconciliationAutomation.lockTtlSeconds !== null
+                  ? formatDurationSeconds(reconciliationAutomation.lockTtlSeconds)
+                  : "n/a"}
+              </Pill>
+              <Pill>
+                {reconciliationAutomation.runOnStart === null
+                  ? "Run-on-start n/a"
+                  : reconciliationAutomation.runOnStart
+                    ? "Runs on startup"
+                    : "Startup reconciliation disabled"}
+              </Pill>
+            </div>
+            <div className="ops-activity-meta">
+              <span>
+                Latest run{" "}
+                {reconciliationAutomation.lastRunAt
+                  ? formatDateTime(reconciliationAutomation.lastRunAt)
+                  : "not available"}
+              </span>
+              <span>
+                Age{" "}
+                {reconciliationAutomation.lastRunAgeSeconds !== null
+                  ? `${formatDurationSeconds(reconciliationAutomation.lastRunAgeSeconds)} ago`
+                  : "n/a"}
+              </span>
+            </div>
+          </>
+        ) : null}
+      </SurfaceCard>
+      <SurfaceCard
+        body={
+          reconciliation
+            ? "Open issues here represent persisted publication drift, missing storage objects, and moderation invalidation that can be repaired or explicitly ignored."
+            : "Reconciliation state is only loaded after the operator session resolves."
+        }
+        eyebrow={reconciliation?.status ?? "unreachable"}
+        span={6}
+        title="Reconciliation status"
+      >
+        {reconciliation ? (
+          <>
+            <div className={`status-banner status-banner--${reconciliationTone}`}>
+              <strong>{reconciliation.status}</strong>
+              <span>{reconciliation.message}</span>
+            </div>
+            <div className="pill-row">
+              <Pill>Critical open {reconciliation.openCriticalIssueCount}</Pill>
+              <Pill>Warning open {reconciliation.openWarningIssueCount}</Pill>
+              <Pill>
+                Last run{" "}
+                {reconciliation.lastRun
+                  ? formatDateTime(reconciliation.lastRun.completedAt)
+                  : "n/a"}
+              </Pill>
+            </div>
+            <div className="studio-action-row">
+              <button
+                className="button-action"
+                disabled={runningReconciliation}
+                onClick={() => {
+                  void runReconciliation();
+                }}
+                type="button"
+              >
+                {runningReconciliation
+                  ? "Running reconciliation…"
+                  : "Run reconciliation"}
+              </button>
+            </div>
+          </>
+        ) : null}
+      </SurfaceCard>
+      <SurfaceCard
+        body={
+          reconciliation
+            ? "Repairable issues can be resolved directly here; non-repairable issues stay visible for operator investigation."
+            : "Reconciliation issues are only loaded after the operator session resolves."
+        }
+        eyebrow={reconciliation?.status ?? "unreachable"}
+        span={12}
+        title="Open reconciliation issues"
+      >
+        {reconciliation?.openIssues.length ? (
+          <div className="ops-activity-list">
+            {reconciliation.openIssues.map((issue) => (
+              <div className="ops-activity-item" key={issue.id}>
+                <div className="ops-activity-item__header">
+                  <div className="ops-activity-item__copy">
+                    <strong>{issue.title}</strong>
+                    <span>{issue.message}</span>
+                  </div>
+                  <Pill>{issue.severity}</Pill>
+                </div>
+                <div className="pill-row">
+                  <Pill>{issue.kind}</Pill>
+                  <Pill>Detected {formatDateTime(issue.lastDetectedAt)}</Pill>
+                  <Pill>{issue.repairable ? "Repairable" : "Manual only"}</Pill>
+                </div>
+                <div className="ops-activity-meta">
+                  {Object.entries(issue.detail).map(([key, value]) => (
+                    <span key={key}>
+                      {key}: {String(value)}
+                    </span>
+                  ))}
+                </div>
+                <div className="studio-action-row">
+                  <button
+                    className="button-action"
+                    disabled={
+                      !issue.repairable ||
+                      repairingReconciliationIssueId === issue.id
+                    }
+                    onClick={() => {
+                      void repairReconciliationIssue(issue.id);
+                    }}
+                    type="button"
+                  >
+                    {repairingReconciliationIssueId === issue.id
+                      ? "Repairing…"
+                      : "Repair issue"}
+                  </button>
+                  <button
+                    className="button-action"
+                    disabled={ignoringReconciliationIssueId === issue.id}
+                    onClick={() => {
+                      void ignoreReconciliationIssue(issue.id);
+                    }}
+                    type="button"
+                  >
+                    {ignoringReconciliationIssueId === issue.id
+                      ? "Ignoring…"
+                      : "Ignore issue"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="asset-placeholder">
+            No open reconciliation issues are recorded for this operator.
+          </div>
+        )}
       </SurfaceCard>
       <SurfaceCard
         body={

@@ -13,6 +13,8 @@ import { createOpsAlertRoutingPolicyRepository } from "./ops-alert-routing-polic
 import { createOpsAlertSchedulePolicyRepository } from "./ops-alert-schedule-policy-repository.js";
 import { createOpsAlertStateRepository } from "./ops-alert-state-repository.js";
 import { createOpsObservabilityCaptureRepository } from "./ops-observability-capture-repository.js";
+import { createOpsReconciliationIssueRepository } from "./ops-reconciliation-issue-repository.js";
+import { createOpsReconciliationRunRepository } from "./ops-reconciliation-run-repository.js";
 import { createPublishedCollectionItemRepository } from "./published-collection-item-repository.js";
 import { createPublishedCollectionRepository } from "./published-collection-repository.js";
 import { createSourceAssetRepository } from "./source-asset-repository.js";
@@ -290,6 +292,41 @@ describe("database repositories", () => {
       }
     });
     expect(result?.id).toBe("generation_1");
+  });
+
+  it("delegates user id listing through the user repository", async () => {
+    const database = {
+      user: {
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "user_1"
+          },
+          {
+            id: "user_2"
+          }
+        ]),
+        findUnique: vi.fn(),
+        upsert: vi.fn()
+      }
+    };
+    const repository = createUserRepository(database as never);
+
+    const result = await repository.listIds();
+
+    expect(database.user.findMany).toHaveBeenCalledWith({
+      orderBy: [
+        {
+          createdAt: "asc"
+        },
+        {
+          id: "asc"
+        }
+      ],
+      select: {
+        id: true
+      }
+    });
+    expect(result).toEqual(["user_1", "user_2"]);
   });
 
   it("delegates distinct generation owner lookup through the generation request repository", async () => {
@@ -1543,5 +1580,104 @@ describe("database repositories", () => {
     expect(policy.id).toBe("schedule_1");
     expect(found?.id).toBe("schedule_1");
     expect(deleted.count).toBe(1);
+  });
+
+  it("delegates reconciliation run persistence through the run repository", async () => {
+    const database = {
+      opsReconciliationRun: {
+        create: vi.fn().mockResolvedValue({
+          id: "run_1"
+        }),
+        findFirst: vi.fn().mockResolvedValue({
+          id: "run_1"
+        }),
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "run_1"
+          }
+        ])
+      }
+    };
+    const repository = createOpsReconciliationRunRepository(database as never);
+
+    const created = await repository.create({
+      completedAt: new Date("2026-04-10T12:00:00.000Z"),
+      criticalIssueCount: 1,
+      issueCount: 2,
+      ownerUserId: "user_1",
+      startedAt: new Date("2026-04-10T11:59:00.000Z"),
+      status: "succeeded",
+      warningIssueCount: 1
+    });
+    const latest = await repository.findLatestByOwnerUserId("user_1");
+    const recent = await repository.listRecentByOwnerUserId({
+      limit: 5,
+      ownerUserId: "user_1"
+    });
+
+    expect(database.opsReconciliationRun.create).toHaveBeenCalled();
+    expect(database.opsReconciliationRun.findFirst).toHaveBeenCalled();
+    expect(database.opsReconciliationRun.findMany).toHaveBeenCalled();
+    expect(created.id).toBe("run_1");
+    expect(latest?.id).toBe("run_1");
+    expect(recent[0]?.id).toBe("run_1");
+  });
+
+  it("delegates reconciliation issue persistence through the issue repository", async () => {
+    const database = {
+      opsReconciliationIssue: {
+        count: vi.fn().mockResolvedValue(1),
+        create: vi.fn().mockResolvedValue({
+          id: "issue_1",
+          status: "open"
+        }),
+        findFirst: vi.fn().mockResolvedValue({
+          id: "issue_1"
+        }),
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "issue_1"
+          }
+        ]),
+        findUnique: vi.fn().mockResolvedValue(null),
+        update: vi.fn().mockResolvedValue({
+          id: "issue_1",
+          status: "repaired"
+        })
+      }
+    };
+    const repository = createOpsReconciliationIssueRepository(
+      database as never
+    );
+
+    const created = await repository.upsertObserved({
+      detailJson: {
+        collectionDraftId: "draft_1"
+      },
+      fingerprint: "draft_contains_unapproved_asset|collectionDraftId:draft_1",
+      kind: "draft_contains_unapproved_asset",
+      lastDetectedAt: new Date("2026-04-10T12:00:00.000Z"),
+      latestRunId: "run_1",
+      message: "Draft contains unapproved asset.",
+      ownerUserId: "user_1",
+      severity: "warning",
+      title: "Draft contains unapproved asset"
+    });
+    const repaired = await repository.markRepaired({
+      id: "issue_1",
+      ownerUserId: "user_1",
+      repairedAt: new Date("2026-04-10T12:05:00.000Z"),
+      repairMessage: "The draft was downgraded back to draft."
+    });
+    const openCount = await repository.countOpenByOwnerUserIdAndSeverity({
+      ownerUserId: "user_1",
+      severity: "warning"
+    });
+
+    expect(database.opsReconciliationIssue.create).toHaveBeenCalled();
+    expect(database.opsReconciliationIssue.update).toHaveBeenCalled();
+    expect(created.id).toBe("issue_1");
+    expect(repaired?.id).toBe("issue_1");
+    expect(openCount).toBe(1);
   });
 });

@@ -83,3 +83,5 @@ A strong change summary should include:
 If your change affects behavior, routes, runtime expectations, or workflow, update the relevant docs in `docs/`.
 
 If your change is meaningful session work, update `docs/_local/current-session.md`.
+
+For release-surface changes, also review `docs/release-checklist.md`, `docs/deployment/environment-reference.md`, and `docs/deployment/self-host-docker-compose.md`.

@@ -33,6 +33,7 @@ type BrowserSmokeAuthSession = NonNullable<
 >;
 
 export type BrowserSmokeSeededState = {
+  invalidDraftTitle: string;
   mainAssetFilename: string;
   mainFailedGenerationId: string;
   runningAssetFilename: string;
@@ -111,6 +112,8 @@ async function clearBrowserSmokeDatabase() {
   const databaseClient = createDatabaseClient(process.env);
 
   try {
+    await databaseClient.opsReconciliationIssue.deleteMany();
+    await databaseClient.opsReconciliationRun.deleteMany();
     await databaseClient.publishedCollectionItem.deleteMany();
     await databaseClient.publishedCollection.deleteMany();
     await databaseClient.collectionDraftItem.deleteMany();
@@ -252,6 +255,7 @@ export async function seedBrowserSmokeData(input: {
   const now = Date.now();
   const sourceAssetContentType = "image/png";
   const mainAssetFilename = "portrait-main.png";
+  const invalidDraftTitle = "Broken Launch Draft";
   const runningAssetFilename = "portrait-running.png";
 
   try {
@@ -375,6 +379,128 @@ export async function seedBrowserSmokeData(input: {
         }
       ]
     });
+    const invalidSourceObject = await storePrivateObject({
+      contentType: sourceAssetContentType,
+      key: `${prefix}/source/invalid.png`
+    });
+    const invalidSourceAsset = await databaseClient.sourceAsset.create({
+      data: {
+        byteSize: invalidSourceObject.byteSize,
+        contentType: sourceAssetContentType,
+        createdAt: new Date(now - 55 * 60 * 1000),
+        originalFilename: "portrait-invalid.png",
+        ownerUserId: input.userId,
+        status: "uploaded",
+        storageBucket: invalidSourceObject.bucket,
+        storageObjectKey: invalidSourceObject.key,
+        uploadedAt: new Date(now - 55 * 60 * 1000)
+      }
+    });
+    const invalidGeneration = await databaseClient.generationRequest.create({
+      data: {
+        completedAt: new Date(now - 52 * 60 * 1000),
+        createdAt: new Date(now - 54 * 60 * 1000),
+        ownerUserId: input.userId,
+        pipelineKey: "collectible-portrait-v1",
+        queueJobId: "browser-smoke-invalid-succeeded",
+        requestedVariantCount: 1,
+        resultJson: {
+          generatedVariantCount: 1,
+          storedAssetCount: 1
+        },
+        sourceAssetId: invalidSourceAsset.id,
+        startedAt: new Date(now - 53 * 60 * 1000),
+        status: "succeeded"
+      }
+    });
+    const invalidGeneratedObject = await storePrivateObject({
+      contentType: sourceAssetContentType,
+      key: `${prefix}/generated/invalid/variant-1.png`
+    });
+    const invalidGeneratedAsset = await databaseClient.generatedAsset.create({
+      data: {
+        byteSize: invalidGeneratedObject.byteSize,
+        contentType: sourceAssetContentType,
+        generationRequestId: invalidGeneration.id,
+        moderatedAt: new Date(now - 45 * 60 * 1000),
+        moderationStatus: "rejected",
+        ownerUserId: input.userId,
+        sourceAssetId: invalidSourceAsset.id,
+        storageBucket: invalidGeneratedObject.bucket,
+        storageObjectKey: invalidGeneratedObject.key,
+        variantIndex: 1
+      }
+    });
+    const workspace = await databaseClient.workspace.create({
+      data: {
+        name: "Browser Smoke Workspace",
+        ownerUserId: input.userId,
+        slug: `browser-smoke-${crypto.randomUUID().slice(0, 8)}`,
+        status: "active"
+      }
+    });
+    const brand = await databaseClient.brand.create({
+      data: {
+        customDomain: null,
+        name: "Browser Smoke Brand",
+        slug: `browser-smoke-brand-${crypto.randomUUID().slice(0, 8)}`,
+        themeJson: {
+          accentColor: "#f58a44",
+          featuredReleaseLabel: "Browser smoke",
+          landingDescription:
+            "Browser smoke brand seeded for reconciliation coverage.",
+          landingHeadline: "Browser smoke launch",
+          themePreset: "editorial_warm"
+        },
+        workspaceId: workspace.id
+      }
+    });
+    const invalidDraft = await databaseClient.collectionDraft.create({
+      data: {
+        description: "Draft seeded with a later-rejected curated asset.",
+        ownerUserId: input.userId,
+        slug: "broken-launch-draft",
+        status: "review_ready",
+        title: invalidDraftTitle
+      }
+    });
+
+    await databaseClient.collectionDraftItem.create({
+      data: {
+        collectionDraftId: invalidDraft.id,
+        generatedAssetId: invalidGeneratedAsset.id,
+        position: 1
+      }
+    });
+
+    const brokenPublication =
+      await databaseClient.publishedCollection.create({
+        data: {
+          brandName: brand.name,
+          brandSlug: brand.slug,
+          description: invalidDraft.description,
+          displayOrder: 0,
+          heroGeneratedAssetId: invalidGeneratedAsset.id,
+          isFeatured: false,
+          ownerUserId: input.userId,
+          publishedAt: new Date(now - 40 * 60 * 1000),
+          slug: invalidDraft.slug,
+          soldCount: 0,
+          sourceCollectionDraftId: invalidDraft.id,
+          storefrontStatus: "live",
+          title: invalidDraft.title
+        }
+      });
+
+    await databaseClient.publishedCollectionItem.create({
+      data: {
+        generatedAssetId: invalidGeneratedAsset.id,
+        position: 1,
+        publicStorageBucket: null,
+        publicStorageObjectKey: null,
+        publishedCollectionId: brokenPublication.id
+      }
+    });
 
     const mainFailedGeneration = await databaseClient.generationRequest.create({
       data: {
@@ -434,6 +560,7 @@ export async function seedBrowserSmokeData(input: {
     });
 
     return {
+      invalidDraftTitle,
       mainAssetFilename,
       mainFailedGenerationId: mainFailedGeneration.id,
       runningAssetFilename

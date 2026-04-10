@@ -6,7 +6,8 @@ import type { WorkerEnv } from "@ai-nft-forge/shared";
 
 import type { Logger } from "../lib/logger.js";
 
-const captureSchedulerLockKey = "ai-nft-forge:ops-observability-capture";
+const observabilitySchedulerLockKey = "ai-nft-forge:ops-observability-capture";
+const reconciliationSchedulerLockKey = "ai-nft-forge:ops-reconciliation";
 const releaseSchedulerLockScript = `
 if redis.call("get", KEYS[1]) == ARGV[1] then
   return redis.call("del", KEYS[1])
@@ -22,10 +23,32 @@ type CaptureSummary = {
   resolvedAlertCount: number;
 };
 
+type ReconciliationSummary = {
+  failedRunCount: number;
+  issueCount: number;
+  ownerCount: number;
+  runCount: number;
+};
+
 type TimeoutHandle = ReturnType<typeof setTimeout>;
 
-type OpsObservabilityCaptureScheduler = {
+type SharedScheduler = {
   close: () => Promise<void>;
+};
+
+type StartScheduledRunnerDependencies<TSummary> = {
+  enabled: boolean;
+  intervalSeconds: number;
+  jitterSeconds: number;
+  leaseFailureMessage: string;
+  lockKey: string;
+  lockTtlSeconds: number;
+  logger: Logger;
+  redisConnection: Pick<Redis, "eval" | "set">;
+  run: () => Promise<TSummary>;
+  runLabel: string;
+  runOnStart: boolean;
+  random?: (() => number) | undefined;
 };
 
 type StartOpsObservabilityCaptureSchedulerDependencies = {
@@ -36,16 +59,25 @@ type StartOpsObservabilityCaptureSchedulerDependencies = {
   redisConnection: Pick<Redis, "eval" | "set">;
 };
 
-async function acquireSchedulerLock(input: {
+type StartOpsReconciliationSchedulerDependencies = {
   env: WorkerEnv;
+  logger: Logger;
+  random?: () => number;
+  reconcile: () => Promise<ReconciliationSummary>;
+  redisConnection: Pick<Redis, "eval" | "set">;
+};
+
+async function acquireSchedulerLock(input: {
+  lockKey: string;
+  lockTtlSeconds: number;
   redisConnection: Pick<Redis, "set">;
   token: string;
 }) {
   const result = await input.redisConnection.set(
-    captureSchedulerLockKey,
+    input.lockKey,
     input.token,
     "PX",
-    input.env.OPS_OBSERVABILITY_CAPTURE_LOCK_TTL_SECONDS * 1000,
+    input.lockTtlSeconds * 1000,
     "NX"
   );
 
@@ -53,34 +85,42 @@ async function acquireSchedulerLock(input: {
 }
 
 async function releaseSchedulerLock(input: {
+  lockKey: string;
   redisConnection: Pick<Redis, "eval">;
   token: string;
 }) {
   await input.redisConnection.eval(
     releaseSchedulerLockScript,
     1,
-    captureSchedulerLockKey,
+    input.lockKey,
     input.token
   );
 }
 
-export function startOpsObservabilityCaptureScheduler({
-  capture,
-  env,
+function startScheduledRunner<TSummary>({
+  enabled,
+  intervalSeconds,
+  jitterSeconds,
+  leaseFailureMessage,
+  lockKey,
+  lockTtlSeconds,
   logger,
-  random = Math.random,
-  redisConnection
-}: StartOpsObservabilityCaptureSchedulerDependencies): OpsObservabilityCaptureScheduler {
-  if (!env.OPS_OBSERVABILITY_CAPTURE_SCHEDULE_ENABLED) {
-    logger.info("Ops observability capture scheduler disabled");
+  redisConnection,
+  run,
+  runLabel,
+  runOnStart,
+  random = Math.random
+}: StartScheduledRunnerDependencies<TSummary>): SharedScheduler {
+  if (!enabled) {
+    logger.info(`${runLabel} scheduler disabled`);
 
     return {
       async close() {}
     };
   }
 
-  const baseIntervalMs = env.OPS_OBSERVABILITY_CAPTURE_INTERVAL_SECONDS * 1000;
-  const jitterMs = env.OPS_OBSERVABILITY_CAPTURE_JITTER_SECONDS * 1000;
+  const baseIntervalMs = intervalSeconds * 1000;
+  const jitterMs = jitterSeconds * 1000;
   let closed = false;
   let activeRun: Promise<void> | null = null;
   let scheduledTimer: TimeoutHandle | null = null;
@@ -109,13 +149,13 @@ export function startOpsObservabilityCaptureScheduler({
     scheduledTimer = setTimeout(
       () => {
         scheduledTimer = null;
-        void runScheduledCapture();
+        void runScheduledTask();
       },
       Math.max(0, delayMs)
     );
   };
 
-  const runScheduledCapture = async () => {
+  const runScheduledTask = async () => {
     if (closed || activeRun) {
       return;
     }
@@ -125,44 +165,47 @@ export function startOpsObservabilityCaptureScheduler({
 
       try {
         const lockAcquired = await acquireSchedulerLock({
-          env,
+          lockKey,
+          lockTtlSeconds,
           redisConnection,
           token
         });
 
         if (!lockAcquired) {
-          logger.debug(
-            "Skipping scheduled ops observability capture because another worker holds the lease"
-          );
+          logger.debug(leaseFailureMessage);
           return;
         }
 
-        logger.info("Running scheduled ops observability capture", {
-          intervalSeconds: env.OPS_OBSERVABILITY_CAPTURE_INTERVAL_SECONDS
+        logger.info(`Running scheduled ${runLabel}`, {
+          intervalSeconds
         });
 
-        const summary = await capture();
+        const summary = await run();
 
-        logger.info("Scheduled ops observability capture completed", summary);
+        logger.info(
+          `Scheduled ${runLabel} completed`,
+          summary as Record<string, unknown>
+        );
       } catch (error) {
-        logger.error("Scheduled ops observability capture failed", {
+        logger.error(`Scheduled ${runLabel} failed`, {
           error:
             error instanceof Error
               ? error.message
-              : "Unknown capture scheduler error"
+              : `Unknown ${runLabel} scheduler error`
         });
       } finally {
         try {
           await releaseSchedulerLock({
+            lockKey,
             redisConnection,
             token
           });
         } catch (error) {
-          logger.warn("Could not release ops observability capture lease", {
+          logger.warn(`Could not release ${runLabel} lease`, {
             error:
               error instanceof Error
                 ? error.message
-                : "Unknown capture lease release error"
+                : `Unknown ${runLabel} lease release error`
           });
         }
       }
@@ -174,23 +217,69 @@ export function startOpsObservabilityCaptureScheduler({
     await activeRun;
   };
 
-  logger.info("Ops observability capture scheduler started", {
-    intervalSeconds: env.OPS_OBSERVABILITY_CAPTURE_INTERVAL_SECONDS,
-    jitterSeconds: env.OPS_OBSERVABILITY_CAPTURE_JITTER_SECONDS,
-    lockTtlSeconds: env.OPS_OBSERVABILITY_CAPTURE_LOCK_TTL_SECONDS,
-    runOnStart: env.OPS_OBSERVABILITY_CAPTURE_RUN_ON_START
+  logger.info(`${runLabel} scheduler started`, {
+    intervalSeconds,
+    jitterSeconds,
+    lockTtlSeconds,
+    runOnStart
   });
 
-  scheduleNextRun(
-    env.OPS_OBSERVABILITY_CAPTURE_RUN_ON_START ? 0 : createScheduledDelayMs()
-  );
+  scheduleNextRun(runOnStart ? 0 : createScheduledDelayMs());
 
   return {
     async close() {
       closed = true;
       clearScheduledTimer();
       await activeRun;
-      logger.info("Ops observability capture scheduler stopped");
+      logger.info(`${runLabel} scheduler stopped`);
     }
   };
+}
+
+export function startOpsObservabilityCaptureScheduler({
+  capture,
+  env,
+  logger,
+  random,
+  redisConnection
+}: StartOpsObservabilityCaptureSchedulerDependencies): SharedScheduler {
+  return startScheduledRunner({
+    enabled: env.OPS_OBSERVABILITY_CAPTURE_SCHEDULE_ENABLED,
+    intervalSeconds: env.OPS_OBSERVABILITY_CAPTURE_INTERVAL_SECONDS,
+    jitterSeconds: env.OPS_OBSERVABILITY_CAPTURE_JITTER_SECONDS,
+    leaseFailureMessage:
+      "Skipping scheduled ops observability capture because another worker holds the lease",
+    lockKey: observabilitySchedulerLockKey,
+    lockTtlSeconds: env.OPS_OBSERVABILITY_CAPTURE_LOCK_TTL_SECONDS,
+    logger,
+    random,
+    redisConnection,
+    run: capture,
+    runLabel: "ops observability capture",
+    runOnStart: env.OPS_OBSERVABILITY_CAPTURE_RUN_ON_START
+  });
+}
+
+export function startOpsReconciliationScheduler({
+  env,
+  logger,
+  random,
+  reconcile,
+  redisConnection
+}: StartOpsReconciliationSchedulerDependencies): SharedScheduler {
+  return startScheduledRunner({
+    enabled: env.OPS_RECONCILIATION_SCHEDULE_ENABLED,
+    intervalSeconds: env.OPS_RECONCILIATION_INTERVAL_SECONDS,
+    jitterSeconds: env.OPS_RECONCILIATION_JITTER_SECONDS,
+    leaseFailureMessage:
+      "Skipping scheduled ops reconciliation because another worker holds the lease",
+    lockKey: reconciliationSchedulerLockKey,
+    lockTtlSeconds: env.OPS_RECONCILIATION_LOCK_TTL_SECONDS,
+    logger,
+    random,
+    redisConnection,
+    run: reconcile,
+    runLabel: "ops reconciliation",
+    runOnStart: env.OPS_RECONCILIATION_RUN_ON_START
+  });
 }

@@ -6,6 +6,8 @@ import {
   evaluateOpsAlertSchedulePolicy,
   formatOpsAlertScheduleMinuteOfDay,
   isValidOpsAlertScheduleTimeZone,
+  opsReconciliationIssueRepairResponseSchema,
+  opsReconciliationRunResponseSchema,
   opsAlertEscalationPolicyRequestSchema,
   opsAlertSchedulePolicyRequestSchema,
   parseOpsAlertScheduleDayMask
@@ -122,5 +124,44 @@ describe("ops shared contracts", () => {
       nextReminderAt: null,
       reason: "acknowledged"
     });
+  });
+
+  it("validates reconciliation run and repair responses", () => {
+    const run = opsReconciliationRunResponseSchema.parse({
+      run: {
+        completedAt: "2026-04-10T12:00:00.000Z",
+        criticalIssueCount: 1,
+        id: "run_1",
+        issueCount: 2,
+        message: "Reconciliation recorded open issues.",
+        startedAt: "2026-04-10T11:59:00.000Z",
+        status: "succeeded",
+        warningIssueCount: 1
+      }
+    });
+    const repair = opsReconciliationIssueRepairResponseSchema.parse({
+      issue: {
+        detail: {
+          collectionDraftId: "draft_1"
+        },
+        fingerprint: "review_ready_draft_invalid|collectionDraftId:draft_1",
+        firstDetectedAt: "2026-04-10T12:00:00.000Z",
+        id: "issue_1",
+        ignoredAt: null,
+        kind: "review_ready_draft_invalid",
+        lastDetectedAt: "2026-04-10T12:00:00.000Z",
+        latestRunId: "run_1",
+        message: "A review-ready draft contains generated assets that are no longer approved.",
+        repairMessage: "The draft was downgraded back to draft.",
+        repairable: true,
+        repairedAt: "2026-04-10T12:05:00.000Z",
+        severity: "critical",
+        status: "repaired",
+        title: "Review-ready draft is invalid"
+      }
+    });
+
+    expect(run.run.issueCount).toBe(2);
+    expect(repair.issue.kind).toBe("review_ready_draft_invalid");
   });
 });

@@ -157,6 +157,10 @@ export {
   type StorageObjectHead
 } from "./object-storage.js";
 export {
+  createOpsReconciliationService,
+  isRepairableOpsReconciliationIssueKind
+} from "./ops-reconciliation-service.js";
+export {
   opsAlertMuteRequestSchema,
   opsAlertMuteResponseSchema,
   opsAlertMuteSummarySchema,
@@ -164,6 +168,15 @@ export {
   opsAlertEscalationPolicyRequestSchema,
   opsAlertEscalationPolicyResponseSchema,
   opsAlertEscalationPolicySummarySchema,
+  opsReconciliationIssueDetailSchema,
+  opsReconciliationIssueKindSchema,
+  opsReconciliationIssueRepairResponseSchema,
+  opsReconciliationIssueSeveritySchema,
+  opsReconciliationIssueStatusSchema,
+  opsReconciliationIssueSummarySchema,
+  opsReconciliationRunResponseSchema,
+  opsReconciliationRunStatusSchema,
+  opsReconciliationRunSummarySchema,
   opsAlertScheduleDaySchema,
   opsAlertScheduleDayValues,
   opsAlertSchedulePolicyRequestSchema,
@@ -191,6 +204,15 @@ export {
   type OpsAlertEscalationPolicyRequest,
   type OpsAlertEscalationPolicyResponse,
   type OpsAlertEscalationPolicySummary,
+  type OpsReconciliationIssueDetail,
+  type OpsReconciliationIssueKind,
+  type OpsReconciliationIssueRepairResponse,
+  type OpsReconciliationIssueSeverity,
+  type OpsReconciliationIssueStatus,
+  type OpsReconciliationIssueSummary,
+  type OpsReconciliationRunResponse,
+  type OpsReconciliationRunStatus,
+  type OpsReconciliationRunSummary,
   type OpsAlertScheduleDay,
   type OpsAlertSchedulePolicyRequest,
   type OpsAlertSchedulePolicyResponse,

@@ -59,6 +59,22 @@ export function createGeneratedAssetRepository(
       });
     },
 
+    listByOwnerUserId(ownerUserId: string): Promise<GeneratedAsset[]> {
+      return database.generatedAsset.findMany({
+        orderBy: [
+          {
+            createdAt: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        where: {
+          ownerUserId
+        }
+      });
+    },
+
     findByIdForOwner(input: {
       id: string;
       ownerUserId: string;

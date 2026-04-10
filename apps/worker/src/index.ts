@@ -3,6 +3,7 @@ import "dotenv/config";
 import { bootstrapWorkerApplication } from "./bootstrap/application.js";
 import { registerWorkerSignalHandlers } from "./bootstrap/signals.js";
 import { createWorkerHealthSnapshot } from "./lib/health.js";
+import { reconcileRuntimeOps } from "./ops/reconciliation-runtime.js";
 import { captureRuntimeOpsObservability } from "./ops/runtime.js";
 
 async function runWorkerCommand(argv: string[]) {
@@ -19,6 +20,13 @@ async function runWorkerCommand(argv: string[]) {
     const captureSummary = await captureRuntimeOpsObservability(process.env);
 
     process.stdout.write(`${JSON.stringify(captureSummary)}\n`);
+    return;
+  }
+
+  if (command === "reconcile") {
+    const reconciliationSummary = await reconcileRuntimeOps(process.env);
+
+    process.stdout.write(`${JSON.stringify(reconciliationSummary)}\n`);
     return;
   }
 

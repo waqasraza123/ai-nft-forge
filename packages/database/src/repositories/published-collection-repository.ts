@@ -113,6 +113,15 @@ export function createPublishedCollectionRepository(
       });
     },
 
+    findByIdForOwner(input: { id: string; ownerUserId: string }) {
+      return database.publishedCollection.findFirst({
+        where: {
+          id: input.id,
+          ownerUserId: input.ownerUserId
+        }
+      });
+    },
+
     findDetailedByBrandSlugAndCollectionSlug(input: {
       brandSlug: string;
       slug: string;
@@ -124,6 +133,27 @@ export function createPublishedCollectionRepository(
             brandSlug: input.brandSlug,
             slug: input.slug
           }
+        }
+      });
+    },
+
+    listDetailedByOwnerUserId(ownerUserId: string) {
+      return database.publishedCollection.findMany({
+        include: {
+          items: {
+            orderBy: publishedCollectionItemOrderBy
+          }
+        },
+        orderBy: [
+          {
+            updatedAt: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        where: {
+          ownerUserId
         }
       });
     },

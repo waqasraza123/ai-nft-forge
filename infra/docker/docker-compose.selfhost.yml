@@ -1,0 +1,283 @@
+name: ai-nft-forge-selfhost
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ai_nft_forge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ai_nft_forge}
+      POSTGRES_DB: ${POSTGRES_DB:-ai_nft_forge}
+    ports:
+      - "${POSTGRES_PORT:-55432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB -h 127.0.0.1"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-56379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+
+  minio:
+    image: quay.io/minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-ai-nft-forge}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-ai-nft-forge-local}
+    ports:
+      - "${MINIO_API_PORT:-59000}:9000"
+      - "${MINIO_CONSOLE_PORT:-59001}:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  minio-init:
+    image: quay.io/minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: "no"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-ai-nft-forge}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-ai-nft-forge-local}
+      MINIO_BUCKET_PRIVATE: ${MINIO_BUCKET_PRIVATE:-ai-nft-forge-private}
+      MINIO_BUCKET_PUBLIC: ${MINIO_BUCKET_PUBLIC:-ai-nft-forge-public}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >
+        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" &&
+        mc mb --ignore-existing "local/$$MINIO_BUCKET_PRIVATE" &&
+        mc mb --ignore-existing "local/$$MINIO_BUCKET_PUBLIC" &&
+        mc anonymous set download "local/$$MINIO_BUCKET_PUBLIC"
+
+  migrate:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: "no"
+    environment:
+      AUTH_MESSAGE_STATEMENT: ${AUTH_MESSAGE_STATEMENT:-Sign in to AI NFT Forge}
+      AUTH_NONCE_TTL_MINUTES: ${AUTH_NONCE_TTL_MINUTES:-10}
+      AUTH_SESSION_COOKIE_NAME: ${AUTH_SESSION_COOKIE_NAME:-ai_nft_forge_session}
+      AUTH_SESSION_TTL_DAYS: ${AUTH_SESSION_TTL_DAYS:-30}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ai_nft_forge}:${POSTGRES_PASSWORD:-ai_nft_forge}@postgres:5432/${POSTGRES_DB:-ai_nft_forge}?schema=public
+      GENERATED_ASSET_DOWNLOAD_URL_TTL_SECONDS: ${GENERATED_ASSET_DOWNLOAD_URL_TTL_SECONDS:-300}
+      GENERATION_ADAPTER_KIND: ${GENERATION_ADAPTER_KIND:-http_backend}
+      GENERATION_BACKEND_AUTH_TOKEN: ${GENERATION_BACKEND_AUTH_TOKEN:-ai-nft-forge-generation-backend-local}
+      GENERATION_BACKEND_TIMEOUT_MS: ${GENERATION_BACKEND_TIMEOUT_MS:-30000}
+      GENERATION_BACKEND_URL: http://generation-backend:8787/generate
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      REDIS_URL: redis://redis:6379
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-ai-nft-forge}
+      S3_BUCKET_PRIVATE: ${S3_BUCKET_PRIVATE:-ai-nft-forge-private}
+      S3_BUCKET_PUBLIC: ${S3_BUCKET_PUBLIC:-ai-nft-forge-public}
+      S3_ENDPOINT: http://minio:9000
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-ai-nft-forge-local}
+      S3_USE_SSL: ${S3_USE_SSL:-false}
+      SOURCE_ASSET_UPLOAD_URL_TTL_SECONDS: ${SOURCE_ASSET_UPLOAD_URL_TTL_SECONDS:-900}
+    command: ["pnpm", "db:migrate:deploy"]
+
+  generation-backend:
+    build:
+      context: ../..
+      dockerfile: apps/generation-backend/Dockerfile
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    environment:
+      COMFYUI_API_BEARER_TOKEN: ${COMFYUI_API_BEARER_TOKEN:-}
+      COMFYUI_BASE_URL: ${COMFYUI_BASE_URL:-http://host.docker.internal:8188}
+      COMFYUI_CFG_SCALE: ${COMFYUI_CFG_SCALE:-7}
+      COMFYUI_CHECKPOINT_NAME: ${COMFYUI_CHECKPOINT_NAME:-}
+      COMFYUI_DENOISE: ${COMFYUI_DENOISE:-0.42}
+      COMFYUI_NEGATIVE_PROMPT: ${COMFYUI_NEGATIVE_PROMPT:-blurry, low quality, deformed hands, extra limbs, watermark, text}
+      COMFYUI_POLL_INTERVAL_MS: ${COMFYUI_POLL_INTERVAL_MS:-1500}
+      COMFYUI_POSITIVE_PROMPT: ${COMFYUI_POSITIVE_PROMPT:-editorial collectible portrait, premium nft artwork, cinematic lighting, highly detailed, clean background, polished stylization}
+      COMFYUI_SAMPLER_NAME: ${COMFYUI_SAMPLER_NAME:-euler}
+      COMFYUI_SCHEDULER: ${COMFYUI_SCHEDULER:-normal}
+      COMFYUI_STEPS: ${COMFYUI_STEPS:-28}
+      COMFYUI_TIMEOUT_MS: ${COMFYUI_TIMEOUT_MS:-180000}
+      COMFYUI_WORKFLOW_PATH: ${COMFYUI_WORKFLOW_PATH:-}
+      GENERATION_BACKEND_AUTH_TOKEN: ${GENERATION_BACKEND_AUTH_TOKEN:-ai-nft-forge-generation-backend-local}
+      GENERATION_BACKEND_BIND_HOST: 0.0.0.0
+      GENERATION_BACKEND_PORT: 8787
+      GENERATION_BACKEND_PROVIDER_KIND: ${GENERATION_BACKEND_PROVIDER_KIND:-deterministic_transform}
+      GENERATION_BACKEND_READINESS_TIMEOUT_MS: ${GENERATION_BACKEND_READINESS_TIMEOUT_MS:-5000}
+      GENERATION_BACKEND_SERVICE_NAME: ${GENERATION_BACKEND_SERVICE_NAME:-ai-nft-forge-generation-backend}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-ai-nft-forge}
+      S3_BUCKET_PRIVATE: ${S3_BUCKET_PRIVATE:-ai-nft-forge-private}
+      S3_BUCKET_PUBLIC: ${S3_BUCKET_PUBLIC:-ai-nft-forge-public}
+      S3_ENDPOINT: http://minio:9000
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-ai-nft-forge-local}
+      S3_USE_SSL: ${S3_USE_SSL:-false}
+    ports:
+      - "${GENERATION_BACKEND_PORT_PUBLIC:-8787}:8787"
+    healthcheck:
+      test: ["CMD-SHELL", "node dist/index.js health >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: apps/worker/Dockerfile
+    depends_on:
+      generation-backend:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ai_nft_forge}:${POSTGRES_PASSWORD:-ai_nft_forge}@postgres:5432/${POSTGRES_DB:-ai_nft_forge}?schema=public
+      GENERATED_ASSET_DOWNLOAD_URL_TTL_SECONDS: ${GENERATED_ASSET_DOWNLOAD_URL_TTL_SECONDS:-300}
+      GENERATION_ADAPTER_KIND: ${GENERATION_ADAPTER_KIND:-http_backend}
+      GENERATION_BACKEND_AUTH_TOKEN: ${GENERATION_BACKEND_AUTH_TOKEN:-ai-nft-forge-generation-backend-local}
+      GENERATION_BACKEND_TIMEOUT_MS: ${GENERATION_BACKEND_TIMEOUT_MS:-30000}
+      GENERATION_BACKEND_URL: http://generation-backend:8787/generate
+      GENERATION_QUEUE_CONCURRENCY: ${GENERATION_QUEUE_CONCURRENCY:-1}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      NOOP_QUEUE_CONCURRENCY: ${NOOP_QUEUE_CONCURRENCY:-1}
+      OPS_ALERT_WEBHOOK_BEARER_TOKEN: ${OPS_ALERT_WEBHOOK_BEARER_TOKEN:-}
+      OPS_ALERT_WEBHOOK_ENABLED: ${OPS_ALERT_WEBHOOK_ENABLED:-false}
+      OPS_ALERT_WEBHOOK_TIMEOUT_MS: ${OPS_ALERT_WEBHOOK_TIMEOUT_MS:-5000}
+      OPS_ALERT_WEBHOOK_URL: ${OPS_ALERT_WEBHOOK_URL:-}
+      OPS_OBSERVABILITY_CAPTURE_INTERVAL_SECONDS: ${OPS_OBSERVABILITY_CAPTURE_INTERVAL_SECONDS:-300}
+      OPS_OBSERVABILITY_CAPTURE_JITTER_SECONDS: ${OPS_OBSERVABILITY_CAPTURE_JITTER_SECONDS:-15}
+      OPS_OBSERVABILITY_CAPTURE_LOCK_TTL_SECONDS: ${OPS_OBSERVABILITY_CAPTURE_LOCK_TTL_SECONDS:-600}
+      OPS_OBSERVABILITY_CAPTURE_RUN_ON_START: ${OPS_OBSERVABILITY_CAPTURE_RUN_ON_START:-true}
+      OPS_OBSERVABILITY_CAPTURE_SCHEDULE_ENABLED: ${OPS_OBSERVABILITY_CAPTURE_SCHEDULE_ENABLED:-false}
+      OPS_RECONCILIATION_INTERVAL_SECONDS: ${OPS_RECONCILIATION_INTERVAL_SECONDS:-300}
+      OPS_RECONCILIATION_JITTER_SECONDS: ${OPS_RECONCILIATION_JITTER_SECONDS:-15}
+      OPS_RECONCILIATION_LOCK_TTL_SECONDS: ${OPS_RECONCILIATION_LOCK_TTL_SECONDS:-600}
+      OPS_RECONCILIATION_RUN_ON_START: ${OPS_RECONCILIATION_RUN_ON_START:-true}
+      OPS_RECONCILIATION_SCHEDULE_ENABLED: ${OPS_RECONCILIATION_SCHEDULE_ENABLED:-false}
+      REDIS_URL: redis://redis:6379
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-ai-nft-forge}
+      S3_BUCKET_PRIVATE: ${S3_BUCKET_PRIVATE:-ai-nft-forge-private}
+      S3_BUCKET_PUBLIC: ${S3_BUCKET_PUBLIC:-ai-nft-forge-public}
+      S3_ENDPOINT: http://minio:9000
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-ai-nft-forge-local}
+      S3_USE_SSL: ${S3_USE_SSL:-false}
+      WORKER_SERVICE_NAME: ${WORKER_SERVICE_NAME:-ai-nft-forge-worker}
+    healthcheck:
+      test: ["CMD-SHELL", "node dist/index.js health >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  web:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+    depends_on:
+      generation-backend:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      worker:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      AUTH_MESSAGE_STATEMENT: ${AUTH_MESSAGE_STATEMENT:-Sign in to AI NFT Forge}
+      AUTH_NONCE_TTL_MINUTES: ${AUTH_NONCE_TTL_MINUTES:-10}
+      AUTH_SESSION_COOKIE_NAME: ${AUTH_SESSION_COOKIE_NAME:-ai_nft_forge_session}
+      AUTH_SESSION_TTL_DAYS: ${AUTH_SESSION_TTL_DAYS:-30}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ai_nft_forge}:${POSTGRES_PASSWORD:-ai_nft_forge}@postgres:5432/${POSTGRES_DB:-ai_nft_forge}?schema=public
+      GENERATED_ASSET_DOWNLOAD_URL_TTL_SECONDS: ${GENERATED_ASSET_DOWNLOAD_URL_TTL_SECONDS:-300}
+      GENERATION_ADAPTER_KIND: ${GENERATION_ADAPTER_KIND:-http_backend}
+      GENERATION_BACKEND_AUTH_TOKEN: ${GENERATION_BACKEND_AUTH_TOKEN:-ai-nft-forge-generation-backend-local}
+      GENERATION_BACKEND_TIMEOUT_MS: ${GENERATION_BACKEND_TIMEOUT_MS:-30000}
+      GENERATION_BACKEND_URL: http://generation-backend:8787/generate
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      OPS_OBSERVABILITY_CAPTURE_INTERVAL_SECONDS: ${OPS_OBSERVABILITY_CAPTURE_INTERVAL_SECONDS:-300}
+      OPS_OBSERVABILITY_CAPTURE_JITTER_SECONDS: ${OPS_OBSERVABILITY_CAPTURE_JITTER_SECONDS:-15}
+      OPS_OBSERVABILITY_CAPTURE_LOCK_TTL_SECONDS: ${OPS_OBSERVABILITY_CAPTURE_LOCK_TTL_SECONDS:-600}
+      OPS_OBSERVABILITY_CAPTURE_RUN_ON_START: ${OPS_OBSERVABILITY_CAPTURE_RUN_ON_START:-true}
+      OPS_OBSERVABILITY_CAPTURE_SCHEDULE_ENABLED: ${OPS_OBSERVABILITY_CAPTURE_SCHEDULE_ENABLED:-false}
+      OPS_RECONCILIATION_INTERVAL_SECONDS: ${OPS_RECONCILIATION_INTERVAL_SECONDS:-300}
+      OPS_RECONCILIATION_JITTER_SECONDS: ${OPS_RECONCILIATION_JITTER_SECONDS:-15}
+      OPS_RECONCILIATION_LOCK_TTL_SECONDS: ${OPS_RECONCILIATION_LOCK_TTL_SECONDS:-600}
+      OPS_RECONCILIATION_RUN_ON_START: ${OPS_RECONCILIATION_RUN_ON_START:-true}
+      OPS_RECONCILIATION_SCHEDULE_ENABLED: ${OPS_RECONCILIATION_SCHEDULE_ENABLED:-false}
+      REDIS_URL: redis://redis:6379
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-ai-nft-forge}
+      S3_BUCKET_PRIVATE: ${S3_BUCKET_PRIVATE:-ai-nft-forge-private}
+      S3_BUCKET_PUBLIC: ${S3_BUCKET_PUBLIC:-ai-nft-forge-public}
+      S3_ENDPOINT: http://minio:9000
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-ai-nft-forge-local}
+      S3_USE_SSL: ${S3_USE_SSL:-false}
+      SOURCE_ASSET_UPLOAD_URL_TTL_SECONDS: ${SOURCE_ASSET_UPLOAD_URL_TTL_SECONDS:-900}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/api/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:

@@ -70,6 +70,31 @@ enum OpsAlertDeliveryState {
   failed
 }
 
+enum OpsReconciliationRunStatus {
+  succeeded
+  failed
+}
+
+enum OpsReconciliationIssueStatus {
+  open
+  repaired
+  ignored
+}
+
+enum OpsReconciliationIssueSeverity {
+  warning
+  critical
+}
+
+enum OpsReconciliationIssueKind {
+  source_asset_object_missing
+  generated_asset_object_missing
+  published_public_asset_missing
+  draft_contains_unapproved_asset
+  review_ready_draft_invalid
+  published_hero_asset_missing_from_snapshot
+}
+
 enum CollectionDraftStatus {
   draft
   review_ready
@@ -103,6 +128,8 @@ model User {
   opsAlertStates     OpsAlertState[]     @relation("OpsAlertStateOwner")
   opsCaptures        OpsObservabilityCapture[] @relation("OpsObservabilityCaptureOwner")
   opsWindowSnapshots OpsGenerationWindowSnapshot[] @relation("OpsGenerationWindowSnapshotOwner")
+  opsReconciliationRuns OpsReconciliationRun[] @relation("OpsReconciliationRunOwner")
+  opsReconciliationIssues OpsReconciliationIssue[] @relation("OpsReconciliationIssueOwner")
   ownedSourceAssets SourceAsset[] @relation("SourceAssetOwner")
   ownedWorkspaces    Workspace[]         @relation("WorkspaceOwner")
 
@@ -378,6 +405,52 @@ model OpsObservabilityCapture {
 
   @@index([ownerUserId, capturedAt], map: "ops_observability_captures_owner_user_id_captured_at_idx")
   @@map("ops_observability_captures")
+}
+
+model OpsReconciliationRun {
+  id                 String                     @id @default(cuid()) @map("id")
+  ownerUserId        String                     @map("owner_user_id")
+  startedAt          DateTime                   @map("started_at")
+  completedAt        DateTime                   @map("completed_at")
+  status             OpsReconciliationRunStatus @map("status")
+  message            String?                    @map("message")
+  issueCount         Int                        @default(0) @map("issue_count")
+  warningIssueCount  Int                        @default(0) @map("warning_issue_count")
+  criticalIssueCount Int                        @default(0) @map("critical_issue_count")
+  createdAt          DateTime                   @default(now()) @map("created_at")
+  updatedAt          DateTime                   @updatedAt @map("updated_at")
+  ownerUser          User                       @relation("OpsReconciliationRunOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  issues             OpsReconciliationIssue[]   @relation("OpsReconciliationIssueLatestRun")
+
+  @@index([ownerUserId, completedAt], map: "ops_reconciliation_runs_owner_user_id_completed_at_idx")
+  @@map("ops_reconciliation_runs")
+}
+
+model OpsReconciliationIssue {
+  id                 String                       @id @default(cuid()) @map("id")
+  ownerUserId        String                       @map("owner_user_id")
+  latestRunId        String                       @map("latest_run_id")
+  fingerprint        String                       @map("fingerprint")
+  kind               OpsReconciliationIssueKind   @map("kind")
+  severity           OpsReconciliationIssueSeverity @map("severity")
+  status             OpsReconciliationIssueStatus @default(open) @map("status")
+  title              String                       @map("title")
+  message            String                       @map("message")
+  detailJson         Json                         @map("detail_json")
+  firstDetectedAt    DateTime                     @map("first_detected_at")
+  lastDetectedAt     DateTime                     @map("last_detected_at")
+  repairedAt         DateTime?                    @map("repaired_at")
+  ignoredAt          DateTime?                    @map("ignored_at")
+  repairMessage      String?                      @map("repair_message")
+  createdAt          DateTime                     @default(now()) @map("created_at")
+  updatedAt          DateTime                     @updatedAt @map("updated_at")
+  latestRun          OpsReconciliationRun         @relation("OpsReconciliationIssueLatestRun", fields: [latestRunId], references: [id], onDelete: Cascade)
+  ownerUser          User                         @relation("OpsReconciliationIssueOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerUserId, fingerprint], map: "ops_reconciliation_issues_owner_user_id_fingerprint_key")
+  @@index([ownerUserId, status, severity, lastDetectedAt], map: "ops_reconciliation_issues_owner_status_severity_detected_idx")
+  @@index([ownerUserId, latestRunId], map: "ops_reconciliation_issues_owner_latest_run_id_idx")
+  @@map("ops_reconciliation_issues")
 }
 
 model OpsGenerationWindowSnapshot {
