@@ -65,8 +65,6 @@ export const collectionContractDeploymentIntentResponseSchema = z.object({
 
 export const collectionContractDeploymentRecordRequestSchema = z.object({
   chainKey: collectionContractChainKeySchema,
-  contractAddress: evmAddressSchema,
-  deployedAt: z.string().datetime().optional(),
   deployTxHash: evmTransactionHashSchema
 });
 
@@ -90,7 +88,6 @@ export const collectionContractMintIntentResponseSchema = z.object({
 });
 
 export const collectionContractMintRecordRequestSchema = z.object({
-  mintedAt: z.string().datetime().optional(),
   recipientWalletAddress: walletAddressSchema,
   tokenId: z.number().int().positive(),
   txHash: evmTransactionHashSchema

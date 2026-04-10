@@ -23,22 +23,14 @@ export async function POST(request: Request, context: RouteContext) {
     );
     const result =
       await createRuntimeCollectionDraftService().recordCollectionContractDeployment(
-        body.deployedAt
-          ? {
-              chainKey: body.chainKey,
-              collectionDraftId,
-              contractAddress: body.contractAddress,
-              deployedAt: body.deployedAt,
-              deployTxHash: body.deployTxHash,
-              ownerUserId: session.user.id
-            }
-          : {
-            chainKey: body.chainKey,
-            collectionDraftId,
-            contractAddress: body.contractAddress,
-            deployTxHash: body.deployTxHash,
-            ownerUserId: session.user.id
-          }
+        {
+          chainKey: body.chainKey,
+          collectionDraftId,
+          deployTxHash: body.deployTxHash,
+          origin: new URL(request.url).origin,
+          ownerUserId: session.user.id,
+          ownerWalletAddress: session.user.walletAddress
+        }
       );
 
     return NextResponse.json(result);

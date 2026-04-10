@@ -29,6 +29,13 @@ This document is the durable source of truth for runtime environment variables a
 - `GENERATED_ASSET_DOWNLOAD_URL_TTL_SECONDS`
 - `SOURCE_ASSET_UPLOAD_URL_TTL_SECONDS`
 
+## Web onchain verification
+
+- `ONCHAIN_BASE_SEPOLIA_RPC_URL`
+- `ONCHAIN_BASE_RPC_URL`
+
+These are used by the web app to verify deployment and mint receipts against Base Sepolia or Base before it records onchain activity back into a published collection. They may point at public RPC endpoints for local work, but self-host deployments should prefer a stable provider URL.
+
 ## Worker concurrency and naming
 
 - `WORKER_SERVICE_NAME`
@@ -123,3 +130,4 @@ These are used by `infra/docker/docker-compose.selfhost.yml` and are optional un
 - Self-host deployment should enable both automation schedulers.
 - Local development can keep `COMFYUI_BASE_URL` pointed at `127.0.0.1`; containerized self-host should usually use `host.docker.internal` or an internal network host that your backend can reach.
 - Keep `S3_ENDPOINT` pointed at the MinIO service inside Docker Compose for self-host, not the host-mapped port.
+- For dependable onchain verification, point `ONCHAIN_BASE_SEPOLIA_RPC_URL` and `ONCHAIN_BASE_RPC_URL` at stable RPC providers rather than rate-limited public endpoints.

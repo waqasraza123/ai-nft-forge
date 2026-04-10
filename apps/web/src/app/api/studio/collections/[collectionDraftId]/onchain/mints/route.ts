@@ -23,22 +23,14 @@ export async function POST(request: Request, context: RouteContext) {
     );
     const result =
       await createRuntimeCollectionDraftService().recordCollectionContractMint(
-        body.mintedAt
-          ? {
-              collectionDraftId,
-              mintedAt: body.mintedAt,
-              ownerUserId: session.user.id,
-              recipientWalletAddress: body.recipientWalletAddress,
-              tokenId: body.tokenId,
-              txHash: body.txHash
-            }
-          : {
-              collectionDraftId,
-              ownerUserId: session.user.id,
-              recipientWalletAddress: body.recipientWalletAddress,
-              tokenId: body.tokenId,
-              txHash: body.txHash
-            }
+        {
+          collectionDraftId,
+          ownerUserId: session.user.id,
+          ownerWalletAddress: session.user.walletAddress,
+          recipientWalletAddress: body.recipientWalletAddress,
+          tokenId: body.tokenId,
+          txHash: body.txHash
+        }
       );
 
     return NextResponse.json(result);

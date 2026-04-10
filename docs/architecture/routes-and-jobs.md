@@ -82,7 +82,7 @@ This document defines durable boundary expectations for the implemented web, wor
 - Long-running and retryable work belongs in jobs, not request handlers.
 - Public collection delivery should stay distinct from studio operations.
 - Public storefront presentation should continue to resolve only from saved brand settings plus immutable published collection snapshots.
-- Onchain deployment and mint control routes should remain authenticated, owner-scoped, and intent-based; transaction signing stays outside the server boundary.
+- Onchain deployment and mint control routes should remain authenticated, owner-scoped, wallet-driven, and intent-based; transaction signing stays outside the server boundary and the server should only persist results after verifying the submitted hash onchain.
 - Generated-asset moderation should remain a protected studio-only control-plane action and should not leak mutable moderation state into public storefront read models.
 - Reconciliation runs, issue persistence, and repair actions should remain authenticated and owner-scoped, with automated execution owned by the worker rather than the web app.
 - Once deployment or mint activity is recorded for a published collection, subsequent publication-boundary mutations should remain blocked to preserve immutable onchain release semantics.

@@ -8,6 +8,15 @@ import {
   useEffectEvent,
   useState
 } from "react";
+import {
+  createPublicClient,
+  custom,
+  getAddress,
+  isAddressEqual,
+  toHex,
+  type Chain
+} from "viem";
+import { base, baseSepolia } from "viem/chains";
 
 import {
   createCollectionContractPath,
@@ -47,6 +56,149 @@ type NoticeState = {
   message: string;
   tone: "error" | "info" | "success";
 } | null;
+
+type BrowserEthereumProvider = {
+  request(input: { method: string; params?: unknown[] }): Promise<unknown>;
+};
+
+type OnchainFlowState = {
+  chainLabel: string;
+  kind: "deployment" | "mint";
+  message: string;
+  status:
+    | "awaiting_signature"
+    | "checking_wallet"
+    | "confirming"
+    | "failed"
+    | "preparing"
+    | "recording"
+    | "replaced"
+    | "submitted"
+    | "success"
+    | "switching_chain";
+  txHash: string | null;
+};
+
+declare global {
+  interface Window {
+    ethereum?: BrowserEthereumProvider;
+  }
+}
+
+class WalletFlowError extends Error {
+  txHash: string | null;
+
+  constructor(message: string, txHash: string | null = null) {
+    super(message);
+    this.name = "WalletFlowError";
+    this.txHash = txHash;
+  }
+}
+
+const walletChains = {
+  base,
+  "base-sepolia": baseSepolia
+} satisfies Record<CollectionContractChainKey, Chain>;
+
+function getWalletChainByKey(key: CollectionContractChainKey) {
+  return walletChains[key];
+}
+
+function getWalletChainLabel(chainId: number | null) {
+  if (chainId === null) {
+    return null;
+  }
+
+  const matchingChain = Object.values(walletChains).find(
+    (chain) => chain.id === chainId
+  );
+
+  return matchingChain?.name ?? `Chain ${chainId}`;
+}
+
+function getBrowserEthereumProvider() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.ethereum ?? null;
+}
+
+function createWalletAddChainParameters(chain: Chain) {
+  return {
+    chainId: toHex(chain.id),
+    chainName: chain.name,
+    nativeCurrency: chain.nativeCurrency,
+    rpcUrls: chain.rpcUrls.default.http,
+    ...(chain.blockExplorers?.default
+      ? {
+          blockExplorerUrls: [chain.blockExplorers.default.url]
+        }
+      : {})
+  };
+}
+
+function parseWalletErrorMessage(input: {
+  action: "connect" | "deploy" | "mint" | "switch" | "wait";
+  error: unknown;
+}) {
+  const errorCode =
+    typeof input.error === "object" &&
+    input.error !== null &&
+    "code" in input.error &&
+    typeof input.error.code === "number"
+      ? input.error.code
+      : null;
+  const errorMessage =
+    input.error instanceof Error
+      ? input.error.message
+      : typeof input.error === "string"
+        ? input.error
+        : "Unexpected wallet error.";
+  const normalizedErrorMessage = errorMessage.toLowerCase();
+
+  if (input.error instanceof WalletFlowError) {
+    return input.error.message;
+  }
+
+  if (
+    errorCode === 4001 ||
+    normalizedErrorMessage.includes("user rejected") ||
+    normalizedErrorMessage.includes("user denied") ||
+    normalizedErrorMessage.includes("rejected the request")
+  ) {
+    return "Wallet request was rejected.";
+  }
+
+  if (
+    normalizedErrorMessage.includes("timeout") ||
+    normalizedErrorMessage.includes("timed out")
+  ) {
+    return "Transaction was submitted but not confirmed in time. Retry confirmation after the network catches up.";
+  }
+
+  if (
+    normalizedErrorMessage.includes("insufficient funds") ||
+    normalizedErrorMessage.includes("intrinsic gas")
+  ) {
+    return "The connected wallet could not cover the transaction cost on the selected chain.";
+  }
+
+  switch (input.action) {
+    case "connect":
+      return `Wallet connection failed. ${errorMessage}`;
+    case "switch":
+      return `Chain switch failed. ${errorMessage}`;
+    case "wait":
+      return `Transaction confirmation failed. ${errorMessage}`;
+    case "deploy":
+      return `Deployment failed. ${errorMessage}`;
+    case "mint":
+      return `Mint failed. ${errorMessage}`;
+    default:
+      return errorMessage;
+  }
+}
 
 function createFallbackErrorMessage(response: Response) {
   switch (response.status) {
@@ -239,19 +391,27 @@ export function StudioCollectionsClient({
     );
   const [deploymentChainKey, setDeploymentChainKey] =
     useState<CollectionContractChainKey>("base-sepolia");
-  const [deploymentRecordState, setDeploymentRecordState] = useState(() => ({
-    contractAddress: "",
-    deployedAt: "",
-    deployTxHash: ""
-  }));
-  const [mintRecordState, setMintRecordState] = useState(() => ({
-    mintedAt: "",
+  const [mintRequestState, setMintRequestState] = useState(() => ({
     recipientWalletAddress: "",
-    tokenId: initialDrafts[0]?.items[0]?.position.toString() ?? "1",
-    txHash: ""
+    tokenId: initialDrafts[0]?.items[0]?.position.toString() ?? "1"
   }));
   const [deploymentIntentJson, setDeploymentIntentJson] = useState("");
   const [mintIntentJson, setMintIntentJson] = useState("");
+  const [walletProviderAvailable, setWalletProviderAvailable] = useState(false);
+  const [connectedWalletAddress, setConnectedWalletAddress] = useState<
+    string | null
+  >(null);
+  const [connectedWalletChainId, setConnectedWalletChainId] = useState<
+    number | null
+  >(null);
+  const [pendingDeploymentTxHash, setPendingDeploymentTxHash] = useState<
+    string | null
+  >(null);
+  const [pendingMintTxHash, setPendingMintTxHash] = useState<string | null>(
+    null
+  );
+  const [onchainFlowState, setOnchainFlowState] =
+    useState<OnchainFlowState | null>(null);
   const [notice, setNotice] = useState<NoticeState>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -262,16 +422,10 @@ export function StudioCollectionsClient({
   const [savingPublicationDraftId, setSavingPublicationDraftId] = useState<
     string | null
   >(null);
-  const [preparingDeploymentDraftId, setPreparingDeploymentDraftId] = useState<
-    string | null
-  >(null);
-  const [recordingDeploymentDraftId, setRecordingDeploymentDraftId] = useState<
-    string | null
-  >(null);
-  const [preparingMintDraftId, setPreparingMintDraftId] = useState<
-    string | null
-  >(null);
-  const [recordingMintDraftId, setRecordingMintDraftId] = useState<
+  const [deployingDraftId, setDeployingDraftId] = useState<string | null>(
+    null
+  );
+  const [mintingDraftId, setMintingDraftId] = useState<
     string | null
   >(null);
   const [unpublishingDraftId, setUnpublishingDraftId] = useState<string | null>(
@@ -292,6 +446,10 @@ export function StudioCollectionsClient({
     selectedDraft?.items.map((item) => item.generatedAsset.generatedAssetId) ??
       []
   );
+  const connectedOwnerWallet =
+    connectedWalletAddress &&
+    isAddressEqual(getAddress(connectedWalletAddress), getAddress(ownerWalletAddress));
+  const connectedWalletChainLabel = getWalletChainLabel(connectedWalletChainId);
 
   useEffect(() => {
     if (!selectedDraft && selectedDraftId) {
@@ -312,23 +470,15 @@ export function StudioCollectionsClient({
     setDeploymentChainKey(
       selectedDraft?.publication?.activeDeployment?.chain.key ?? "base-sepolia"
     );
-    setDeploymentRecordState({
-      contractAddress:
-        selectedDraft?.publication?.activeDeployment?.contractAddress ?? "",
-      deployedAt: selectedDraft?.publication?.activeDeployment?.deployedAt
-        ? selectedDraft.publication.activeDeployment.deployedAt.slice(0, 16)
-        : "",
-      deployTxHash:
-        selectedDraft?.publication?.activeDeployment?.deployTxHash ?? ""
-    });
-    setMintRecordState({
-      mintedAt: "",
+    setMintRequestState({
       recipientWalletAddress: "",
-      tokenId: selectedDraft?.items[0]?.position.toString() ?? "1",
-      txHash: ""
+      tokenId: selectedDraft?.items[0]?.position.toString() ?? "1"
     });
     setDeploymentIntentJson("");
     setMintIntentJson("");
+    setPendingDeploymentTxHash(null);
+    setPendingMintTxHash(null);
+    setOnchainFlowState(null);
   }, [selectedDraft]);
 
   const refreshDrafts = useEffectEvent(async (input?: { silent?: boolean }) => {
@@ -371,6 +521,347 @@ export function StudioCollectionsClient({
       setSelectedDraftId(draft.id);
     });
   });
+
+  const refreshWalletStatus = useEffectEvent(async () => {
+    const provider = getBrowserEthereumProvider();
+
+    setWalletProviderAvailable(Boolean(provider));
+
+    if (!provider) {
+      setConnectedWalletAddress(null);
+      setConnectedWalletChainId(null);
+      return;
+    }
+
+    const [accounts, chainIdHex] = await Promise.all([
+      provider.request({
+        method: "eth_accounts"
+      }),
+      provider
+        .request({
+          method: "eth_chainId"
+        })
+        .catch(() => null)
+    ]);
+
+    const firstAccount =
+      Array.isArray(accounts) && typeof accounts[0] === "string"
+        ? getAddress(accounts[0])
+        : null;
+    const parsedChainId =
+      typeof chainIdHex === "string" ? Number.parseInt(chainIdHex, 16) : null;
+
+    setConnectedWalletAddress(firstAccount);
+    setConnectedWalletChainId(
+      Number.isFinite(parsedChainId) ? parsedChainId : null
+    );
+  });
+
+  useEffect(() => {
+    void refreshWalletStatus();
+  }, [refreshWalletStatus]);
+
+  async function requestOwnerWalletConnection() {
+    const provider = getBrowserEthereumProvider();
+
+    if (!provider) {
+      throw new WalletFlowError(
+        "No browser wallet provider is available in this browser."
+      );
+    }
+
+    setWalletProviderAvailable(true);
+
+    const accounts = await provider.request({
+      method: "eth_requestAccounts"
+    });
+
+    if (!Array.isArray(accounts) || typeof accounts[0] !== "string") {
+      throw new WalletFlowError(
+        "The wallet did not return an account for this browser session."
+      );
+    }
+
+    const normalizedConnectedWalletAddress = getAddress(accounts[0]);
+
+    if (
+      !isAddressEqual(
+        normalizedConnectedWalletAddress,
+        getAddress(ownerWalletAddress)
+      )
+    ) {
+      throw new WalletFlowError(
+        "The connected wallet does not match the authenticated studio owner wallet."
+      );
+    }
+
+    setConnectedWalletAddress(normalizedConnectedWalletAddress);
+
+    return {
+      provider,
+      walletAddress: normalizedConnectedWalletAddress
+    };
+  }
+
+  async function ensureWalletChain(input: {
+    chainKey: CollectionContractChainKey;
+    provider: BrowserEthereumProvider;
+  }) {
+    const chain = getWalletChainByKey(input.chainKey);
+
+    try {
+      await input.provider.request({
+        method: "wallet_switchEthereumChain",
+        params: [
+          {
+            chainId: toHex(chain.id)
+          }
+        ]
+      });
+    } catch (error) {
+      const errorCode =
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        typeof error.code === "number"
+          ? error.code
+          : null;
+
+      if (errorCode !== 4902) {
+        throw error;
+      }
+
+      await input.provider.request({
+        method: "wallet_addEthereumChain",
+        params: [createWalletAddChainParameters(chain)]
+      });
+      await input.provider.request({
+        method: "wallet_switchEthereumChain",
+        params: [
+          {
+            chainId: toHex(chain.id)
+          }
+        ]
+      });
+    }
+
+    setConnectedWalletChainId(chain.id);
+
+    return chain;
+  }
+
+  async function submitWalletTransaction(input: {
+    chainKey: CollectionContractChainKey;
+    chainLabel: string;
+    kind: "deployment" | "mint";
+    transaction: {
+      data: string;
+      to: string | null;
+      value: string;
+    };
+  }) {
+    setOnchainFlowState({
+      chainLabel: input.chainLabel,
+      kind: input.kind,
+      message: "Connecting owner wallet…",
+      status: "checking_wallet",
+      txHash: null
+    });
+
+    const { provider, walletAddress } = await requestOwnerWalletConnection();
+
+    setOnchainFlowState({
+      chainLabel: input.chainLabel,
+      kind: input.kind,
+      message: "Switching wallet to the selected chain…",
+      status: "switching_chain",
+      txHash: null
+    });
+
+    const chain = await ensureWalletChain({
+      chainKey: input.chainKey,
+      provider
+    });
+    const publicClient = createPublicClient({
+      chain,
+      transport: custom(provider)
+    });
+
+    setOnchainFlowState({
+      chainLabel: input.chainLabel,
+      kind: input.kind,
+      message: "Approve the transaction in your wallet to continue.",
+      status: "awaiting_signature",
+      txHash: null
+    });
+
+    const submittedHash = await provider.request({
+      method: "eth_sendTransaction",
+      params: [
+        {
+          data: input.transaction.data,
+          from: walletAddress,
+          ...(input.transaction.to
+            ? {
+                to: input.transaction.to
+              }
+            : {}),
+          value: input.transaction.value
+        }
+      ]
+    });
+
+    if (typeof submittedHash !== "string") {
+      throw new WalletFlowError(
+        "The wallet did not return a transaction hash after submission."
+      );
+    }
+
+    let finalTxHash = submittedHash;
+    let transactionWasCancelled = false;
+
+    setOnchainFlowState({
+      chainLabel: input.chainLabel,
+      kind: input.kind,
+      message: "Transaction submitted. Waiting for an onchain receipt…",
+      status: "submitted",
+      txHash: submittedHash
+    });
+
+    try {
+      await publicClient.waitForTransactionReceipt({
+        hash: submittedHash as `0x${string}`,
+        onReplaced(replacement) {
+          finalTxHash = replacement.transaction.hash;
+
+          if (replacement.reason === "cancelled") {
+            transactionWasCancelled = true;
+            return;
+          }
+
+          setOnchainFlowState({
+            chainLabel: input.chainLabel,
+            kind: input.kind,
+            message:
+              replacement.reason === "repriced"
+                ? "The wallet repriced the transaction. Waiting on the replacement hash…"
+                : "The wallet replaced the transaction. Waiting on the replacement hash…",
+            status: "replaced",
+            txHash: finalTxHash
+          });
+        },
+        timeout: 120_000
+      });
+    } catch (error) {
+      throw new WalletFlowError(
+        parseWalletErrorMessage({
+          action: "wait",
+          error
+        }),
+        finalTxHash
+      );
+    }
+
+    if (transactionWasCancelled) {
+      throw new WalletFlowError(
+        "The transaction was cancelled in the wallet before confirmation."
+      );
+    }
+
+    setOnchainFlowState({
+      chainLabel: input.chainLabel,
+      kind: input.kind,
+      message: "Confirmed onchain. Recording the verified result…",
+      status: "recording",
+      txHash: finalTxHash
+    });
+
+    return finalTxHash as `0x${string}`;
+  }
+
+  async function recordVerifiedDeploymentTx(input: {
+    chainKey: CollectionContractChainKey;
+    draftId: string;
+    txHash: `0x${string}`;
+  }) {
+    const response = await fetch(
+      `/api/studio/collections/${input.draftId}/onchain/deployment`,
+      {
+        body: JSON.stringify({
+          chainKey: input.chainKey,
+          deployTxHash: input.txHash
+        }),
+        headers: {
+          "Content-Type": "application/json"
+        },
+        method: "POST"
+      }
+    );
+    const result = await parseJsonResponse({
+      response,
+      schema: collectionDraftResponseSchema
+    });
+
+    applyUpdatedDraft(result.draft);
+    setPendingDeploymentTxHash(null);
+
+    return result;
+  }
+
+  async function recordVerifiedMintTx(input: {
+    draftId: string;
+    recipientWalletAddress: string;
+    tokenId: number;
+    txHash: `0x${string}`;
+  }) {
+    const response = await fetch(
+      `/api/studio/collections/${input.draftId}/onchain/mints`,
+      {
+        body: JSON.stringify({
+          recipientWalletAddress: input.recipientWalletAddress,
+          tokenId: input.tokenId,
+          txHash: input.txHash
+        }),
+        headers: {
+          "Content-Type": "application/json"
+        },
+        method: "POST"
+      }
+    );
+    const result = await parseJsonResponse({
+      response,
+      schema: collectionDraftResponseSchema
+    });
+
+    applyUpdatedDraft(result.draft);
+    setPendingMintTxHash(null);
+
+    return result;
+  }
+
+  async function handleConnectWallet() {
+    setNotice({
+      message: "Connecting owner wallet…",
+      tone: "info"
+    });
+
+    try {
+      await requestOwnerWalletConnection();
+      await refreshWalletStatus();
+      setNotice({
+        message: "Owner wallet connected.",
+        tone: "success"
+      });
+    } catch (error) {
+      setNotice({
+        message: parseWalletErrorMessage({
+          action: "connect",
+          error
+        }),
+        tone: "error"
+      });
+    }
+  }
 
   async function handleCreateDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -636,14 +1127,14 @@ export function StudioCollectionsClient({
     }
   }
 
-  async function handlePrepareDeploymentIntent() {
+  async function handleDeployWithWallet() {
     if (!selectedDraft?.publication) {
       return;
     }
 
-    setPreparingDeploymentDraftId(selectedDraft.id);
+    setDeployingDraftId(selectedDraft.id);
     setNotice({
-      message: "Preparing deployment intent…",
+      message: "Preparing deployment transaction…",
       tone: "info"
     });
 
@@ -660,89 +1151,135 @@ export function StudioCollectionsClient({
           method: "POST"
         }
       );
-      const result = await parseJsonResponse({
+      const intent = await parseJsonResponse({
         response,
         schema: collectionContractDeploymentIntentResponseSchema
       });
 
-      setDeploymentIntentJson(JSON.stringify(result, null, 2));
+      setDeploymentIntentJson(JSON.stringify(intent, null, 2));
+      setOnchainFlowState({
+        chainLabel: intent.deployment.chain.label,
+        kind: "deployment",
+        message: "Prepared deployment intent. Opening wallet flow…",
+        status: "preparing",
+        txHash: null
+      });
+
+      const txHash = await submitWalletTransaction({
+        chainKey: intent.deployment.chain.key,
+        chainLabel: intent.deployment.chain.label,
+        kind: "deployment",
+        transaction: intent.deployment.transaction
+      });
+
+      setPendingDeploymentTxHash(txHash);
+      await recordVerifiedDeploymentTx({
+        chainKey: intent.deployment.chain.key,
+        draftId: selectedDraft.id,
+        txHash
+      });
+      setOnchainFlowState({
+        chainLabel: intent.deployment.chain.label,
+        kind: "deployment",
+        message: "Deployment confirmed and recorded from chain state.",
+        status: "success",
+        txHash
+      });
       setNotice({
-        message: "Deployment intent prepared.",
+        message: "Contract deployed, verified, and recorded.",
         tone: "success"
       });
     } catch (error) {
+      const message = parseWalletErrorMessage({
+        action: "deploy",
+        error
+      });
+      const txHash = error instanceof WalletFlowError ? error.txHash : null;
+
+      if (txHash) {
+        setPendingDeploymentTxHash(txHash);
+      }
+
+      setOnchainFlowState((current) => ({
+        chainLabel:
+          current?.chainLabel ??
+          getWalletChainByKey(deploymentChainKey).name,
+        kind: "deployment",
+        message,
+        status: "failed",
+        txHash
+      }));
       setNotice({
-        message:
-          error instanceof Error
-            ? error.message
-            : "Deployment intent could not be prepared.",
+        message,
         tone: "error"
       });
     } finally {
-      setPreparingDeploymentDraftId(null);
+      setDeployingDraftId(null);
+      void refreshWalletStatus();
     }
   }
 
-  async function handleRecordDeployment(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!selectedDraft?.publication) {
+  async function handleRetryDeploymentRecord() {
+    if (!selectedDraft?.publication || !pendingDeploymentTxHash) {
       return;
     }
 
-    setRecordingDeploymentDraftId(selectedDraft.id);
-    setNotice({
-      message: "Recording deployed contract…",
-      tone: "info"
+    setDeployingDraftId(selectedDraft.id);
+    setOnchainFlowState({
+      chainLabel: getWalletChainByKey(deploymentChainKey).name,
+      kind: "deployment",
+      message: "Retrying deployment confirmation and record…",
+      status: "recording",
+      txHash: pendingDeploymentTxHash
     });
 
     try {
-      const response = await fetch(
-        `/api/studio/collections/${selectedDraft.id}/onchain/deployment`,
-        {
-          body: JSON.stringify({
-            chainKey: deploymentChainKey,
-            contractAddress: deploymentRecordState.contractAddress,
-            deployedAt: toOptionalIsoTimestamp(deploymentRecordState.deployedAt),
-            deployTxHash: deploymentRecordState.deployTxHash
-          }),
-          headers: {
-            "Content-Type": "application/json"
-          },
-          method: "POST"
-        }
-      );
-      const result = await parseJsonResponse({
-        response,
-        schema: collectionDraftResponseSchema
+      await recordVerifiedDeploymentTx({
+        chainKey: deploymentChainKey,
+        draftId: selectedDraft.id,
+        txHash: pendingDeploymentTxHash as `0x${string}`
       });
-
-      applyUpdatedDraft(result.draft);
+      setOnchainFlowState({
+        chainLabel: getWalletChainByKey(deploymentChainKey).name,
+        kind: "deployment",
+        message: "Deployment confirmed and recorded from chain state.",
+        status: "success",
+        txHash: pendingDeploymentTxHash
+      });
       setNotice({
-        message: "Contract deployment recorded.",
+        message: "Contract deployment recorded from verified chain state.",
         tone: "success"
       });
     } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Deployment confirmation retry failed.";
+
+      setOnchainFlowState({
+        chainLabel: getWalletChainByKey(deploymentChainKey).name,
+        kind: "deployment",
+        message,
+        status: "failed",
+        txHash: pendingDeploymentTxHash
+      });
       setNotice({
-        message:
-          error instanceof Error
-            ? error.message
-            : "Contract deployment could not be recorded.",
+        message,
         tone: "error"
       });
     } finally {
-      setRecordingDeploymentDraftId(null);
+      setDeployingDraftId(null);
     }
   }
 
-  async function handlePrepareMintIntent() {
+  async function handleMintWithWallet() {
     if (!selectedDraft?.publication) {
       return;
     }
 
-    setPreparingMintDraftId(selectedDraft.id);
+    setMintingDraftId(selectedDraft.id);
     setNotice({
-      message: "Preparing mint intent…",
+      message: "Preparing mint transaction…",
       tone: "info"
     });
 
@@ -751,8 +1288,8 @@ export function StudioCollectionsClient({
         `/api/studio/collections/${selectedDraft.id}/onchain/mint-intent`,
         {
           body: JSON.stringify({
-            recipientWalletAddress: mintRecordState.recipientWalletAddress,
-            tokenId: Number.parseInt(mintRecordState.tokenId || "0", 10)
+            recipientWalletAddress: mintRequestState.recipientWalletAddress,
+            tokenId: Number.parseInt(mintRequestState.tokenId || "0", 10)
           }),
           headers: {
             "Content-Type": "application/json"
@@ -760,78 +1297,133 @@ export function StudioCollectionsClient({
           method: "POST"
         }
       );
-      const result = await parseJsonResponse({
+      const intent = await parseJsonResponse({
         response,
         schema: collectionContractMintIntentResponseSchema
       });
 
-      setMintIntentJson(JSON.stringify(result, null, 2));
+      setMintIntentJson(JSON.stringify(intent, null, 2));
+      setOnchainFlowState({
+        chainLabel: intent.mint.chain.label,
+        kind: "mint",
+        message: "Prepared mint intent. Opening wallet flow…",
+        status: "preparing",
+        txHash: null
+      });
+
+      const txHash = await submitWalletTransaction({
+        chainKey: intent.mint.chain.key,
+        chainLabel: intent.mint.chain.label,
+        kind: "mint",
+        transaction: intent.mint.transaction
+      });
+
+      setPendingMintTxHash(txHash);
+      await recordVerifiedMintTx({
+        draftId: selectedDraft.id,
+        recipientWalletAddress: intent.mint.recipientWalletAddress,
+        tokenId: intent.mint.tokenId,
+        txHash
+      });
+      setOnchainFlowState({
+        chainLabel: intent.mint.chain.label,
+        kind: "mint",
+        message: "Mint confirmed and recorded from chain state.",
+        status: "success",
+        txHash
+      });
       setNotice({
-        message: "Mint intent prepared.",
+        message: "Mint confirmed, verified, and recorded.",
         tone: "success"
       });
     } catch (error) {
+      const message = parseWalletErrorMessage({
+        action: "mint",
+        error
+      });
+      const txHash = error instanceof WalletFlowError ? error.txHash : null;
+
+      if (txHash) {
+        setPendingMintTxHash(txHash);
+      }
+
+      setOnchainFlowState((current) => ({
+        chainLabel:
+          current?.chainLabel ??
+          (selectedDraft.publication?.activeDeployment?.chain.label ??
+            getWalletChainByKey(deploymentChainKey).name),
+        kind: "mint",
+        message,
+        status: "failed",
+        txHash
+      }));
       setNotice({
-        message:
-          error instanceof Error
-            ? error.message
-            : "Mint intent could not be prepared.",
+        message,
         tone: "error"
       });
     } finally {
-      setPreparingMintDraftId(null);
+      setMintingDraftId(null);
+      void refreshWalletStatus();
     }
   }
 
-  async function handleRecordMint(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!selectedDraft?.publication) {
+  async function handleRetryMintRecord() {
+    if (!selectedDraft?.publication || !pendingMintTxHash) {
       return;
     }
 
-    setRecordingMintDraftId(selectedDraft.id);
-    setNotice({
-      message: "Recording mint…",
-      tone: "info"
+    const tokenId = Number.parseInt(mintRequestState.tokenId || "0", 10);
+
+    setMintingDraftId(selectedDraft.id);
+    setOnchainFlowState({
+      chainLabel:
+        selectedDraft.publication.activeDeployment?.chain.label ??
+        getWalletChainByKey(deploymentChainKey).name,
+      kind: "mint",
+      message: "Retrying mint confirmation and record…",
+      status: "recording",
+      txHash: pendingMintTxHash
     });
 
     try {
-      const response = await fetch(
-        `/api/studio/collections/${selectedDraft.id}/onchain/mints`,
-        {
-          body: JSON.stringify({
-            mintedAt: toOptionalIsoTimestamp(mintRecordState.mintedAt),
-            recipientWalletAddress: mintRecordState.recipientWalletAddress,
-            tokenId: Number.parseInt(mintRecordState.tokenId || "0", 10),
-            txHash: mintRecordState.txHash
-          }),
-          headers: {
-            "Content-Type": "application/json"
-          },
-          method: "POST"
-        }
-      );
-      const result = await parseJsonResponse({
-        response,
-        schema: collectionDraftResponseSchema
+      await recordVerifiedMintTx({
+        draftId: selectedDraft.id,
+        recipientWalletAddress: mintRequestState.recipientWalletAddress,
+        tokenId,
+        txHash: pendingMintTxHash as `0x${string}`
       });
-
-      applyUpdatedDraft(result.draft);
+      setOnchainFlowState({
+        chainLabel:
+          selectedDraft.publication.activeDeployment?.chain.label ??
+          getWalletChainByKey(deploymentChainKey).name,
+        kind: "mint",
+        message: "Mint confirmed and recorded from chain state.",
+        status: "success",
+        txHash: pendingMintTxHash
+      });
       setNotice({
-        message: "Mint recorded.",
+        message: "Mint recorded from verified chain state.",
         tone: "success"
       });
     } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Mint confirmation retry failed.";
+
+      setOnchainFlowState({
+        chainLabel:
+          selectedDraft.publication.activeDeployment?.chain.label ??
+          getWalletChainByKey(deploymentChainKey).name,
+        kind: "mint",
+        message,
+        status: "failed",
+        txHash: pendingMintTxHash
+      });
       setNotice({
-        message:
-          error instanceof Error
-            ? error.message
-            : "Mint could not be recorded.",
+        message,
         tone: "error"
       });
     } finally {
-      setRecordingMintDraftId(null);
+      setMintingDraftId(null);
     }
   }
 
@@ -1771,7 +2363,7 @@ export function StudioCollectionsClient({
           )}
         </SurfaceCard>
         <SurfaceCard
-          body="Prepare owner-signed deployment and mint transactions from the immutable published snapshot, then record the resulting onchain events back into the collection."
+          body="Prepare, sign, submit, confirm, and record owner-signed deployment and mint transactions directly from the immutable published snapshot. The server now verifies chain receipts before it accepts any deployment or mint record."
           eyebrow="Onchain"
           span={6}
           title="Deployment and minting"
@@ -1779,6 +2371,21 @@ export function StudioCollectionsClient({
           {selectedDraft?.publication ? (
             <div className="studio-form">
               <div className="pill-row">
+                <Pill>{walletProviderAvailable ? "Wallet detected" : "No wallet detected"}</Pill>
+                <Pill>
+                  Owner {shortHex(ownerWalletAddress)}
+                </Pill>
+                {connectedWalletAddress ? (
+                  <Pill>
+                    {connectedOwnerWallet ? "Connected" : "Wallet mismatch"}{" "}
+                    {shortHex(connectedWalletAddress)}
+                  </Pill>
+                ) : (
+                  <Pill>Wallet not connected</Pill>
+                )}
+                {connectedWalletChainLabel ? (
+                  <Pill>{connectedWalletChainLabel}</Pill>
+                ) : null}
                 {selectedDraft.publication.activeDeployment ? (
                   <>
                     <Pill>
@@ -1806,6 +2413,38 @@ export function StudioCollectionsClient({
                   {selectedDraft.publication.mintedTokenCount === 1 ? "" : "s"}
                 </Pill>
               </div>
+              <div className="studio-action-row">
+                <button
+                  className="button-action"
+                  onClick={() => {
+                    void handleConnectWallet();
+                  }}
+                  type="button"
+                >
+                  Connect owner wallet
+                </button>
+              </div>
+              {onchainFlowState ? (
+                <div
+                  className={`status-banner ${
+                    onchainFlowState.status === "failed"
+                      ? "status-banner--error"
+                      : onchainFlowState.status === "success"
+                        ? "status-banner--success"
+                        : ""
+                  }`}
+                >
+                  <strong>
+                    {onchainFlowState.kind === "deployment"
+                      ? "Deployment flow"
+                      : "Mint flow"}
+                  </strong>
+                  <span>{onchainFlowState.message}</span>
+                  {onchainFlowState.txHash ? (
+                    <span>Tx: {onchainFlowState.txHash}</span>
+                  ) : null}
+                </div>
+              ) : null}
               <label className="field-stack">
                 <span className="field-label">Deployment chain</span>
                 <select
@@ -1825,18 +2464,31 @@ export function StudioCollectionsClient({
                 <button
                   className="button-action"
                   disabled={
-                    preparingDeploymentDraftId === selectedDraft.id ||
+                    deployingDraftId === selectedDraft.id ||
                     Boolean(selectedDraft.publication.activeDeployment)
                   }
                   onClick={() => {
-                    void handlePrepareDeploymentIntent();
+                    void handleDeployWithWallet();
                   }}
                   type="button"
                 >
-                  {preparingDeploymentDraftId === selectedDraft.id
-                    ? "Preparing deployment…"
-                    : "Prepare deployment intent"}
+                  {deployingDraftId === selectedDraft.id
+                    ? "Processing deployment…"
+                    : "Deploy with wallet"}
                 </button>
+                {pendingDeploymentTxHash &&
+                !selectedDraft.publication.activeDeployment ? (
+                  <button
+                    className="button-action"
+                    disabled={deployingDraftId === selectedDraft.id}
+                    onClick={() => {
+                      void handleRetryDeploymentRecord();
+                    }}
+                    type="button"
+                  >
+                    Retry deployment confirmation
+                  </button>
+                ) : null}
               </div>
               {deploymentIntentJson ? (
                 <label className="field-stack">
@@ -1849,77 +2501,19 @@ export function StudioCollectionsClient({
                   />
                 </label>
               ) : null}
-              <form className="studio-form" onSubmit={handleRecordDeployment}>
-                <label className="field-stack">
-                  <span className="field-label">Contract address</span>
-                  <input
-                    className="input-field"
-                    onChange={(event) => {
-                      setDeploymentRecordState((current) => ({
-                        ...current,
-                        contractAddress: event.target.value
-                      }));
-                    }}
-                    placeholder="0x..."
-                    value={deploymentRecordState.contractAddress}
-                  />
-                </label>
-                <label className="field-stack">
-                  <span className="field-label">Deployment tx hash</span>
-                  <input
-                    className="input-field"
-                    onChange={(event) => {
-                      setDeploymentRecordState((current) => ({
-                        ...current,
-                        deployTxHash: event.target.value
-                      }));
-                    }}
-                    placeholder="0x..."
-                    value={deploymentRecordState.deployTxHash}
-                  />
-                </label>
-                <label className="field-stack">
-                  <span className="field-label">Deployed at</span>
-                  <input
-                    className="input-field"
-                    onChange={(event) => {
-                      setDeploymentRecordState((current) => ({
-                        ...current,
-                        deployedAt: event.target.value
-                      }));
-                    }}
-                    type="datetime-local"
-                    value={deploymentRecordState.deployedAt}
-                  />
-                </label>
-                <div className="studio-action-row">
-                  <button
-                    className="button-action"
-                    disabled={
-                      recordingDeploymentDraftId === selectedDraft.id ||
-                      Boolean(selectedDraft.publication.activeDeployment)
-                    }
-                    type="submit"
-                  >
-                    {recordingDeploymentDraftId === selectedDraft.id
-                      ? "Recording deployment…"
-                      : "Record deployment"}
-                  </button>
-                </div>
-              </form>
-              <form className="studio-form" onSubmit={handleRecordMint}>
+              <div className="studio-form">
                 <label className="field-stack">
                   <span className="field-label">Recipient wallet</span>
                   <input
                     className="input-field"
                     onChange={(event) => {
-                      setMintRecordState((current) => ({
+                      setMintRequestState((current) => ({
                         ...current,
                         recipientWalletAddress: event.target.value
                       }));
                     }}
                     placeholder="0x..."
-                    value={mintRecordState.recipientWalletAddress}
+                    value={mintRequestState.recipientWalletAddress}
                   />
                 </label>
                 <label className="field-stack">
@@ -1928,31 +2522,43 @@ export function StudioCollectionsClient({
                     className="input-field"
                     min={1}
                     onChange={(event) => {
-                      setMintRecordState((current) => ({
+                      setMintRequestState((current) => ({
                         ...current,
                         tokenId: event.target.value
                       }));
                     }}
                     type="number"
-                    value={mintRecordState.tokenId}
+                    value={mintRequestState.tokenId}
                   />
                 </label>
                 <div className="studio-action-row">
                   <button
                     className="button-action"
                     disabled={
-                      preparingMintDraftId === selectedDraft.id ||
+                      mintingDraftId === selectedDraft.id ||
                       !selectedDraft.publication.activeDeployment
                     }
                     onClick={() => {
-                      void handlePrepareMintIntent();
+                      void handleMintWithWallet();
                     }}
                     type="button"
                   >
-                    {preparingMintDraftId === selectedDraft.id
-                      ? "Preparing mint…"
-                      : "Prepare mint intent"}
+                    {mintingDraftId === selectedDraft.id
+                      ? "Processing mint…"
+                      : "Mint with wallet"}
                   </button>
+                  {pendingMintTxHash ? (
+                    <button
+                      className="button-action"
+                      disabled={mintingDraftId === selectedDraft.id}
+                      onClick={() => {
+                        void handleRetryMintRecord();
+                      }}
+                      type="button"
+                    >
+                      Retry mint confirmation
+                    </button>
+                  ) : null}
                 </div>
                 {mintIntentJson ? (
                   <label className="field-stack">
@@ -1965,49 +2571,7 @@ export function StudioCollectionsClient({
                     />
                   </label>
                 ) : null}
-                <label className="field-stack">
-                  <span className="field-label">Mint tx hash</span>
-                  <input
-                    className="input-field"
-                    onChange={(event) => {
-                      setMintRecordState((current) => ({
-                        ...current,
-                        txHash: event.target.value
-                      }));
-                    }}
-                    placeholder="0x..."
-                    value={mintRecordState.txHash}
-                  />
-                </label>
-                <label className="field-stack">
-                  <span className="field-label">Minted at</span>
-                  <input
-                    className="input-field"
-                    onChange={(event) => {
-                      setMintRecordState((current) => ({
-                        ...current,
-                        mintedAt: event.target.value
-                      }));
-                    }}
-                    type="datetime-local"
-                    value={mintRecordState.mintedAt}
-                  />
-                </label>
-                <div className="studio-action-row">
-                  <button
-                    className="button-action button-action--accent"
-                    disabled={
-                      recordingMintDraftId === selectedDraft.id ||
-                      !selectedDraft.publication.activeDeployment
-                    }
-                    type="submit"
-                  >
-                    {recordingMintDraftId === selectedDraft.id
-                      ? "Recording mint…"
-                      : "Record mint"}
-                  </button>
-                </div>
-              </form>
+              </div>
               {selectedDraft.publication.mints.length > 0 ? (
                 <div className="collection-item-list">
                   {selectedDraft.publication.mints.map((mint) => (

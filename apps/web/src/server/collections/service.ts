@@ -302,6 +302,33 @@ type PublicPublicationAssetRecord = {
 
 type CollectionDraftServiceDependencies = {
   now: () => Date;
+  onchain: {
+    verifyDeploymentTransaction(input: {
+      chainKey: CollectionContractChainKey;
+      deployTxHash: `0x${string}`;
+      expectedContractName: string;
+      expectedContractSymbol: string;
+      expectedDeploymentData: `0x${string}`;
+      expectedOwnerWalletAddress: string;
+      expectedTokenUriBaseUrl: string;
+    }): Promise<{
+      contractAddress: string;
+      deployedAt: Date;
+      deployTxHash: string;
+    }>;
+    verifyMintTransaction(input: {
+      chainKey: CollectionContractChainKey;
+      contractAddress: string;
+      expectedMintData: `0x${string}`;
+      expectedOwnerWalletAddress: string;
+      recipientWalletAddress: string;
+      tokenId: number;
+      txHash: `0x${string}`;
+    }): Promise<{
+      mintedAt: Date;
+      txHash: string;
+    }>;
+  };
   repositories: CollectionDraftRepositorySet;
   runTransaction<T>(
     operation: (repositories: CollectionDraftRepositorySet) => Promise<T>
@@ -357,6 +384,68 @@ function resolveRemainingSupply(totalSupply: number | null, soldCount: number) {
 
 function countMintedTokens(publication: PublishedCollectionRecord) {
   return publication.mints?.length ?? 0;
+}
+
+function buildCollectionContractDeploymentContext(input: {
+  brandName: string;
+  brandSlug: string;
+  collectionTitle: string;
+  collectionSlug: string;
+  origin: string;
+  ownerWalletAddress: string;
+}) {
+  const contractName = createCollectionContractName({
+    brandName: input.brandName,
+    collectionTitle: input.collectionTitle
+  });
+  const contractSymbol = createCollectionContractSymbol({
+    brandSlug: input.brandSlug,
+    collectionSlug: input.collectionSlug
+  });
+  const tokenUriBaseUrl = createCollectionTokenUriBaseUrl({
+    brandSlug: input.brandSlug,
+    collectionSlug: input.collectionSlug,
+    origin: input.origin
+  });
+  const artifact = getAiNftForgeCollectionContractArtifact();
+  const deploymentData = (encodeDeployData as unknown as (input: {
+    abi: unknown[];
+    args: unknown[];
+    bytecode: `0x${string}`;
+  }) => `0x${string}`)({
+    abi: artifact.abi,
+    args: [
+      contractName,
+      contractSymbol,
+      input.ownerWalletAddress,
+      tokenUriBaseUrl
+    ],
+    bytecode: artifact.bytecode
+  });
+
+  return {
+    contractName,
+    contractSymbol,
+    deploymentData,
+    tokenUriBaseUrl
+  };
+}
+
+function buildCollectionContractMintData(input: {
+  recipientWalletAddress: string;
+  tokenId: number;
+}) {
+  const artifact = getAiNftForgeCollectionContractArtifact();
+
+  return (encodeFunctionData as unknown as (input: {
+    abi: unknown[];
+    args: unknown[];
+    functionName: string;
+  }) => `0x${string}`)({
+    abi: artifact.abi,
+    args: [input.recipientWalletAddress, BigInt(input.tokenId)],
+    functionName: "ownerMint"
+  });
 }
 
 function serializeOnchainDeployment(publication: PublishedCollectionRecord) {
@@ -1256,44 +1345,24 @@ export function createCollectionDraftService(
         );
       }
 
-      const contractName = createCollectionContractName({
+      const deploymentContext = buildCollectionContractDeploymentContext({
         brandName: publication.brandName,
-        collectionTitle: publication.title
-      });
-      const contractSymbol = createCollectionContractSymbol({
-        brandSlug: publication.brandSlug,
-        collectionSlug: publication.slug
-      });
-      const tokenUriBaseUrl = createCollectionTokenUriBaseUrl({
         brandSlug: publication.brandSlug,
         collectionSlug: publication.slug,
-        origin: input.origin
-      });
-      const artifact = getAiNftForgeCollectionContractArtifact();
-      const deploymentData = (encodeDeployData as unknown as (input: {
-        abi: unknown[];
-        args: unknown[];
-        bytecode: `0x${string}`;
-      }) => `0x${string}`)({
-        abi: artifact.abi,
-        args: [
-          contractName,
-          contractSymbol,
-          input.ownerWalletAddress,
-          tokenUriBaseUrl
-        ],
-        bytecode: artifact.bytecode
+        collectionTitle: publication.title,
+        origin: input.origin,
+        ownerWalletAddress: input.ownerWalletAddress
       });
 
       return collectionContractDeploymentIntentResponseSchema.parse({
         deployment: {
           chain,
-          contractName,
-          contractSymbol,
+          contractName: deploymentContext.contractName,
+          contractSymbol: deploymentContext.contractSymbol,
           ownerWalletAddress: input.ownerWalletAddress,
-          tokenUriBaseUrl,
+          tokenUriBaseUrl: deploymentContext.tokenUriBaseUrl,
           transaction: {
-            data: deploymentData,
+            data: deploymentContext.deploymentData,
             to: null,
             value: "0x0"
           }
@@ -1304,10 +1373,10 @@ export function createCollectionDraftService(
     async recordCollectionContractDeployment(input: {
       chainKey: CollectionContractChainKey;
       collectionDraftId: string;
-      contractAddress: string;
-      deployedAt?: string;
       deployTxHash: string;
+      origin: string;
       ownerUserId: string;
+      ownerWalletAddress: string;
     }) {
       const chain = getSupportedCollectionContractChainByKey(input.chainKey);
 
@@ -1343,16 +1412,33 @@ export function createCollectionDraftService(
         );
       }
 
+      const deploymentContext = buildCollectionContractDeploymentContext({
+        brandName: publication.brandName,
+        brandSlug: publication.brandSlug,
+        collectionSlug: publication.slug,
+        collectionTitle: publication.title,
+        origin: input.origin,
+        ownerWalletAddress: input.ownerWalletAddress
+      });
+      const verifiedDeployment =
+        await dependencies.onchain.verifyDeploymentTransaction({
+          chainKey: chain.key,
+          deployTxHash: input.deployTxHash as `0x${string}`,
+          expectedContractName: deploymentContext.contractName,
+          expectedContractSymbol: deploymentContext.contractSymbol,
+          expectedDeploymentData: deploymentContext.deploymentData,
+          expectedOwnerWalletAddress: input.ownerWalletAddress,
+          expectedTokenUriBaseUrl: deploymentContext.tokenUriBaseUrl
+        });
+
       await dependencies.repositories.publishedCollectionRepository.updateByIdForOwner(
         {
           brandName: publication.brandName,
           brandSlug: publication.brandSlug,
-          contractAddress: input.contractAddress,
+          contractAddress: verifiedDeployment.contractAddress,
           contractChainKey: chain.key,
-          contractDeployedAt: input.deployedAt
-            ? new Date(input.deployedAt)
-            : dependencies.now(),
-          contractDeployTxHash: input.deployTxHash,
+          contractDeployedAt: verifiedDeployment.deployedAt,
+          contractDeployTxHash: verifiedDeployment.deployTxHash,
           description: publication.description,
           displayOrder: publication.displayOrder,
           endAt: publication.endAt,
@@ -1451,15 +1537,9 @@ export function createCollectionDraftService(
         );
       }
 
-      const artifact = getAiNftForgeCollectionContractArtifact();
-      const mintData = (encodeFunctionData as unknown as (input: {
-        abi: unknown[];
-        args: unknown[];
-        functionName: string;
-      }) => `0x${string}`)({
-        abi: artifact.abi,
-        args: [parsedInput.recipientWalletAddress, BigInt(parsedInput.tokenId)],
-        functionName: "ownerMint"
+      const mintData = buildCollectionContractMintData({
+        recipientWalletAddress: parsedInput.recipientWalletAddress,
+        tokenId: parsedInput.tokenId
       });
 
       return collectionContractMintIntentResponseSchema.parse({
@@ -1479,8 +1559,8 @@ export function createCollectionDraftService(
 
     async recordCollectionContractMint(input: {
       collectionDraftId: string;
-      mintedAt?: string;
       ownerUserId: string;
+      ownerWalletAddress: string;
       recipientWalletAddress: string;
       tokenId: number;
       txHash: string;
@@ -1547,14 +1627,28 @@ export function createCollectionDraftService(
         );
       }
 
+      const mintData = buildCollectionContractMintData({
+        recipientWalletAddress: parsedInput.recipientWalletAddress,
+        tokenId: parsedInput.tokenId
+      });
+      const verifiedMint = await dependencies.onchain.verifyMintTransaction({
+        chainKey: deployment.chain.key,
+        contractAddress: deployment.contractAddress,
+        expectedMintData: mintData,
+        expectedOwnerWalletAddress: input.ownerWalletAddress,
+        recipientWalletAddress: parsedInput.recipientWalletAddress,
+        tokenId: parsedInput.tokenId,
+        txHash: input.txHash as `0x${string}`
+      });
+
       await dependencies.repositories.publishedCollectionMintRepository.create({
-        mintedAt: input.mintedAt ? new Date(input.mintedAt) : dependencies.now(),
+        mintedAt: verifiedMint.mintedAt,
         ownerUserId: input.ownerUserId,
         publishedCollectionId: publication.id,
         publishedCollectionItemId: publicationItem.id,
         recipientWalletAddress: parsedInput.recipientWalletAddress,
         tokenId: parsedInput.tokenId,
-        txHash: input.txHash
+        txHash: verifiedMint.txHash
       });
 
       return loadSerializedCollectionDraftById({

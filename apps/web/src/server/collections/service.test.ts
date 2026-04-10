@@ -128,8 +128,26 @@ function createCollectionDraftHarness() {
       destinationKey: string;
       sourceBucket: string;
       sourceKey: string;
-    }
+      }
   >();
+  const verifiedDeploymentTransactions: Array<{
+    chainKey: "base" | "base-sepolia";
+    deployTxHash: `0x${string}`;
+    expectedContractName: string;
+    expectedContractSymbol: string;
+    expectedDeploymentData: `0x${string}`;
+    expectedOwnerWalletAddress: string;
+    expectedTokenUriBaseUrl: string;
+  }> = [];
+  const verifiedMintTransactions: Array<{
+    chainKey: "base" | "base-sepolia";
+    contractAddress: string;
+    expectedMintData: `0x${string}`;
+    expectedOwnerWalletAddress: string;
+    recipientWalletAddress: string;
+    tokenId: number;
+    txHash: `0x${string}`;
+  }> = [];
   const publicationTargets = new Map<
     string,
     {
@@ -882,6 +900,25 @@ function createCollectionDraftHarness() {
   };
   const service = createCollectionDraftService({
     now: () => nextDate(),
+    onchain: {
+      async verifyDeploymentTransaction(input) {
+        verifiedDeploymentTransactions.push(input);
+
+        return {
+          contractAddress: "0x1111111111111111111111111111111111111111",
+          deployedAt: new Date("2026-04-08T01:00:00.000Z"),
+          deployTxHash: input.deployTxHash
+        };
+      },
+      async verifyMintTransaction(input) {
+        verifiedMintTransactions.push(input);
+
+        return {
+          mintedAt: new Date("2026-04-08T01:05:00.000Z"),
+          txHash: input.txHash
+        };
+      }
+    },
     repositories,
     async runTransaction<T>(
       operation: (repositorySet: typeof repositories) => Promise<T>
@@ -915,6 +952,8 @@ function createCollectionDraftHarness() {
     publicationItems,
     publicationTargets,
     publications,
+    verifiedDeploymentTransactions,
+    verifiedMintTransactions,
     setGeneratedAssetModeration(
       generatedAssetId: string,
       moderationStatus: "approved" | "pending_review" | "rejected"
@@ -1405,6 +1444,192 @@ describe("createCollectionDraftService", () => {
       new CollectionDraftServiceError(
         "STUDIO_SETTINGS_REQUIRED",
         "Studio settings must define a brand profile before collection publication.",
+        409
+      )
+    );
+  });
+
+  it(
+    "prepares a deployment intent and records a verified contract deployment",
+    async () => {
+      const harness = createCollectionDraftHarness();
+    const createdDraft = await harness.service.createCollectionDraft({
+      ownerUserId: "user_1",
+      title: "Genesis Portrait Set"
+    });
+
+    await harness.service.addCollectionDraftItem({
+      collectionDraftId: createdDraft.draft.id,
+      generatedAssetId: "generated_asset_1",
+      ownerUserId: "user_1"
+    });
+    await harness.service.updateCollectionDraft({
+      collectionDraftId: createdDraft.draft.id,
+      description: null,
+      ownerUserId: "user_1",
+      slug: createdDraft.draft.slug,
+      status: "review_ready",
+      title: createdDraft.draft.title
+    });
+    await harness.service.publishCollectionDraft({
+      collectionDraftId: createdDraft.draft.id,
+      ownerUserId: "user_1"
+    });
+
+    const intent = await harness.service.createCollectionContractDeploymentIntent(
+      {
+        chainKey: "base-sepolia",
+        collectionDraftId: createdDraft.draft.id,
+        origin: "https://forge.example",
+        ownerUserId: "user_1",
+        ownerWalletAddress: "0x1111111111111111111111111111111111111111"
+      }
+    );
+    const result = await harness.service.recordCollectionContractDeployment({
+      chainKey: "base-sepolia",
+      collectionDraftId: createdDraft.draft.id,
+      deployTxHash: `0x${"a".repeat(64)}`,
+      origin: "https://forge.example",
+      ownerUserId: "user_1",
+      ownerWalletAddress: "0x1111111111111111111111111111111111111111"
+    });
+
+    expect(intent.deployment.transaction.to).toBeNull();
+    expect(result.draft.publication?.activeDeployment).toMatchObject({
+      chain: {
+        key: "base-sepolia"
+      },
+      contractAddress: "0x1111111111111111111111111111111111111111",
+      deployTxHash: `0x${"a".repeat(64)}`
+    });
+    expect(harness.verifiedDeploymentTransactions[0]).toMatchObject({
+      chainKey: "base-sepolia",
+      deployTxHash: `0x${"a".repeat(64)}`,
+      expectedContractName: "Demo Studio Genesis Portrait Set",
+      expectedContractSymbol: "DEMOGENESIS",
+      expectedOwnerWalletAddress: "0x1111111111111111111111111111111111111111",
+      expectedTokenUriBaseUrl:
+        "https://forge.example/brands/demo-studio/collections/genesis-portrait-set/token-uri"
+    });
+      expect(
+        harness.verifiedDeploymentTransactions[0]?.expectedDeploymentData
+      ).toBe(intent.deployment.transaction.data);
+    },
+    15_000
+  );
+
+  it("prepares a mint intent and records a verified mint", async () => {
+    const harness = createCollectionDraftHarness();
+    const createdDraft = await harness.service.createCollectionDraft({
+      ownerUserId: "user_1",
+      title: "Genesis Portrait Set"
+    });
+
+    await harness.service.addCollectionDraftItem({
+      collectionDraftId: createdDraft.draft.id,
+      generatedAssetId: "generated_asset_1",
+      ownerUserId: "user_1"
+    });
+    await harness.service.updateCollectionDraft({
+      collectionDraftId: createdDraft.draft.id,
+      description: null,
+      ownerUserId: "user_1",
+      slug: createdDraft.draft.slug,
+      status: "review_ready",
+      title: createdDraft.draft.title
+    });
+    await harness.service.publishCollectionDraft({
+      collectionDraftId: createdDraft.draft.id,
+      ownerUserId: "user_1"
+    });
+    await harness.service.recordCollectionContractDeployment({
+      chainKey: "base-sepolia",
+      collectionDraftId: createdDraft.draft.id,
+      deployTxHash: `0x${"b".repeat(64)}`,
+      origin: "https://forge.example",
+      ownerUserId: "user_1",
+      ownerWalletAddress: "0x1111111111111111111111111111111111111111"
+    });
+
+    const intent = await harness.service.createCollectionContractMintIntent({
+      collectionDraftId: createdDraft.draft.id,
+      ownerUserId: "user_1",
+      recipientWalletAddress: "0x2222222222222222222222222222222222222222",
+      tokenId: 1
+    });
+    const result = await harness.service.recordCollectionContractMint({
+      collectionDraftId: createdDraft.draft.id,
+      ownerUserId: "user_1",
+      ownerWalletAddress: "0x1111111111111111111111111111111111111111",
+      recipientWalletAddress: "0x2222222222222222222222222222222222222222",
+      tokenId: 1,
+      txHash: `0x${"c".repeat(64)}`
+    });
+
+    expect(intent.mint.transaction.to).toBe(
+      "0x1111111111111111111111111111111111111111"
+    );
+    expect(result.draft.publication?.mintedTokenCount).toBe(1);
+    expect(result.draft.publication?.mints[0]).toMatchObject({
+      recipientWalletAddress: "0x2222222222222222222222222222222222222222",
+      tokenId: 1,
+      txHash: `0x${"c".repeat(64)}`
+    });
+    expect(harness.verifiedMintTransactions[0]).toMatchObject({
+      chainKey: "base-sepolia",
+      contractAddress: "0x1111111111111111111111111111111111111111",
+      expectedOwnerWalletAddress: "0x1111111111111111111111111111111111111111",
+      recipientWalletAddress: "0x2222222222222222222222222222222222222222",
+      tokenId: 1,
+      txHash: `0x${"c".repeat(64)}`
+    });
+    expect(harness.verifiedMintTransactions[0]?.expectedMintData).toBe(
+      intent.mint.transaction.data
+    );
+  });
+
+  it("blocks unpublish after verified onchain deployment is recorded", async () => {
+    const harness = createCollectionDraftHarness();
+    const createdDraft = await harness.service.createCollectionDraft({
+      ownerUserId: "user_1",
+      title: "Genesis Portrait Set"
+    });
+
+    await harness.service.addCollectionDraftItem({
+      collectionDraftId: createdDraft.draft.id,
+      generatedAssetId: "generated_asset_1",
+      ownerUserId: "user_1"
+    });
+    await harness.service.updateCollectionDraft({
+      collectionDraftId: createdDraft.draft.id,
+      description: null,
+      ownerUserId: "user_1",
+      slug: createdDraft.draft.slug,
+      status: "review_ready",
+      title: createdDraft.draft.title
+    });
+    await harness.service.publishCollectionDraft({
+      collectionDraftId: createdDraft.draft.id,
+      ownerUserId: "user_1"
+    });
+    await harness.service.recordCollectionContractDeployment({
+      chainKey: "base-sepolia",
+      collectionDraftId: createdDraft.draft.id,
+      deployTxHash: `0x${"d".repeat(64)}`,
+      origin: "https://forge.example",
+      ownerUserId: "user_1",
+      ownerWalletAddress: "0x1111111111111111111111111111111111111111"
+    });
+
+    await expect(
+      harness.service.unpublishCollectionDraft({
+        collectionDraftId: createdDraft.draft.id,
+        ownerUserId: "user_1"
+      })
+    ).rejects.toEqual(
+      new CollectionDraftServiceError(
+        "ONCHAIN_COLLECTION_IMMUTABLE",
+        "Published collections with recorded deployment or mint activity can no longer be republished or unpublished.",
         409
       )
     );

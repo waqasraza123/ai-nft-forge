@@ -8,7 +8,8 @@ The repository ships as a pnpm monorepo with a Next.js control plane, a BullMQ w
 
 - Phases 1 through 7 are complete, and the first post-phase onchain deployment/minting slice is landed
 - Deferred beyond the public release:
-  - polished wallet UX and automated transaction submission
+  - Base Account integration and broader wallet UX polish
+  - chain-state reconciliation beyond verified transaction recording
   - native checkout and payments
   - multi-brand administration
   - advanced multi-node orchestration
@@ -23,7 +24,7 @@ The repository ships as a pnpm monorepo with a Next.js control plane, a BullMQ w
 - Collection draft curation, review-ready validation, publication, and storefront merchandising
 - Public white-label brand and collection storefront routes backed only by saved brand settings and immutable published snapshots
 - Contract manifest and token-URI publication routes
-- Owner-signed contract deployment intent generation, deployment recording, mint intent generation, and mint ledger recording for published collections
+- Wallet-driven owner-signed contract deployment and mint flows with server-verified transaction recording for published collections
 - Authenticated ops diagnostics, persisted observability captures, alert delivery policy, and operator retry controls
 - Worker-owned reconciliation with persisted runs and issues, manual run/repair/ignore actions, and `/ops` visibility
 - Dockerfiles and a single-node Docker Compose self-host path
@@ -107,7 +108,7 @@ docker build -f apps/generation-backend/Dockerfile .
 - PostgreSQL is the system of record
 - Source and generated assets stay private by default; public storefront assets are copied into the public bucket only at publication time
 - Public routes read only from saved brand settings and immutable published snapshots
-- Onchain deployment and minting stay owner-signed; the repo prepares and records transactions but does not ship server-held private keys
+- Onchain deployment and minting stay owner-signed; the repo opens wallet flows and records verified chain receipts, but it does not ship server-held private keys
 - Moderation, ops, and reconciliation actions remain authenticated and owner-scoped
 - This repository targets single-node self-hosting with Docker Compose, not Kubernetes or hosted SaaS
 

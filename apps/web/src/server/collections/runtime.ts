@@ -20,6 +20,7 @@ import {
 } from "@ai-nft-forge/shared";
 
 import { createPublicCollectionService } from "./public-service";
+import { createCollectionOnchainRuntime } from "./onchain";
 import { createCollectionDraftService } from "./service";
 
 function createCollectionRepositories(database: DatabaseExecutor) {
@@ -43,9 +44,11 @@ export function createRuntimeCollectionDraftService(
   const databaseClient = getDatabaseClient(rawEnvironment);
   const objectStorageClient = createObjectStorageClient(rawEnvironment);
   const storageConfig = getStorageConfig(rawEnvironment);
+  const onchainRuntime = createCollectionOnchainRuntime(rawEnvironment);
 
   return createCollectionDraftService({
     now: () => new Date(),
+    onchain: onchainRuntime,
     repositories: createCollectionRepositories(databaseClient),
     runTransaction: (operation) =>
       runDatabaseTransaction(databaseClient, (transaction) =>
