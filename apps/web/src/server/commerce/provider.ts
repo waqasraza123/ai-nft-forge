@@ -23,6 +23,10 @@ export type CommercePaymentBoundary = {
     priceLabel: string | null;
     title: string;
   }): Promise<CommercePaymentSession>;
+  expireCheckoutSession(input: {
+    providerKind: CommerceCheckoutProviderKind;
+    providerSessionId: string | null;
+  }): Promise<void>;
   providerMode: CommerceCheckoutProviderMode;
 };
 
@@ -51,6 +55,7 @@ export function createManualPaymentBoundary(input?: {
         providerSessionId: null
       };
     },
+    async expireCheckoutSession() {},
     providerMode: input?.providerMode ?? "manual"
   };
 }
@@ -105,6 +110,18 @@ export function createStripePaymentBoundary(input: { stripe: Stripe }) {
         providerKind: "stripe" as const,
         providerSessionId: stripeSession.id
       };
+    },
+    async expireCheckoutSession(expireInput) {
+      if (
+        expireInput.providerKind !== "stripe" ||
+        !expireInput.providerSessionId
+      ) {
+        return;
+      }
+
+      await input.stripe.checkout.sessions.expire(
+        expireInput.providerSessionId
+      );
     },
     providerMode: "stripe" as const
   } satisfies CommercePaymentBoundary;

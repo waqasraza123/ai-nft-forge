@@ -1,4 +1,5 @@
 import type {
+  CommerceCheckoutFulfillmentStatus,
   CommerceCheckoutProviderKind,
   CommerceCheckoutSession,
   CommerceCheckoutSessionStatus
@@ -49,6 +50,23 @@ export function createCommerceCheckoutSessionRepository(
       });
     },
 
+    listDetailedByOwnerUserId(ownerUserId: string) {
+      return database.commerceCheckoutSession.findMany({
+        include: commerceCheckoutSessionDetailInclude,
+        orderBy: [
+          {
+            createdAt: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        where: {
+          ownerUserId
+        }
+      });
+    },
+
     expireOpenByPublishedCollectionId(input: {
       now: Date;
       publishedCollectionId: string;
@@ -87,6 +105,36 @@ export function createCommerceCheckoutSessionRepository(
 
       if (input.completedAt !== undefined) {
         data.completedAt = input.completedAt;
+      }
+
+      return database.commerceCheckoutSession.update({
+        data,
+        where: {
+          id: input.id
+        }
+      });
+    },
+
+    updateFulfillmentById(input: {
+      fulfillmentNotes?: string | null;
+      fulfillmentStatus: CommerceCheckoutFulfillmentStatus;
+      fulfilledAt?: Date | null;
+      id: string;
+    }): Promise<CommerceCheckoutSession> {
+      const data: {
+        fulfillmentNotes?: string | null;
+        fulfillmentStatus: CommerceCheckoutFulfillmentStatus;
+        fulfilledAt?: Date | null;
+      } = {
+        fulfillmentStatus: input.fulfillmentStatus
+      };
+
+      if (input.fulfillmentNotes !== undefined) {
+        data.fulfillmentNotes = input.fulfillmentNotes;
+      }
+
+      if (input.fulfilledAt !== undefined) {
+        data.fulfilledAt = input.fulfilledAt;
       }
 
       return database.commerceCheckoutSession.update({

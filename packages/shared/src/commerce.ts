@@ -12,6 +12,7 @@ const commerceBrandSlugSchema = z
 const commerceCollectionSlugSchema = commerceBrandSlugSchema;
 const commerceCollectionTitleSchema = z.string().trim().min(1).max(120);
 const commercePriceLabelSchema = z.string().trim().max(60);
+const commerceFulfillmentNotesSchema = z.string().trim().max(1000);
 
 export const commerceCheckoutProviderModeSchema = z.enum([
   "disabled",
@@ -52,6 +53,11 @@ export const commerceCheckoutSessionStatusSchema = z.enum([
   "completed",
   "expired",
   "canceled"
+]);
+
+export const commerceCheckoutFulfillmentStatusSchema = z.enum([
+  "unfulfilled",
+  "fulfilled"
 ]);
 
 export const collectionCommerceAvailabilitySchema = z.object({
@@ -102,6 +108,75 @@ export const collectionCheckoutSessionResponseSchema = z.object({
   checkout: collectionCheckoutSessionSummarySchema
 });
 
+export const studioCommerceCheckoutSummarySchema = z.object({
+  brandName: commerceBrandNameSchema,
+  brandSlug: commerceBrandSlugSchema,
+  buyerDisplayName: commerceBuyerDisplayNameSchema.nullable(),
+  buyerEmail: commerceBuyerEmailSchema,
+  buyerWalletAddress: commerceBuyerWalletAddressSchema.nullable(),
+  checkoutSessionId: z.string().min(1),
+  checkoutUrl: z.string().min(1),
+  collectionPublicPath: z.string().min(1),
+  collectionSlug: commerceCollectionSlugSchema,
+  completedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime(),
+  editionNumber: z.number().int().positive(),
+  expiresAt: z.string().datetime(),
+  fulfilledAt: z.string().datetime().nullable(),
+  fulfillmentNotes: commerceFulfillmentNotesSchema.nullable(),
+  fulfillmentStatus: commerceCheckoutFulfillmentStatusSchema,
+  priceLabel: commercePriceLabelSchema.nullable(),
+  providerKind: commerceCheckoutProviderKindSchema,
+  providerSessionId: z.string().min(1).nullable(),
+  reservationStatus: commerceReservationStatusSchema,
+  status: commerceCheckoutSessionStatusSchema,
+  storefrontStatus: z.enum(["upcoming", "live", "sold_out", "ended"]),
+  title: commerceCollectionTitleSchema
+});
+
+export const studioCommerceCollectionSummarySchema = z.object({
+  brandName: commerceBrandNameSchema,
+  brandSlug: commerceBrandSlugSchema,
+  collectionPublicPath: z.string().min(1),
+  collectionSlug: commerceCollectionSlugSchema,
+  completedCheckoutCount: z.number().int().min(0),
+  fulfilledCheckoutCount: z.number().int().min(0),
+  openCheckoutCount: z.number().int().min(0),
+  storefrontStatus: z.enum(["upcoming", "live", "sold_out", "ended"]),
+  title: commerceCollectionTitleSchema,
+  totalCheckoutCount: z.number().int().min(0),
+  unfulfilledCheckoutCount: z.number().int().min(0)
+});
+
+export const studioCommerceDashboardSummarySchema = z.object({
+  canceledCheckoutCount: z.number().int().min(0),
+  completedCheckoutCount: z.number().int().min(0),
+  expiredCheckoutCount: z.number().int().min(0),
+  fulfilledCheckoutCount: z.number().int().min(0),
+  manualCheckoutCount: z.number().int().min(0),
+  openCheckoutCount: z.number().int().min(0),
+  stripeCheckoutCount: z.number().int().min(0),
+  totalCheckoutCount: z.number().int().min(0),
+  unfulfilledCheckoutCount: z.number().int().min(0)
+});
+
+export const studioCommerceDashboardResponseSchema = z.object({
+  dashboard: z.object({
+    checkouts: z.array(studioCommerceCheckoutSummarySchema),
+    collections: z.array(studioCommerceCollectionSummarySchema),
+    summary: studioCommerceDashboardSummarySchema
+  })
+});
+
+export const studioCommerceCheckoutActionResponseSchema = z.object({
+  checkout: studioCommerceCheckoutSummarySchema
+});
+
+export const studioCommerceFulfillmentUpdateRequestSchema = z.object({
+  fulfillmentNotes: commerceFulfillmentNotesSchema.nullish(),
+  fulfillmentStatus: commerceCheckoutFulfillmentStatusSchema
+});
+
 export const collectionCommerceErrorResponseSchema = z.object({
   error: z.object({
     code: z.enum([
@@ -112,8 +187,10 @@ export const collectionCommerceErrorResponseSchema = z.object({
       "CHECKOUT_SESSION_NOT_OPEN",
       "COLLECTION_NOT_FOUND",
       "COLLECTION_NOT_LIVE",
+      "FULFILLMENT_NOT_ALLOWED",
       "INVALID_REQUEST",
       "RESERVATION_NOT_AVAILABLE",
+      "SESSION_REQUIRED",
       "UNSUPPORTED_CHECKOUT_PROVIDER",
       "INTERNAL_SERVER_ERROR"
     ]),
@@ -133,6 +210,9 @@ export type CollectionCheckoutReservationSummary = z.infer<
 export type CollectionCheckoutSessionStatus = z.infer<
   typeof commerceCheckoutSessionStatusSchema
 >;
+export type CommerceCheckoutFulfillmentStatus = z.infer<
+  typeof commerceCheckoutFulfillmentStatusSchema
+>;
 export type CollectionCheckoutSessionSummary = z.infer<
   typeof collectionCheckoutSessionSummarySchema
 >;
@@ -150,6 +230,24 @@ export type CommerceCheckoutProviderKind = z.infer<
 >;
 export type CommerceCheckoutAvailabilityReason = z.infer<
   typeof commerceCheckoutAvailabilityReasonSchema
+>;
+export type StudioCommerceCheckoutSummary = z.infer<
+  typeof studioCommerceCheckoutSummarySchema
+>;
+export type StudioCommerceCollectionSummary = z.infer<
+  typeof studioCommerceCollectionSummarySchema
+>;
+export type StudioCommerceDashboardSummary = z.infer<
+  typeof studioCommerceDashboardSummarySchema
+>;
+export type StudioCommerceDashboardResponse = z.infer<
+  typeof studioCommerceDashboardResponseSchema
+>;
+export type StudioCommerceCheckoutActionResponse = z.infer<
+  typeof studioCommerceCheckoutActionResponseSchema
+>;
+export type StudioCommerceFulfillmentUpdateRequest = z.infer<
+  typeof studioCommerceFulfillmentUpdateRequestSchema
 >;
 export type CommerceReservationStatus = z.infer<
   typeof commerceReservationStatusSchema

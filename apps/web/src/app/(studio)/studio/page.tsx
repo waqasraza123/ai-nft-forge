@@ -11,7 +11,7 @@ export default async function StudioPage() {
     <PageShell
       eyebrow="Studio"
       title="Operational shell for curation and release prep"
-      lead="This route is session-protected and now includes source asset intake, collection curation, live publication, and durable studio settings for the owner brand profile. Minting still lands in a later phase."
+      lead="This route is session-protected and now includes source asset intake, collection curation, live publication, owner-side commerce administration, and durable studio settings for the owner brand profile. Onchain mint fulfillment remains intentionally deferred from the studio shell."
       actions={
         <>
           <Link className="action-link" href="/studio/assets">
@@ -19,6 +19,9 @@ export default async function StudioPage() {
           </Link>
           <Link className="action-link" href="/studio/collections">
             Open collections
+          </Link>
+          <Link className="action-link" href="/studio/commerce">
+            Open commerce
           </Link>
           <Link className="action-link" href="/studio/settings">
             Open settings
@@ -72,12 +75,26 @@ export default async function StudioPage() {
           </div>
         </SurfaceCard>
         <SurfaceCard
+          body="Reservations, hosted checkout sessions, payment completion, and fulfillment tracking now have a protected operations surface for the owner."
+          eyebrow="Commerce"
+          title="Owner-side commerce administration"
+        >
+          <div className="pill-row">
+            <Pill>Reservations</Pill>
+            <Pill>Checkout sessions</Pill>
+            <Pill>Fulfillment state</Pill>
+            <Link className="inline-link" href="/studio/commerce">
+              /studio/commerce
+            </Link>
+          </div>
+        </SurfaceCard>
+        <SurfaceCard
           body="The current session is resolved on the server before these routes render, and protected studio APIs use the same session boundary."
           eyebrow="Session"
           title="Server-side access control"
         />
         <SurfaceCard
-          body="Uploads, generation, curation, publication, and settings now have durable backend contracts. Minting remains intentionally deferred."
+          body="Uploads, generation, curation, publication, commerce administration, and settings now have durable backend contracts. Onchain mint fulfillment remains intentionally deferred."
           eyebrow="Guardrail"
           title="Feature logic stays out"
         >
@@ -85,6 +102,7 @@ export default async function StudioPage() {
             <Pill>Upload contract landed</Pill>
             <Pill>Curation landed</Pill>
             <Pill>Publication landed</Pill>
+            <Pill>Commerce admin landed</Pill>
             <Pill>Settings landed</Pill>
             <Pill>Minting deferred</Pill>
           </div>

@@ -307,6 +307,16 @@ select {
   gap: 12px;
 }
 
+.stack-list {
+  display: grid;
+  gap: 12px;
+}
+
+.stack-list > .status-banner {
+  border-color: var(--color-line);
+  background: rgba(255, 255, 255, 0.46);
+}
+
 .metric-list--single-column {
   grid-template-columns: minmax(0, 1fr);
 }

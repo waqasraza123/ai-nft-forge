@@ -70,9 +70,14 @@ function createCommerceHarness(input?: {
   const checkoutSessions = new Map<
     string,
     {
+      canceledAt: Date | null;
+      createdAt: Date;
       checkoutUrl: string;
       completedAt: Date | null;
       expiresAt: Date;
+      fulfilledAt: Date | null;
+      fulfillmentNotes: string | null;
+      fulfillmentStatus: "unfulfilled" | "fulfilled";
       id: string;
       providerKind: "manual" | "stripe";
       providerSessionId: string | null;
@@ -94,6 +99,7 @@ function createCommerceHarness(input?: {
       status: "open" | "completed" | "expired" | "canceled";
     }
   >();
+  const expiredProviderSessionIds: string[] = [];
   let soldCount = publication.soldCount;
   let storefrontStatus: "upcoming" | "live" | "sold_out" | "ended" =
     publication.storefrontStatus;
@@ -124,9 +130,14 @@ function createCommerceHarness(input?: {
           ) ?? publication.items[0]!;
 
         const record = {
+          canceledAt: null,
+          createdAt: new Date("2026-04-10T09:55:00.000Z"),
           checkoutUrl: createInput.checkoutUrl,
           completedAt: null,
           expiresAt: createInput.expiresAt,
+          fulfilledAt: null,
+          fulfillmentNotes: null,
+          fulfillmentStatus: "unfulfilled" as const,
           id: `checkout_record_${checkoutSessions.size + 1}`,
           providerKind: createInput.providerKind,
           providerSessionId: createInput.providerSessionId ?? null,
@@ -159,6 +170,35 @@ function createCommerceHarness(input?: {
       async findByPublicId(publicId: string) {
         return checkoutSessions.get(publicId) ?? null;
       },
+      async listDetailedByOwnerUserId() {
+        return [...checkoutSessions.values()];
+      },
+      async updateFulfillmentById(updateInput: {
+        fulfillmentNotes?: string | null;
+        fulfillmentStatus: "unfulfilled" | "fulfilled";
+        fulfilledAt?: Date | null;
+        id: string;
+      }) {
+        const record = [...checkoutSessions.values()].find(
+          (candidate) => candidate.id === updateInput.id
+        );
+
+        if (!record) {
+          throw new Error("Checkout session was not found.");
+        }
+
+        record.fulfillmentStatus = updateInput.fulfillmentStatus;
+        record.fulfillmentNotes =
+          updateInput.fulfillmentNotes === undefined
+            ? record.fulfillmentNotes
+            : updateInput.fulfillmentNotes;
+        record.fulfilledAt =
+          updateInput.fulfilledAt === undefined
+            ? record.fulfilledAt
+            : updateInput.fulfilledAt;
+
+        return record;
+      },
       async updateStatusById(updateInput: {
         canceledAt?: Date | null;
         completedAt?: Date | null;
@@ -174,6 +214,10 @@ function createCommerceHarness(input?: {
         }
 
         record.status = updateInput.status;
+        record.canceledAt =
+          updateInput.canceledAt === undefined
+            ? record.canceledAt
+            : updateInput.canceledAt;
         record.completedAt =
           updateInput.completedAt === undefined
             ? record.completedAt
@@ -290,6 +334,11 @@ function createCommerceHarness(input?: {
             input?.providerMode === "stripe" ? `cs_test_${checkoutSessionId}` : null
         };
       },
+      async expireCheckoutSession({ providerSessionId }) {
+        if (providerSessionId) {
+          expiredProviderSessionIds.push(providerSessionId);
+        }
+      },
       providerMode: input?.providerMode ?? "manual"
     },
     repositories,
@@ -301,6 +350,7 @@ function createCommerceHarness(input?: {
 
   return {
     checkoutSessions,
+    expiredProviderSessionIds,
     getSoldCount() {
       return soldCount;
     },
@@ -392,5 +442,111 @@ describe("createCollectionCommerceService", () => {
     ).rejects.toMatchObject({
       code: "CHECKOUT_CONFIGURATION_REQUIRED"
     });
+  });
+
+  it("returns owner dashboard summary counts across payment and fulfillment states", async () => {
+    const harness = createCommerceHarness();
+    const checkout = await harness.service.createCheckoutSession({
+      body: {
+        buyerEmail: "collector@example.com"
+      },
+      brandSlug: "demo-studio",
+      collectionSlug: "genesis-portrait-set",
+      origin: "https://demo.example"
+    });
+
+    await harness.service.completeOwnerManualCheckout({
+      checkoutSessionId: checkout.checkout.checkoutSessionId,
+      ownerUserId: "user_1"
+    });
+    await harness.service.updateOwnerCheckoutFulfillment({
+      body: {
+        fulfillmentNotes: " Delivered to collector wallet ",
+        fulfillmentStatus: "fulfilled"
+      },
+      checkoutSessionId: checkout.checkout.checkoutSessionId,
+      ownerUserId: "user_1"
+    });
+
+    const result = await harness.service.getOwnerCommerceDashboard({
+      ownerUserId: "user_1"
+    });
+
+    expect(result.dashboard.summary.totalCheckoutCount).toBe(1);
+    expect(result.dashboard.summary.completedCheckoutCount).toBe(1);
+    expect(result.dashboard.summary.fulfilledCheckoutCount).toBe(1);
+    expect(result.dashboard.summary.unfulfilledCheckoutCount).toBe(0);
+    expect(result.dashboard.collections).toHaveLength(1);
+    expect(result.dashboard.collections[0]?.fulfilledCheckoutCount).toBe(1);
+    expect(result.dashboard.checkouts[0]?.fulfillmentNotes).toBe(
+      "Delivered to collector wallet"
+    );
+  });
+
+  it("cancels open stripe checkout sessions and expires the provider session", async () => {
+    const harness = createCommerceHarness({
+      providerMode: "stripe"
+    });
+    const checkout = await harness.service.createCheckoutSession({
+      body: {
+        buyerEmail: "collector@example.com"
+      },
+      brandSlug: "demo-studio",
+      collectionSlug: "genesis-portrait-set",
+      origin: "https://demo.example"
+    });
+
+    const result = await harness.service.cancelOwnerCheckoutSession({
+      checkoutSessionId: checkout.checkout.checkoutSessionId,
+      ownerUserId: "user_1"
+    });
+
+    expect(result.checkout.status).toBe("canceled");
+    expect(harness.expiredProviderSessionIds).toEqual([
+      `cs_test_${checkout.checkout.checkoutSessionId}`
+    ]);
+  });
+
+  it("records fulfillment state only for completed checkout sessions", async () => {
+    const harness = createCommerceHarness();
+    const checkout = await harness.service.createCheckoutSession({
+      body: {
+        buyerEmail: "collector@example.com"
+      },
+      brandSlug: "demo-studio",
+      collectionSlug: "genesis-portrait-set",
+      origin: "https://demo.example"
+    });
+
+    await expect(
+      harness.service.updateOwnerCheckoutFulfillment({
+        body: {
+          fulfillmentNotes: "Packed",
+          fulfillmentStatus: "fulfilled"
+        },
+        checkoutSessionId: checkout.checkout.checkoutSessionId,
+        ownerUserId: "user_1"
+      })
+    ).rejects.toMatchObject({
+      code: "FULFILLMENT_NOT_ALLOWED"
+    });
+
+    await harness.service.completeOwnerManualCheckout({
+      checkoutSessionId: checkout.checkout.checkoutSessionId,
+      ownerUserId: "user_1"
+    });
+
+    const result = await harness.service.updateOwnerCheckoutFulfillment({
+      body: {
+        fulfillmentNotes: " Packed and delivered ",
+        fulfillmentStatus: "fulfilled"
+      },
+      checkoutSessionId: checkout.checkout.checkoutSessionId,
+      ownerUserId: "user_1"
+    });
+
+    expect(result.checkout.fulfillmentStatus).toBe("fulfilled");
+    expect(result.checkout.fulfilledAt).not.toBeNull();
+    expect(result.checkout.fulfillmentNotes).toBe("Packed and delivered");
   });
 });

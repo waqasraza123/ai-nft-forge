@@ -1,7 +1,10 @@
 import { collectionCommerceErrorResponseSchema } from "@ai-nft-forge/shared";
 import { NextResponse } from "next/server";
 
-import { parseStudioJsonBody } from "../studio/http";
+import {
+  parseStudioJsonBody,
+  requireStudioApiSession as requireStudioApiSessionBase
+} from "../studio/http";
 
 import { CommerceServiceError } from "./error";
 
@@ -15,6 +18,20 @@ export async function parseJsonBody(request: Request): Promise<unknown> {
       400
     );
   }
+}
+
+export async function requireStudioApiSession() {
+  const session = await requireStudioApiSessionBase();
+
+  if (!session) {
+    throw new CommerceServiceError(
+      "SESSION_REQUIRED",
+      "An active studio session is required.",
+      401
+    );
+  }
+
+  return session;
 }
 
 export function createCommerceErrorResponse(error: unknown): NextResponse {
