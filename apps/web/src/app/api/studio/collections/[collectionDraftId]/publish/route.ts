@@ -63,6 +63,8 @@ export async function PATCH(request: Request, context: RouteContext) {
           isFeatured: body.isFeatured,
           launchAt: body.launchAt ?? null,
           ownerUserId: session.user.id,
+          priceAmountMinor: body.priceAmountMinor ?? null,
+          priceCurrency: body.priceCurrency ?? null,
           priceLabel: body.priceLabel ?? null,
           primaryCtaHref: body.primaryCtaHref ?? null,
           primaryCtaLabel: body.primaryCtaLabel ?? null,

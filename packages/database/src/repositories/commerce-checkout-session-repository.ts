@@ -29,6 +29,7 @@ export function createCommerceCheckoutSessionRepository(
       expiresAt: Date;
       ownerUserId: string;
       providerKind: CommerceCheckoutProviderKind;
+      providerSessionId?: string | null;
       publicId: string;
       publishedCollectionId: string;
       reservationId: string;

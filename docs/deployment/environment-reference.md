@@ -42,13 +42,26 @@ These are used by the web app to verify deployment and mint receipts against Bas
 
 - `COMMERCE_CHECKOUT_PROVIDER_MODE`
   - `manual` enables the hosted reservation and simulated manual checkout flow
+  - `stripe` enables Stripe-hosted checkout plus webhook-driven completion on `/api/commerce/stripe/webhook`
   - `disabled` hides checkout and blocks new reservation creation
+- `COMMERCE_STRIPE_PUBLISHABLE_KEY`
+- `COMMERCE_STRIPE_SECRET_KEY`
+- `COMMERCE_STRIPE_WEBHOOK_SECRET`
 - `COMMERCE_RESERVATION_TTL_SECONDS`
+  - Stripe mode clamps the effective reservation and hosted-session lifetime to at least 1800 seconds
 
 Recommended self-host baseline:
 
 - `COMMERCE_CHECKOUT_PROVIDER_MODE=manual`
 - `COMMERCE_RESERVATION_TTL_SECONDS=900`
+
+Recommended Stripe baseline:
+
+- `COMMERCE_CHECKOUT_PROVIDER_MODE=stripe`
+- `COMMERCE_STRIPE_PUBLISHABLE_KEY=pk_live_or_test_...`
+- `COMMERCE_STRIPE_SECRET_KEY=sk_live_or_test_...`
+- `COMMERCE_STRIPE_WEBHOOK_SECRET=whsec_...`
+- `COMMERCE_RESERVATION_TTL_SECONDS=1800`
 
 ## Worker concurrency and naming
 
@@ -145,4 +158,5 @@ These are used by `infra/docker/docker-compose.selfhost.yml` and are optional un
 - Local development can keep `COMFYUI_BASE_URL` pointed at `127.0.0.1`; containerized self-host should usually use `host.docker.internal` or an internal network host that your backend can reach.
 - Keep `S3_ENDPOINT` pointed at the MinIO service inside Docker Compose for self-host, not the host-mapped port.
 - For dependable onchain verification, point `ONCHAIN_BASE_SEPOLIA_RPC_URL` and `ONCHAIN_BASE_RPC_URL` at stable RPC providers rather than rate-limited public endpoints.
-- `manual` commerce mode is the intended default for self-host validation and operator-run fulfillment until an external payment provider is added later.
+- `manual` commerce mode remains the simplest self-host validation path.
+- `stripe` mode requires live publication pricing (`priceAmountMinor` plus `priceCurrency`) before checkout can open for a collection.

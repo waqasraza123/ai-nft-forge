@@ -4,12 +4,12 @@ import {
   collectionCheckoutSessionResponseSchema,
   collectionCheckoutCreateRequestSchema,
   type CollectionStorefrontStatus,
-  type CommerceCheckoutProviderKind,
-  type CommerceCheckoutProviderMode
+  type CommerceCheckoutProviderKind
 } from "@ai-nft-forge/shared";
 
 import { createCollectionCommerceAvailability } from "./availability";
 import { CommerceServiceError } from "./error";
+import type { CommercePaymentBoundary } from "./provider";
 
 type PublishedCollectionCommerceRecord = {
   brandName: string;
@@ -23,6 +23,8 @@ type PublishedCollectionCommerceRecord = {
     publishedCollectionItemId: string;
   }>;
   ownerUserId: string;
+  priceAmountMinor: number | null;
+  priceCurrency: string | null;
   priceLabel: string | null;
   slug: string;
   soldCount: number;
@@ -37,12 +39,15 @@ type CheckoutSessionRecord = {
   expiresAt: Date;
   id: string;
   providerKind: CommerceCheckoutProviderKind;
+  providerSessionId: string | null;
   publicId: string;
   publishedCollection: {
     brandName: string;
     brandSlug: string;
     id: string;
     ownerUserId: string;
+    priceAmountMinor: number | null;
+    priceCurrency: string | null;
     priceLabel: string | null;
     slug: string;
     soldCount: number;
@@ -73,6 +78,7 @@ type CommerceRepositorySet = {
       expiresAt: Date;
       ownerUserId: string;
       providerKind: CommerceCheckoutProviderKind;
+      providerSessionId?: string | null;
       publicId: string;
       publishedCollectionId: string;
       reservationId: string;
@@ -83,6 +89,7 @@ type CommerceRepositorySet = {
       expiresAt: Date;
       id: string;
       providerKind: CommerceCheckoutProviderKind;
+      providerSessionId: string | null;
       publicId: string;
       status: "open" | "completed" | "expired" | "canceled";
     }>;
@@ -152,18 +159,6 @@ type CommerceRepositorySet = {
   };
 };
 
-type CommercePaymentBoundary = {
-  createCheckoutSession(input: {
-    brandSlug: string;
-    checkoutSessionId: string;
-    collectionSlug: string;
-  }): {
-    checkoutUrl: string;
-    providerKind: CommerceCheckoutProviderKind;
-  };
-  providerMode: CommerceCheckoutProviderMode;
-};
-
 type CommerceServiceDependencies = {
   now: () => Date;
   payment: CommercePaymentBoundary;
@@ -208,6 +203,7 @@ function serializeCheckoutSession(input: { session: CheckoutSessionRecord }) {
       collectionSlug: input.session.publishedCollection.slug,
       completedAt: input.session.completedAt?.toISOString() ?? null,
       expiresAt: input.session.expiresAt.toISOString(),
+      providerSessionId: input.session.providerSessionId,
       priceLabel: input.session.publishedCollection.priceLabel,
       providerKind: input.session.providerKind,
       reservation: {
@@ -299,6 +295,233 @@ async function refreshCheckoutSession(
   );
 }
 
+function assertSessionCollectionMatch(
+  session: CheckoutSessionRecord,
+  input: {
+    brandSlug: string;
+    collectionSlug: string;
+  }
+) {
+  if (
+    session.publishedCollection.brandSlug !== input.brandSlug ||
+    session.publishedCollection.slug !== input.collectionSlug
+  ) {
+    throw new CommerceServiceError(
+      "CHECKOUT_SESSION_NOT_FOUND",
+      "Checkout session was not found.",
+      404
+    );
+  }
+}
+
+function assertProviderKind(
+  session: CheckoutSessionRecord,
+  providerKind: CommerceCheckoutProviderKind
+) {
+  if (session.providerKind !== providerKind) {
+    throw new CommerceServiceError(
+      "UNSUPPORTED_CHECKOUT_PROVIDER",
+      "This checkout session cannot be updated from this provider path.",
+      409
+    );
+  }
+}
+
+async function completeCheckoutSessionRecord(input: {
+  checkoutSessionId: string;
+  now: Date;
+  repositories: CommerceRepositorySet;
+}) {
+  const session =
+    await input.repositories.commerceCheckoutSessionRepository.findByPublicId(
+      input.checkoutSessionId
+    );
+
+  if (!session) {
+    throw new CommerceServiceError(
+      "CHECKOUT_SESSION_NOT_FOUND",
+      "Checkout session was not found.",
+      404
+    );
+  }
+
+  if (session.status === "completed") {
+    return serializeCheckoutSession({ session });
+  }
+
+  if (session.status !== "open") {
+    return serializeCheckoutSession({ session });
+  }
+
+  const publication = await loadPublicationOrThrow(input.repositories, {
+    brandSlug: session.publishedCollection.brandSlug,
+    collectionSlug: session.publishedCollection.slug
+  });
+  const reservations =
+    await input.repositories.publishedCollectionReservationRepository.listByPublishedCollectionIdAndStatuses(
+      {
+        publishedCollectionId: publication.id,
+        statuses: ["completed"]
+      }
+    );
+  const completedItemIds = new Set(
+    reservations.map((reservation) => reservation.publishedCollectionItemId)
+  );
+  const mintedItemIds = new Set(
+    publication.mints.map((mint) => mint.publishedCollectionItemId)
+  );
+
+  if (
+    completedItemIds.has(session.reservation.publishedCollectionItem.id) ||
+    mintedItemIds.has(session.reservation.publishedCollectionItem.id)
+  ) {
+    await input.repositories.commerceCheckoutSessionRepository.updateStatusById({
+      canceledAt: input.now,
+      id: session.id,
+      status: "canceled"
+    });
+    await input.repositories.publishedCollectionReservationRepository.updateStatusById(
+      {
+        canceledAt: input.now,
+        id: session.reservation.id,
+        status: "canceled"
+      }
+    );
+
+    throw new CommerceServiceError(
+      "RESERVATION_NOT_AVAILABLE",
+      "That edition is no longer available.",
+      409
+    );
+  }
+
+  await input.repositories.commerceCheckoutSessionRepository.updateStatusById({
+    completedAt: input.now,
+    id: session.id,
+    status: "completed"
+  });
+  await input.repositories.publishedCollectionReservationRepository.updateStatusById({
+    completedAt: input.now,
+    id: session.reservation.id,
+    status: "completed"
+  });
+
+  const nextSoldCount = publication.soldCount + 1;
+  const nextStorefrontStatus =
+    publication.totalSupply !== null &&
+    nextSoldCount >= publication.totalSupply &&
+    publication.storefrontStatus === "live"
+      ? "sold_out"
+      : undefined;
+  const nextCommerceUpdate: {
+    id: string;
+    soldCount: number;
+    storefrontStatus?: CollectionStorefrontStatus;
+  } = {
+    id: publication.id,
+    soldCount: nextSoldCount
+  };
+
+  if (nextStorefrontStatus !== undefined) {
+    nextCommerceUpdate.storefrontStatus = nextStorefrontStatus;
+  }
+
+  await input.repositories.publishedCollectionRepository.updateCommerceById(
+    nextCommerceUpdate
+  );
+
+  const refreshed =
+    await input.repositories.commerceCheckoutSessionRepository.findByPublicId(
+      input.checkoutSessionId
+    );
+
+  if (!refreshed) {
+    throw new CommerceServiceError(
+      "CHECKOUT_SESSION_NOT_FOUND",
+      "Checkout session was not found.",
+      500
+    );
+  }
+
+  return serializeCheckoutSession({ session: refreshed });
+}
+
+async function transitionCheckoutSessionRecord(input: {
+  canceledAt?: Date | null;
+  checkoutSessionId: string;
+  nextStatus: "expired" | "canceled";
+  repositories: CommerceRepositorySet;
+}) {
+  const session =
+    await input.repositories.commerceCheckoutSessionRepository.findByPublicId(
+      input.checkoutSessionId
+    );
+
+  if (!session) {
+    throw new CommerceServiceError(
+      "CHECKOUT_SESSION_NOT_FOUND",
+      "Checkout session was not found.",
+      404
+    );
+  }
+
+  if (session.status === "completed") {
+    return serializeCheckoutSession({ session });
+  }
+
+  if (session.status === input.nextStatus) {
+    return serializeCheckoutSession({ session });
+  }
+
+  if (session.status !== "open") {
+    return serializeCheckoutSession({ session });
+  }
+
+  const nextCheckoutStatusUpdate: {
+    canceledAt?: Date | null;
+    id: string;
+    status: "expired" | "canceled";
+  } = {
+    id: session.id,
+    status: input.nextStatus
+  };
+  const nextReservationStatusUpdate: {
+    canceledAt?: Date | null;
+    id: string;
+    status: "expired" | "canceled";
+  } = {
+    id: session.reservation.id,
+    status: input.nextStatus
+  };
+
+  if (input.canceledAt !== undefined) {
+    nextCheckoutStatusUpdate.canceledAt = input.canceledAt;
+    nextReservationStatusUpdate.canceledAt = input.canceledAt;
+  }
+
+  await input.repositories.commerceCheckoutSessionRepository.updateStatusById(
+    nextCheckoutStatusUpdate
+  );
+  await input.repositories.publishedCollectionReservationRepository.updateStatusById(
+    nextReservationStatusUpdate
+  );
+
+  const refreshed =
+    await input.repositories.commerceCheckoutSessionRepository.findByPublicId(
+      input.checkoutSessionId
+    );
+
+  if (!refreshed) {
+    throw new CommerceServiceError(
+      "CHECKOUT_SESSION_NOT_FOUND",
+      "Checkout session was not found.",
+      500
+    );
+  }
+
+  return serializeCheckoutSession({ session: refreshed });
+}
+
 export function createCollectionCommerceService(
   dependencies: CommerceServiceDependencies
 ) {
@@ -307,6 +530,7 @@ export function createCollectionCommerceService(
       body: unknown;
       brandSlug: string;
       collectionSlug: string;
+      origin: string;
     }) {
       if (dependencies.payment.providerMode === "disabled") {
         throw new CommerceServiceError(
@@ -362,12 +586,27 @@ export function createCollectionCommerceService(
         const availability = createCollectionCommerceAvailability({
           items: refreshedPublication.items,
           mints: refreshedPublication.mints,
+          pricingReady:
+            dependencies.payment.providerMode !== "stripe" ||
+            (refreshedPublication.priceAmountMinor !== null &&
+              refreshedPublication.priceCurrency !== null),
           providerMode: dependencies.payment.providerMode,
           reservations,
           reservationTtlSeconds: dependencies.reservationTtlSeconds,
           storefrontStatus: refreshedPublication.storefrontStatus
         });
         const nextAvailableItem = availability.availableItems[0] ?? null;
+
+        if (
+          availability.availability.checkoutAvailabilityReason ===
+          "pricing_incomplete"
+        ) {
+          throw new CommerceServiceError(
+            "CHECKOUT_CONFIGURATION_REQUIRED",
+            "Checkout pricing is not configured for this release.",
+            409
+          );
+        }
 
         if (!availability.availability.checkoutEnabled || !nextAvailableItem) {
           throw new CommerceServiceError(
@@ -409,10 +648,30 @@ export function createCollectionCommerceService(
           throw error;
         }
 
-        const checkout = dependencies.payment.createCheckoutSession({
+        if (
+          dependencies.payment.providerMode === "stripe" &&
+          (refreshedPublication.priceAmountMinor === null ||
+            refreshedPublication.priceCurrency === null)
+        ) {
+          throw new CommerceServiceError(
+            "CHECKOUT_CONFIGURATION_REQUIRED",
+            "Checkout pricing is not configured for this release.",
+            409
+          );
+        }
+
+        const checkout = await dependencies.payment.createCheckoutSession({
           brandSlug: refreshedPublication.brandSlug,
+          buyerEmail: parsedInput.data.buyerEmail,
           checkoutSessionId: checkoutSessionPublicId,
-          collectionSlug: refreshedPublication.slug
+          collectionSlug: refreshedPublication.slug,
+          editionNumber: nextAvailableItem.position,
+          expiresAt,
+          origin: input.origin,
+          priceAmountMinor: refreshedPublication.priceAmountMinor ?? 0,
+          priceCurrency: refreshedPublication.priceCurrency ?? "usd",
+          priceLabel: refreshedPublication.priceLabel,
+          title: refreshedPublication.title
         });
 
         await repositories.commerceCheckoutSessionRepository.create({
@@ -420,6 +679,7 @@ export function createCollectionCommerceService(
           expiresAt,
           ownerUserId: refreshedPublication.ownerUserId,
           providerKind: checkout.providerKind,
+          providerSessionId: checkout.providerSessionId,
           publicId: checkoutSessionPublicId,
           publishedCollectionId: refreshedPublication.id,
           reservationId: reservation.id
@@ -487,24 +747,8 @@ export function createCollectionCommerceService(
           );
         }
 
-        if (
-          session.publishedCollection.brandSlug !== input.brandSlug ||
-          session.publishedCollection.slug !== input.collectionSlug
-        ) {
-          throw new CommerceServiceError(
-            "CHECKOUT_SESSION_NOT_FOUND",
-            "Checkout session was not found.",
-            404
-          );
-        }
-
-        if (session.providerKind !== "manual") {
-          throw new CommerceServiceError(
-            "UNSUPPORTED_CHECKOUT_PROVIDER",
-            "This checkout session cannot be completed from the storefront.",
-            409
-          );
-        }
+        assertSessionCollectionMatch(session, input);
+        assertProviderKind(session, "manual");
 
         if (session.status === "completed") {
           return serializeCheckoutSession({ session });
@@ -523,13 +767,10 @@ export function createCollectionCommerceService(
         }
 
         if (session.expiresAt.getTime() <= now.getTime()) {
-          await repositories.commerceCheckoutSessionRepository.updateStatusById({
-            id: session.id,
-            status: "expired"
-          });
-          await repositories.publishedCollectionReservationRepository.updateStatusById({
-            id: session.reservation.id,
-            status: "expired"
+          await transitionCheckoutSessionRecord({
+            checkoutSessionId: input.checkoutSessionId,
+            nextStatus: "expired",
+            repositories
           });
 
           throw new CommerceServiceError(
@@ -539,95 +780,11 @@ export function createCollectionCommerceService(
           );
         }
 
-        const publication = await loadPublicationOrThrow(repositories, {
-          brandSlug: input.brandSlug,
-          collectionSlug: input.collectionSlug
+        return completeCheckoutSessionRecord({
+          checkoutSessionId: input.checkoutSessionId,
+          now,
+          repositories
         });
-        const reservations =
-          await repositories.publishedCollectionReservationRepository.listByPublishedCollectionIdAndStatuses(
-            {
-              publishedCollectionId: publication.id,
-              statuses: ["completed"]
-            }
-          );
-        const completedItemIds = new Set(
-          reservations.map((reservation) => reservation.publishedCollectionItemId)
-        );
-        const mintedItemIds = new Set(
-          publication.mints.map((mint) => mint.publishedCollectionItemId)
-        );
-
-        if (
-          completedItemIds.has(session.reservation.publishedCollectionItem.id) ||
-          mintedItemIds.has(session.reservation.publishedCollectionItem.id)
-        ) {
-          await repositories.commerceCheckoutSessionRepository.updateStatusById({
-            canceledAt: now,
-            id: session.id,
-            status: "canceled"
-          });
-          await repositories.publishedCollectionReservationRepository.updateStatusById({
-            canceledAt: now,
-            id: session.reservation.id,
-            status: "canceled"
-          });
-
-          throw new CommerceServiceError(
-            "RESERVATION_NOT_AVAILABLE",
-            "That edition is no longer available.",
-            409
-          );
-        }
-
-        await repositories.commerceCheckoutSessionRepository.updateStatusById({
-          completedAt: now,
-          id: session.id,
-          status: "completed"
-        });
-        await repositories.publishedCollectionReservationRepository.updateStatusById({
-          completedAt: now,
-          id: session.reservation.id,
-          status: "completed"
-        });
-
-        const nextSoldCount = publication.soldCount + 1;
-        const nextStorefrontStatus =
-          publication.totalSupply !== null &&
-          nextSoldCount >= publication.totalSupply &&
-          publication.storefrontStatus === "live"
-            ? "sold_out"
-            : undefined;
-        const nextCommerceUpdate: {
-          id: string;
-          soldCount: number;
-          storefrontStatus?: CollectionStorefrontStatus;
-        } = {
-          id: publication.id,
-          soldCount: nextSoldCount
-        };
-
-        if (nextStorefrontStatus !== undefined) {
-          nextCommerceUpdate.storefrontStatus = nextStorefrontStatus;
-        }
-
-        await repositories.publishedCollectionRepository.updateCommerceById(
-          nextCommerceUpdate
-        );
-
-        const refreshed =
-          await repositories.commerceCheckoutSessionRepository.findByPublicId(
-            input.checkoutSessionId
-          );
-
-        if (!refreshed) {
-          throw new CommerceServiceError(
-            "CHECKOUT_SESSION_NOT_FOUND",
-            "Checkout session was not found.",
-            500
-          );
-        }
-
-        return serializeCheckoutSession({ session: refreshed });
       });
     },
 
@@ -652,16 +809,8 @@ export function createCollectionCommerceService(
           );
         }
 
-        if (
-          session.publishedCollection.brandSlug !== input.brandSlug ||
-          session.publishedCollection.slug !== input.collectionSlug
-        ) {
-          throw new CommerceServiceError(
-            "CHECKOUT_SESSION_NOT_FOUND",
-            "Checkout session was not found.",
-            404
-          );
-        }
+        assertSessionCollectionMatch(session, input);
+        assertProviderKind(session, "manual");
 
         if (session.status === "completed") {
           throw new CommerceServiceError(
@@ -680,49 +829,99 @@ export function createCollectionCommerceService(
             ? "expired"
             : "canceled";
 
-        const nextSessionStatusUpdate: {
-          canceledAt?: Date | null;
-          id: string;
-          status: "expired" | "canceled";
-        } = {
-          id: session.id,
-          status: nextStatus
-        };
-        const nextReservationStatusUpdate: {
-          canceledAt?: Date | null;
-          id: string;
-          status: "expired" | "canceled";
-        } = {
-          id: session.reservation.id,
-          status: nextStatus
-        };
-
         if (nextStatus === "canceled") {
-          nextSessionStatusUpdate.canceledAt = now;
-          nextReservationStatusUpdate.canceledAt = now;
+          return transitionCheckoutSessionRecord({
+            canceledAt: now,
+            checkoutSessionId: input.checkoutSessionId,
+            nextStatus,
+            repositories
+          });
         }
 
-        await repositories.commerceCheckoutSessionRepository.updateStatusById(
-          nextSessionStatusUpdate
-        );
-        await repositories.publishedCollectionReservationRepository.updateStatusById(
-          nextReservationStatusUpdate
-        );
+        return transitionCheckoutSessionRecord({
+          checkoutSessionId: input.checkoutSessionId,
+          nextStatus,
+          repositories
+        });
+      });
+    },
 
-        const refreshed =
+    async completeProviderCheckoutSession(input: {
+      checkoutSessionId: string;
+      providerKind: CommerceCheckoutProviderKind;
+    }) {
+      const now = dependencies.now();
+
+      return dependencies.runTransaction(async (repositories) => {
+        const session =
           await repositories.commerceCheckoutSessionRepository.findByPublicId(
             input.checkoutSessionId
           );
 
-        if (!refreshed) {
-          throw new CommerceServiceError(
-            "CHECKOUT_SESSION_NOT_FOUND",
-            "Checkout session was not found.",
-            500
-          );
+        if (!session) {
+          return null;
         }
 
-        return serializeCheckoutSession({ session: refreshed });
+        assertProviderKind(session, input.providerKind);
+
+        return completeCheckoutSessionRecord({
+          checkoutSessionId: input.checkoutSessionId,
+          now,
+          repositories
+        });
+      });
+    },
+
+    async expireProviderCheckoutSession(input: {
+      checkoutSessionId: string;
+      providerKind: CommerceCheckoutProviderKind;
+    }) {
+      const now = dependencies.now();
+
+      return dependencies.runTransaction(async (repositories) => {
+        const session =
+          await repositories.commerceCheckoutSessionRepository.findByPublicId(
+            input.checkoutSessionId
+          );
+
+        if (!session) {
+          return null;
+        }
+
+        assertProviderKind(session, input.providerKind);
+
+        return transitionCheckoutSessionRecord({
+          checkoutSessionId: input.checkoutSessionId,
+          nextStatus: "expired",
+          repositories
+        });
+      });
+    },
+
+    async cancelProviderCheckoutSession(input: {
+      checkoutSessionId: string;
+      providerKind: CommerceCheckoutProviderKind;
+    }) {
+      const now = dependencies.now();
+
+      return dependencies.runTransaction(async (repositories) => {
+        const session =
+          await repositories.commerceCheckoutSessionRepository.findByPublicId(
+            input.checkoutSessionId
+          );
+
+        if (!session) {
+          return null;
+        }
+
+        assertProviderKind(session, input.providerKind);
+
+        return transitionCheckoutSessionRecord({
+          canceledAt: now,
+          checkoutSessionId: input.checkoutSessionId,
+          nextStatus: "canceled",
+          repositories
+        });
       });
     }
   };

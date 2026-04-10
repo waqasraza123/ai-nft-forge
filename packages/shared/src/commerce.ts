@@ -15,10 +15,21 @@ const commercePriceLabelSchema = z.string().trim().max(60);
 
 export const commerceCheckoutProviderModeSchema = z.enum([
   "disabled",
-  "manual"
+  "manual",
+  "stripe"
 ]);
 
-export const commerceCheckoutProviderKindSchema = z.enum(["manual"]);
+export const commerceCheckoutProviderKindSchema = z.enum([
+  "manual",
+  "stripe"
+]);
+
+export const commerceCheckoutAvailabilityReasonSchema = z.enum([
+  "provider_disabled",
+  "collection_not_live",
+  "no_available_editions",
+  "pricing_incomplete"
+]);
 
 export const commerceBuyerDisplayNameSchema = z.string().trim().min(1).max(120);
 export const commerceBuyerEmailSchema = z
@@ -47,6 +58,8 @@ export const collectionCommerceAvailabilitySchema = z.object({
   activeReservationCount: z.number().int().min(0),
   availableEditionCount: z.number().int().min(0),
   checkoutEnabled: z.boolean(),
+  checkoutAvailabilityReason:
+    commerceCheckoutAvailabilityReasonSchema.nullable(),
   nextAvailableEditionNumber: z.number().int().positive().nullable(),
   providerMode: commerceCheckoutProviderModeSchema,
   reservationTtlSeconds: z.number().int().positive()
@@ -77,6 +90,7 @@ export const collectionCheckoutSessionSummarySchema = z.object({
   collectionSlug: commerceCollectionSlugSchema,
   completedAt: z.string().datetime().nullable(),
   expiresAt: z.string().datetime(),
+  providerSessionId: z.string().min(1).nullable(),
   priceLabel: commercePriceLabelSchema.nullable(),
   providerKind: commerceCheckoutProviderKindSchema,
   reservation: collectionCheckoutReservationSummarySchema,
@@ -91,6 +105,7 @@ export const collectionCheckoutSessionResponseSchema = z.object({
 export const collectionCommerceErrorResponseSchema = z.object({
   error: z.object({
     code: z.enum([
+      "CHECKOUT_CONFIGURATION_REQUIRED",
       "CHECKOUT_DISABLED",
       "CHECKOUT_SESSION_EXPIRED",
       "CHECKOUT_SESSION_NOT_FOUND",
@@ -132,6 +147,9 @@ export type CommerceCheckoutProviderMode = z.infer<
 >;
 export type CommerceCheckoutProviderKind = z.infer<
   typeof commerceCheckoutProviderKindSchema
+>;
+export type CommerceCheckoutAvailabilityReason = z.infer<
+  typeof commerceCheckoutAvailabilityReasonSchema
 >;
 export type CommerceReservationStatus = z.infer<
   typeof commerceReservationStatusSchema

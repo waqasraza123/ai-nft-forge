@@ -20,7 +20,8 @@ export async function POST(request: Request, context: RouteContext) {
       await createRuntimeCollectionCommerceService().createCheckoutSession({
         body: await parseJsonBody(request),
         brandSlug,
-        collectionSlug
+        collectionSlug,
+        origin: new URL(request.url).origin
       });
 
     return NextResponse.json(result, {

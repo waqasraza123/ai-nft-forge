@@ -23,6 +23,7 @@ import {
   parseCommerceEnv
 } from "@ai-nft-forge/shared";
 
+import { resolveCommerceReservationTtlSeconds } from "../commerce/provider";
 import { createPublicCollectionService } from "./public-service";
 import { createCollectionOnchainRuntime } from "./onchain";
 import { createCollectionDraftService } from "./service";
@@ -97,6 +98,11 @@ export function createRuntimePublicCollectionService(
   const objectStorageClient = createObjectStorageClient(rawEnvironment);
   const commerceEnv = parseCommerceEnv(rawEnvironment);
   const storageConfig = getStorageConfig(rawEnvironment);
+  const reservationTtlSeconds = resolveCommerceReservationTtlSeconds({
+    configuredReservationTtlSeconds:
+      commerceEnv.COMMERCE_RESERVATION_TTL_SECONDS,
+    providerMode: commerceEnv.COMMERCE_CHECKOUT_PROVIDER_MODE
+  });
 
   return createPublicCollectionService({
     repositories: {
@@ -106,7 +112,7 @@ export function createRuntimePublicCollectionService(
       publishedCollectionRepository:
         createPublishedCollectionRepository(databaseClient)
     },
-    reservationTtlSeconds: commerceEnv.COMMERCE_RESERVATION_TTL_SECONDS,
+    reservationTtlSeconds,
     checkoutProviderMode: commerceEnv.COMMERCE_CHECKOUT_PROVIDER_MODE,
     storage: {
       createDownloadDescriptor: (input) =>

@@ -105,6 +105,8 @@ export function createPublishedCollectionRepository(
       contractDeployedAt?: Date | null;
       contractTokenUriBaseUrl?: string | null;
       ownerUserId: string;
+      priceAmountMinor?: number | null;
+      priceCurrency?: string | null;
       priceLabel?: string | null;
       primaryCtaHref?: string | null;
       primaryCtaLabel?: string | null;
@@ -289,6 +291,8 @@ export function createPublishedCollectionRepository(
       contractDeployedAt?: Date | null;
       contractTokenUriBaseUrl?: string | null;
       ownerUserId: string;
+      priceAmountMinor?: number | null;
+      priceCurrency?: string | null;
       priceLabel?: string | null;
       primaryCtaHref?: string | null;
       primaryCtaLabel?: string | null;
@@ -351,6 +355,14 @@ export function createPublishedCollectionRepository(
                 input.launchAt === undefined
                   ? publication.launchAt
                   : input.launchAt,
+              priceAmountMinor:
+                input.priceAmountMinor === undefined
+                  ? publication.priceAmountMinor
+                  : input.priceAmountMinor,
+              priceCurrency:
+                input.priceCurrency === undefined
+                  ? publication.priceCurrency
+                  : input.priceCurrency,
               priceLabel:
                 input.priceLabel === undefined
                   ? publication.priceLabel

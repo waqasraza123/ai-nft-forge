@@ -65,6 +65,8 @@ type PublishedCollectionDetailRecord = {
     publicStorageObjectKey: string | null;
   }>;
   launchAt: Date | null;
+  priceAmountMinor: number | null;
+  priceCurrency: string | null;
   priceLabel: string | null;
   primaryCtaHref: string | null;
   primaryCtaLabel: string | null;
@@ -116,6 +118,8 @@ type PublishedCollectionPreviewRecord = {
     };
   }>;
   launchAt: Date | null;
+  priceAmountMinor: number | null;
+  priceCurrency: string | null;
   priceLabel: string | null;
   publishedAt: Date;
   soldCount: number;
@@ -653,6 +657,10 @@ export function createPublicCollectionService(
           position: item.position
         })),
         mints: publication.mints ?? [],
+        pricingReady:
+          dependencies.checkoutProviderMode !== "stripe" ||
+          (publication.priceAmountMinor !== null &&
+            publication.priceCurrency !== null),
         providerMode: dependencies.checkoutProviderMode,
         reservations,
         reservationTtlSeconds: dependencies.reservationTtlSeconds,

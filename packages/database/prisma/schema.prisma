@@ -129,6 +129,7 @@ enum CommerceCheckoutSessionStatus {
 
 enum CommerceCheckoutProviderKind {
   manual
+  stripe
 }
 
 model User {
@@ -365,6 +366,8 @@ model PublishedCollection {
   contractDeployedAt    DateTime?                 @map("contract_deployed_at")
   contractTokenUriBaseUrl String?                 @map("contract_token_uri_base_url")
   priceLabel            String?                   @map("price_label")
+  priceAmountMinor      Int?                      @map("price_amount_minor")
+  priceCurrency         String?                   @map("price_currency")
   heroGeneratedAssetId  String?                   @map("hero_generated_asset_id")
   storefrontHeadline    String?                   @map("storefront_headline")
   storefrontBody        String?                   @map("storefront_body")
@@ -471,6 +474,7 @@ model CommerceCheckoutSession {
   ownerUserId           String                       @map("owner_user_id")
   publishedCollectionId String                       @map("published_collection_id")
   providerKind          CommerceCheckoutProviderKind @map("provider_kind")
+  providerSessionId     String?                      @map("provider_session_id")
   status                CommerceCheckoutSessionStatus @default(open) @map("status")
   checkoutUrl           String                       @map("checkout_url")
   expiresAt             DateTime                     @map("expires_at")

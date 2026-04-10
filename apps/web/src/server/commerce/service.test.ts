@@ -12,6 +12,8 @@ type HarnessPublication = {
   }>;
   mints: Array<never>;
   ownerUserId: string;
+  priceAmountMinor: number | null;
+  priceCurrency: string | null;
   priceLabel: string;
   slug: string;
   soldCount: number;
@@ -37,6 +39,8 @@ function createPublicationRecord() {
     ],
     mints: [],
     ownerUserId: "user_1",
+    priceAmountMinor: 1800,
+    priceCurrency: "usd",
     priceLabel: "0.18 ETH",
     slug: "genesis-portrait-set",
     soldCount: 0,
@@ -47,10 +51,14 @@ function createPublicationRecord() {
 }
 
 function createCommerceHarness(input?: {
-  providerMode?: "disabled" | "manual";
+  providerMode?: "disabled" | "manual" | "stripe";
+  publicationOverrides?: Partial<HarnessPublication>;
   reservationStatuses?: Array<"pending" | "completed" | "expired" | "canceled">;
 }) {
-  const publication = createPublicationRecord();
+  const publication = {
+    ...createPublicationRecord(),
+    ...input?.publicationOverrides
+  };
   const reservations = (input?.reservationStatuses ?? []).map(
     (status, index) => ({
       id: `reservation_${index + 1}`,
@@ -66,7 +74,8 @@ function createCommerceHarness(input?: {
       completedAt: Date | null;
       expiresAt: Date;
       id: string;
-      providerKind: "manual";
+      providerKind: "manual" | "stripe";
+      providerSessionId: string | null;
       publicId: string;
       publishedCollection: HarnessPublication;
       reservation: {
@@ -94,7 +103,8 @@ function createCommerceHarness(input?: {
         checkoutUrl: string;
         expiresAt: Date;
         ownerUserId: string;
-        providerKind: "manual";
+        providerKind: "manual" | "stripe";
+        providerSessionId?: string | null;
         publicId: string;
         publishedCollectionId: string;
         reservationId: string;
@@ -119,6 +129,7 @@ function createCommerceHarness(input?: {
           expiresAt: createInput.expiresAt,
           id: `checkout_record_${checkoutSessions.size + 1}`,
           providerKind: createInput.providerKind,
+          providerSessionId: createInput.providerSessionId ?? null,
           publicId: createInput.publicId,
           publishedCollection: {
             ...publication,
@@ -271,10 +282,12 @@ function createCommerceHarness(input?: {
   const service = createCollectionCommerceService({
     now: () => new Date("2026-04-10T10:00:00.000Z"),
     payment: {
-      createCheckoutSession({ checkoutSessionId }) {
+      async createCheckoutSession({ checkoutSessionId }) {
         return {
           checkoutUrl: `/checkout/${checkoutSessionId}`,
-          providerKind: "manual" as const
+          providerKind: input?.providerMode === "stripe" ? "stripe" : "manual",
+          providerSessionId:
+            input?.providerMode === "stripe" ? `cs_test_${checkoutSessionId}` : null
         };
       },
       providerMode: input?.providerMode ?? "manual"
@@ -308,7 +321,8 @@ describe("createCollectionCommerceService", () => {
         buyerEmail: "collector@example.com"
       },
       brandSlug: "demo-studio",
-      collectionSlug: "genesis-portrait-set"
+      collectionSlug: "genesis-portrait-set",
+      origin: "https://demo.example"
     });
 
     expect(result.checkout.status).toBe("open");
@@ -323,7 +337,8 @@ describe("createCollectionCommerceService", () => {
         buyerEmail: "collector@example.com"
       },
       brandSlug: "demo-studio",
-      collectionSlug: "genesis-portrait-set"
+      collectionSlug: "genesis-portrait-set",
+      origin: "https://demo.example"
     });
 
     const result = await harness.service.completeManualCheckout({
@@ -348,10 +363,34 @@ describe("createCollectionCommerceService", () => {
           buyerEmail: "collector@example.com"
         },
         brandSlug: "demo-studio",
-        collectionSlug: "genesis-portrait-set"
+        collectionSlug: "genesis-portrait-set",
+        origin: "https://demo.example"
       })
     ).rejects.toMatchObject({
       code: "CHECKOUT_DISABLED"
+    });
+  });
+
+  it("requires machine pricing when stripe checkout is enabled", async () => {
+    const harness = createCommerceHarness({
+      providerMode: "stripe",
+      publicationOverrides: {
+        priceAmountMinor: null,
+        priceCurrency: null
+      }
+    });
+
+    await expect(
+      harness.service.createCheckoutSession({
+        body: {
+          buyerEmail: "collector@example.com"
+        },
+        brandSlug: "demo-studio",
+        collectionSlug: "genesis-portrait-set",
+        origin: "https://demo.example"
+      })
+    ).rejects.toMatchObject({
+      code: "CHECKOUT_CONFIGURATION_REQUIRED"
     });
   });
 });

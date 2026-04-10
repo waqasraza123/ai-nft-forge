@@ -6,11 +6,17 @@ type PurchasePanelProps = {
   activeReservationCount: number;
   availableEditionCount: number;
   brandSlug: string;
+  checkoutAvailabilityReason:
+    | "collection_not_live"
+    | "no_available_editions"
+    | "pricing_incomplete"
+    | "provider_disabled"
+    | null;
   checkoutEnabled: boolean;
   collectionSlug: string;
   nextAvailableEditionNumber: number | null;
   priceLabel: string | null;
-  providerMode: "disabled" | "manual";
+  providerMode: "disabled" | "manual" | "stripe";
 };
 
 type ApiError = {
@@ -86,11 +92,13 @@ export function PurchasePanel(props: PurchasePanelProps) {
   }
 
   const disabledMessage =
-    props.providerMode === "disabled"
+    props.checkoutAvailabilityReason === "provider_disabled"
       ? "Checkout is disabled on this deployment."
-      : props.availableEditionCount === 0
-        ? "No reserveable editions remain in this drop."
-        : "Checkout opens once this release is live.";
+      : props.checkoutAvailabilityReason === "pricing_incomplete"
+        ? "Checkout pricing is not configured for this release yet."
+        : props.checkoutAvailabilityReason === "no_available_editions"
+          ? "No reserveable editions remain in this drop."
+          : "Checkout opens once this release is live.";
 
   return (
     <article className="storefront-panel storefront-commerce-panel">
@@ -155,7 +163,11 @@ export function PurchasePanel(props: PurchasePanelProps) {
             disabled={busy}
             type="submit"
           >
-            {busy ? "Starting checkout..." : "Reserve and continue"}
+            {busy
+              ? "Starting checkout..."
+              : props.providerMode === "stripe"
+                ? "Reserve and continue to payment"
+                : "Reserve and continue"}
           </button>
         </form>
       ) : (

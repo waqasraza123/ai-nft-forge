@@ -30,6 +30,14 @@ export const collectionStorefrontStatusSchema = z.enum([
   "ended"
 ]);
 export const collectionStorefrontPriceLabelSchema = z.string().trim().max(60);
+export const collectionStorefrontPriceAmountMinorSchema = z
+  .number()
+  .int()
+  .positive();
+export const collectionStorefrontPriceCurrencySchema = z
+  .string()
+  .trim()
+  .regex(/^[a-z]{3}$/);
 export const collectionStorefrontHeadlineSchema = z.string().trim().max(120);
 export const collectionStorefrontBodySchema = z.string().trim().max(600);
 export const collectionStorefrontCtaLabelSchema = z.string().trim().max(40);
@@ -63,6 +71,8 @@ export const collectionPublicationSummarySchema = z.object({
   id: z.string().min(1),
   isFeatured: z.boolean(),
   launchAt: z.string().datetime().nullable(),
+  priceAmountMinor: collectionStorefrontPriceAmountMinorSchema.nullable(),
+  priceCurrency: collectionStorefrontPriceCurrencySchema.nullable(),
   mintedTokenCount: z.number().int().min(0),
   mints: z.array(collectionOnchainMintSummarySchema),
   priceLabel: collectionStorefrontPriceLabelSchema.nullable(),
@@ -282,6 +292,10 @@ export const collectionPublicationMerchandisingRequestSchema = z
     heroGeneratedAssetId: z.string().min(1).nullable().optional(),
     isFeatured: z.boolean(),
     launchAt: z.string().datetime().nullable().optional(),
+    priceAmountMinor:
+      collectionStorefrontPriceAmountMinorSchema.nullable().optional(),
+    priceCurrency:
+      z.string().trim().regex(/^[a-zA-Z]{3}$/).nullable().optional(),
     priceLabel: collectionStorefrontPriceLabelSchema.nullable().optional(),
     primaryCtaHref: collectionStorefrontCtaHrefSchema.nullable().optional(),
     primaryCtaLabel: collectionStorefrontCtaLabelSchema.nullable().optional(),
@@ -339,6 +353,23 @@ export const collectionPublicationMerchandisingRequestSchema = z
         path: value.secondaryCtaLabel
           ? ["secondaryCtaHref"]
           : ["secondaryCtaLabel"]
+      });
+    }
+
+    const pricingPair =
+      (value.priceAmountMinor !== null && value.priceAmountMinor !== undefined
+        ? 1
+        : 0) +
+      (value.priceCurrency ? 1 : 0);
+
+    if (pricingPair === 1) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Price amount and currency must be provided together.",
+        path:
+          value.priceAmountMinor !== null && value.priceAmountMinor !== undefined
+            ? ["priceCurrency"]
+            : ["priceAmountMinor"]
       });
     }
   });

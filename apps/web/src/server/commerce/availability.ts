@@ -1,6 +1,7 @@
 import {
   collectionCommerceAvailabilitySchema,
   type CollectionStorefrontStatus,
+  type CommerceCheckoutAvailabilityReason,
   type CommerceCheckoutProviderMode
 } from "@ai-nft-forge/shared";
 
@@ -21,6 +22,7 @@ type CommerceAvailabilityReservation = {
 export function createCollectionCommerceAvailability(input: {
   items: CommerceAvailabilityItem[];
   mints: CommerceAvailabilityMint[];
+  pricingReady: boolean;
   providerMode: CommerceCheckoutProviderMode;
   reservations: CommerceAvailabilityReservation[];
   reservationTtlSeconds: number;
@@ -45,15 +47,25 @@ export function createCollectionCommerceAvailability(input: {
       !completedReservationItemIds.has(item.id) &&
       !mintedItemIds.has(item.id)
   );
+  let checkoutAvailabilityReason: CommerceCheckoutAvailabilityReason | null =
+    null;
+
+  if (input.providerMode === "disabled") {
+    checkoutAvailabilityReason = "provider_disabled";
+  } else if (input.storefrontStatus !== "live") {
+    checkoutAvailabilityReason = "collection_not_live";
+  } else if (!input.pricingReady) {
+    checkoutAvailabilityReason = "pricing_incomplete";
+  } else if (availableItems.length === 0) {
+    checkoutAvailabilityReason = "no_available_editions";
+  }
 
   return {
     availability: collectionCommerceAvailabilitySchema.parse({
       activeReservationCount: pendingReservationItemIds.size,
       availableEditionCount: availableItems.length,
-      checkoutEnabled:
-        input.providerMode !== "disabled" &&
-        input.storefrontStatus === "live" &&
-        availableItems.length > 0,
+      checkoutAvailabilityReason,
+      checkoutEnabled: checkoutAvailabilityReason === null,
       nextAvailableEditionNumber: availableItems[0]?.position ?? null,
       providerMode: input.providerMode,
       reservationTtlSeconds: input.reservationTtlSeconds

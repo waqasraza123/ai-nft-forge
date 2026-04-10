@@ -71,6 +71,8 @@ function createPreviewRecord(input: {
       }
     ],
     launchAt: input.launchAt ? new Date(input.launchAt) : null,
+    priceAmountMinor: null,
+    priceCurrency: null,
     priceLabel: input.priceLabel ?? null,
     publishedAt: new Date("2026-04-08T00:30:00.000Z"),
     slug: input.slug,
@@ -160,6 +162,8 @@ function createDetailedRecord(input?: {
       }
     ],
     launchAt: input?.launchAt ? new Date(input.launchAt) : null,
+    priceAmountMinor: 1800,
+    priceCurrency: "usd",
     priceLabel: input?.priceLabel === undefined ? "0.18 ETH" : input.priceLabel,
     primaryCtaHref:
       input?.primaryCtaHref === undefined

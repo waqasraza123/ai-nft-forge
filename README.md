@@ -6,9 +6,9 @@ The repository ships as a pnpm monorepo with a Next.js control plane, a BullMQ w
 
 ## Status
 
-- Phases 1 through 7 are complete, and post-phase onchain deployment/minting, wallet UX, chain-state reconciliation, and first-commerce reservation/manual-checkout slices are landed
+- Phases 1 through 7 are complete, and post-phase onchain deployment/minting, wallet UX, chain-state reconciliation, and commerce checkout slices are landed
 - Deferred beyond the public release:
-  - external payment-provider integrations and richer commerce fulfillment automation
+  - richer commerce fulfillment automation and owner-side commerce administration
   - multi-brand administration
   - advanced multi-node orchestration
 - Durable project memory lives in `AGENTS.md`, `docs/project-state.md`, and the architecture docs under `docs/`
@@ -23,7 +23,7 @@ The repository ships as a pnpm monorepo with a Next.js control plane, a BullMQ w
 - Public white-label brand and collection storefront routes backed only by saved brand settings and immutable published snapshots
 - Contract manifest and token-URI publication routes
 - Shared wallet connection UX for owner-signed contract deployment and mint flows with server-verified transaction recording for published collections
-- Public item-level reservations plus a hosted manual checkout flow for live published collections
+- Public item-level reservations plus hosted checkout for live published collections, with manual and Stripe provider modes
 - Authenticated ops diagnostics, persisted observability captures, alert delivery policy, and operator retry controls
 - Worker-owned reconciliation with persisted runs and issues, manual run/repair/ignore actions, `/ops` visibility, and onchain drift checks for recorded deployments and mints
 - Dockerfiles and a single-node Docker Compose self-host path
@@ -108,7 +108,7 @@ docker build -f apps/generation-backend/Dockerfile .
 - Source and generated assets stay private by default; public storefront assets are copied into the public bucket only at publication time
 - Public routes read only from saved brand settings and immutable published snapshots
 - Onchain deployment and minting stay owner-signed; the repo opens wallet flows and records verified chain receipts, but it does not ship server-held private keys
-- The first commerce slice uses a provider boundary with `manual` and `disabled` modes; external payment processors are still deferred
+- Commerce checkout now supports `manual`, `stripe`, and `disabled` provider modes, with Stripe-hosted checkout and webhook-driven completion when configured
 - Moderation, ops, and reconciliation actions remain authenticated and owner-scoped
 - This repository targets single-node self-hosting with Docker Compose, not Kubernetes or hosted SaaS
 

@@ -265,6 +265,12 @@ function createInitialPublicationMerchandisingState(
     launchAt: draft?.publication?.launchAt
       ? draft.publication.launchAt.slice(0, 16)
       : "",
+    priceAmountMinor:
+      draft?.publication?.priceAmountMinor !== null &&
+      draft?.publication?.priceAmountMinor !== undefined
+        ? draft.publication.priceAmountMinor.toString()
+        : "",
+    priceCurrency: draft?.publication?.priceCurrency?.toUpperCase() ?? "",
     priceLabel: draft?.publication?.priceLabel ?? "",
     primaryCtaHref: draft?.publication?.primaryCtaHref ?? "",
     primaryCtaLabel: draft?.publication?.primaryCtaLabel ?? "",
@@ -1096,6 +1102,11 @@ export function StudioCollectionsClient({
             launchAt: toOptionalIsoTimestamp(
               publicationMerchandisingState.launchAt
             ),
+            priceAmountMinor: toOptionalPositiveInteger(
+              publicationMerchandisingState.priceAmountMinor
+            ),
+            priceCurrency:
+              publicationMerchandisingState.priceCurrency.trim() || null,
             priceLabel: publicationMerchandisingState.priceLabel || null,
             primaryCtaHref:
               publicationMerchandisingState.primaryCtaHref || null,
@@ -1980,6 +1991,14 @@ export function StudioCollectionsClient({
                 {selectedDraft.publication?.priceLabel ? (
                   <Pill>{selectedDraft.publication.priceLabel}</Pill>
                 ) : null}
+                {selectedDraft.publication?.priceAmountMinor !== null &&
+                selectedDraft.publication?.priceAmountMinor !== undefined &&
+                selectedDraft.publication?.priceCurrency ? (
+                  <Pill>
+                    {selectedDraft.publication.priceAmountMinor}{" "}
+                    {selectedDraft.publication.priceCurrency.toUpperCase()}
+                  </Pill>
+                ) : null}
                 {selectedDraft.publication?.totalSupply !== null &&
                 selectedDraft.publication?.totalSupply !== undefined ? (
                   <Pill>
@@ -2202,6 +2221,37 @@ export function StudioCollectionsClient({
                       }}
                       placeholder="0.08 ETH"
                       value={publicationMerchandisingState.priceLabel}
+                    />
+                  </label>
+                  <label className="field-stack">
+                    <span className="field-label">Price amount (minor)</span>
+                    <input
+                      className="input-field"
+                      min={1}
+                      onChange={(event) => {
+                        setPublicationMerchandisingState((current) => ({
+                          ...current,
+                          priceAmountMinor: event.target.value
+                        }));
+                      }}
+                      placeholder="1800"
+                      type="number"
+                      value={publicationMerchandisingState.priceAmountMinor}
+                    />
+                  </label>
+                  <label className="field-stack">
+                    <span className="field-label">Price currency</span>
+                    <input
+                      className="input-field"
+                      maxLength={3}
+                      onChange={(event) => {
+                        setPublicationMerchandisingState((current) => ({
+                          ...current,
+                          priceCurrency: event.target.value.toUpperCase()
+                        }));
+                      }}
+                      placeholder="USD"
+                      value={publicationMerchandisingState.priceCurrency}
                     />
                   </label>
                   <label className="field-stack">

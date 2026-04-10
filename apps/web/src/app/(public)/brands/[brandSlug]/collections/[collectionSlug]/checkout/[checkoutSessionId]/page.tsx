@@ -114,7 +114,20 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
     checkout.checkout.providerKind === "manual" &&
     checkout.checkout.status === "open";
   const canCancel =
-    checkout.checkout.status === "open" || checkout.checkout.status === "expired";
+    checkout.checkout.providerKind === "manual" &&
+    (checkout.checkout.status === "open" ||
+      checkout.checkout.status === "expired");
+  const stripeCheckoutOpen =
+    checkout.checkout.providerKind === "stripe" &&
+    checkout.checkout.status === "open";
+  const checkoutLead =
+    checkout.checkout.providerKind === "stripe"
+      ? checkout.checkout.status === "completed"
+        ? "Payment was confirmed through Stripe Checkout. This reservation has been converted into a completed sale."
+        : checkout.checkout.status === "open"
+          ? "Payment is being handled through Stripe Checkout. If the redirect already closed, reopen the Stripe session below or refresh this page after payment confirmation."
+          : "This Stripe Checkout session is no longer open."
+      : "This deployment is using the manual commerce provider. The reservation is real and time-bound, but payment completion is simulated from this hosted checkout page.";
 
   return (
     <div
@@ -137,9 +150,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
             ) : null}
           </div>
           <p className="storefront-hero__lead">
-            This deployment is using the manual commerce provider. The reservation
-            is real and time-bound, but payment completion is simulated from this
-            hosted checkout page.
+            {checkoutLead}
           </p>
           <div className="storefront-checkout-detail-grid">
             <div className="storefront-stat">
@@ -161,13 +172,30 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
               <span>Completed at</span>
             </div>
           </div>
-          <CheckoutClient
-            brandSlug={brandSlug}
-            canCancel={canCancel}
-            canComplete={canComplete}
-            checkoutSessionId={checkoutSessionId}
-            collectionSlug={collectionSlug}
-          />
+          {checkout.checkout.providerKind === "manual" ? (
+            <CheckoutClient
+              brandSlug={brandSlug}
+              canCancel={canCancel}
+              canComplete={canComplete}
+              checkoutSessionId={checkoutSessionId}
+              collectionSlug={collectionSlug}
+            />
+          ) : stripeCheckoutOpen ? (
+            <div className="storefront-checkout-actions">
+              <Link
+                className="storefront-button storefront-button--primary"
+                href={checkout.checkout.checkoutUrl}
+              >
+                Open Stripe Checkout
+              </Link>
+              <Link
+                className="storefront-button storefront-button--ghost"
+                href={`/brands/${brandSlug}/collections/${collectionSlug}/checkout/${checkoutSessionId}`}
+              >
+                Refresh payment status
+              </Link>
+            </div>
+          ) : null}
           <Link
             className="storefront-button storefront-button--ghost"
             href={`/brands/${brandSlug}/collections/${collectionSlug}`}

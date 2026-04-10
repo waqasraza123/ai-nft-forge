@@ -80,6 +80,8 @@ type PublishedCollectionRecord = {
   id: string;
   isFeatured: boolean;
   launchAt: Date | null;
+  priceAmountMinor: number | null;
+  priceCurrency: string | null;
   priceLabel: string | null;
   primaryCtaHref: string | null;
   primaryCtaLabel: string | null;
@@ -223,6 +225,8 @@ type CollectionDraftRepositorySet = {
       contractDeployTxHash?: string | null;
       contractTokenUriBaseUrl?: string | null;
       ownerUserId: string;
+      priceAmountMinor?: number | null;
+      priceCurrency?: string | null;
       priceLabel?: string | null;
       primaryCtaHref?: string | null;
       primaryCtaLabel?: string | null;
@@ -269,6 +273,8 @@ type CollectionDraftRepositorySet = {
       contractDeployTxHash?: string | null;
       contractTokenUriBaseUrl?: string | null;
       ownerUserId: string;
+      priceAmountMinor?: number | null;
+      priceCurrency?: string | null;
       priceLabel?: string | null;
       primaryCtaHref?: string | null;
       primaryCtaLabel?: string | null;
@@ -504,6 +510,8 @@ function serializePublication(publication: PublishedCollectionRecord) {
     id: publication.id,
     isFeatured: publication.isFeatured,
     launchAt: publication.launchAt?.toISOString() ?? null,
+    priceAmountMinor: publication.priceAmountMinor,
+    priceCurrency: publication.priceCurrency,
     mintedTokenCount: countMintedTokens(publication),
     mints:
       publication.mints?.map((mint) => ({
@@ -1123,6 +1131,8 @@ export function createCollectionDraftService(
                   ).length === 0,
                 launchAt: null,
                 ownerUserId: input.ownerUserId,
+                priceAmountMinor: null,
+                priceCurrency: null,
                 priceLabel: null,
                 primaryCtaHref: null,
                 primaryCtaLabel: null,
@@ -1204,6 +1214,8 @@ export function createCollectionDraftService(
       isFeatured: boolean;
       launchAt: string | null;
       ownerUserId: string;
+      priceAmountMinor: number | null;
+      priceCurrency: string | null;
       priceLabel: string | null;
       primaryCtaHref: string | null;
       primaryCtaLabel: string | null;
@@ -1223,6 +1235,8 @@ export function createCollectionDraftService(
           isFeatured: input.isFeatured,
           launchAt: input.launchAt,
           priceLabel: input.priceLabel,
+          priceAmountMinor: input.priceAmountMinor,
+          priceCurrency: input.priceCurrency,
           primaryCtaHref: input.primaryCtaHref,
           primaryCtaLabel: input.primaryCtaLabel,
           secondaryCtaHref: input.secondaryCtaHref,
@@ -1328,6 +1342,10 @@ export function createCollectionDraftService(
             ? new Date(parsedInput.launchAt)
             : null,
           ownerUserId: input.ownerUserId,
+          priceAmountMinor: parsedInput.priceAmountMinor ?? null,
+          priceCurrency:
+            normalizeOptionalText(parsedInput.priceCurrency)?.toLowerCase() ??
+            null,
           priceLabel: normalizeOptionalText(parsedInput.priceLabel),
           primaryCtaHref: normalizeOptionalText(parsedInput.primaryCtaHref),
           primaryCtaLabel: normalizeOptionalText(parsedInput.primaryCtaLabel),

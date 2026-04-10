@@ -8,6 +8,8 @@ function createDefaultPublicationStorefrontState() {
     endAt: null,
     heroGeneratedAssetId: null,
     launchAt: null,
+    priceAmountMinor: null,
+    priceCurrency: null,
     priceLabel: null,
     primaryCtaHref: null,
     primaryCtaLabel: null,
@@ -85,6 +87,8 @@ function createCollectionDraftHarness() {
       isFeatured: boolean;
       launchAt: Date | null;
       ownerUserId: string;
+      priceAmountMinor: number | null;
+      priceCurrency: string | null;
       priceLabel: string | null;
       primaryCtaHref: string | null;
       primaryCtaLabel: string | null;
@@ -641,6 +645,8 @@ function createCollectionDraftHarness() {
         isFeatured: boolean;
         launchAt?: Date | null;
         ownerUserId: string;
+        priceAmountMinor?: number | null;
+        priceCurrency?: string | null;
         priceLabel?: string | null;
         primaryCtaHref?: string | null;
         primaryCtaLabel?: string | null;
@@ -675,6 +681,8 @@ function createCollectionDraftHarness() {
           isFeatured: input.isFeatured,
           launchAt: input.launchAt ?? null,
           ownerUserId: input.ownerUserId,
+          priceAmountMinor: input.priceAmountMinor ?? null,
+          priceCurrency: input.priceCurrency ?? null,
           priceLabel: input.priceLabel ?? null,
           primaryCtaHref: input.primaryCtaHref ?? null,
           primaryCtaLabel: input.primaryCtaLabel ?? null,
@@ -770,6 +778,8 @@ function createCollectionDraftHarness() {
         isFeatured?: boolean;
         launchAt?: Date | null;
         ownerUserId: string;
+        priceAmountMinor?: number | null;
+        priceCurrency?: string | null;
         priceLabel?: string | null;
         primaryCtaHref?: string | null;
         primaryCtaLabel?: string | null;
@@ -829,6 +839,14 @@ function createCollectionDraftHarness() {
             input.launchAt === undefined
               ? publication.launchAt
               : input.launchAt,
+          priceAmountMinor:
+            input.priceAmountMinor === undefined
+              ? publication.priceAmountMinor
+              : input.priceAmountMinor,
+          priceCurrency:
+            input.priceCurrency === undefined
+              ? publication.priceCurrency
+              : input.priceCurrency,
           priceLabel:
             input.priceLabel === undefined
               ? publication.priceLabel
@@ -1829,6 +1847,8 @@ describe("createCollectionDraftService", () => {
         isFeatured: true,
         launchAt: "2026-04-10T12:00:00.000Z",
         ownerUserId: "user_1",
+        priceAmountMinor: 1800,
+        priceCurrency: "usd",
         priceLabel: "0.18 ETH",
         primaryCtaHref: "https://example.com/mint",
         primaryCtaLabel: "Enter mint",
@@ -1845,6 +1865,8 @@ describe("createCollectionDraftService", () => {
       displayOrder: 4,
       heroGeneratedAssetId: "generated_asset_2",
       isFeatured: true,
+      priceAmountMinor: 1800,
+      priceCurrency: "usd",
       priceLabel: "0.18 ETH",
       primaryCtaLabel: "Enter mint",
       remainingSupply: 7,
@@ -1895,6 +1917,8 @@ describe("createCollectionDraftService", () => {
         isFeatured: false,
         launchAt: null,
         ownerUserId: "user_1",
+        priceAmountMinor: null,
+        priceCurrency: null,
         priceLabel: null,
         primaryCtaHref: null,
         primaryCtaLabel: null,

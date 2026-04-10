@@ -265,6 +265,9 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
           activeReservationCount={collection.commerce.activeReservationCount}
           availableEditionCount={collection.commerce.availableEditionCount}
           brandSlug={collection.brandSlug}
+          checkoutAvailabilityReason={
+            collection.commerce.checkoutAvailabilityReason
+          }
           checkoutEnabled={collection.commerce.checkoutEnabled}
           collectionSlug={collection.collectionSlug}
           nextAvailableEditionNumber={
