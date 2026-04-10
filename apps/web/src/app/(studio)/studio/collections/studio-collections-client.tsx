@@ -14,8 +14,11 @@ import {
   createCollectionTokenUriPath
 } from "@ai-nft-forge/contracts";
 import {
+  collectionContractDeploymentIntentResponseSchema,
+  collectionContractMintIntentResponseSchema,
   collectionDraftListResponseSchema,
   collectionDraftResponseSchema,
+  type CollectionContractChainKey,
   type CollectionDraftStatus,
   type CollectionDraftSummary,
   type CollectionGeneratedAssetCandidate,
@@ -190,6 +193,14 @@ function toOptionalPositiveInteger(value: string) {
   return Number.parseInt(value, 10);
 }
 
+function shortHex(value: string) {
+  if (value.length <= 14) {
+    return value;
+  }
+
+  return `${value.slice(0, 8)}…${value.slice(-6)}`;
+}
+
 function buildPublishedCollectionMetadataPath(publicPath: string) {
   return `${publicPath}/metadata`;
 }
@@ -226,6 +237,21 @@ export function StudioCollectionsClient({
     useState(() =>
       createInitialPublicationMerchandisingState(initialDrafts[0] ?? null)
     );
+  const [deploymentChainKey, setDeploymentChainKey] =
+    useState<CollectionContractChainKey>("base-sepolia");
+  const [deploymentRecordState, setDeploymentRecordState] = useState(() => ({
+    contractAddress: "",
+    deployedAt: "",
+    deployTxHash: ""
+  }));
+  const [mintRecordState, setMintRecordState] = useState(() => ({
+    mintedAt: "",
+    recipientWalletAddress: "",
+    tokenId: initialDrafts[0]?.items[0]?.position.toString() ?? "1",
+    txHash: ""
+  }));
+  const [deploymentIntentJson, setDeploymentIntentJson] = useState("");
+  const [mintIntentJson, setMintIntentJson] = useState("");
   const [notice, setNotice] = useState<NoticeState>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -234,6 +260,18 @@ export function StudioCollectionsClient({
     null
   );
   const [savingPublicationDraftId, setSavingPublicationDraftId] = useState<
+    string | null
+  >(null);
+  const [preparingDeploymentDraftId, setPreparingDeploymentDraftId] = useState<
+    string | null
+  >(null);
+  const [recordingDeploymentDraftId, setRecordingDeploymentDraftId] = useState<
+    string | null
+  >(null);
+  const [preparingMintDraftId, setPreparingMintDraftId] = useState<
+    string | null
+  >(null);
+  const [recordingMintDraftId, setRecordingMintDraftId] = useState<
     string | null
   >(null);
   const [unpublishingDraftId, setUnpublishingDraftId] = useState<string | null>(
@@ -271,6 +309,26 @@ export function StudioCollectionsClient({
     setPublicationMerchandisingState(
       createInitialPublicationMerchandisingState(selectedDraft)
     );
+    setDeploymentChainKey(
+      selectedDraft?.publication?.activeDeployment?.chain.key ?? "base-sepolia"
+    );
+    setDeploymentRecordState({
+      contractAddress:
+        selectedDraft?.publication?.activeDeployment?.contractAddress ?? "",
+      deployedAt: selectedDraft?.publication?.activeDeployment?.deployedAt
+        ? selectedDraft.publication.activeDeployment.deployedAt.slice(0, 16)
+        : "",
+      deployTxHash:
+        selectedDraft?.publication?.activeDeployment?.deployTxHash ?? ""
+    });
+    setMintRecordState({
+      mintedAt: "",
+      recipientWalletAddress: "",
+      tokenId: selectedDraft?.items[0]?.position.toString() ?? "1",
+      txHash: ""
+    });
+    setDeploymentIntentJson("");
+    setMintIntentJson("");
   }, [selectedDraft]);
 
   const refreshDrafts = useEffectEvent(async (input?: { silent?: boolean }) => {
@@ -575,6 +633,205 @@ export function StudioCollectionsClient({
       });
     } finally {
       setSavingPublicationDraftId(null);
+    }
+  }
+
+  async function handlePrepareDeploymentIntent() {
+    if (!selectedDraft?.publication) {
+      return;
+    }
+
+    setPreparingDeploymentDraftId(selectedDraft.id);
+    setNotice({
+      message: "Preparing deployment intent…",
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch(
+        `/api/studio/collections/${selectedDraft.id}/onchain/deployment-intent`,
+        {
+          body: JSON.stringify({
+            chainKey: deploymentChainKey
+          }),
+          headers: {
+            "Content-Type": "application/json"
+          },
+          method: "POST"
+        }
+      );
+      const result = await parseJsonResponse({
+        response,
+        schema: collectionContractDeploymentIntentResponseSchema
+      });
+
+      setDeploymentIntentJson(JSON.stringify(result, null, 2));
+      setNotice({
+        message: "Deployment intent prepared.",
+        tone: "success"
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Deployment intent could not be prepared.",
+        tone: "error"
+      });
+    } finally {
+      setPreparingDeploymentDraftId(null);
+    }
+  }
+
+  async function handleRecordDeployment(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedDraft?.publication) {
+      return;
+    }
+
+    setRecordingDeploymentDraftId(selectedDraft.id);
+    setNotice({
+      message: "Recording deployed contract…",
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch(
+        `/api/studio/collections/${selectedDraft.id}/onchain/deployment`,
+        {
+          body: JSON.stringify({
+            chainKey: deploymentChainKey,
+            contractAddress: deploymentRecordState.contractAddress,
+            deployedAt: toOptionalIsoTimestamp(deploymentRecordState.deployedAt),
+            deployTxHash: deploymentRecordState.deployTxHash
+          }),
+          headers: {
+            "Content-Type": "application/json"
+          },
+          method: "POST"
+        }
+      );
+      const result = await parseJsonResponse({
+        response,
+        schema: collectionDraftResponseSchema
+      });
+
+      applyUpdatedDraft(result.draft);
+      setNotice({
+        message: "Contract deployment recorded.",
+        tone: "success"
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Contract deployment could not be recorded.",
+        tone: "error"
+      });
+    } finally {
+      setRecordingDeploymentDraftId(null);
+    }
+  }
+
+  async function handlePrepareMintIntent() {
+    if (!selectedDraft?.publication) {
+      return;
+    }
+
+    setPreparingMintDraftId(selectedDraft.id);
+    setNotice({
+      message: "Preparing mint intent…",
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch(
+        `/api/studio/collections/${selectedDraft.id}/onchain/mint-intent`,
+        {
+          body: JSON.stringify({
+            recipientWalletAddress: mintRecordState.recipientWalletAddress,
+            tokenId: Number.parseInt(mintRecordState.tokenId || "0", 10)
+          }),
+          headers: {
+            "Content-Type": "application/json"
+          },
+          method: "POST"
+        }
+      );
+      const result = await parseJsonResponse({
+        response,
+        schema: collectionContractMintIntentResponseSchema
+      });
+
+      setMintIntentJson(JSON.stringify(result, null, 2));
+      setNotice({
+        message: "Mint intent prepared.",
+        tone: "success"
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Mint intent could not be prepared.",
+        tone: "error"
+      });
+    } finally {
+      setPreparingMintDraftId(null);
+    }
+  }
+
+  async function handleRecordMint(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedDraft?.publication) {
+      return;
+    }
+
+    setRecordingMintDraftId(selectedDraft.id);
+    setNotice({
+      message: "Recording mint…",
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch(
+        `/api/studio/collections/${selectedDraft.id}/onchain/mints`,
+        {
+          body: JSON.stringify({
+            mintedAt: toOptionalIsoTimestamp(mintRecordState.mintedAt),
+            recipientWalletAddress: mintRecordState.recipientWalletAddress,
+            tokenId: Number.parseInt(mintRecordState.tokenId || "0", 10),
+            txHash: mintRecordState.txHash
+          }),
+          headers: {
+            "Content-Type": "application/json"
+          },
+          method: "POST"
+        }
+      );
+      const result = await parseJsonResponse({
+        response,
+        schema: collectionDraftResponseSchema
+      });
+
+      applyUpdatedDraft(result.draft);
+      setNotice({
+        message: "Mint recorded.",
+        tone: "success"
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Mint could not be recorded.",
+        tone: "error"
+      });
+    } finally {
+      setRecordingMintDraftId(null);
     }
   }
 
@@ -1093,6 +1350,23 @@ export function StudioCollectionsClient({
                 {selectedDraft.publication ? (
                   <Pill>{selectedDraft.publication.storefrontStatus}</Pill>
                 ) : null}
+                {selectedDraft.publication?.activeDeployment ? (
+                  <Pill>
+                    {selectedDraft.publication.activeDeployment.chain.label}
+                  </Pill>
+                ) : null}
+                {selectedDraft.publication?.activeDeployment ? (
+                  <Pill>
+                    {shortHex(
+                      selectedDraft.publication.activeDeployment.contractAddress
+                    )}
+                  </Pill>
+                ) : null}
+                {selectedDraft.publication ? (
+                  <Pill>
+                    {selectedDraft.publication.mintedTokenCount} minted
+                  </Pill>
+                ) : null}
                 {selectedDraft.publication?.priceLabel ? (
                   <Pill>{selectedDraft.publication.priceLabel}</Pill>
                 ) : null}
@@ -1493,6 +1767,267 @@ export function StudioCollectionsClient({
           ) : (
             <div className="collection-empty-state">
               Select a draft to publish it.
+            </div>
+          )}
+        </SurfaceCard>
+        <SurfaceCard
+          body="Prepare owner-signed deployment and mint transactions from the immutable published snapshot, then record the resulting onchain events back into the collection."
+          eyebrow="Onchain"
+          span={6}
+          title="Deployment and minting"
+        >
+          {selectedDraft?.publication ? (
+            <div className="studio-form">
+              <div className="pill-row">
+                {selectedDraft.publication.activeDeployment ? (
+                  <>
+                    <Pill>
+                      {
+                        selectedDraft.publication.activeDeployment.chain.label
+                      }
+                    </Pill>
+                    <Pill>
+                      {shortHex(
+                        selectedDraft.publication.activeDeployment
+                          .contractAddress
+                      )}
+                    </Pill>
+                    <Pill>
+                      {shortHex(
+                        selectedDraft.publication.activeDeployment.deployTxHash
+                      )}
+                    </Pill>
+                  </>
+                ) : (
+                  <Pill>No deployment recorded</Pill>
+                )}
+                <Pill>
+                  {selectedDraft.publication.mintedTokenCount} recorded mint
+                  {selectedDraft.publication.mintedTokenCount === 1 ? "" : "s"}
+                </Pill>
+              </div>
+              <label className="field-stack">
+                <span className="field-label">Deployment chain</span>
+                <select
+                  className="input-field"
+                  onChange={(event) => {
+                    setDeploymentChainKey(
+                      event.target.value as CollectionContractChainKey
+                    );
+                  }}
+                  value={deploymentChainKey}
+                >
+                  <option value="base-sepolia">Base Sepolia</option>
+                  <option value="base">Base</option>
+                </select>
+              </label>
+              <div className="studio-action-row">
+                <button
+                  className="button-action"
+                  disabled={
+                    preparingDeploymentDraftId === selectedDraft.id ||
+                    Boolean(selectedDraft.publication.activeDeployment)
+                  }
+                  onClick={() => {
+                    void handlePrepareDeploymentIntent();
+                  }}
+                  type="button"
+                >
+                  {preparingDeploymentDraftId === selectedDraft.id
+                    ? "Preparing deployment…"
+                    : "Prepare deployment intent"}
+                </button>
+              </div>
+              {deploymentIntentJson ? (
+                <label className="field-stack">
+                  <span className="field-label">Deployment intent JSON</span>
+                  <textarea
+                    className="input-field input-field--multiline"
+                    readOnly
+                    rows={10}
+                    value={deploymentIntentJson}
+                  />
+                </label>
+              ) : null}
+              <form className="studio-form" onSubmit={handleRecordDeployment}>
+                <label className="field-stack">
+                  <span className="field-label">Contract address</span>
+                  <input
+                    className="input-field"
+                    onChange={(event) => {
+                      setDeploymentRecordState((current) => ({
+                        ...current,
+                        contractAddress: event.target.value
+                      }));
+                    }}
+                    placeholder="0x..."
+                    value={deploymentRecordState.contractAddress}
+                  />
+                </label>
+                <label className="field-stack">
+                  <span className="field-label">Deployment tx hash</span>
+                  <input
+                    className="input-field"
+                    onChange={(event) => {
+                      setDeploymentRecordState((current) => ({
+                        ...current,
+                        deployTxHash: event.target.value
+                      }));
+                    }}
+                    placeholder="0x..."
+                    value={deploymentRecordState.deployTxHash}
+                  />
+                </label>
+                <label className="field-stack">
+                  <span className="field-label">Deployed at</span>
+                  <input
+                    className="input-field"
+                    onChange={(event) => {
+                      setDeploymentRecordState((current) => ({
+                        ...current,
+                        deployedAt: event.target.value
+                      }));
+                    }}
+                    type="datetime-local"
+                    value={deploymentRecordState.deployedAt}
+                  />
+                </label>
+                <div className="studio-action-row">
+                  <button
+                    className="button-action"
+                    disabled={
+                      recordingDeploymentDraftId === selectedDraft.id ||
+                      Boolean(selectedDraft.publication.activeDeployment)
+                    }
+                    type="submit"
+                  >
+                    {recordingDeploymentDraftId === selectedDraft.id
+                      ? "Recording deployment…"
+                      : "Record deployment"}
+                  </button>
+                </div>
+              </form>
+              <form className="studio-form" onSubmit={handleRecordMint}>
+                <label className="field-stack">
+                  <span className="field-label">Recipient wallet</span>
+                  <input
+                    className="input-field"
+                    onChange={(event) => {
+                      setMintRecordState((current) => ({
+                        ...current,
+                        recipientWalletAddress: event.target.value
+                      }));
+                    }}
+                    placeholder="0x..."
+                    value={mintRecordState.recipientWalletAddress}
+                  />
+                </label>
+                <label className="field-stack">
+                  <span className="field-label">Token ID</span>
+                  <input
+                    className="input-field"
+                    min={1}
+                    onChange={(event) => {
+                      setMintRecordState((current) => ({
+                        ...current,
+                        tokenId: event.target.value
+                      }));
+                    }}
+                    type="number"
+                    value={mintRecordState.tokenId}
+                  />
+                </label>
+                <div className="studio-action-row">
+                  <button
+                    className="button-action"
+                    disabled={
+                      preparingMintDraftId === selectedDraft.id ||
+                      !selectedDraft.publication.activeDeployment
+                    }
+                    onClick={() => {
+                      void handlePrepareMintIntent();
+                    }}
+                    type="button"
+                  >
+                    {preparingMintDraftId === selectedDraft.id
+                      ? "Preparing mint…"
+                      : "Prepare mint intent"}
+                  </button>
+                </div>
+                {mintIntentJson ? (
+                  <label className="field-stack">
+                    <span className="field-label">Mint intent JSON</span>
+                    <textarea
+                      className="input-field input-field--multiline"
+                      readOnly
+                      rows={10}
+                      value={mintIntentJson}
+                    />
+                  </label>
+                ) : null}
+                <label className="field-stack">
+                  <span className="field-label">Mint tx hash</span>
+                  <input
+                    className="input-field"
+                    onChange={(event) => {
+                      setMintRecordState((current) => ({
+                        ...current,
+                        txHash: event.target.value
+                      }));
+                    }}
+                    placeholder="0x..."
+                    value={mintRecordState.txHash}
+                  />
+                </label>
+                <label className="field-stack">
+                  <span className="field-label">Minted at</span>
+                  <input
+                    className="input-field"
+                    onChange={(event) => {
+                      setMintRecordState((current) => ({
+                        ...current,
+                        mintedAt: event.target.value
+                      }));
+                    }}
+                    type="datetime-local"
+                    value={mintRecordState.mintedAt}
+                  />
+                </label>
+                <div className="studio-action-row">
+                  <button
+                    className="button-action button-action--accent"
+                    disabled={
+                      recordingMintDraftId === selectedDraft.id ||
+                      !selectedDraft.publication.activeDeployment
+                    }
+                    type="submit"
+                  >
+                    {recordingMintDraftId === selectedDraft.id
+                      ? "Recording mint…"
+                      : "Record mint"}
+                  </button>
+                </div>
+              </form>
+              {selectedDraft.publication.mints.length > 0 ? (
+                <div className="collection-item-list">
+                  {selectedDraft.publication.mints.map((mint) => (
+                    <div className="collection-item-card" key={mint.id}>
+                      <div className="collection-item-card__copy">
+                        <strong>Token #{mint.tokenId}</strong>
+                        <span>{mint.recipientWalletAddress}</span>
+                        <span>{formatCandidateTimestamp(mint.mintedAt)}</span>
+                      </div>
+                      <div className="collection-item-card__actions">
+                        <Pill>{shortHex(mint.txHash)}</Pill>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="collection-empty-state">
+              Publish a collection before preparing deployment or minting.
             </div>
           )}
         </SurfaceCard>

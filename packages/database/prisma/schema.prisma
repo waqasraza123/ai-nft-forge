@@ -130,6 +130,7 @@ model User {
   opsWindowSnapshots OpsGenerationWindowSnapshot[] @relation("OpsGenerationWindowSnapshotOwner")
   opsReconciliationRuns OpsReconciliationRun[] @relation("OpsReconciliationRunOwner")
   opsReconciliationIssues OpsReconciliationIssue[] @relation("OpsReconciliationIssueOwner")
+  publishedCollectionMints PublishedCollectionMint[] @relation("PublishedCollectionMintOwner")
   ownedSourceAssets SourceAsset[] @relation("SourceAssetOwner")
   ownedWorkspaces    Workspace[]         @relation("WorkspaceOwner")
 
@@ -332,6 +333,10 @@ model PublishedCollection {
   endAt                 DateTime?                 @map("end_at")
   totalSupply           Int?                      @map("total_supply")
   soldCount             Int                       @default(0) @map("sold_count")
+  contractChainKey      String?                   @map("contract_chain_key")
+  contractAddress       String?                   @map("contract_address")
+  contractDeployTxHash  String?                   @map("contract_deploy_tx_hash")
+  contractDeployedAt    DateTime?                 @map("contract_deployed_at")
   priceLabel            String?                   @map("price_label")
   heroGeneratedAssetId  String?                   @map("hero_generated_asset_id")
   storefrontHeadline    String?                   @map("storefront_headline")
@@ -347,11 +352,14 @@ model PublishedCollection {
   createdAt             DateTime                  @default(now()) @map("created_at")
   updatedAt             DateTime                  @updatedAt @map("updated_at")
   items                 PublishedCollectionItem[]
+  mints                 PublishedCollectionMint[]
   ownerUser             User                      @relation("PublishedCollectionOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
   sourceCollectionDraft CollectionDraft           @relation(fields: [sourceCollectionDraftId], references: [id], onDelete: Cascade)
   heroGeneratedAsset    GeneratedAsset?           @relation("PublishedCollectionHeroGeneratedAsset", fields: [heroGeneratedAssetId], references: [id], onDelete: SetNull)
 
   @@unique([brandSlug, slug], map: "published_collections_brand_slug_slug_key")
+  @@unique([contractAddress], map: "published_collections_contract_address_key")
+  @@unique([contractDeployTxHash], map: "published_collections_contract_deploy_tx_hash_key")
   @@index([ownerUserId, updatedAt], map: "published_collections_owner_user_id_updated_at_idx")
   @@index([brandSlug, isFeatured, displayOrder, updatedAt], map: "published_collections_brand_featured_order_updated_at_idx")
   @@index([brandSlug, storefrontStatus, displayOrder, updatedAt], map: "published_collections_brand_status_order_updated_at_idx")
@@ -368,6 +376,7 @@ model PublishedCollectionItem {
   createdAt            DateTime            @default(now()) @map("created_at")
   updatedAt            DateTime            @updatedAt @map("updated_at")
   generatedAsset       GeneratedAsset      @relation(fields: [generatedAssetId], references: [id], onDelete: Cascade)
+  mints                PublishedCollectionMint[]
   publishedCollection  PublishedCollection @relation(fields: [publishedCollectionId], references: [id], onDelete: Cascade)
 
   @@unique([publishedCollectionId, generatedAssetId], map: "pub_collection_items_pub_asset_key")
@@ -375,6 +384,28 @@ model PublishedCollectionItem {
   @@unique([publicStorageObjectKey], map: "pub_collection_items_public_object_key")
   @@index([generatedAssetId], map: "published_collection_items_generated_asset_id_idx")
   @@map("published_collection_items")
+}
+
+model PublishedCollectionMint {
+  id                      String                  @id @default(cuid()) @map("id")
+  ownerUserId             String                  @map("owner_user_id")
+  publishedCollectionId   String                  @map("published_collection_id")
+  publishedCollectionItemId String                @map("published_collection_item_id")
+  tokenId                 Int                     @map("token_id")
+  recipientWalletAddress  String                  @map("recipient_wallet_address")
+  txHash                  String                  @unique @map("tx_hash")
+  mintedAt                DateTime                @map("minted_at")
+  createdAt               DateTime                @default(now()) @map("created_at")
+  updatedAt               DateTime                @updatedAt @map("updated_at")
+  ownerUser               User                    @relation("PublishedCollectionMintOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  publishedCollection     PublishedCollection     @relation(fields: [publishedCollectionId], references: [id], onDelete: Cascade)
+  publishedCollectionItem PublishedCollectionItem @relation(fields: [publishedCollectionItemId], references: [id], onDelete: Cascade)
+
+  @@unique([publishedCollectionId, tokenId], map: "published_collection_mints_collection_token_id_key")
+  @@index([ownerUserId, mintedAt], map: "published_collection_mints_owner_user_id_minted_at_idx")
+  @@index([publishedCollectionId, mintedAt], map: "published_collection_mints_collection_id_minted_at_idx")
+  @@index([publishedCollectionItemId], map: "published_collection_mints_item_id_idx")
+  @@map("published_collection_mints")
 }
 
 model OpsObservabilityCapture {

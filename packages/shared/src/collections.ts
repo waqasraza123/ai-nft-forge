@@ -1,6 +1,10 @@
 import { z } from "zod";
 
 import { generatedAssetModerationStatusSchema } from "./generated-assets.js";
+import {
+  collectionOnchainDeploymentSummarySchema,
+  collectionOnchainMintSummarySchema
+} from "./onchain.js";
 
 export const collectionDraftStatusSchema = z.enum(["draft", "review_ready"]);
 
@@ -48,6 +52,7 @@ export const collectionGeneratedAssetCandidateSchema = z.object({
 });
 
 export const collectionPublicationSummarySchema = z.object({
+  activeDeployment: collectionOnchainDeploymentSummarySchema.nullable(),
   brandName: collectionBrandNameSchema,
   brandSlug: collectionBrandSlugSchema,
   collectionSlug: collectionDraftSlugSchema,
@@ -57,6 +62,8 @@ export const collectionPublicationSummarySchema = z.object({
   id: z.string().min(1),
   isFeatured: z.boolean(),
   launchAt: z.string().datetime().nullable(),
+  mintedTokenCount: z.number().int().min(0),
+  mints: z.array(collectionOnchainMintSummarySchema),
   priceLabel: collectionStorefrontPriceLabelSchema.nullable(),
   primaryCtaHref: collectionStorefrontCtaHrefSchema.nullable(),
   primaryCtaLabel: collectionStorefrontCtaLabelSchema.nullable(),
@@ -117,6 +124,7 @@ export const collectionPublicItemSchema = z.object({
 });
 
 export const collectionPublicPageSchema = z.object({
+  activeDeployment: collectionOnchainDeploymentSummarySchema.nullable(),
   availabilityLabel: z.string().min(1),
   brandPublicPath: z.string().min(1),
   brandTheme: collectionPublicBrandThemeSchema,
@@ -130,6 +138,7 @@ export const collectionPublicPageSchema = z.object({
   heroImageUrlExpiresAt: z.string().datetime().nullable(),
   items: z.array(collectionPublicItemSchema),
   launchAt: z.string().datetime().nullable(),
+  mintedTokenCount: z.number().int().min(0),
   priceLabel: collectionStorefrontPriceLabelSchema.nullable(),
   primaryCtaHref: collectionStorefrontCtaHrefSchema.nullable(),
   primaryCtaLabel: collectionStorefrontCtaLabelSchema.nullable(),
@@ -207,6 +216,7 @@ export const collectionPublicMetadataItemSchema = z.object({
 });
 
 export const collectionPublicBrandPreviewSchema = z.object({
+  activeDeployment: collectionOnchainDeploymentSummarySchema.nullable(),
   collectionSlug: collectionDraftSlugSchema,
   availabilityLabel: z.string().min(1),
   description: z.string().max(1000).nullable(),
@@ -218,6 +228,7 @@ export const collectionPublicBrandPreviewSchema = z.object({
   itemCount: z.number().int().positive(),
   isFeatured: z.boolean(),
   launchAt: z.string().datetime().nullable(),
+  mintedTokenCount: z.number().int().min(0),
   priceLabel: collectionStorefrontPriceLabelSchema.nullable(),
   previewPipelineKey: z.string().min(1).nullable(),
   previewSourceAssetOriginalFilename: z.string().min(1).nullable(),
@@ -383,6 +394,11 @@ export const collectionDraftErrorResponseSchema = z.object({
       "GENERATED_ASSET_ALREADY_INCLUDED",
       "GENERATED_ASSET_NOT_FOUND",
       "GENERATED_ASSET_NOT_APPROVED",
+      "ONCHAIN_COLLECTION_ALREADY_DEPLOYED",
+      "ONCHAIN_COLLECTION_IMMUTABLE",
+      "ONCHAIN_DEPLOYMENT_REQUIRED",
+      "ONCHAIN_TOKEN_ALREADY_MINTED",
+      "ONCHAIN_TOKEN_NOT_FOUND",
       "INVALID_REQUEST",
       "INTERNAL_SERVER_ERROR",
       "STUDIO_SETTINGS_REQUIRED",

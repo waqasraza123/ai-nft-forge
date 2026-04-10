@@ -16,6 +16,21 @@ const publishedCollectionItemOrderBy = [
   }
 ];
 
+const publishedCollectionMintOrderBy = [
+  {
+    mintedAt: "desc" as const
+  },
+  {
+    id: "desc" as const
+  }
+];
+
+const publishedCollectionSummaryInclude = {
+  mints: {
+    orderBy: publishedCollectionMintOrderBy
+  }
+};
+
 const publishedCollectionDetailInclude = {
   items: {
     include: {
@@ -37,13 +52,17 @@ const publishedCollectionDetailInclude = {
       }
     },
     orderBy: publishedCollectionItemOrderBy
+  },
+  mints: {
+    orderBy: publishedCollectionMintOrderBy
   }
 };
 
 const publishedCollectionPreviewInclude = {
   _count: {
     select: {
-      items: true
+      items: true,
+      mints: true
     }
   },
   items: {
@@ -80,6 +99,10 @@ export function createPublishedCollectionRepository(
       heroGeneratedAssetId?: string | null;
       isFeatured: boolean;
       launchAt?: Date | null;
+      contractAddress?: string | null;
+      contractChainKey?: string | null;
+      contractDeployTxHash?: string | null;
+      contractDeployedAt?: Date | null;
       ownerUserId: string;
       priceLabel?: string | null;
       primaryCtaHref?: string | null;
@@ -104,8 +127,9 @@ export function createPublishedCollectionRepository(
     findByDraftIdForOwner(input: {
       ownerUserId: string;
       sourceCollectionDraftId: string;
-    }): Promise<PublishedCollection | null> {
+    }) {
       return database.publishedCollection.findFirst({
+        include: publishedCollectionSummaryInclude,
         where: {
           ownerUserId: input.ownerUserId,
           sourceCollectionDraftId: input.sourceCollectionDraftId
@@ -115,6 +139,7 @@ export function createPublishedCollectionRepository(
 
     findByIdForOwner(input: { id: string; ownerUserId: string }) {
       return database.publishedCollection.findFirst({
+        include: publishedCollectionSummaryInclude,
         where: {
           id: input.id,
           ownerUserId: input.ownerUserId
@@ -142,6 +167,16 @@ export function createPublishedCollectionRepository(
         include: {
           items: {
             orderBy: publishedCollectionItemOrderBy
+          },
+          mints: {
+            orderBy: [
+              {
+                mintedAt: "desc"
+              },
+              {
+                id: "desc"
+              }
+            ]
           }
         },
         orderBy: [
@@ -161,8 +196,9 @@ export function createPublishedCollectionRepository(
     findByBrandSlugAndCollectionSlug(input: {
       brandSlug: string;
       slug: string;
-    }): Promise<PublishedCollection | null> {
+    }) {
       return database.publishedCollection.findUnique({
+        include: publishedCollectionSummaryInclude,
         where: {
           brandSlug_slug: {
             brandSlug: input.brandSlug,
@@ -172,8 +208,9 @@ export function createPublishedCollectionRepository(
       });
     },
 
-    listByOwnerUserId(ownerUserId: string): Promise<PublishedCollection[]> {
+    listByOwnerUserId(ownerUserId: string) {
       return database.publishedCollection.findMany({
+        include: publishedCollectionSummaryInclude,
         orderBy: [
           {
             updatedAt: "desc"
@@ -245,6 +282,10 @@ export function createPublishedCollectionRepository(
       id: string;
       isFeatured?: boolean;
       launchAt?: Date | null;
+      contractAddress?: string | null;
+      contractChainKey?: string | null;
+      contractDeployTxHash?: string | null;
+      contractDeployedAt?: Date | null;
       ownerUserId: string;
       priceLabel?: string | null;
       primaryCtaHref?: string | null;
@@ -275,6 +316,22 @@ export function createPublishedCollectionRepository(
             data: {
               brandName: input.brandName,
               brandSlug: input.brandSlug,
+              contractAddress:
+                input.contractAddress === undefined
+                  ? publication.contractAddress
+                  : input.contractAddress,
+              contractChainKey:
+                input.contractChainKey === undefined
+                  ? publication.contractChainKey
+                  : input.contractChainKey,
+              contractDeployTxHash:
+                input.contractDeployTxHash === undefined
+                  ? publication.contractDeployTxHash
+                  : input.contractDeployTxHash,
+              contractDeployedAt:
+                input.contractDeployedAt === undefined
+                  ? publication.contractDeployedAt
+                  : input.contractDeployedAt,
               displayOrder: input.displayOrder ?? publication.displayOrder,
               description: input.description,
               endAt:

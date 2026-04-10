@@ -70,6 +70,18 @@ export function createPublishedCollectionItemRepository(
       });
     },
 
+    findByPositionForPublishedCollection(input: {
+      position: number;
+      publishedCollectionId: string;
+    }): Promise<PublishedCollectionItem | null> {
+      return database.publishedCollectionItem.findFirst({
+        where: {
+          position: input.position,
+          publishedCollectionId: input.publishedCollectionId
+        }
+      });
+    },
+
     updatePublicStorageById(input: {
       id: string;
       publicStorageBucket: string | null;

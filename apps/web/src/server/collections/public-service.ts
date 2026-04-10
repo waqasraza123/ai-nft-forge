@@ -35,6 +35,10 @@ type BrandRecord = {
 type PublishedCollectionDetailRecord = {
   brandName: string;
   brandSlug: string;
+  contractAddress: string | null;
+  contractChainKey: string | null;
+  contractDeployedAt: Date | null;
+  contractDeployTxHash: string | null;
   description: string | null;
   endAt: Date | null;
   heroGeneratedAssetId: string | null;
@@ -70,12 +74,20 @@ type PublishedCollectionDetailRecord = {
   totalSupply: number | null;
   title: string;
   updatedAt: Date;
+  mints?: Array<{
+    tokenId: number;
+  }>;
 };
 
 type PublishedCollectionPreviewRecord = {
   _count: {
     items: number;
+    mints: number;
   };
+  contractAddress: string | null;
+  contractChainKey: string | null;
+  contractDeployedAt: Date | null;
+  contractDeployTxHash: string | null;
   displayOrder: number;
   description: string | null;
   endAt: Date | null;
@@ -296,6 +308,37 @@ function createAvailabilityLabel(input: {
   }
 }
 
+function serializeOnchainDeployment(input: {
+  contractAddress: string | null;
+  contractChainKey: string | null;
+  contractDeployedAt: Date | null;
+  contractDeployTxHash: string | null;
+}) {
+  if (
+    !input.contractAddress ||
+    !input.contractChainKey ||
+    !input.contractDeployedAt ||
+    !input.contractDeployTxHash
+  ) {
+    return null;
+  }
+
+  const chain = aiNftForgeSupportedCollectionContractChains.find(
+    (candidate) => candidate.key === input.contractChainKey
+  );
+
+  if (!chain) {
+    return null;
+  }
+
+  return {
+    chain,
+    contractAddress: input.contractAddress,
+    deployedAt: input.contractDeployedAt.toISOString(),
+    deployTxHash: input.contractDeployTxHash
+  };
+}
+
 function resolveHeroPreviewItem(
   publication:
     | PublishedCollectionPreviewRecord
@@ -324,6 +367,7 @@ async function serializeBrandPreview(input: {
 
   if (!heroItem) {
     return {
+      activeDeployment: serializeOnchainDeployment(input.publication),
       availabilityLabel: createAvailabilityLabel({
         launchAt: input.publication.launchAt,
         priceLabel: input.publication.priceLabel,
@@ -342,6 +386,7 @@ async function serializeBrandPreview(input: {
       itemCount: input.publication._count.items,
       isFeatured: input.publication.isFeatured,
       launchAt: input.publication.launchAt?.toISOString() ?? null,
+      mintedTokenCount: input.publication._count.mints,
       previewPipelineKey: null,
       previewSourceAssetOriginalFilename: null,
       previewVariantIndex: null,
@@ -370,6 +415,7 @@ async function serializeBrandPreview(input: {
   });
 
   return {
+    activeDeployment: serializeOnchainDeployment(input.publication),
     availabilityLabel: createAvailabilityLabel({
       launchAt: input.publication.launchAt,
       priceLabel: input.publication.priceLabel,
@@ -388,6 +434,7 @@ async function serializeBrandPreview(input: {
     itemCount: input.publication._count.items,
     isFeatured: input.publication.isFeatured,
     launchAt: input.publication.launchAt?.toISOString() ?? null,
+    mintedTokenCount: input.publication._count.mints,
     previewPipelineKey: heroItem.generatedAsset.generationRequest.pipelineKey,
     previewSourceAssetOriginalFilename:
       heroItem.generatedAsset.generationRequest.sourceAsset.originalFilename,
@@ -576,6 +623,7 @@ export function createPublicCollectionService(
 
       return collectionPublicPageResponseSchema.parse({
         collection: {
+          activeDeployment: serializeOnchainDeployment(publication),
           availabilityLabel: createAvailabilityLabel({
             launchAt: publication.launchAt,
             priceLabel: publication.priceLabel,
@@ -608,6 +656,7 @@ export function createPublicCollectionService(
           heroImageUrlExpiresAt: heroImage?.expiresAt ?? null,
           items,
           launchAt: publication.launchAt?.toISOString() ?? null,
+          mintedTokenCount: publication.mints?.length ?? 0,
           priceLabel: publication.priceLabel,
           primaryCtaHref: publication.primaryCtaHref,
           primaryCtaLabel: publication.primaryCtaLabel,
@@ -810,6 +859,7 @@ export function createPublicCollectionService(
 
       return collectionPublicContractResponseSchema.parse({
         contract: {
+          activeDeployment: serializeOnchainDeployment(publication),
           brandName: publication.brandName,
           brandSlug: publication.brandSlug,
           collectionUrl: createCollectionPublicUrl({
@@ -830,6 +880,10 @@ export function createPublicCollectionService(
             collectionSlug: publication.slug,
             origin: input.origin
           }),
+          mintedTokenCount: publication.mints?.length ?? 0,
+          mintedTokenIds:
+            publication.mints?.map((mint) => mint.tokenId).sort((left, right) => left - right) ??
+            [],
           name: createCollectionContractName({
             brandName: publication.brandName,
             collectionTitle: publication.title

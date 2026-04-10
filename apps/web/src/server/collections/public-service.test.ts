@@ -3,6 +3,10 @@ import { describe, expect, it } from "vitest";
 import { createPublicCollectionService } from "./public-service";
 
 function createPreviewRecord(input: {
+  contractAddress?: string | null;
+  contractChainKey?: string | null;
+  contractDeployedAt?: string | null;
+  contractDeployTxHash?: string | null;
   displayOrder: number;
   heroGeneratedAssetId?: string | null;
   isFeatured?: boolean;
@@ -18,8 +22,15 @@ function createPreviewRecord(input: {
 }) {
   return {
     _count: {
-      items: input.itemCount ?? 2
+      items: input.itemCount ?? 2,
+      mints: 0
     },
+    contractAddress: input.contractAddress ?? null,
+    contractChainKey: input.contractChainKey ?? null,
+    contractDeployedAt: input.contractDeployedAt
+      ? new Date(input.contractDeployedAt)
+      : null,
+    contractDeployTxHash: input.contractDeployTxHash ?? null,
     description: `${input.title} description`,
     displayOrder: input.displayOrder,
     endAt: null,
@@ -73,6 +84,10 @@ function createPreviewRecord(input: {
 }
 
 function createDetailedRecord(input?: {
+  contractAddress?: string | null;
+  contractChainKey?: string | null;
+  contractDeployedAt?: string | null;
+  contractDeployTxHash?: string | null;
   heroGeneratedAssetId?: string | null;
   launchAt?: string | null;
   priceLabel?: string | null;
@@ -89,6 +104,12 @@ function createDetailedRecord(input?: {
   return {
     brandName: "Demo Studio",
     brandSlug: "demo-studio",
+    contractAddress: input?.contractAddress ?? null,
+    contractChainKey: input?.contractChainKey ?? null,
+    contractDeployedAt: input?.contractDeployedAt
+      ? new Date(input.contractDeployedAt)
+      : null,
+    contractDeployTxHash: input?.contractDeployTxHash ?? null,
     description: "Release-ready portrait set",
     endAt: null,
     heroGeneratedAssetId:
@@ -156,6 +177,7 @@ function createDetailedRecord(input?: {
         : input.secondaryCtaLabel,
     slug: "genesis-portrait-set",
     soldCount: input?.soldCount ?? 7,
+    mints: [],
     storefrontBody:
       input?.storefrontBody === undefined
         ? "A launch-ready collectible portrait release with curated hero artwork."

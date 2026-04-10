@@ -6,9 +6,9 @@ The repository ships as a pnpm monorepo with a Next.js control plane, a BullMQ w
 
 ## Status
 
-- Phases 1 through 7 are complete
+- Phases 1 through 7 are complete, and the first post-phase onchain deployment/minting slice is landed
 - Deferred beyond the public release:
-  - onchain deployment and minting
+  - polished wallet UX and automated transaction submission
   - native checkout and payments
   - multi-brand administration
   - advanced multi-node orchestration
@@ -23,6 +23,7 @@ The repository ships as a pnpm monorepo with a Next.js control plane, a BullMQ w
 - Collection draft curation, review-ready validation, publication, and storefront merchandising
 - Public white-label brand and collection storefront routes backed only by saved brand settings and immutable published snapshots
 - Contract manifest and token-URI publication routes
+- Owner-signed contract deployment intent generation, deployment recording, mint intent generation, and mint ledger recording for published collections
 - Authenticated ops diagnostics, persisted observability captures, alert delivery policy, and operator retry controls
 - Worker-owned reconciliation with persisted runs and issues, manual run/repair/ignore actions, and `/ops` visibility
 - Dockerfiles and a single-node Docker Compose self-host path
@@ -35,7 +36,7 @@ The repository ships as a pnpm monorepo with a Next.js control plane, a BullMQ w
 - `packages/shared`: shared schemas, env parsing, storage helpers, and reconciliation contracts
 - `packages/database`: Prisma schema, repositories, and transaction helpers
 - `packages/ui`: shared UI primitives
-- `packages/contracts`: contract path helpers and manifest utilities
+- `packages/contracts`: contract path helpers, supported chain metadata, and a server-only ERC-721 compiler entrypoint
 - `infra/docker`: local and self-host Docker Compose stacks
 - `docs`: product, architecture, deployment, and runbook documentation
 
@@ -106,6 +107,7 @@ docker build -f apps/generation-backend/Dockerfile .
 - PostgreSQL is the system of record
 - Source and generated assets stay private by default; public storefront assets are copied into the public bucket only at publication time
 - Public routes read only from saved brand settings and immutable published snapshots
+- Onchain deployment and minting stay owner-signed; the repo prepares and records transactions but does not ship server-held private keys
 - Moderation, ops, and reconciliation actions remain authenticated and owner-scoped
 - This repository targets single-node self-hosting with Docker Compose, not Kubernetes or hosted SaaS
 

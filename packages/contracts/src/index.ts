@@ -1,4 +1,5 @@
 export const aiNftForgeCollectionContractStandard = "erc721";
+export const aiNftForgeCollectionContractName = "AiNftForgeCollection";
 
 export const aiNftForgeSupportedCollectionContractChains = [
   {
@@ -34,6 +35,15 @@ function trimTrailingSlash(value: string) {
 
 function joinPublicOriginAndPath(origin: string, path: string) {
   return `${trimTrailingSlash(origin)}${path}`;
+}
+
+export function getSupportedCollectionContractChainByKey(
+  key: AiNftForgeCollectionContractChain["key"]
+) {
+  return (
+    aiNftForgeSupportedCollectionContractChains.find((chain) => chain.key === key) ??
+    null
+  );
 }
 
 export function createCollectionContractName(input: {

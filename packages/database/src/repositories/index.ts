@@ -67,6 +67,10 @@ export {
   type PublishedCollectionItemRepository
 } from "./published-collection-item-repository.js";
 export {
+  createPublishedCollectionMintRepository,
+  type PublishedCollectionMintRepository
+} from "./published-collection-mint-repository.js";
+export {
   createPublishedCollectionRepository,
   type PublishedCollectionRepository
 } from "./published-collection-repository.js";

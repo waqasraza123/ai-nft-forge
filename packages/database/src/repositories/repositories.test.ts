@@ -16,6 +16,7 @@ import { createOpsObservabilityCaptureRepository } from "./ops-observability-cap
 import { createOpsReconciliationIssueRepository } from "./ops-reconciliation-issue-repository.js";
 import { createOpsReconciliationRunRepository } from "./ops-reconciliation-run-repository.js";
 import { createPublishedCollectionItemRepository } from "./published-collection-item-repository.js";
+import { createPublishedCollectionMintRepository } from "./published-collection-mint-repository.js";
 import { createPublishedCollectionRepository } from "./published-collection-repository.js";
 import { createSourceAssetRepository } from "./source-asset-repository.js";
 import { createUserRepository } from "./user-repository.js";
@@ -674,6 +675,16 @@ describe("database repositories", () => {
               id: "asc"
             }
           ]
+        },
+        mints: {
+          orderBy: [
+            {
+              mintedAt: "desc"
+            },
+            {
+              id: "desc"
+            }
+          ]
         }
       },
       where: {
@@ -745,7 +756,8 @@ describe("database repositories", () => {
       include: {
         _count: {
           select: {
-            items: true
+            items: true,
+            mints: true
           }
         },
         items: {
@@ -802,6 +814,10 @@ describe("database repositories", () => {
         create: vi.fn().mockResolvedValue({
           id: "published_item_1"
         }),
+        findFirst: vi.fn().mockResolvedValue({
+          id: "published_item_2",
+          position: 2
+        }),
         findMany: vi.fn().mockResolvedValue([
           {
             id: "published_item_1",
@@ -832,6 +848,10 @@ describe("database repositories", () => {
     const listed = await repository.listByPublishedCollectionId(
       "published_collection_1"
     );
+    const foundByPosition = await repository.findByPositionForPublishedCollection({
+      position: 2,
+      publishedCollectionId: "published_collection_1"
+    });
     const deleted = await repository.deleteByPublishedCollectionId(
       "published_collection_1"
     );
@@ -865,6 +885,12 @@ describe("database repositories", () => {
         publishedCollectionId: "published_collection_1"
       }
     });
+    expect(database.publishedCollectionItem.findFirst).toHaveBeenCalledWith({
+      where: {
+        position: 2,
+        publishedCollectionId: "published_collection_1"
+      }
+    });
     expect(database.publishedCollectionItem.deleteMany).toHaveBeenCalledWith({
       where: {
         publishedCollectionId: "published_collection_1"
@@ -872,7 +898,84 @@ describe("database repositories", () => {
     });
     expect(created[0]?.id).toBe("published_item_1");
     expect(listed[0]?.publicStorageBucket).toBe("ai-nft-forge-public");
+    expect(foundByPosition?.id).toBe("published_item_2");
     expect(deleted.count).toBe(1);
+  });
+
+  it("delegates published collection mint persistence through the published collection mint repository", async () => {
+    const mintedAt = new Date("2026-04-10T06:00:00.000Z");
+    const database = {
+      publishedCollectionMint: {
+        create: vi.fn().mockResolvedValue({
+          id: "published_mint_1",
+          tokenId: 1
+        }),
+        findFirst: vi.fn().mockResolvedValue({
+          id: "published_mint_1",
+          tokenId: 1
+        }),
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "published_mint_2",
+            tokenId: 2
+          }
+        ])
+      }
+    };
+    const repository = createPublishedCollectionMintRepository(
+      database as never
+    );
+
+    const created = await repository.create({
+      mintedAt,
+      ownerUserId: "user_1",
+      publishedCollectionId: "published_collection_1",
+      publishedCollectionItemId: "published_item_1",
+      recipientWalletAddress: "0x1111111111111111111111111111111111111111",
+      tokenId: 1,
+      txHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    });
+    const found = await repository.findByTokenIdForPublishedCollection({
+      publishedCollectionId: "published_collection_1",
+      tokenId: 1
+    });
+    const listed = await repository.listByPublishedCollectionId(
+      "published_collection_1"
+    );
+
+    expect(database.publishedCollectionMint.create).toHaveBeenCalledWith({
+      data: {
+        mintedAt,
+        ownerUserId: "user_1",
+        publishedCollectionId: "published_collection_1",
+        publishedCollectionItemId: "published_item_1",
+        recipientWalletAddress: "0x1111111111111111111111111111111111111111",
+        tokenId: 1,
+        txHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    });
+    expect(database.publishedCollectionMint.findFirst).toHaveBeenCalledWith({
+      where: {
+        publishedCollectionId: "published_collection_1",
+        tokenId: 1
+      }
+    });
+    expect(database.publishedCollectionMint.findMany).toHaveBeenCalledWith({
+      orderBy: [
+        {
+          mintedAt: "desc"
+        },
+        {
+          id: "desc"
+        }
+      ],
+      where: {
+        publishedCollectionId: "published_collection_1"
+      }
+    });
+    expect(created.id).toBe("published_mint_1");
+    expect(found?.tokenId).toBe(1);
+    expect(listed[0]?.tokenId).toBe(2);
   });
 
   it("delegates oldest owner-scoped generation lookup through the generation request repository", async () => {

@@ -4,6 +4,7 @@ import {
   createCollectionDraftRepository,
   createGeneratedAssetRepository,
   createPublishedCollectionItemRepository,
+  createPublishedCollectionMintRepository,
   createPublishedCollectionRepository,
   getDatabaseClient,
   runDatabaseTransaction,
@@ -30,6 +31,8 @@ function createCollectionRepositories(database: DatabaseExecutor) {
     generatedAssetRepository: createGeneratedAssetRepository(database),
     publishedCollectionItemRepository:
       createPublishedCollectionItemRepository(database),
+    publishedCollectionMintRepository:
+      createPublishedCollectionMintRepository(database),
     publishedCollectionRepository: createPublishedCollectionRepository(database)
   };
 }

@@ -41,6 +41,7 @@ function createCollectionDraftHarness() {
   let draftItemIndex = 0;
   let publicationIndex = 0;
   let publicationItemIndex = 0;
+  let publicationMintIndex = 0;
   const drafts = new Map<
     string,
     {
@@ -70,6 +71,10 @@ function createCollectionDraftHarness() {
     {
       brandName: string;
       brandSlug: string;
+      contractAddress: string | null;
+      contractChainKey: string | null;
+      contractDeployedAt: Date | null;
+      contractDeployTxHash: string | null;
       createdAt: Date;
       displayOrder: number;
       description: string | null;
@@ -94,6 +99,13 @@ function createCollectionDraftHarness() {
       totalSupply: number | null;
       title: string;
       updatedAt: Date;
+      mints: Array<{
+        id: string;
+        mintedAt: Date;
+        recipientWalletAddress: string;
+        tokenId: number;
+        txHash: string;
+      }>;
     }
   >();
   const publicationItems = new Map<
@@ -550,6 +562,19 @@ function createCollectionDraftHarness() {
           }));
       },
 
+      async findByPositionForPublishedCollection(input: {
+        position: number;
+        publishedCollectionId: string;
+      }) {
+        return (
+          [...publicationItems.values()].find(
+            (item) =>
+              item.position === input.position &&
+              item.publishedCollectionId === input.publishedCollectionId
+          ) ?? null
+        );
+      },
+
       async deleteByPublishedCollectionId(publishedCollectionId: string) {
         const itemsToDelete = [...publicationItems.values()].filter(
           (item) => item.publishedCollectionId === publishedCollectionId
@@ -569,6 +594,10 @@ function createCollectionDraftHarness() {
       async create(input: {
         brandName: string;
         brandSlug: string;
+        contractAddress?: string | null;
+        contractChainKey?: string | null;
+        contractDeployedAt?: Date | null;
+        contractDeployTxHash?: string | null;
         displayOrder: number;
         description: string | null;
         endAt?: Date | null;
@@ -595,6 +624,10 @@ function createCollectionDraftHarness() {
         const publication = {
           brandName: input.brandName,
           brandSlug: input.brandSlug,
+          contractAddress: input.contractAddress ?? null,
+          contractChainKey: input.contractChainKey ?? null,
+          contractDeployedAt: input.contractDeployedAt ?? null,
+          contractDeployTxHash: input.contractDeployTxHash ?? null,
           createdAt: nextDate(),
           displayOrder: input.displayOrder,
           description: input.description,
@@ -619,7 +652,8 @@ function createCollectionDraftHarness() {
           storefrontStatus: input.storefrontStatus ?? "ended",
           totalSupply: input.totalSupply ?? null,
           title: input.title,
-          updatedAt: nextDate()
+          updatedAt: nextDate(),
+          mints: []
         };
 
         publications.set(publication.id, publication);
@@ -686,6 +720,10 @@ function createCollectionDraftHarness() {
       async updateByIdForOwner(input: {
         brandName: string;
         brandSlug: string;
+        contractAddress?: string | null;
+        contractChainKey?: string | null;
+        contractDeployedAt?: Date | null;
+        contractDeployTxHash?: string | null;
         displayOrder?: number;
         description: string | null;
         endAt?: Date | null;
@@ -719,6 +757,22 @@ function createCollectionDraftHarness() {
           ...publication,
           brandName: input.brandName,
           brandSlug: input.brandSlug,
+          contractAddress:
+            input.contractAddress === undefined
+              ? publication.contractAddress
+              : input.contractAddress,
+          contractChainKey:
+            input.contractChainKey === undefined
+              ? publication.contractChainKey
+              : input.contractChainKey,
+          contractDeployedAt:
+            input.contractDeployedAt === undefined
+              ? publication.contractDeployedAt
+              : input.contractDeployedAt,
+          contractDeployTxHash:
+            input.contractDeployTxHash === undefined
+              ? publication.contractDeployTxHash
+              : input.contractDeployTxHash,
           displayOrder: input.displayOrder ?? publication.displayOrder,
           description: input.description,
           endAt: input.endAt === undefined ? publication.endAt : input.endAt,
@@ -777,6 +831,52 @@ function createCollectionDraftHarness() {
         publications.set(updatedPublication.id, updatedPublication);
 
         return updatedPublication;
+      }
+    },
+
+    publishedCollectionMintRepository: {
+      async create(input: {
+        mintedAt: Date;
+        ownerUserId: string;
+        publishedCollectionId: string;
+        publishedCollectionItemId: string;
+        recipientWalletAddress: string;
+        tokenId: number;
+        txHash: string;
+      }) {
+        const publication = publications.get(input.publishedCollectionId);
+
+        if (!publication || publication.ownerUserId !== input.ownerUserId) {
+          throw new Error(
+            "Published collection was not found in the test harness."
+          );
+        }
+
+        publicationMintIndex += 1;
+        const mint = {
+          id: `published_mint_${publicationMintIndex}`,
+          mintedAt: input.mintedAt,
+          recipientWalletAddress: input.recipientWalletAddress,
+          tokenId: input.tokenId,
+          txHash: input.txHash
+        };
+
+        publication.mints.push(mint);
+        publication.updatedAt = nextDate();
+
+        return mint;
+      },
+
+      async findByTokenIdForPublishedCollection(input: {
+        publishedCollectionId: string;
+        tokenId: number;
+      }) {
+        const publication = publications.get(input.publishedCollectionId);
+
+        return (
+          publication?.mints.find((mint) => mint.tokenId === input.tokenId) ??
+          null
+        );
       }
     }
   };

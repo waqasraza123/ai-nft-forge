@@ -1,4 +1,15 @@
 import {
+  createCollectionContractName,
+  createCollectionContractSymbol,
+  createCollectionTokenUriBaseUrl,
+  getSupportedCollectionContractChainByKey
+} from "@ai-nft-forge/contracts";
+import { getAiNftForgeCollectionContractArtifact } from "@ai-nft-forge/contracts/server";
+import {
+  collectionContractDeploymentIntentRequestSchema,
+  collectionContractDeploymentIntentResponseSchema,
+  collectionContractMintIntentRequestSchema,
+  collectionContractMintIntentResponseSchema,
   collectionDraftCreateRequestSchema,
   collectionDraftItemReorderRequestSchema,
   collectionDraftListResponseSchema,
@@ -7,10 +18,12 @@ import {
   collectionDraftResponseSchema,
   collectionDraftUpdateRequestSchema,
   sanitizeStorageFileName,
+  type CollectionContractChainKey,
   type CollectionDraftStatus,
   type CollectionStorefrontStatus,
   type GeneratedAssetModerationStatus
 } from "@ai-nft-forge/shared";
+import { encodeDeployData, encodeFunctionData } from "viem";
 
 import { CollectionDraftServiceError } from "./error";
 
@@ -53,6 +66,10 @@ type CollectionDraftRecord = {
 type PublishedCollectionRecord = {
   brandName: string;
   brandSlug: string;
+  contractAddress: string | null;
+  contractChainKey: string | null;
+  contractDeployedAt: Date | null;
+  contractDeployTxHash: string | null;
   displayOrder: number;
   description: string | null;
   endAt: Date | null;
@@ -75,6 +92,13 @@ type PublishedCollectionRecord = {
   totalSupply: number | null;
   title: string;
   updatedAt: Date;
+  mints?: Array<{
+    id: string;
+    mintedAt: Date;
+    recipientWalletAddress: string;
+    tokenId: number;
+    txHash: string;
+  }>;
 };
 
 type PublicationTargetRecord = {
@@ -172,6 +196,10 @@ type CollectionDraftRepositorySet = {
         publicStorageObjectKey: string | null;
       }>
     >;
+    findByPositionForPublishedCollection(input: {
+      position: number;
+      publishedCollectionId: string;
+    }): Promise<{ id: string; position: number } | null>;
     deleteByPublishedCollectionId(
       publishedCollectionId: string
     ): Promise<{ count: number }>;
@@ -186,6 +214,10 @@ type CollectionDraftRepositorySet = {
       heroGeneratedAssetId?: string | null;
       isFeatured: boolean;
       launchAt?: Date | null;
+      contractAddress?: string | null;
+      contractChainKey?: string | null;
+      contractDeployedAt?: Date | null;
+      contractDeployTxHash?: string | null;
       ownerUserId: string;
       priceLabel?: string | null;
       primaryCtaHref?: string | null;
@@ -227,6 +259,10 @@ type CollectionDraftRepositorySet = {
       id: string;
       isFeatured?: boolean;
       launchAt?: Date | null;
+      contractAddress?: string | null;
+      contractChainKey?: string | null;
+      contractDeployedAt?: Date | null;
+      contractDeployTxHash?: string | null;
       ownerUserId: string;
       priceLabel?: string | null;
       primaryCtaHref?: string | null;
@@ -241,6 +277,21 @@ type CollectionDraftRepositorySet = {
       totalSupply?: number | null;
       title: string;
     }): Promise<{ id: string }>;
+  };
+  publishedCollectionMintRepository: {
+    create(input: {
+      mintedAt: Date;
+      ownerUserId: string;
+      publishedCollectionId: string;
+      publishedCollectionItemId: string;
+      recipientWalletAddress: string;
+      tokenId: number;
+      txHash: string;
+    }): Promise<unknown>;
+    findByTokenIdForPublishedCollection(input: {
+      publishedCollectionId: string;
+      tokenId: number;
+    }): Promise<{ id: string } | null>;
   };
 };
 
@@ -304,6 +355,36 @@ function resolveRemainingSupply(totalSupply: number | null, soldCount: number) {
   return Math.max(0, totalSupply - soldCount);
 }
 
+function countMintedTokens(publication: PublishedCollectionRecord) {
+  return publication.mints?.length ?? 0;
+}
+
+function serializeOnchainDeployment(publication: PublishedCollectionRecord) {
+  if (
+    !publication.contractAddress ||
+    !publication.contractChainKey ||
+    !publication.contractDeployTxHash ||
+    !publication.contractDeployedAt
+  ) {
+    return null;
+  }
+
+  const chain = getSupportedCollectionContractChainByKey(
+    publication.contractChainKey as CollectionContractChainKey
+  );
+
+  if (!chain) {
+    return null;
+  }
+
+  return {
+    chain,
+    contractAddress: publication.contractAddress,
+    deployedAt: publication.contractDeployedAt.toISOString(),
+    deployTxHash: publication.contractDeployTxHash
+  };
+}
+
 function serializePublication(publication: PublishedCollectionRecord) {
   const remainingSupply = resolveRemainingSupply(
     publication.totalSupply,
@@ -311,6 +392,7 @@ function serializePublication(publication: PublishedCollectionRecord) {
   );
 
   return {
+    activeDeployment: serializeOnchainDeployment(publication),
     brandName: publication.brandName,
     brandSlug: publication.brandSlug,
     collectionSlug: publication.slug,
@@ -320,6 +402,15 @@ function serializePublication(publication: PublishedCollectionRecord) {
     id: publication.id,
     isFeatured: publication.isFeatured,
     launchAt: publication.launchAt?.toISOString() ?? null,
+    mintedTokenCount: countMintedTokens(publication),
+    mints:
+      publication.mints?.map((mint) => ({
+        id: mint.id,
+        mintedAt: mint.mintedAt.toISOString(),
+        recipientWalletAddress: mint.recipientWalletAddress,
+        tokenId: mint.tokenId,
+        txHash: mint.txHash
+      })) ?? [],
     priceLabel: publication.priceLabel,
     primaryCtaHref: publication.primaryCtaHref,
     primaryCtaLabel: publication.primaryCtaLabel,
@@ -647,6 +738,22 @@ function sortPublicationsForMerchandising(
   });
 }
 
+function publicationHasOnchainActivity(publication: PublishedCollectionRecord) {
+  return Boolean(publication.contractAddress) || countMintedTokens(publication) > 0;
+}
+
+function assertPublicationMutable(publication: PublishedCollectionRecord) {
+  if (!publicationHasOnchainActivity(publication)) {
+    return;
+  }
+
+  throw new CollectionDraftServiceError(
+    "ONCHAIN_COLLECTION_IMMUTABLE",
+    "Published collections with recorded deployment or mint activity can no longer be republished or unpublished.",
+    409
+  );
+}
+
 export function createCollectionDraftService(
   dependencies: CollectionDraftServiceDependencies
 ) {
@@ -826,6 +933,10 @@ export function createCollectionDraftService(
           "Another published collection already uses this public route.",
           409
         );
+      }
+
+      if (existingPublication) {
+        assertPublicationMutable(existingPublication);
       }
 
       const { copiedAssets, promotedAssets } =
@@ -1011,6 +1122,8 @@ export function createCollectionDraftService(
           );
         }
 
+        assertPublicationMutable(publication);
+
         const publicationItems =
           await repositories.publishedCollectionItemRepository.listByPublishedCollectionId(
             publication.id
@@ -1094,6 +1207,360 @@ export function createCollectionDraftService(
           ownerUserId: input.ownerUserId,
           repositories
         });
+      });
+    },
+
+    async createCollectionContractDeploymentIntent(input: {
+      chainKey: CollectionContractChainKey;
+      collectionDraftId: string;
+      origin: string;
+      ownerUserId: string;
+      ownerWalletAddress: string;
+    }) {
+      const parsedInput = collectionContractDeploymentIntentRequestSchema.parse({
+        chainKey: input.chainKey
+      });
+      const publication =
+        await dependencies.repositories.publishedCollectionRepository.findByDraftIdForOwner(
+          {
+            ownerUserId: input.ownerUserId,
+            sourceCollectionDraftId: input.collectionDraftId
+          }
+        );
+
+      if (!publication) {
+        throw new CollectionDraftServiceError(
+          "COLLECTION_PUBLICATION_NOT_FOUND",
+          "Published collection was not found for this draft.",
+          404
+        );
+      }
+
+      if (publication.contractAddress) {
+        throw new CollectionDraftServiceError(
+          "ONCHAIN_COLLECTION_ALREADY_DEPLOYED",
+          "A contract deployment has already been recorded for this published collection.",
+          409
+        );
+      }
+
+      const chain = getSupportedCollectionContractChainByKey(
+        parsedInput.chainKey
+      );
+
+      if (!chain) {
+        throw new CollectionDraftServiceError(
+          "INVALID_REQUEST",
+          "Selected chain is not supported.",
+          400
+        );
+      }
+
+      const contractName = createCollectionContractName({
+        brandName: publication.brandName,
+        collectionTitle: publication.title
+      });
+      const contractSymbol = createCollectionContractSymbol({
+        brandSlug: publication.brandSlug,
+        collectionSlug: publication.slug
+      });
+      const tokenUriBaseUrl = createCollectionTokenUriBaseUrl({
+        brandSlug: publication.brandSlug,
+        collectionSlug: publication.slug,
+        origin: input.origin
+      });
+      const artifact = getAiNftForgeCollectionContractArtifact();
+      const deploymentData = (encodeDeployData as unknown as (input: {
+        abi: unknown[];
+        args: unknown[];
+        bytecode: `0x${string}`;
+      }) => `0x${string}`)({
+        abi: artifact.abi,
+        args: [
+          contractName,
+          contractSymbol,
+          input.ownerWalletAddress,
+          tokenUriBaseUrl
+        ],
+        bytecode: artifact.bytecode
+      });
+
+      return collectionContractDeploymentIntentResponseSchema.parse({
+        deployment: {
+          chain,
+          contractName,
+          contractSymbol,
+          ownerWalletAddress: input.ownerWalletAddress,
+          tokenUriBaseUrl,
+          transaction: {
+            data: deploymentData,
+            to: null,
+            value: "0x0"
+          }
+        }
+      });
+    },
+
+    async recordCollectionContractDeployment(input: {
+      chainKey: CollectionContractChainKey;
+      collectionDraftId: string;
+      contractAddress: string;
+      deployedAt?: string;
+      deployTxHash: string;
+      ownerUserId: string;
+    }) {
+      const chain = getSupportedCollectionContractChainByKey(input.chainKey);
+
+      if (!chain) {
+        throw new CollectionDraftServiceError(
+          "INVALID_REQUEST",
+          "Selected chain is not supported.",
+          400
+        );
+      }
+
+      const publication =
+        await dependencies.repositories.publishedCollectionRepository.findByDraftIdForOwner(
+          {
+            ownerUserId: input.ownerUserId,
+            sourceCollectionDraftId: input.collectionDraftId
+          }
+        );
+
+      if (!publication) {
+        throw new CollectionDraftServiceError(
+          "COLLECTION_PUBLICATION_NOT_FOUND",
+          "Published collection was not found for this draft.",
+          404
+        );
+      }
+
+      if (publication.contractAddress) {
+        throw new CollectionDraftServiceError(
+          "ONCHAIN_COLLECTION_ALREADY_DEPLOYED",
+          "A contract deployment has already been recorded for this published collection.",
+          409
+        );
+      }
+
+      await dependencies.repositories.publishedCollectionRepository.updateByIdForOwner(
+        {
+          brandName: publication.brandName,
+          brandSlug: publication.brandSlug,
+          contractAddress: input.contractAddress,
+          contractChainKey: chain.key,
+          contractDeployedAt: input.deployedAt
+            ? new Date(input.deployedAt)
+            : dependencies.now(),
+          contractDeployTxHash: input.deployTxHash,
+          description: publication.description,
+          displayOrder: publication.displayOrder,
+          endAt: publication.endAt,
+          heroGeneratedAssetId: publication.heroGeneratedAssetId,
+          id: publication.id,
+          isFeatured: publication.isFeatured,
+          launchAt: publication.launchAt,
+          ownerUserId: input.ownerUserId,
+          priceLabel: publication.priceLabel,
+          primaryCtaHref: publication.primaryCtaHref,
+          primaryCtaLabel: publication.primaryCtaLabel,
+          secondaryCtaHref: publication.secondaryCtaHref,
+          secondaryCtaLabel: publication.secondaryCtaLabel,
+          slug: publication.slug,
+          soldCount: publication.soldCount,
+          storefrontBody: publication.storefrontBody,
+          storefrontHeadline: publication.storefrontHeadline,
+          storefrontStatus: publication.storefrontStatus,
+          title: publication.title,
+          totalSupply: publication.totalSupply
+        }
+      );
+
+      return loadSerializedCollectionDraftById({
+        collectionDraftId: input.collectionDraftId,
+        ownerUserId: input.ownerUserId,
+        repositories: dependencies.repositories
+      });
+    },
+
+    async createCollectionContractMintIntent(input: {
+      collectionDraftId: string;
+      ownerUserId: string;
+      recipientWalletAddress: string;
+      tokenId: number;
+    }) {
+      const parsedInput = collectionContractMintIntentRequestSchema.parse({
+        recipientWalletAddress: input.recipientWalletAddress,
+        tokenId: input.tokenId
+      });
+      const publication =
+        await dependencies.repositories.publishedCollectionRepository.findByDraftIdForOwner(
+          {
+            ownerUserId: input.ownerUserId,
+            sourceCollectionDraftId: input.collectionDraftId
+          }
+        );
+
+      if (!publication) {
+        throw new CollectionDraftServiceError(
+          "COLLECTION_PUBLICATION_NOT_FOUND",
+          "Published collection was not found for this draft.",
+          404
+        );
+      }
+
+      const deployment = serializeOnchainDeployment(publication);
+
+      if (!deployment) {
+        throw new CollectionDraftServiceError(
+          "ONCHAIN_DEPLOYMENT_REQUIRED",
+          "Record an onchain contract deployment before minting tokens.",
+          409
+        );
+      }
+
+      const publicationItem =
+        await dependencies.repositories.publishedCollectionItemRepository.findByPositionForPublishedCollection(
+          {
+            position: parsedInput.tokenId,
+            publishedCollectionId: publication.id
+          }
+        );
+
+      if (!publicationItem) {
+        throw new CollectionDraftServiceError(
+          "ONCHAIN_TOKEN_NOT_FOUND",
+          "The requested token ID does not exist in the published collection snapshot.",
+          404
+        );
+      }
+
+      const existingMint =
+        await dependencies.repositories.publishedCollectionMintRepository.findByTokenIdForPublishedCollection(
+          {
+            publishedCollectionId: publication.id,
+            tokenId: parsedInput.tokenId
+          }
+        );
+
+      if (existingMint) {
+        throw new CollectionDraftServiceError(
+          "ONCHAIN_TOKEN_ALREADY_MINTED",
+          "The requested token ID has already been recorded as minted.",
+          409
+        );
+      }
+
+      const artifact = getAiNftForgeCollectionContractArtifact();
+      const mintData = (encodeFunctionData as unknown as (input: {
+        abi: unknown[];
+        args: unknown[];
+        functionName: string;
+      }) => `0x${string}`)({
+        abi: artifact.abi,
+        args: [parsedInput.recipientWalletAddress, BigInt(parsedInput.tokenId)],
+        functionName: "ownerMint"
+      });
+
+      return collectionContractMintIntentResponseSchema.parse({
+        mint: {
+          chain: deployment.chain,
+          contractAddress: deployment.contractAddress,
+          recipientWalletAddress: parsedInput.recipientWalletAddress,
+          tokenId: parsedInput.tokenId,
+          transaction: {
+            data: mintData,
+            to: deployment.contractAddress,
+            value: "0x0"
+          }
+        }
+      });
+    },
+
+    async recordCollectionContractMint(input: {
+      collectionDraftId: string;
+      mintedAt?: string;
+      ownerUserId: string;
+      recipientWalletAddress: string;
+      tokenId: number;
+      txHash: string;
+    }) {
+      const parsedInput = collectionContractMintIntentRequestSchema.parse({
+        recipientWalletAddress: input.recipientWalletAddress,
+        tokenId: input.tokenId
+      });
+      const publication =
+        await dependencies.repositories.publishedCollectionRepository.findByDraftIdForOwner(
+          {
+            ownerUserId: input.ownerUserId,
+            sourceCollectionDraftId: input.collectionDraftId
+          }
+        );
+
+      if (!publication) {
+        throw new CollectionDraftServiceError(
+          "COLLECTION_PUBLICATION_NOT_FOUND",
+          "Published collection was not found for this draft.",
+          404
+        );
+      }
+
+      const deployment = serializeOnchainDeployment(publication);
+
+      if (!deployment) {
+        throw new CollectionDraftServiceError(
+          "ONCHAIN_DEPLOYMENT_REQUIRED",
+          "Record an onchain contract deployment before minting tokens.",
+          409
+        );
+      }
+
+      const publicationItem =
+        await dependencies.repositories.publishedCollectionItemRepository.findByPositionForPublishedCollection(
+          {
+            position: parsedInput.tokenId,
+            publishedCollectionId: publication.id
+          }
+        );
+
+      if (!publicationItem) {
+        throw new CollectionDraftServiceError(
+          "ONCHAIN_TOKEN_NOT_FOUND",
+          "The requested token ID does not exist in the published collection snapshot.",
+          404
+        );
+      }
+
+      const existingMint =
+        await dependencies.repositories.publishedCollectionMintRepository.findByTokenIdForPublishedCollection(
+          {
+            publishedCollectionId: publication.id,
+            tokenId: parsedInput.tokenId
+          }
+        );
+
+      if (existingMint) {
+        throw new CollectionDraftServiceError(
+          "ONCHAIN_TOKEN_ALREADY_MINTED",
+          "The requested token ID has already been recorded as minted.",
+          409
+        );
+      }
+
+      await dependencies.repositories.publishedCollectionMintRepository.create({
+        mintedAt: input.mintedAt ? new Date(input.mintedAt) : dependencies.now(),
+        ownerUserId: input.ownerUserId,
+        publishedCollectionId: publication.id,
+        publishedCollectionItemId: publicationItem.id,
+        recipientWalletAddress: parsedInput.recipientWalletAddress,
+        tokenId: parsedInput.tokenId,
+        txHash: input.txHash
+      });
+
+      return loadSerializedCollectionDraftById({
+        collectionDraftId: input.collectionDraftId,
+        ownerUserId: input.ownerUserId,
+        repositories: dependencies.repositories
       });
     },
 
@@ -1307,6 +1774,7 @@ export function createCollectionDraftService(
           );
 
         if (existingPublication) {
+          assertPublicationMutable(existingPublication);
           deletedPublicAssets.push(
             ...(
               await repositories.publishedCollectionItemRepository.listByPublishedCollectionId(
@@ -1463,6 +1931,7 @@ export function createCollectionDraftService(
         );
 
       if (publication) {
+        assertPublicationMutable(publication);
         const routeConflict =
           await dependencies.repositories.publishedCollectionRepository.findByBrandSlugAndCollectionSlug(
             {

@@ -6,27 +6,15 @@ import {
   collectionDraftSlugSchema,
   collectionDraftTitleSchema
 } from "./collections.js";
+import {
+  collectionContractChainSchema,
+  collectionOnchainDeploymentSummarySchema
+} from "./onchain.js";
 
 export const collectionContractStandardSchema = z.literal("erc721");
 
-export const collectionContractChainKeySchema = z.enum([
-  "base-sepolia",
-  "base"
-]);
-
-export const collectionContractChainNetworkSchema = z.enum([
-  "development",
-  "production"
-]);
-
-export const collectionContractChainSchema = z.object({
-  chainId: z.number().int().positive(),
-  key: collectionContractChainKeySchema,
-  label: z.string().trim().min(1).max(40),
-  network: collectionContractChainNetworkSchema
-});
-
 export const collectionPublicContractSchema = z.object({
+  activeDeployment: collectionOnchainDeploymentSummarySchema.nullable(),
   brandName: collectionBrandNameSchema,
   brandSlug: collectionBrandSlugSchema,
   collectionUrl: z.string().url(),
@@ -35,6 +23,8 @@ export const collectionPublicContractSchema = z.object({
   description: z.string().max(1000).nullable(),
   itemCount: z.number().int().positive(),
   metadataUrl: z.string().url(),
+  mintedTokenCount: z.number().int().min(0),
+  mintedTokenIds: z.array(z.number().int().positive()),
   name: z.string().trim().min(1).max(160),
   publishedAt: z.string().datetime(),
   standard: collectionContractStandardSchema,
@@ -53,12 +43,6 @@ export const collectionPublicContractResponseSchema = z.object({
 
 export type CollectionContractChain = z.infer<
   typeof collectionContractChainSchema
->;
-export type CollectionContractChainKey = z.infer<
-  typeof collectionContractChainKeySchema
->;
-export type CollectionContractChainNetwork = z.infer<
-  typeof collectionContractChainNetworkSchema
 >;
 export type CollectionContractStandard = z.infer<
   typeof collectionContractStandardSchema
