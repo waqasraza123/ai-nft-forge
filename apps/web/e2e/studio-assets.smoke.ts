@@ -16,7 +16,7 @@ test.describe("studio assets browser smoke", () => {
     await expect(page).toHaveURL(/\/sign-in\?next=%2Fstudio$/u);
     await expect(
       page.getByRole("heading", {
-        name: "Server-verified wallet session foundation"
+        name: "Wallet access and Base Account sign-in"
       })
     ).toBeVisible();
   });

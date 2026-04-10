@@ -27,6 +27,7 @@ export const authVerifyRequestSchema = z.object({
   avatarUrl: z.string().url().optional(),
   displayName: z.string().trim().min(1).max(120).optional(),
   nonce: nonceValueSchema,
+  signedMessage: z.string().trim().min(1).max(10_000).optional(),
   signature: signatureSchema,
   walletAddress: walletAddressSchema
 });

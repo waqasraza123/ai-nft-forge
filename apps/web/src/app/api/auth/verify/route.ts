@@ -27,6 +27,16 @@ export async function POST(request: Request) {
         signature: body.signature as `0x${string}`,
         userAgent: requestContext.userAgent,
         walletAddress: body.walletAddress,
+        ...(body.signedMessage !== undefined
+          ? {
+              signedMessage: body.signedMessage
+            }
+          : {}),
+        ...(requestContext.host !== null
+          ? {
+              expectedDomain: requestContext.host
+            }
+          : {}),
         ...(body.avatarUrl !== undefined ? { avatarUrl: body.avatarUrl } : {}),
         ...(body.displayName !== undefined
           ? { displayName: body.displayName }

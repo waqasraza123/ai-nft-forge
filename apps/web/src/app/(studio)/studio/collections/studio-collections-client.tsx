@@ -8,15 +8,8 @@ import {
   useEffectEvent,
   useState
 } from "react";
-import {
-  createPublicClient,
-  custom,
-  getAddress,
-  isAddressEqual,
-  toHex,
-  type Chain
-} from "viem";
-import { base, baseSepolia } from "viem/chains";
+import { createPublicClient, custom, getAddress, isAddressEqual } from "viem";
+import { useConnection, useConnect, useDisconnect } from "wagmi";
 
 import {
   createCollectionContractPath,
@@ -41,6 +34,12 @@ import {
   SurfaceGrid
 } from "@ai-nft-forge/ui";
 
+import {
+  createWalletAddChainParameters,
+  getWalletChainByKey,
+  getWalletChainLabel
+} from "../../../../lib/wallet/chains";
+
 type StudioCollectionsClientProps = {
   initialDrafts: CollectionDraftSummary[];
   initialGeneratedAssetCandidates: CollectionGeneratedAssetCandidate[];
@@ -59,7 +58,10 @@ type NoticeState = {
 
 type BrowserEthereumProvider = {
   request(input: { method: string; params?: unknown[] }): Promise<unknown>;
+  removeListener?(event: string, listener: (...args: unknown[]) => void): void;
 };
+
+type SupportedWalletConnectorId = "baseAccount" | "injected";
 
 type OnchainFlowState = {
   chainLabel: string;
@@ -79,12 +81,6 @@ type OnchainFlowState = {
   txHash: string | null;
 };
 
-declare global {
-  interface Window {
-    ethereum?: BrowserEthereumProvider;
-  }
-}
-
 class WalletFlowError extends Error {
   txHash: string | null;
 
@@ -93,49 +89,6 @@ class WalletFlowError extends Error {
     this.name = "WalletFlowError";
     this.txHash = txHash;
   }
-}
-
-const walletChains = {
-  base,
-  "base-sepolia": baseSepolia
-} satisfies Record<CollectionContractChainKey, Chain>;
-
-function getWalletChainByKey(key: CollectionContractChainKey) {
-  return walletChains[key];
-}
-
-function getWalletChainLabel(chainId: number | null) {
-  if (chainId === null) {
-    return null;
-  }
-
-  const matchingChain = Object.values(walletChains).find(
-    (chain) => chain.id === chainId
-  );
-
-  return matchingChain?.name ?? `Chain ${chainId}`;
-}
-
-function getBrowserEthereumProvider() {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  return window.ethereum ?? null;
-}
-
-function createWalletAddChainParameters(chain: Chain) {
-  return {
-    chainId: toHex(chain.id),
-    chainName: chain.name,
-    nativeCurrency: chain.nativeCurrency,
-    rpcUrls: chain.rpcUrls.default.http,
-    ...(chain.blockExplorers?.default
-      ? {
-          blockExplorerUrls: [chain.blockExplorers.default.url]
-        }
-      : {})
-  };
 }
 
 function parseWalletErrorMessage(input: {
@@ -370,6 +323,9 @@ export function StudioCollectionsClient({
   initialPublicationTarget,
   ownerWalletAddress
 }: StudioCollectionsClientProps) {
+  const walletConnection = useConnection();
+  const { connectAsync, connectors } = useConnect();
+  const { disconnectAsync } = useDisconnect();
   const [drafts, setDrafts] = useState(() => sortDrafts(initialDrafts));
   const [generatedAssetCandidates, setGeneratedAssetCandidates] = useState(
     initialGeneratedAssetCandidates
@@ -397,13 +353,9 @@ export function StudioCollectionsClient({
   }));
   const [deploymentIntentJson, setDeploymentIntentJson] = useState("");
   const [mintIntentJson, setMintIntentJson] = useState("");
-  const [walletProviderAvailable, setWalletProviderAvailable] = useState(false);
-  const [connectedWalletAddress, setConnectedWalletAddress] = useState<
-    string | null
-  >(null);
-  const [connectedWalletChainId, setConnectedWalletChainId] = useState<
-    number | null
-  >(null);
+  const [selectedWalletConnectorId, setSelectedWalletConnectorId] = useState<
+    SupportedWalletConnectorId | ""
+  >("baseAccount");
   const [pendingDeploymentTxHash, setPendingDeploymentTxHash] = useState<
     string | null
   >(null);
@@ -442,13 +394,25 @@ export function StudioCollectionsClient({
   const selectedDraftHasInvalidItems = selectedDraftInvalidItems.length > 0;
   const selectedDraftNeedsRepairDowngrade =
     selectedDraft?.status === "review_ready" && selectedDraftHasInvalidItems;
+  const baseAccountConnector =
+    connectors.find((connector) => connector.id === "baseAccount") ?? null;
+  const injectedWalletConnector =
+    connectors.find((connector) => connector.id === "injected") ?? null;
+  const connectedWalletAddress = walletConnection.address ?? null;
+  const connectedWalletChainId = walletConnection.chainId ?? null;
+  const connectedWalletConnector = walletConnection.connector ?? null;
+  const walletProviderAvailable =
+    Boolean(baseAccountConnector) || Boolean(injectedWalletConnector);
   const includedGeneratedAssetIds = new Set(
     selectedDraft?.items.map((item) => item.generatedAsset.generatedAssetId) ??
       []
   );
   const connectedOwnerWallet =
     connectedWalletAddress &&
-    isAddressEqual(getAddress(connectedWalletAddress), getAddress(ownerWalletAddress));
+    isAddressEqual(
+      getAddress(connectedWalletAddress),
+      getAddress(ownerWalletAddress)
+    );
   const connectedWalletChainLabel = getWalletChainLabel(connectedWalletChainId);
 
   useEffect(() => {
@@ -480,6 +444,34 @@ export function StudioCollectionsClient({
     setPendingMintTxHash(null);
     setOnchainFlowState(null);
   }, [selectedDraft]);
+
+  useEffect(() => {
+    const nextConnectorId =
+      connectedWalletConnector?.id === "baseAccount" ||
+      connectedWalletConnector?.id === "injected"
+        ? connectedWalletConnector.id
+        : baseAccountConnector
+          ? "baseAccount"
+          : injectedWalletConnector
+            ? "injected"
+            : "";
+
+    setSelectedWalletConnectorId((currentValue) => {
+      if (
+        currentValue &&
+        ((currentValue === "baseAccount" && baseAccountConnector) ||
+          (currentValue === "injected" && injectedWalletConnector))
+      ) {
+        return currentValue;
+      }
+
+      return nextConnectorId;
+    });
+  }, [
+    baseAccountConnector,
+    connectedWalletConnector?.id,
+    injectedWalletConnector
+  ]);
 
   const refreshDrafts = useEffectEvent(async (input?: { silent?: boolean }) => {
     if (!input?.silent) {
@@ -522,67 +514,77 @@ export function StudioCollectionsClient({
     });
   });
 
-  const refreshWalletStatus = useEffectEvent(async () => {
-    const provider = getBrowserEthereumProvider();
-
-    setWalletProviderAvailable(Boolean(provider));
-
-    if (!provider) {
-      setConnectedWalletAddress(null);
-      setConnectedWalletChainId(null);
-      return;
+  function getSelectedWalletConnector() {
+    if (selectedWalletConnectorId === "baseAccount" && baseAccountConnector) {
+      return baseAccountConnector;
     }
 
-    const [accounts, chainIdHex] = await Promise.all([
-      provider.request({
-        method: "eth_accounts"
-      }),
-      provider
-        .request({
-          method: "eth_chainId"
-        })
-        .catch(() => null)
-    ]);
+    if (selectedWalletConnectorId === "injected" && injectedWalletConnector) {
+      return injectedWalletConnector;
+    }
 
-    const firstAccount =
-      Array.isArray(accounts) && typeof accounts[0] === "string"
-        ? getAddress(accounts[0])
-        : null;
-    const parsedChainId =
-      typeof chainIdHex === "string" ? Number.parseInt(chainIdHex, 16) : null;
+    if (
+      connectedWalletConnector?.id === "baseAccount" ||
+      connectedWalletConnector?.id === "injected"
+    ) {
+      return connectedWalletConnector;
+    }
 
-    setConnectedWalletAddress(firstAccount);
-    setConnectedWalletChainId(
-      Number.isFinite(parsedChainId) ? parsedChainId : null
-    );
-  });
-
-  useEffect(() => {
-    void refreshWalletStatus();
-  }, [refreshWalletStatus]);
+    return baseAccountConnector ?? injectedWalletConnector;
+  }
 
   async function requestOwnerWalletConnection() {
-    const provider = getBrowserEthereumProvider();
+    if (
+      connectedWalletConnector &&
+      connectedWalletAddress &&
+      connectedOwnerWallet &&
+      (connectedWalletConnector.id === "baseAccount" ||
+        connectedWalletConnector.id === "injected")
+    ) {
+      const provider = (await connectedWalletConnector.getProvider()) as
+        | BrowserEthereumProvider
+        | null;
 
-    if (!provider) {
+      if (!provider) {
+        throw new WalletFlowError(
+          "The connected wallet provider is unavailable in this browser."
+        );
+      }
+
+      return {
+        provider,
+        walletAddress: getAddress(connectedWalletAddress)
+      };
+    }
+
+    const connector = getSelectedWalletConnector();
+
+    if (!connector) {
       throw new WalletFlowError(
-        "No browser wallet provider is available in this browser."
+        "No supported wallet connector is available in this browser."
       );
     }
 
-    setWalletProviderAvailable(true);
-
-    const accounts = await provider.request({
-      method: "eth_requestAccounts"
+    const connection = await connectAsync({
+      connector
     });
+    const walletAddress = connection.accounts[0];
 
-    if (!Array.isArray(accounts) || typeof accounts[0] !== "string") {
+    if (!walletAddress) {
       throw new WalletFlowError(
         "The wallet did not return an account for this browser session."
       );
     }
 
-    const normalizedConnectedWalletAddress = getAddress(accounts[0]);
+    const provider = (await connector.getProvider()) as BrowserEthereumProvider | null;
+
+    if (!provider) {
+      throw new WalletFlowError(
+        "The connected wallet provider is unavailable in this browser."
+      );
+    }
+
+    const normalizedConnectedWalletAddress = getAddress(walletAddress);
 
     if (
       !isAddressEqual(
@@ -594,8 +596,6 @@ export function StudioCollectionsClient({
         "The connected wallet does not match the authenticated studio owner wallet."
       );
     }
-
-    setConnectedWalletAddress(normalizedConnectedWalletAddress);
 
     return {
       provider,
@@ -614,7 +614,7 @@ export function StudioCollectionsClient({
         method: "wallet_switchEthereumChain",
         params: [
           {
-            chainId: toHex(chain.id)
+            chainId: `0x${chain.id.toString(16)}`
           }
         ]
       });
@@ -639,13 +639,11 @@ export function StudioCollectionsClient({
         method: "wallet_switchEthereumChain",
         params: [
           {
-            chainId: toHex(chain.id)
+            chainId: `0x${chain.id.toString(16)}`
           }
         ]
       });
     }
-
-    setConnectedWalletChainId(chain.id);
 
     return chain;
   }
@@ -847,7 +845,6 @@ export function StudioCollectionsClient({
 
     try {
       await requestOwnerWalletConnection();
-      await refreshWalletStatus();
       setNotice({
         message: "Owner wallet connected.",
         tone: "success"
@@ -858,6 +855,29 @@ export function StudioCollectionsClient({
           action: "connect",
           error
         }),
+        tone: "error"
+      });
+    }
+  }
+
+  async function handleDisconnectWallet() {
+    setNotice({
+      message: "Disconnecting wallet session…",
+      tone: "info"
+    });
+
+    try {
+      await disconnectAsync();
+      setNotice({
+        message: "Wallet disconnected from this browser session.",
+        tone: "success"
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Wallet disconnection failed.",
         tone: "error"
       });
     }
@@ -1215,7 +1235,6 @@ export function StudioCollectionsClient({
       });
     } finally {
       setDeployingDraftId(null);
-      void refreshWalletStatus();
     }
   }
 
@@ -1363,7 +1382,6 @@ export function StudioCollectionsClient({
       });
     } finally {
       setMintingDraftId(null);
-      void refreshWalletStatus();
     }
   }
 
@@ -2371,10 +2389,12 @@ export function StudioCollectionsClient({
           {selectedDraft?.publication ? (
             <div className="studio-form">
               <div className="pill-row">
-                <Pill>{walletProviderAvailable ? "Wallet detected" : "No wallet detected"}</Pill>
                 <Pill>
-                  Owner {shortHex(ownerWalletAddress)}
+                  {walletProviderAvailable
+                    ? "Wallet connector ready"
+                    : "No wallet connector ready"}
                 </Pill>
+                <Pill>Owner {shortHex(ownerWalletAddress)}</Pill>
                 {connectedWalletAddress ? (
                   <Pill>
                     {connectedOwnerWallet ? "Connected" : "Wallet mismatch"}{" "}
@@ -2383,6 +2403,9 @@ export function StudioCollectionsClient({
                 ) : (
                   <Pill>Wallet not connected</Pill>
                 )}
+                {connectedWalletConnector ? (
+                  <Pill>{connectedWalletConnector.name}</Pill>
+                ) : null}
                 {connectedWalletChainLabel ? (
                   <Pill>{connectedWalletChainLabel}</Pill>
                 ) : null}
@@ -2413,16 +2436,49 @@ export function StudioCollectionsClient({
                   {selectedDraft.publication.mintedTokenCount === 1 ? "" : "s"}
                 </Pill>
               </div>
+              <label className="field-stack">
+                <span className="field-label">Wallet path</span>
+                <select
+                  className="input-field"
+                  onChange={(event) => {
+                    setSelectedWalletConnectorId(
+                      event.target.value as SupportedWalletConnectorId
+                    );
+                  }}
+                  value={selectedWalletConnectorId}
+                >
+                  {baseAccountConnector ? (
+                    <option value="baseAccount">Base Account</option>
+                  ) : null}
+                  {injectedWalletConnector ? (
+                    <option value="injected">
+                      {injectedWalletConnector.name}
+                    </option>
+                  ) : null}
+                </select>
+              </label>
               <div className="studio-action-row">
                 <button
                   className="button-action"
+                  disabled={!walletProviderAvailable}
                   onClick={() => {
                     void handleConnectWallet();
                   }}
                   type="button"
                 >
-                  Connect owner wallet
+                  Connect selected wallet
                 </button>
+                {connectedWalletConnector ? (
+                  <button
+                    className="button-action"
+                    onClick={() => {
+                      void handleDisconnectWallet();
+                    }}
+                    type="button"
+                  >
+                    Disconnect wallet
+                  </button>
+                ) : null}
               </div>
               {onchainFlowState ? (
                 <div

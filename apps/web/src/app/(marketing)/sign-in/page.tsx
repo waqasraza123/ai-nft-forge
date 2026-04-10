@@ -1,14 +1,10 @@
 import Link from "next/link";
 
-import {
-  MetricTile,
-  PageShell,
-  Pill,
-  SurfaceCard,
-  SurfaceGrid
-} from "@ai-nft-forge/ui";
+import { PageShell, Pill, SurfaceCard, SurfaceGrid } from "@ai-nft-forge/ui";
 
 import { getCurrentAuthSession } from "../../../server/auth/session";
+
+import { SignInClient } from "./sign-in-client";
 
 export default async function SignInPage() {
   const session = await getCurrentAuthSession();
@@ -16,8 +12,8 @@ export default async function SignInPage() {
   return (
     <PageShell
       eyebrow="Auth"
-      title="Server-verified wallet session foundation"
-      lead="Phase 1 lands the nonce and session contract before a polished wallet UI. The server issues a nonce, verifies a signature, and stores the session in the database."
+      title="Wallet access and Base Account sign-in"
+      lead="Phase 8 turns the wallet-auth placeholder into a real sign-in surface. Base Account now uses a SIWE-capable flow on top of the existing server nonce and session contract, while standard injected wallets still work through the same backend boundary."
       actions={
         <>
           <Link className="action-link" href="/api/auth/session">
@@ -31,10 +27,12 @@ export default async function SignInPage() {
       tone="default"
     >
       <SurfaceGrid>
+        <SignInClient initialSession={session} />
         <SurfaceCard
-          body="The browser requests a nonce, signs the server-defined message, and submits the signature for verification. A valid signature becomes an HTTP-only session cookie."
+          body="The server remains the source of truth: it issues the nonce, verifies either the classic wallet signature or the SIWE message returned by Base Account, and sets the HTTP-only session cookie."
           eyebrow="Flow"
-          title="Wallet auth contract"
+          span={6}
+          title="Server auth contract"
         >
           <div className="pill-row">
             <Pill>POST /api/auth/nonce</Pill>
@@ -44,44 +42,17 @@ export default async function SignInPage() {
           </div>
         </SurfaceCard>
         <SurfaceCard
-          body="The studio route is now protected by server-side session lookup. Later UI work can plug Base Account and wallet fallback experiences into the same server contract."
+          body="The same wallet connection layer also feeds collection deployment and minting, so the signed-in owner can stay on a single Base Account or browser-wallet path from auth through onchain execution."
           eyebrow="Boundary"
-          title="Protected studio shell"
+          span={6}
+          title="Shared wallet UX"
         >
           <div className="pill-row">
-            <Link className="inline-link" href="/studio">
-              Open studio
-            </Link>
+            <Pill>Base Account</Pill>
+            <Pill>Injected wallet</Pill>
+            <Pill>/studio/collections</Pill>
           </div>
         </SurfaceCard>
-        <SurfaceCard
-          body={
-            session
-              ? "A valid studio session is currently present in this browser."
-              : "No active studio session is present in this browser."
-          }
-          eyebrow="Current state"
-          span={8}
-          title={session ? "Authenticated session detected" : "No session yet"}
-        >
-          <div className="metric-list">
-            <MetricTile label="Authenticated" value={session ? "Yes" : "No"} />
-            <MetricTile
-              label="Wallet"
-              value={session?.user.walletAddress ?? "Not signed in"}
-            />
-            <MetricTile
-              label="Studio access"
-              value={session ? "Allowed" : "Redirects to sign-in"}
-            />
-          </div>
-        </SurfaceCard>
-        <SurfaceCard
-          body="A polished client wallet flow is intentionally deferred. The durable server contract is what matters in this commit."
-          eyebrow="Guardrail"
-          span={4}
-          title="UI stays thin"
-        />
       </SurfaceGrid>
     </PageShell>
   );

@@ -1,9 +1,12 @@
 import { randomUUID } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
+import { createSiweMessage } from "viem/siwe";
 import { privateKeyToAccount } from "viem/accounts";
+import { base } from "viem/chains";
 
-import { createAuthMessage, verifyAuthMessageSignature } from "./message";
+import { createAuthMessage } from "./message";
+import { createAuthSignatureVerifier } from "./signature";
 import { createAuthService } from "./service";
 
 function createInMemoryAuthHarness() {
@@ -208,13 +211,17 @@ function createInMemoryAuthHarness() {
     createNonce: () => {
       nonceIndex += 1;
 
-      return `nonce_value_${nonceIndex.toString().padStart(16, "0")}`;
+      return `noncevalue${nonceIndex.toString().padStart(24, "0")}`;
     },
     hashValue: (value) => `hash:${value}`,
     now: () => currentTime,
     repositories,
     runTransaction: async (operation) => operation(repositories),
-    verifyMessageSignature: verifyAuthMessageSignature
+    verifyMessageSignature: createAuthSignatureVerifier({
+      ...process.env,
+      ONCHAIN_BASE_RPC_URL: "https://mainnet.base.org",
+      ONCHAIN_BASE_SEPOLIA_RPC_URL: "https://sepolia.base.org"
+    })
   });
 
   return {
@@ -305,6 +312,39 @@ describe("auth service", () => {
       code: "NONCE_INVALID",
       statusCode: 401
     });
+  });
+
+  it("accepts a SIWE message signed against the issued nonce", async () => {
+    const harness = createInMemoryAuthHarness();
+    const nonceResponse = await harness.service.issueNonce({
+      walletAddress: harness.account.address
+    });
+    const signedMessage = createSiweMessage({
+      address: harness.account.address,
+      chainId: base.id,
+      domain: "127.0.0.1:3000",
+      nonce: nonceResponse.nonce,
+      statement: "Sign in to AI NFT Forge",
+      uri: "http://127.0.0.1:3000/sign-in",
+      version: "1"
+    });
+    const signature = await harness.account.signMessage({
+      message: signedMessage
+    });
+
+    const verificationResult = await harness.service.verifyAndCreateSession({
+      expectedDomain: "127.0.0.1:3000",
+      ipAddress: "127.0.0.1",
+      nonce: nonceResponse.nonce,
+      signature,
+      signedMessage,
+      userAgent: "vitest",
+      walletAddress: harness.account.address
+    });
+
+    expect(verificationResult.session.user.walletAddress).toBe(
+      harness.account.address
+    );
   });
 
   it("rejects expired nonces", async () => {

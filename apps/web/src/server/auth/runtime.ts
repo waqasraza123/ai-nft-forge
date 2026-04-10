@@ -10,7 +10,7 @@ import { parseWebAuthEnv, type WebAuthEnv } from "@ai-nft-forge/shared";
 
 import { createAuthNonce, hashAuthRequestValue } from "./request-context";
 import { createAuthService } from "./service";
-import { verifyAuthMessageSignature } from "./message";
+import { createAuthSignatureVerifier } from "./signature";
 
 function createAuthRepositories(executor: DatabaseExecutor) {
   return {
@@ -41,6 +41,6 @@ export function createRuntimeAuthService(
       runDatabaseTransaction(databaseClient, async (transaction) =>
         operation(createAuthRepositories(transaction))
       ),
-    verifyMessageSignature: verifyAuthMessageSignature
+    verifyMessageSignature: createAuthSignatureVerifier(rawEnvironment)
   });
 }

@@ -2,7 +2,7 @@
 
 ## Product
 
-AI NFT Forge is a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, operating authenticated moderation and ops workflows, packaging the system for external self-host adopters, and now executing, recording, and re-verifying owner-signed onchain deployment and mint activity from immutable published snapshots. The repository now contains the completed current Phase 1 through Phase 7 scope plus post-phase onchain slices: storage-backed source asset intake, queue-backed generation orchestration, durable generated-output persistence, the standalone generation backend, provider-aware ops diagnostics, persisted observability capture plus alert delivery policy, owner-scoped collection drafting and publication, preset-driven white-label storefront presentation, published-snapshot-backed metadata and contract/token-uri routes, owner-scoped generated-asset moderation, worker-owned reconciliation with persisted runs and repairable issues, Apache-2.0 self-host packaging with Dockerfiles, a single-node Compose stack, release-grade docs, wallet-driven contract deployment and mint flows with server-verified onchain deployment and mint ledgers, and chain-state reconciliation for recorded contract deployments and mints.
+AI NFT Forge is a self-hosted, white-label product for turning client photos into collectible-style art variants, curating final assets, publishing branded collection pages, operating authenticated moderation and ops workflows, packaging the system for external self-host adopters, and now authenticating and executing owner-signed onchain deployment and mint activity from immutable published snapshots through Base Account-capable wallet UX plus chain-state verification. The repository now contains the completed current Phase 1 through Phase 7 scope plus post-phase wallet and onchain slices: storage-backed source asset intake, queue-backed generation orchestration, durable generated-output persistence, the standalone generation backend, provider-aware ops diagnostics, persisted observability capture plus alert delivery policy, owner-scoped collection drafting and publication, preset-driven white-label storefront presentation, published-snapshot-backed metadata and contract/token-uri routes, owner-scoped generated-asset moderation, worker-owned reconciliation with persisted runs and repairable issues, Apache-2.0 self-host packaging with Dockerfiles, a single-node Compose stack, release-grade docs, Base Account and injected-wallet session authentication, shared wallet-driven contract deployment and mint flows with server-verified onchain deployment and mint ledgers, and chain-state reconciliation for recorded contract deployments and mints.
 
 ## Current Architecture
 
@@ -22,7 +22,7 @@ Current implementation status:
 
 - `apps/web` is a real Next.js App Router app with route groups for marketing, studio, public brand collection placeholders, and ops.
 - `apps/web` exposes `GET /api/health`.
-- `apps/web` now exposes `POST /api/auth/nonce`, `POST /api/auth/verify`, `POST /api/auth/logout`, and `GET /api/auth/session`.
+- `apps/web` now exposes `POST /api/auth/nonce`, `POST /api/auth/verify`, `POST /api/auth/logout`, and `GET /api/auth/session`, plus a real `/sign-in` wallet UX built on Wagmi with Base Account SIWE and injected-wallet fallback against the same server-issued nonce/session boundary.
 - `apps/web` now protects `/studio` with server-side session lookup and redirects unauthenticated requests to `/sign-in`.
 - `apps/web` now exposes an interactive `/studio/assets` browser workflow plus `GET /api/studio/assets`, `POST /api/studio/assets/upload-intents`, `POST /api/studio/assets/[assetId]/complete`, `POST /api/studio/generations`, `POST /api/studio/generations/[generationRequestId]/retry`, `POST /api/studio/generated-assets/[generatedAssetId]/download-intent`, and `PATCH /api/studio/generated-assets/[generatedAssetId]/moderation` for source asset intake, generation dispatch, retry, polling, protected generated-output retrieval, owner-scoped moderation updates, and per-asset generation history inspection.
 - `apps/web` now also exposes `/studio/collections` plus `GET/POST /api/studio/collections`, `PATCH /api/studio/collections/[collectionDraftId]`, `POST /api/studio/collections/[collectionDraftId]/items`, `DELETE /api/studio/collections/[collectionDraftId]/items/[itemId]`, and `POST /api/studio/collections/[collectionDraftId]/items/reorder` for owner-scoped collection draft creation, metadata management, curated generated-asset inclusion, and ordered draft assembly.
@@ -59,7 +59,7 @@ Current implementation status:
 - The ops route now also renders active persisted alert state plus owner-scoped acknowledgment, mute, webhook-routing, webhook-delivery-schedule, and webhook-escalation controls, while the worker clears acknowledgments automatically when the underlying alert resolves or materially changes, suppresses alert delivery while active mutes are in effect, and applies owner-scoped webhook routing, schedule, and escalation policy before external delivery.
 - The worker and `/ops` surface now also support owner-scoped reconciliation with persisted runs and issues, Redis-leased scheduled execution, manual run/repair/ignore controls, repair-time public-asset recopies and draft downgrades, freshness/critical-issue warnings for operators, and onchain drift detection for recorded contract deployments and mints.
 - `apps/web` now also ships Playwright-based browser smoke coverage for `/studio/assets` and `/ops`, including real auth handshake, seeded owner-scoped fixture data, isolated test schema/Redis usage, and CI execution.
-- The studio onchain flow now includes a real browser-wallet deployment and mint path with server-side receipt verification, and recorded onchain state is now rechecked by reconciliation before additional minting proceeds, but broader wallet UX and Base Account integration remain deferred.
+- The studio auth and onchain flow now share a real wallet connection layer with Base Account SIWE sign-in, injected-wallet fallback, owner-wallet connection management on `/studio/collections`, server-side receipt verification, and reconciliation rechecks before additional minting proceeds.
 
 The frozen technical direction remains:
 
@@ -139,6 +139,7 @@ The frozen technical direction remains:
 - Phase 6 Commit 1 landed generated-asset moderation with owner-scoped approve/reject/reset controls, collection curation safeguards, and moderation-aware studio asset and collection read models.
 - Phase 6 Commit 2 landed worker-owned reconciliation with persisted runs and issues, manual `/ops` run/repair/ignore controls, repairable public-asset recopy and draft-downgrade actions, scheduler automation, studio invalid-draft warnings, and `/ops` smoke coverage for reconciliation flows.
 - Phase 7 Commit 1 landed the public self-host release surface, including Apache-2.0 licensing, a public README, Dockerfiles for app services, a single-node self-host Compose stack, env/deployment/operator docs, release checklist guidance, and CI validation for compose config plus Docker builds.
+- Post-phase Wallet UX Commit 1 landed Base Account and injected-wallet authentication on `/sign-in`, SIWE-aware server verification on top of the existing nonce/session contract, a shared Wagmi-based wallet provider layer for the web app, an owner-wallet connection picker on `/studio/collections`, and an auth nonce generator updated to meet SIWE nonce requirements.
 
 ## Important Decisions
 
@@ -195,8 +196,8 @@ The frozen technical direction remains:
 
 ## Deferred / Not Yet Implemented
 
-- Base Account integration and broader wallet UX polish
 - Native commerce, reservations, and checkout
+- Multi-brand administration
 - Package-registry publishing, Helm/Kubernetes orchestration, and hosted SaaS deployment
 
 ## Risks / Watchouts
@@ -206,7 +207,7 @@ The frozen technical direction remains:
 - The ops surface now exposes backend liveness/readiness plus authenticated queue depth, rolling owner-scoped metrics, persisted observability history, active-alert acknowledgment and mute controls, owner-scoped webhook routing, delivery-schedule, escalation policy, reconciliation automation health, persisted reconciliation issues, and owner-scoped repair controls, but cross-user/workspace controls are still deferred.
 - The studio and public surfaces now expose per-asset generation history, owner-scoped collection drafts, durable studio settings, storefront merchandising, preset-driven public presentation, and published collection launch pages, but multi-brand administration, live storefront commerce, and richer cross-release merchandising are still deferred.
 - New publications now use durable public asset URLs for collection and metadata image delivery, but older publications still require republish to gain public copies.
-- The repo now supports wallet-driven owner-signed deployment and mint flows plus recorded onchain deployment and mint ledgers, and it now rechecks those records during reconciliation, but it still lacks Base Account integration and richer wallet UX polish.
+- The repo now supports Base Account and injected-wallet session auth plus shared wallet-driven deployment and mint flows with recorded onchain ledgers and reconciliation rechecks, but richer multi-wallet account-abstraction options and commerce-aware wallet flows are still limited.
 - Planning docs should remain durable; avoid locking in low-level implementation details before the foundation lands.
 - `docs/_local/` must stay local-only and must never hold secrets.
 

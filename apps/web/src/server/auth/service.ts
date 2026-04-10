@@ -86,8 +86,10 @@ type AuthServiceDependencies = {
     operation: (repositories: AuthRepositorySet) => Promise<T>
   ) => Promise<T>;
   verifyMessageSignature: (input: {
+    expectedDomain?: string | null;
     nonce: string;
     signature: `0x${string}`;
+    signedMessage?: string;
     statement: string;
     walletAddress: string;
   }) => Promise<boolean>;
@@ -130,9 +132,11 @@ export function createAuthService(dependencies: AuthServiceDependencies) {
     async verifyAndCreateSession(input: {
       avatarUrl?: string;
       displayName?: string;
+      expectedDomain?: string | null;
       ipAddress: string | null;
       nonce: string;
       signature: `0x${string}`;
+      signedMessage?: string;
       userAgent: string | null;
       walletAddress: string;
     }): Promise<VerifiedSessionResult> {
@@ -161,7 +165,17 @@ export function createAuthService(dependencies: AuthServiceDependencies) {
           nonce: input.nonce,
           signature: input.signature,
           statement: dependencies.config.AUTH_MESSAGE_STATEMENT,
-          walletAddress
+          walletAddress,
+          ...(input.expectedDomain !== undefined
+            ? {
+                expectedDomain: input.expectedDomain
+              }
+            : {}),
+          ...(input.signedMessage !== undefined
+            ? {
+                signedMessage: input.signedMessage
+              }
+            : {})
         });
 
         if (!signatureValid) {

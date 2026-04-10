@@ -6,9 +6,8 @@ The repository ships as a pnpm monorepo with a Next.js control plane, a BullMQ w
 
 ## Status
 
-- Phases 1 through 7 are complete, and post-phase onchain deployment/minting plus chain-state reconciliation slices are landed
+- Phases 1 through 7 are complete, and post-phase onchain deployment/minting, wallet UX, and chain-state reconciliation slices are landed
 - Deferred beyond the public release:
-  - Base Account integration and broader wallet UX polish
   - native checkout and payments
   - multi-brand administration
   - advanced multi-node orchestration
@@ -16,14 +15,14 @@ The repository ships as a pnpm monorepo with a Next.js control plane, a BullMQ w
 
 ## What Ships
 
-- Wallet-authenticated studio session flow
+- Base Account and injected-wallet studio sign-in on top of the server-issued nonce/session contract
 - Source asset intake with signed private-object uploads
 - Queue-backed generation orchestration with retry and history
 - Generated-asset moderation with owner-scoped approve/reject/reset controls
 - Collection draft curation, review-ready validation, publication, and storefront merchandising
 - Public white-label brand and collection storefront routes backed only by saved brand settings and immutable published snapshots
 - Contract manifest and token-URI publication routes
-- Wallet-driven owner-signed contract deployment and mint flows with server-verified transaction recording for published collections
+- Shared wallet connection UX for owner-signed contract deployment and mint flows with server-verified transaction recording for published collections
 - Authenticated ops diagnostics, persisted observability captures, alert delivery policy, and operator retry controls
 - Worker-owned reconciliation with persisted runs and issues, manual run/repair/ignore actions, `/ops` visibility, and onchain drift checks for recorded deployments and mints
 - Dockerfiles and a single-node Docker Compose self-host path

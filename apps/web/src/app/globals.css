@@ -307,6 +307,10 @@ select {
   gap: 12px;
 }
 
+.metric-list--single-column {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .metric-tile {
   padding: 16px;
   border: 1px solid var(--color-line);
