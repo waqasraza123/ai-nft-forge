@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  commerceJobNames,
+  commerceQueueNames,
   generationJobNames,
   generationQueueNames,
   foundationJobNames,
@@ -18,6 +20,10 @@ describe("queueCatalog", () => {
       {
         jobName: generationJobNames.processSourceAssetGeneration,
         queueName: generationQueueNames.generationDispatch
+      },
+      {
+        jobName: commerceJobNames.processCheckoutFulfillment,
+        queueName: commerceQueueNames.fulfillmentDispatch
       }
     ]);
   });

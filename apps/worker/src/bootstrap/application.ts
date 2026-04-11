@@ -2,17 +2,20 @@ import { type Redis } from "ioredis";
 
 import {
   createDatabaseClient,
+  createCommerceCheckoutSessionRepository,
   createGenerationRequestRepository,
   createSourceAssetRepository,
   type DatabaseClient
 } from "@ai-nft-forge/database";
 import {
+  parseCommerceEnv,
   createObjectStorageClient,
   getStorageConfig,
   parseWorkerEnv,
   type WorkerEnv
 } from "@ai-nft-forge/shared";
 
+import { createCheckoutFulfillmentWebhookBoundary } from "../commerce/fulfillment-webhook.js";
 import { createGenerationAdapter } from "../generation/factory.js";
 import { createLogger, type Logger } from "../lib/logger.js";
 import { createRedisConnection } from "../lib/redis.js";
@@ -46,6 +49,7 @@ export async function bootstrapWorkerApplication(
   rawEnvironment: NodeJS.ProcessEnv
 ): Promise<WorkerApplication> {
   const env = parseWorkerEnv(rawEnvironment);
+  const commerceEnv = parseCommerceEnv(rawEnvironment);
   const databaseClient = createDatabaseClient(rawEnvironment);
   const logger = createLogger({
     level: env.LOG_LEVEL,
@@ -57,6 +61,20 @@ export async function bootstrapWorkerApplication(
   const queueRegistry = createQueueRegistry({
     databaseClient,
     env,
+    fulfillmentWebhook: createCheckoutFulfillmentWebhookBoundary({
+      callbackBaseUrl:
+        commerceEnv.COMMERCE_FULFILLMENT_CALLBACK_BASE_URL ?? "",
+      callbackBearerToken:
+        commerceEnv.COMMERCE_FULFILLMENT_CALLBACK_BEARER_TOKEN ?? "",
+      timeoutMs: commerceEnv.COMMERCE_FULFILLMENT_WEBHOOK_TIMEOUT_MS,
+      ...(commerceEnv.COMMERCE_FULFILLMENT_WEBHOOK_BEARER_TOKEN
+        ? {
+            webhookBearerToken:
+              commerceEnv.COMMERCE_FULFILLMENT_WEBHOOK_BEARER_TOKEN
+          }
+        : {}),
+      webhookUrl: commerceEnv.COMMERCE_FULFILLMENT_WEBHOOK_URL ?? ""
+    }),
     generationAdapter: createGenerationAdapter({
       env,
       logger,
@@ -65,6 +83,45 @@ export async function bootstrapWorkerApplication(
     }),
     logger,
     repositories: {
+      commerceCheckoutSessionRepository: {
+        findByPublicId: async (publicId) => {
+          const session =
+            await createCommerceCheckoutSessionRepository(databaseClient).findByPublicId(
+              publicId
+            );
+
+          if (!session) {
+            return null;
+          }
+
+          return {
+            brandName: session.publishedCollection.brandName,
+            brandSlug: session.publishedCollection.brandSlug,
+            buyerDisplayName: session.reservation.buyerDisplayName,
+            buyerEmail: session.reservation.buyerEmail,
+            buyerWalletAddress: session.reservation.buyerWalletAddress,
+            checkoutSessionId: session.publicId,
+            collectionSlug: session.publishedCollection.slug,
+            completedAt: session.completedAt?.toISOString() ?? null,
+            editionNumber: session.reservation.publishedCollectionItem.position,
+            fulfillmentAutomationAttemptCount:
+              session.fulfillmentAutomationAttemptCount,
+            fulfillmentAutomationExternalReference:
+              session.fulfillmentAutomationExternalReference,
+            fulfillmentAutomationStatus: session.fulfillmentAutomationStatus,
+            fulfillmentStatus: session.fulfillmentStatus,
+            id: session.id,
+            priceLabel: session.publishedCollection.priceLabel,
+            providerKind: session.providerKind,
+            status: session.status,
+            title: session.publishedCollection.title
+          };
+        },
+        updateFulfillmentAutomationById: (input) =>
+          createCommerceCheckoutSessionRepository(
+            databaseClient
+          ).updateFulfillmentAutomationById(input)
+      },
       generationRequestRepository:
         createGenerationRequestRepository(databaseClient),
       sourceAssetRepository: createSourceAssetRepository(databaseClient)

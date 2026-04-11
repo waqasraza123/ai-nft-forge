@@ -51,6 +51,7 @@ function createPublicationRecord() {
 }
 
 function createCommerceHarness(input?: {
+  fulfillmentProviderMode?: "manual" | "webhook";
   providerMode?: "disabled" | "manual" | "stripe";
   publicationOverrides?: Partial<HarnessPublication>;
   reservationStatuses?: Array<"pending" | "completed" | "expired" | "canceled">;
@@ -75,8 +76,24 @@ function createCommerceHarness(input?: {
       checkoutUrl: string;
       completedAt: Date | null;
       expiresAt: Date;
+      fulfillmentAutomationAttemptCount: number;
+      fulfillmentAutomationErrorCode: string | null;
+      fulfillmentAutomationErrorMessage: string | null;
+      fulfillmentAutomationExternalReference: string | null;
+      fulfillmentAutomationLastAttemptedAt: Date | null;
+      fulfillmentAutomationLastSucceededAt: Date | null;
+      fulfillmentAutomationNextRetryAt: Date | null;
+      fulfillmentAutomationQueuedAt: Date | null;
+      fulfillmentAutomationStatus:
+        | "idle"
+        | "queued"
+        | "processing"
+        | "submitted"
+        | "completed"
+        | "failed";
       fulfilledAt: Date | null;
       fulfillmentNotes: string | null;
+      fulfillmentProviderKind: "manual" | "webhook";
       fulfillmentStatus: "unfulfilled" | "fulfilled";
       id: string;
       providerKind: "manual" | "stripe";
@@ -99,6 +116,10 @@ function createCommerceHarness(input?: {
       status: "open" | "completed" | "expired" | "canceled";
     }
   >();
+  const enqueuedFulfillmentJobs: Array<{
+    checkoutSessionId: string;
+    source: "automatic" | "manual_retry";
+  }> = [];
   const expiredProviderSessionIds: string[] = [];
   let soldCount = publication.soldCount;
   let storefrontStatus: "upcoming" | "live" | "sold_out" | "ended" =
@@ -135,8 +156,18 @@ function createCommerceHarness(input?: {
           checkoutUrl: createInput.checkoutUrl,
           completedAt: null,
           expiresAt: createInput.expiresAt,
+          fulfillmentAutomationAttemptCount: 0,
+          fulfillmentAutomationErrorCode: null,
+          fulfillmentAutomationErrorMessage: null,
+          fulfillmentAutomationExternalReference: null,
+          fulfillmentAutomationLastAttemptedAt: null,
+          fulfillmentAutomationLastSucceededAt: null,
+          fulfillmentAutomationNextRetryAt: null,
+          fulfillmentAutomationQueuedAt: null,
+          fulfillmentAutomationStatus: "idle" as const,
           fulfilledAt: null,
           fulfillmentNotes: null,
+          fulfillmentProviderKind: "manual" as const,
           fulfillmentStatus: "unfulfilled" as const,
           id: `checkout_record_${checkoutSessions.size + 1}`,
           providerKind: createInput.providerKind,
@@ -196,6 +227,84 @@ function createCommerceHarness(input?: {
           updateInput.fulfilledAt === undefined
             ? record.fulfilledAt
             : updateInput.fulfilledAt;
+
+        return record;
+      },
+      async updateFulfillmentAutomationById(updateInput: {
+        fulfillmentAutomationAttemptCount?: number;
+        fulfillmentAutomationErrorCode?: string | null;
+        fulfillmentAutomationErrorMessage?: string | null;
+        fulfillmentAutomationExternalReference?: string | null;
+        fulfillmentAutomationLastAttemptedAt?: Date | null;
+        fulfillmentAutomationLastSucceededAt?: Date | null;
+        fulfillmentAutomationNextRetryAt?: Date | null;
+        fulfillmentAutomationQueuedAt?: Date | null;
+        fulfillmentAutomationStatus?:
+          | "idle"
+          | "queued"
+          | "processing"
+          | "submitted"
+          | "completed"
+          | "failed";
+        fulfillmentProviderKind?: "manual" | "webhook";
+        id: string;
+      }) {
+        const record = [...checkoutSessions.values()].find(
+          (candidate) => candidate.id === updateInput.id
+        );
+
+        if (!record) {
+          throw new Error("Checkout session was not found.");
+        }
+
+        if (updateInput.fulfillmentAutomationAttemptCount !== undefined) {
+          record.fulfillmentAutomationAttemptCount =
+            updateInput.fulfillmentAutomationAttemptCount;
+        }
+
+        if (updateInput.fulfillmentAutomationErrorCode !== undefined) {
+          record.fulfillmentAutomationErrorCode =
+            updateInput.fulfillmentAutomationErrorCode;
+        }
+
+        if (updateInput.fulfillmentAutomationErrorMessage !== undefined) {
+          record.fulfillmentAutomationErrorMessage =
+            updateInput.fulfillmentAutomationErrorMessage;
+        }
+
+        if (updateInput.fulfillmentAutomationExternalReference !== undefined) {
+          record.fulfillmentAutomationExternalReference =
+            updateInput.fulfillmentAutomationExternalReference;
+        }
+
+        if (updateInput.fulfillmentAutomationLastAttemptedAt !== undefined) {
+          record.fulfillmentAutomationLastAttemptedAt =
+            updateInput.fulfillmentAutomationLastAttemptedAt;
+        }
+
+        if (updateInput.fulfillmentAutomationLastSucceededAt !== undefined) {
+          record.fulfillmentAutomationLastSucceededAt =
+            updateInput.fulfillmentAutomationLastSucceededAt;
+        }
+
+        if (updateInput.fulfillmentAutomationNextRetryAt !== undefined) {
+          record.fulfillmentAutomationNextRetryAt =
+            updateInput.fulfillmentAutomationNextRetryAt;
+        }
+
+        if (updateInput.fulfillmentAutomationQueuedAt !== undefined) {
+          record.fulfillmentAutomationQueuedAt =
+            updateInput.fulfillmentAutomationQueuedAt;
+        }
+
+        if (updateInput.fulfillmentAutomationStatus !== undefined) {
+          record.fulfillmentAutomationStatus =
+            updateInput.fulfillmentAutomationStatus;
+        }
+
+        if (updateInput.fulfillmentProviderKind !== undefined) {
+          record.fulfillmentProviderKind = updateInput.fulfillmentProviderKind;
+        }
 
         return record;
       },
@@ -324,6 +433,12 @@ function createCommerceHarness(input?: {
   };
 
   const service = createCollectionCommerceService({
+    fulfillmentAutomation: {
+      async enqueue(enqueueInput) {
+        enqueuedFulfillmentJobs.push(enqueueInput);
+      },
+      providerMode: input?.fulfillmentProviderMode ?? "manual"
+    },
     now: () => new Date("2026-04-10T10:00:00.000Z"),
     payment: {
       async createCheckoutSession({ checkoutSessionId }) {
@@ -350,6 +465,7 @@ function createCommerceHarness(input?: {
 
   return {
     checkoutSessions,
+    enqueuedFulfillmentJobs,
     expiredProviderSessionIds,
     getSoldCount() {
       return soldCount;
@@ -400,6 +516,34 @@ describe("createCollectionCommerceService", () => {
     expect(result.checkout.status).toBe("completed");
     expect(result.checkout.completedAt).not.toBeNull();
     expect(harness.getSoldCount()).toBe(1);
+  });
+
+  it("queues webhook fulfillment automation after checkout completion", async () => {
+    const harness = createCommerceHarness({
+      fulfillmentProviderMode: "webhook"
+    });
+    const checkout = await harness.service.createCheckoutSession({
+      body: {
+        buyerEmail: "collector@example.com"
+      },
+      brandSlug: "demo-studio",
+      collectionSlug: "genesis-portrait-set",
+      origin: "https://demo.example"
+    });
+
+    const result = await harness.service.completeOwnerManualCheckout({
+      checkoutSessionId: checkout.checkout.checkoutSessionId,
+      ownerUserId: "user_1"
+    });
+
+    expect(result.checkout.fulfillmentProviderKind).toBe("webhook");
+    expect(result.checkout.fulfillmentAutomationStatus).toBe("queued");
+    expect(harness.enqueuedFulfillmentJobs).toEqual([
+      {
+        checkoutSessionId: checkout.checkout.checkoutSessionId,
+        source: "automatic"
+      }
+    ]);
   });
 
   it("disables checkout when the deployment provider is disabled", async () => {
@@ -476,6 +620,7 @@ describe("createCollectionCommerceService", () => {
     expect(result.dashboard.summary.completedCheckoutCount).toBe(1);
     expect(result.dashboard.summary.fulfilledCheckoutCount).toBe(1);
     expect(result.dashboard.summary.unfulfilledCheckoutCount).toBe(0);
+    expect(result.dashboard.summary.automationSubmittedCheckoutCount).toBe(0);
     expect(result.dashboard.collections).toHaveLength(1);
     expect(result.dashboard.collections[0]?.fulfilledCheckoutCount).toBe(1);
     expect(result.dashboard.checkouts[0]?.fulfillmentNotes).toBe(
@@ -548,5 +693,84 @@ describe("createCollectionCommerceService", () => {
     expect(result.checkout.fulfillmentStatus).toBe("fulfilled");
     expect(result.checkout.fulfilledAt).not.toBeNull();
     expect(result.checkout.fulfillmentNotes).toBe("Packed and delivered");
+  });
+
+  it("requeues failed webhook fulfillment automation for the owner", async () => {
+    const harness = createCommerceHarness({
+      fulfillmentProviderMode: "webhook"
+    });
+    const checkout = await harness.service.createCheckoutSession({
+      body: {
+        buyerEmail: "collector@example.com"
+      },
+      brandSlug: "demo-studio",
+      collectionSlug: "genesis-portrait-set",
+      origin: "https://demo.example"
+    });
+
+    await harness.service.completeOwnerManualCheckout({
+      checkoutSessionId: checkout.checkout.checkoutSessionId,
+      ownerUserId: "user_1"
+    });
+
+    const record = harness.checkoutSessions.get(
+      checkout.checkout.checkoutSessionId
+    );
+
+    if (!record) {
+      throw new Error("Expected checkout record.");
+    }
+
+    record.fulfillmentAutomationStatus = "failed";
+    record.fulfillmentAutomationErrorCode = "WEBHOOK_DELIVERY_FAILED";
+    record.fulfillmentAutomationErrorMessage = "Remote endpoint failed.";
+
+    const result = await harness.service.retryOwnerCheckoutFulfillment({
+      body: {},
+      checkoutSessionId: checkout.checkout.checkoutSessionId,
+      ownerUserId: "user_1"
+    });
+
+    expect(result.checkout.fulfillmentAutomationStatus).toBe("queued");
+    expect(result.checkout.fulfillmentAutomationErrorMessage).toBeNull();
+    expect(harness.enqueuedFulfillmentJobs).toHaveLength(2);
+    expect(harness.enqueuedFulfillmentJobs[1]).toEqual({
+      checkoutSessionId: checkout.checkout.checkoutSessionId,
+      source: "manual_retry"
+    });
+  });
+
+  it("records fulfillment callback completion from the webhook provider", async () => {
+    const harness = createCommerceHarness({
+      fulfillmentProviderMode: "webhook"
+    });
+    const checkout = await harness.service.createCheckoutSession({
+      body: {
+        buyerEmail: "collector@example.com"
+      },
+      brandSlug: "demo-studio",
+      collectionSlug: "genesis-portrait-set",
+      origin: "https://demo.example"
+    });
+
+    await harness.service.completeOwnerManualCheckout({
+      checkoutSessionId: checkout.checkout.checkoutSessionId,
+      ownerUserId: "user_1"
+    });
+
+    const result = await harness.service.recordFulfillmentAutomationCallback({
+      body: {
+        checkoutSessionId: checkout.checkout.checkoutSessionId,
+        externalReference: "ship_123",
+        fulfillmentNotes: "Delivered by external system",
+        status: "fulfilled"
+      }
+    });
+
+    expect(result.checkout.fulfillmentStatus).toBe("fulfilled");
+    expect(result.checkout.fulfillmentAutomationStatus).toBe("completed");
+    expect(result.checkout.fulfillmentAutomationExternalReference).toBe(
+      "ship_123"
+    );
   });
 });

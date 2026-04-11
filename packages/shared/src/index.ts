@@ -45,6 +45,7 @@ export {
   studioCommerceCollectionSummarySchema,
   studioCommerceDashboardResponseSchema,
   studioCommerceDashboardSummarySchema,
+  studioCommerceFulfillmentRetryRequestSchema,
   studioCommerceFulfillmentUpdateRequestSchema,
   commerceBuyerDisplayNameSchema,
   commerceBuyerEmailSchema,
@@ -54,6 +55,10 @@ export {
   commerceCheckoutProviderKindSchema,
   commerceCheckoutProviderModeSchema,
   commerceCheckoutSessionStatusSchema,
+  commerceFulfillmentAutomationStatusSchema,
+  commerceFulfillmentCallbackRequestSchema,
+  commerceFulfillmentCallbackStatusSchema,
+  commerceFulfillmentProviderKindSchema,
   commerceReservationStatusSchema,
   type CollectionCheckoutCreateRequest,
   type CollectionCheckoutReservationSummary,
@@ -66,11 +71,16 @@ export {
   type CommerceCheckoutFulfillmentStatus,
   type CommerceCheckoutProviderKind,
   type CommerceCheckoutProviderMode,
+  type CommerceFulfillmentAutomationStatus,
+  type CommerceFulfillmentCallbackRequest,
+  type CommerceFulfillmentCallbackStatus,
+  type CommerceFulfillmentProviderKind,
   type StudioCommerceCheckoutActionResponse,
   type StudioCommerceCheckoutSummary,
   type StudioCommerceCollectionSummary,
   type StudioCommerceDashboardResponse,
   type StudioCommerceDashboardSummary,
+  type StudioCommerceFulfillmentRetryRequest,
   type StudioCommerceFulfillmentUpdateRequest,
   type CommerceReservationStatus
 } from "./commerce.js";
@@ -310,6 +320,9 @@ export {
   type WorkerLogLevel
 } from "./env/worker-env.js";
 export {
+  commerceFulfillmentJobPayloadSchema,
+  commerceJobNames,
+  commerceQueueNames,
   generationJobNames,
   generationJobPayloadSchema,
   generationQueueNames,
@@ -317,6 +330,7 @@ export {
   foundationQueueNames,
   noopJobPayloadSchema,
   queueCatalog,
+  type CommerceFulfillmentJobPayload,
   type GenerationJobPayload,
   type NoopJobPayload
 } from "./queues.js";

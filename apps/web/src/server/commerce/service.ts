@@ -1,12 +1,16 @@
 import { randomBytes } from "node:crypto";
 
 import {
+  commerceFulfillmentCallbackRequestSchema,
   collectionCheckoutSessionResponseSchema,
   collectionCheckoutCreateRequestSchema,
   studioCommerceCheckoutActionResponseSchema,
   studioCommerceDashboardResponseSchema,
+  studioCommerceFulfillmentRetryRequestSchema,
   studioCommerceFulfillmentUpdateRequestSchema,
   type CollectionStorefrontStatus,
+  type CommerceFulfillmentAutomationStatus,
+  type CommerceFulfillmentProviderKind,
   type CommerceCheckoutFulfillmentStatus,
   type CommerceCheckoutProviderKind
 } from "@ai-nft-forge/shared";
@@ -43,8 +47,18 @@ type CheckoutSessionRecord = {
   checkoutUrl: string;
   completedAt: Date | null;
   expiresAt: Date;
+  fulfillmentAutomationAttemptCount: number;
+  fulfillmentAutomationErrorCode: string | null;
+  fulfillmentAutomationErrorMessage: string | null;
+  fulfillmentAutomationExternalReference: string | null;
+  fulfillmentAutomationLastAttemptedAt: Date | null;
+  fulfillmentAutomationLastSucceededAt: Date | null;
+  fulfillmentAutomationNextRetryAt: Date | null;
+  fulfillmentAutomationQueuedAt: Date | null;
+  fulfillmentAutomationStatus: CommerceFulfillmentAutomationStatus;
   fulfilledAt: Date | null;
   fulfillmentNotes: string | null;
+  fulfillmentProviderKind: CommerceFulfillmentProviderKind;
   fulfillmentStatus: CommerceCheckoutFulfillmentStatus;
   id: string;
   providerKind: CommerceCheckoutProviderKind;
@@ -114,6 +128,19 @@ type CommerceRepositorySet = {
       fulfilledAt?: Date | null;
       id: string;
     }): Promise<unknown>;
+    updateFulfillmentAutomationById(input: {
+      fulfillmentAutomationAttemptCount?: number;
+      fulfillmentAutomationErrorCode?: string | null;
+      fulfillmentAutomationErrorMessage?: string | null;
+      fulfillmentAutomationExternalReference?: string | null;
+      fulfillmentAutomationLastAttemptedAt?: Date | null;
+      fulfillmentAutomationLastSucceededAt?: Date | null;
+      fulfillmentAutomationNextRetryAt?: Date | null;
+      fulfillmentAutomationQueuedAt?: Date | null;
+      fulfillmentAutomationStatus?: CommerceFulfillmentAutomationStatus;
+      fulfillmentProviderKind?: CommerceFulfillmentProviderKind;
+      id: string;
+    }): Promise<unknown>;
     updateStatusById(input: {
       canceledAt?: Date | null;
       completedAt?: Date | null;
@@ -176,6 +203,13 @@ type CommerceRepositorySet = {
 };
 
 type CommerceServiceDependencies = {
+  fulfillmentAutomation: {
+    enqueue(input: {
+      checkoutSessionId: string;
+      source: "automatic" | "manual_retry";
+    }): Promise<void>;
+    providerMode: "manual" | "webhook";
+  };
   now: () => Date;
   payment: CommercePaymentBoundary;
   repositories: CommerceRepositorySet;
@@ -187,6 +221,18 @@ type CommerceServiceDependencies = {
 
 function createPublicId(prefix: "chk" | "rsv") {
   return `${prefix}_${randomBytes(10).toString("hex")}`;
+}
+
+function normalizeFulfillmentNotes(value: string | null | undefined) {
+  return value?.trim() || null;
+}
+
+function normalizeAutomationErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message.trim() || "Unknown fulfillment automation failure.";
+  }
+
+  return "Unknown fulfillment automation failure.";
 }
 
 function buildCollectionLookup(input: {
@@ -263,8 +309,26 @@ function serializeStudioCheckoutSession(input: { session: CheckoutSessionRecord 
     createdAt: input.session.createdAt.toISOString(),
     editionNumber: input.session.reservation.publishedCollectionItem.position,
     expiresAt: input.session.expiresAt.toISOString(),
+    fulfillmentAutomationAttemptCount:
+      input.session.fulfillmentAutomationAttemptCount,
+    fulfillmentAutomationErrorCode:
+      input.session.fulfillmentAutomationErrorCode,
+    fulfillmentAutomationErrorMessage:
+      input.session.fulfillmentAutomationErrorMessage,
+    fulfillmentAutomationExternalReference:
+      input.session.fulfillmentAutomationExternalReference,
+    fulfillmentAutomationLastAttemptedAt:
+      input.session.fulfillmentAutomationLastAttemptedAt?.toISOString() ?? null,
+    fulfillmentAutomationLastSucceededAt:
+      input.session.fulfillmentAutomationLastSucceededAt?.toISOString() ?? null,
+    fulfillmentAutomationNextRetryAt:
+      input.session.fulfillmentAutomationNextRetryAt?.toISOString() ?? null,
+    fulfillmentAutomationQueuedAt:
+      input.session.fulfillmentAutomationQueuedAt?.toISOString() ?? null,
+    fulfillmentAutomationStatus: input.session.fulfillmentAutomationStatus,
     fulfilledAt: input.session.fulfilledAt?.toISOString() ?? null,
     fulfillmentNotes: input.session.fulfillmentNotes,
+    fulfillmentProviderKind: input.session.fulfillmentProviderKind,
     fulfillmentStatus: input.session.fulfillmentStatus,
     priceLabel: input.session.publishedCollection.priceLabel,
     providerKind: input.session.providerKind,
@@ -352,6 +416,102 @@ async function refreshCheckoutSession(
 
   return dependencies.repositories.commerceCheckoutSessionRepository.findByPublicId(
     publicId
+  );
+}
+
+async function scheduleFulfillmentAutomationIfNeeded(
+  dependencies: CommerceServiceDependencies,
+  input: {
+    checkoutSessionId: string;
+    source: "automatic" | "manual_retry";
+  }
+) {
+  if (dependencies.fulfillmentAutomation.providerMode !== "webhook") {
+    return dependencies.repositories.commerceCheckoutSessionRepository.findByPublicId(
+      input.checkoutSessionId
+    );
+  }
+
+  const queuedSession = await dependencies.runTransaction(async (repositories) => {
+    const session =
+      await repositories.commerceCheckoutSessionRepository.findByPublicId(
+        input.checkoutSessionId
+      );
+
+    if (!session) {
+      return null;
+    }
+
+    if (session.status !== "completed" || session.fulfillmentStatus === "fulfilled") {
+      return session;
+    }
+
+    if (input.source === "manual_retry") {
+      if (!["failed", "idle"].includes(session.fulfillmentAutomationStatus)) {
+        throw new CommerceServiceError(
+          "FULFILLMENT_NOT_ALLOWED",
+          "This checkout is not eligible for fulfillment retry.",
+          409
+        );
+      }
+    } else if (
+      ["queued", "processing", "submitted", "completed"].includes(
+        session.fulfillmentAutomationStatus
+      )
+    ) {
+      return session;
+    }
+
+    await repositories.commerceCheckoutSessionRepository.updateFulfillmentAutomationById(
+      {
+        fulfillmentAutomationErrorCode: null,
+        fulfillmentAutomationErrorMessage: null,
+        fulfillmentAutomationNextRetryAt: null,
+        fulfillmentAutomationQueuedAt: dependencies.now(),
+        fulfillmentAutomationStatus: "queued",
+        fulfillmentProviderKind: "webhook",
+        id: session.id
+      }
+    );
+
+    return repositories.commerceCheckoutSessionRepository.findByPublicId(
+      input.checkoutSessionId
+    );
+  });
+
+  if (!queuedSession) {
+    return null;
+  }
+
+  if (
+    queuedSession.status !== "completed" ||
+    queuedSession.fulfillmentStatus === "fulfilled" ||
+    queuedSession.fulfillmentAutomationStatus !== "queued"
+  ) {
+    return queuedSession;
+  }
+
+  try {
+    await dependencies.fulfillmentAutomation.enqueue({
+      checkoutSessionId: input.checkoutSessionId,
+      source: input.source
+    });
+  } catch (error) {
+    const failureMessage = normalizeAutomationErrorMessage(error);
+
+    await dependencies.repositories.commerceCheckoutSessionRepository.updateFulfillmentAutomationById(
+      {
+        fulfillmentAutomationErrorCode: "ENQUEUE_FAILED",
+        fulfillmentAutomationErrorMessage: failureMessage,
+        fulfillmentAutomationNextRetryAt: null,
+        fulfillmentAutomationStatus: "failed",
+        id: queuedSession.id
+      }
+    );
+  }
+
+  return dependencies.repositories.commerceCheckoutSessionRepository.findByPublicId(
+    input.checkoutSessionId
   );
 }
 
@@ -806,7 +966,7 @@ export function createCollectionCommerceService(
     }) {
       const now = dependencies.now();
 
-      return dependencies.runTransaction(async (repositories) => {
+      const result = await dependencies.runTransaction(async (repositories) => {
         const session =
           await repositories.commerceCheckoutSessionRepository.findByPublicId(
             input.checkoutSessionId
@@ -859,6 +1019,17 @@ export function createCollectionCommerceService(
           repositories
         });
       });
+
+      await scheduleFulfillmentAutomationIfNeeded(dependencies, {
+        checkoutSessionId: input.checkoutSessionId,
+        source: "automatic"
+      });
+
+      const refreshed = await dependencies.repositories.commerceCheckoutSessionRepository.findByPublicId(
+        input.checkoutSessionId
+      );
+
+      return refreshed ? serializeCheckoutSession({ session: refreshed }) : result;
     },
 
     async cancelCheckoutSession(input: {
@@ -925,7 +1096,7 @@ export function createCollectionCommerceService(
     }) {
       const now = dependencies.now();
 
-      return dependencies.runTransaction(async (repositories) => {
+      const result = await dependencies.runTransaction(async (repositories) => {
         const session =
           await repositories.commerceCheckoutSessionRepository.findByPublicId(
             input.checkoutSessionId
@@ -943,6 +1114,21 @@ export function createCollectionCommerceService(
           repositories
         });
       });
+
+      if (result === null) {
+        return null;
+      }
+
+      await scheduleFulfillmentAutomationIfNeeded(dependencies, {
+        checkoutSessionId: input.checkoutSessionId,
+        source: "automatic"
+      });
+
+      const refreshed = await dependencies.repositories.commerceCheckoutSessionRepository.findByPublicId(
+        input.checkoutSessionId
+      );
+
+      return refreshed ? serializeCheckoutSession({ session: refreshed }) : result;
     },
 
     async expireProviderCheckoutSession(input: {
@@ -1094,6 +1280,19 @@ export function createCollectionCommerceService(
             return left.title.localeCompare(right.title);
           }),
           summary: {
+            automationFailedCheckoutCount: checkouts.filter(
+              (checkout) => checkout.fulfillmentAutomationStatus === "failed"
+            ).length,
+            automationQueuedCheckoutCount: checkouts.filter(
+              (checkout) =>
+                checkout.fulfillmentAutomationStatus === "queued" ||
+                checkout.fulfillmentAutomationStatus === "processing"
+            ).length,
+            automationSubmittedCheckoutCount: checkouts.filter(
+              (checkout) =>
+                checkout.fulfillmentAutomationStatus === "submitted" ||
+                checkout.fulfillmentAutomationStatus === "completed"
+            ).length,
             canceledCheckoutCount: checkouts.filter(
               (checkout) => checkout.status === "canceled"
             ).length,
@@ -1134,7 +1333,7 @@ export function createCollectionCommerceService(
     }) {
       const now = dependencies.now();
 
-      return dependencies.runTransaction(async (repositories) => {
+      await dependencies.runTransaction(async (repositories) => {
         const session =
           await repositories.commerceCheckoutSessionRepository.findByPublicId(
             input.checkoutSessionId
@@ -1152,7 +1351,7 @@ export function createCollectionCommerceService(
         assertProviderKind(session, "manual");
 
         if (session.status === "completed") {
-          return serializeStudioCheckoutAction({ session });
+          return;
         }
 
         if (session.status !== "open") {
@@ -1186,22 +1385,26 @@ export function createCollectionCommerceService(
           now,
           repositories
         });
-
-        const refreshed =
-          await repositories.commerceCheckoutSessionRepository.findByPublicId(
-            input.checkoutSessionId
-          );
-
-        if (!refreshed) {
-          throw new CommerceServiceError(
-            "CHECKOUT_SESSION_NOT_FOUND",
-            "Checkout session was not found.",
-            500
-          );
-        }
-
-        return serializeStudioCheckoutAction({ session: refreshed });
       });
+
+      await scheduleFulfillmentAutomationIfNeeded(dependencies, {
+        checkoutSessionId: input.checkoutSessionId,
+        source: "automatic"
+      });
+
+      const refreshed = await dependencies.repositories.commerceCheckoutSessionRepository.findByPublicId(
+        input.checkoutSessionId
+      );
+
+      if (!refreshed) {
+        throw new CommerceServiceError(
+          "CHECKOUT_SESSION_NOT_FOUND",
+          "Checkout session was not found.",
+          500
+        );
+      }
+
+      return serializeStudioCheckoutAction({ session: refreshed });
     },
 
     async cancelOwnerCheckoutSession(input: {
@@ -1362,8 +1565,9 @@ export function createCollectionCommerceService(
 
         await repositories.commerceCheckoutSessionRepository.updateFulfillmentById(
           {
-            fulfillmentNotes:
-              parsedInput.data.fulfillmentNotes?.trim() || null,
+            fulfillmentNotes: normalizeFulfillmentNotes(
+              parsedInput.data.fulfillmentNotes
+            ),
             fulfillmentStatus: parsedInput.data.fulfillmentStatus,
             fulfilledAt:
               parsedInput.data.fulfillmentStatus === "fulfilled" ? now : null,
@@ -1371,9 +1575,212 @@ export function createCollectionCommerceService(
           }
         );
 
+        if (
+          session.fulfillmentProviderKind === "webhook" &&
+          parsedInput.data.fulfillmentStatus === "fulfilled"
+        ) {
+          await repositories.commerceCheckoutSessionRepository.updateFulfillmentAutomationById(
+            {
+              fulfillmentAutomationErrorCode: null,
+              fulfillmentAutomationErrorMessage: null,
+              fulfillmentAutomationNextRetryAt: null,
+              fulfillmentAutomationStatus: "completed",
+              id: session.id
+            }
+          );
+        }
+
         const refreshed =
           await repositories.commerceCheckoutSessionRepository.findByPublicId(
             input.checkoutSessionId
+          );
+
+        if (!refreshed) {
+          throw new CommerceServiceError(
+            "CHECKOUT_SESSION_NOT_FOUND",
+            "Checkout session was not found.",
+            500
+          );
+        }
+
+        return serializeStudioCheckoutAction({ session: refreshed });
+      });
+    },
+
+    async retryOwnerCheckoutFulfillment(input: {
+      body: unknown;
+      checkoutSessionId: string;
+      ownerUserId: string;
+    }) {
+      const parsedInput =
+        studioCommerceFulfillmentRetryRequestSchema.safeParse(input.body);
+
+      if (!parsedInput.success) {
+        throw new CommerceServiceError(
+          "INVALID_REQUEST",
+          "Fulfillment retry payload is invalid.",
+          400
+        );
+      }
+
+      if (dependencies.fulfillmentAutomation.providerMode !== "webhook") {
+        throw new CommerceServiceError(
+          "FULFILLMENT_NOT_ALLOWED",
+          "Webhook fulfillment automation is not enabled.",
+          409
+        );
+      }
+
+      const session =
+        await dependencies.repositories.commerceCheckoutSessionRepository.findByPublicId(
+          input.checkoutSessionId
+        );
+
+      if (!session) {
+        throw new CommerceServiceError(
+          "CHECKOUT_SESSION_NOT_FOUND",
+          "Checkout session was not found.",
+          404
+        );
+      }
+
+      assertSessionOwner(session, input.ownerUserId);
+
+      const refreshed = await scheduleFulfillmentAutomationIfNeeded(
+        dependencies,
+        {
+          checkoutSessionId: input.checkoutSessionId,
+          source: "manual_retry"
+        }
+      );
+
+      if (!refreshed) {
+        throw new CommerceServiceError(
+          "CHECKOUT_SESSION_NOT_FOUND",
+          "Checkout session was not found.",
+          404
+        );
+      }
+
+      return serializeStudioCheckoutAction({ session: refreshed });
+    },
+
+    async recordFulfillmentAutomationCallback(input: { body: unknown }) {
+      const parsedInput =
+        commerceFulfillmentCallbackRequestSchema.safeParse(input.body);
+
+      if (!parsedInput.success) {
+        throw new CommerceServiceError(
+          "INVALID_REQUEST",
+          "Fulfillment callback payload is invalid.",
+          400
+        );
+      }
+
+      const now = dependencies.now();
+
+      return dependencies.runTransaction(async (repositories) => {
+        const session =
+          await repositories.commerceCheckoutSessionRepository.findByPublicId(
+            parsedInput.data.checkoutSessionId
+          );
+
+        if (!session) {
+          throw new CommerceServiceError(
+            "CHECKOUT_SESSION_NOT_FOUND",
+            "Checkout session was not found.",
+            404
+          );
+        }
+
+        if (session.fulfillmentProviderKind !== "webhook") {
+          throw new CommerceServiceError(
+            "FULFILLMENT_NOT_ALLOWED",
+            "This checkout is not configured for webhook fulfillment callbacks.",
+            409
+          );
+        }
+
+        if (session.status !== "completed") {
+          throw new CommerceServiceError(
+            "FULFILLMENT_NOT_ALLOWED",
+            "Only completed checkout sessions can accept fulfillment callbacks.",
+            409
+          );
+        }
+
+        if (parsedInput.data.status === "fulfilled") {
+          await repositories.commerceCheckoutSessionRepository.updateFulfillmentById(
+            {
+              fulfillmentNotes:
+                normalizeFulfillmentNotes(parsedInput.data.fulfillmentNotes) ??
+                session.fulfillmentNotes,
+              fulfillmentStatus: "fulfilled",
+              fulfilledAt: now,
+              id: session.id
+            }
+          );
+          await repositories.commerceCheckoutSessionRepository.updateFulfillmentAutomationById(
+            {
+              fulfillmentAutomationErrorCode: null,
+              fulfillmentAutomationErrorMessage: null,
+              fulfillmentAutomationExternalReference:
+                parsedInput.data.externalReference ??
+                session.fulfillmentAutomationExternalReference,
+              fulfillmentAutomationLastSucceededAt: now,
+              fulfillmentAutomationNextRetryAt: null,
+              fulfillmentAutomationStatus: "completed",
+              id: session.id
+            }
+          );
+        } else {
+          if (session.fulfillmentStatus === "fulfilled") {
+            const current =
+              await repositories.commerceCheckoutSessionRepository.findByPublicId(
+                parsedInput.data.checkoutSessionId
+              );
+
+            if (!current) {
+              throw new CommerceServiceError(
+                "CHECKOUT_SESSION_NOT_FOUND",
+                "Checkout session was not found.",
+                500
+              );
+            }
+
+            return serializeStudioCheckoutAction({ session: current });
+          }
+
+          await repositories.commerceCheckoutSessionRepository.updateFulfillmentAutomationById(
+            {
+              fulfillmentAutomationErrorCode:
+                parsedInput.data.failureCode ?? "CALLBACK_FAILED",
+              fulfillmentAutomationErrorMessage:
+                parsedInput.data.failureMessage ??
+                "The external fulfillment system reported a failure.",
+              fulfillmentAutomationExternalReference:
+                parsedInput.data.externalReference ??
+                session.fulfillmentAutomationExternalReference,
+              fulfillmentAutomationNextRetryAt: null,
+              fulfillmentAutomationStatus: "failed",
+              id: session.id
+            }
+          );
+          await repositories.commerceCheckoutSessionRepository.updateFulfillmentById(
+            {
+              fulfillmentNotes:
+                normalizeFulfillmentNotes(parsedInput.data.fulfillmentNotes) ??
+                session.fulfillmentNotes,
+              fulfillmentStatus: "unfulfilled",
+              fulfilledAt: null,
+              id: session.id
+            }
+          );
+        }
+
+        const refreshed =
+          await repositories.commerceCheckoutSessionRepository.findByPublicId(
+            parsedInput.data.checkoutSessionId
           );
 
         if (!refreshed) {

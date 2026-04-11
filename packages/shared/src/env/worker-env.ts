@@ -30,6 +30,12 @@ const optionalUrlSchema = z.preprocess((value) => {
 
 export const workerEnvSchema = z
   .object({
+    COMMERCE_FULFILLMENT_QUEUE_CONCURRENCY: z.coerce
+      .number()
+      .int()
+      .positive()
+      .max(32)
+      .default(1),
     GENERATION_ADAPTER_KIND: z
       .enum(generationAdapterKinds)
       .default("storage_copy"),

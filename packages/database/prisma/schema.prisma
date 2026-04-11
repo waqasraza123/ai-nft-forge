@@ -132,6 +132,20 @@ enum CommerceCheckoutFulfillmentStatus {
   fulfilled
 }
 
+enum CommerceFulfillmentProviderKind {
+  manual
+  webhook
+}
+
+enum CommerceFulfillmentAutomationStatus {
+  idle
+  queued
+  processing
+  submitted
+  completed
+  failed
+}
+
 enum CommerceCheckoutProviderKind {
   manual
   stripe
@@ -481,7 +495,17 @@ model CommerceCheckoutSession {
   providerKind          CommerceCheckoutProviderKind @map("provider_kind")
   providerSessionId     String?                      @map("provider_session_id")
   status                CommerceCheckoutSessionStatus @default(open) @map("status")
+  fulfillmentProviderKind CommerceFulfillmentProviderKind @default(manual) @map("fulfillment_provider_kind")
   fulfillmentStatus     CommerceCheckoutFulfillmentStatus @default(unfulfilled) @map("fulfillment_status")
+  fulfillmentAutomationStatus CommerceFulfillmentAutomationStatus @default(idle) @map("fulfillment_automation_status")
+  fulfillmentAutomationAttemptCount Int              @default(0) @map("fulfillment_automation_attempt_count")
+  fulfillmentAutomationQueuedAt DateTime?            @map("fulfillment_automation_queued_at")
+  fulfillmentAutomationLastAttemptedAt DateTime?     @map("fulfillment_automation_last_attempted_at")
+  fulfillmentAutomationLastSucceededAt DateTime?     @map("fulfillment_automation_last_succeeded_at")
+  fulfillmentAutomationNextRetryAt DateTime?         @map("fulfillment_automation_next_retry_at")
+  fulfillmentAutomationExternalReference String?     @map("fulfillment_automation_external_reference")
+  fulfillmentAutomationErrorCode String?             @map("fulfillment_automation_error_code")
+  fulfillmentAutomationErrorMessage String?          @map("fulfillment_automation_error_message")
   fulfillmentNotes      String?                      @map("fulfillment_notes")
   checkoutUrl           String                       @map("checkout_url")
   expiresAt             DateTime                     @map("expires_at")
@@ -495,6 +519,7 @@ model CommerceCheckoutSession {
   reservation           PublishedCollectionReservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
 
   @@index([ownerUserId, createdAt], map: "commerce_checkout_owner_created_idx")
+  @@index([ownerUserId, fulfillmentAutomationStatus, updatedAt], map: "commerce_checkout_owner_fulfill_auto_status_updated_idx")
   @@index([publishedCollectionId, status, expiresAt], map: "commerce_checkout_collection_status_exp_idx")
   @@map("commerce_checkout_sessions")
 }

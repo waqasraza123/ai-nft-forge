@@ -6,6 +6,7 @@ describe("parseWorkerEnv", () => {
   it("applies stable defaults for the worker shell", () => {
     const env = parseWorkerEnv({});
 
+    expect(env.COMMERCE_FULFILLMENT_QUEUE_CONCURRENCY).toBe(1);
     expect(env.GENERATION_ADAPTER_KIND).toBe("storage_copy");
     expect(env.WORKER_SERVICE_NAME).toBe("ai-nft-forge-worker");
     expect(env.LOG_LEVEL).toBe("info");
@@ -27,6 +28,7 @@ describe("parseWorkerEnv", () => {
 
   it("parses explicit values", () => {
     const env = parseWorkerEnv({
+      COMMERCE_FULFILLMENT_QUEUE_CONCURRENCY: "2",
       GENERATION_ADAPTER_KIND: "http_backend",
       GENERATION_BACKEND_TIMEOUT_MS: "45000",
       GENERATION_BACKEND_URL: "http://127.0.0.1:8787/generate",
@@ -50,6 +52,7 @@ describe("parseWorkerEnv", () => {
       WORKER_SERVICE_NAME: "forge-worker"
     });
 
+    expect(env.COMMERCE_FULFILLMENT_QUEUE_CONCURRENCY).toBe(2);
     expect(env.GENERATION_ADAPTER_KIND).toBe("http_backend");
     expect(env.GENERATION_BACKEND_TIMEOUT_MS).toBe(45000);
     expect(env.GENERATION_BACKEND_URL).toBe("http://127.0.0.1:8787/generate");

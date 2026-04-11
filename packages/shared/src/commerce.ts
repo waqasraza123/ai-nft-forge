@@ -25,6 +25,20 @@ export const commerceCheckoutProviderKindSchema = z.enum([
   "stripe"
 ]);
 
+export const commerceFulfillmentProviderKindSchema = z.enum([
+  "manual",
+  "webhook"
+]);
+
+export const commerceFulfillmentAutomationStatusSchema = z.enum([
+  "idle",
+  "queued",
+  "processing",
+  "submitted",
+  "completed",
+  "failed"
+]);
+
 export const commerceCheckoutAvailabilityReasonSchema = z.enum([
   "provider_disabled",
   "collection_not_live",
@@ -58,6 +72,11 @@ export const commerceCheckoutSessionStatusSchema = z.enum([
 export const commerceCheckoutFulfillmentStatusSchema = z.enum([
   "unfulfilled",
   "fulfilled"
+]);
+
+export const commerceFulfillmentCallbackStatusSchema = z.enum([
+  "fulfilled",
+  "failed"
 ]);
 
 export const collectionCommerceAvailabilitySchema = z.object({
@@ -122,8 +141,18 @@ export const studioCommerceCheckoutSummarySchema = z.object({
   createdAt: z.string().datetime(),
   editionNumber: z.number().int().positive(),
   expiresAt: z.string().datetime(),
+  fulfillmentAutomationAttemptCount: z.number().int().min(0),
+  fulfillmentAutomationErrorCode: z.string().trim().min(1).nullable(),
+  fulfillmentAutomationErrorMessage: z.string().trim().min(1).nullable(),
+  fulfillmentAutomationExternalReference: z.string().trim().min(1).nullable(),
+  fulfillmentAutomationLastAttemptedAt: z.string().datetime().nullable(),
+  fulfillmentAutomationLastSucceededAt: z.string().datetime().nullable(),
+  fulfillmentAutomationNextRetryAt: z.string().datetime().nullable(),
+  fulfillmentAutomationQueuedAt: z.string().datetime().nullable(),
+  fulfillmentAutomationStatus: commerceFulfillmentAutomationStatusSchema,
   fulfilledAt: z.string().datetime().nullable(),
   fulfillmentNotes: commerceFulfillmentNotesSchema.nullable(),
+  fulfillmentProviderKind: commerceFulfillmentProviderKindSchema,
   fulfillmentStatus: commerceCheckoutFulfillmentStatusSchema,
   priceLabel: commercePriceLabelSchema.nullable(),
   providerKind: commerceCheckoutProviderKindSchema,
@@ -149,6 +178,9 @@ export const studioCommerceCollectionSummarySchema = z.object({
 });
 
 export const studioCommerceDashboardSummarySchema = z.object({
+  automationFailedCheckoutCount: z.number().int().min(0),
+  automationQueuedCheckoutCount: z.number().int().min(0),
+  automationSubmittedCheckoutCount: z.number().int().min(0),
   canceledCheckoutCount: z.number().int().min(0),
   completedCheckoutCount: z.number().int().min(0),
   expiredCheckoutCount: z.number().int().min(0),
@@ -177,6 +209,19 @@ export const studioCommerceFulfillmentUpdateRequestSchema = z.object({
   fulfillmentStatus: commerceCheckoutFulfillmentStatusSchema
 });
 
+export const studioCommerceFulfillmentRetryRequestSchema = z.object({
+  reason: z.string().trim().max(240).nullish()
+});
+
+export const commerceFulfillmentCallbackRequestSchema = z.object({
+  checkoutSessionId: z.string().min(1),
+  externalReference: z.string().trim().min(1).max(240).nullish(),
+  failureCode: z.string().trim().min(1).max(120).nullish(),
+  failureMessage: z.string().trim().min(1).max(1000).nullish(),
+  fulfillmentNotes: commerceFulfillmentNotesSchema.nullish(),
+  status: commerceFulfillmentCallbackStatusSchema
+});
+
 export const collectionCommerceErrorResponseSchema = z.object({
   error: z.object({
     code: z.enum([
@@ -187,6 +232,7 @@ export const collectionCommerceErrorResponseSchema = z.object({
       "CHECKOUT_SESSION_NOT_OPEN",
       "COLLECTION_NOT_FOUND",
       "COLLECTION_NOT_LIVE",
+      "FULFILLMENT_CALLBACK_UNAUTHORIZED",
       "FULFILLMENT_NOT_ALLOWED",
       "INVALID_REQUEST",
       "RESERVATION_NOT_AVAILABLE",
@@ -228,6 +274,12 @@ export type CommerceCheckoutProviderMode = z.infer<
 export type CommerceCheckoutProviderKind = z.infer<
   typeof commerceCheckoutProviderKindSchema
 >;
+export type CommerceFulfillmentProviderKind = z.infer<
+  typeof commerceFulfillmentProviderKindSchema
+>;
+export type CommerceFulfillmentAutomationStatus = z.infer<
+  typeof commerceFulfillmentAutomationStatusSchema
+>;
 export type CommerceCheckoutAvailabilityReason = z.infer<
   typeof commerceCheckoutAvailabilityReasonSchema
 >;
@@ -248,6 +300,15 @@ export type StudioCommerceCheckoutActionResponse = z.infer<
 >;
 export type StudioCommerceFulfillmentUpdateRequest = z.infer<
   typeof studioCommerceFulfillmentUpdateRequestSchema
+>;
+export type StudioCommerceFulfillmentRetryRequest = z.infer<
+  typeof studioCommerceFulfillmentRetryRequestSchema
+>;
+export type CommerceFulfillmentCallbackRequest = z.infer<
+  typeof commerceFulfillmentCallbackRequestSchema
+>;
+export type CommerceFulfillmentCallbackStatus = z.infer<
+  typeof commerceFulfillmentCallbackStatusSchema
 >;
 export type CommerceReservationStatus = z.infer<
   typeof commerceReservationStatusSchema

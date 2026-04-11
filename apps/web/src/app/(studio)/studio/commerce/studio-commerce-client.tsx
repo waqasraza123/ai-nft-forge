@@ -13,6 +13,7 @@ import {
   studioCommerceCheckoutActionResponseSchema,
   studioCommerceDashboardResponseSchema,
   type CommerceCheckoutFulfillmentStatus,
+  type CommerceFulfillmentAutomationStatus,
   type StudioCommerceCheckoutSummary,
   type StudioCommerceDashboardResponse
 } from "@ai-nft-forge/shared";
@@ -113,6 +114,26 @@ function formatFulfillmentStatus(
   status: StudioCommerceCheckoutSummary["fulfillmentStatus"]
 ) {
   return status === "fulfilled" ? "Fulfilled" : "Unfulfilled";
+}
+
+function formatAutomationStatus(
+  status: CommerceFulfillmentAutomationStatus
+) {
+  switch (status) {
+    case "queued":
+      return "Queued";
+    case "processing":
+      return "Dispatching";
+    case "submitted":
+      return "Submitted";
+    case "completed":
+      return "Completed";
+    case "failed":
+      return "Failed";
+    case "idle":
+    default:
+      return "Idle";
+  }
 }
 
 function formatProviderKind(providerKind: StudioCommerceCheckoutSummary["providerKind"]) {
@@ -315,6 +336,10 @@ export function StudioCommerceClient({
               value={dashboard.summary.unfulfilledCheckoutCount.toString()}
             />
             <MetricTile
+              label="Automation queued"
+              value={dashboard.summary.automationQueuedCheckoutCount.toString()}
+            />
+            <MetricTile
               label="Stripe"
               value={dashboard.summary.stripeCheckoutCount.toString()}
             />
@@ -324,6 +349,7 @@ export function StudioCommerceClient({
             <Pill>{dashboard.summary.manualCheckoutCount} manual</Pill>
             <Pill>{dashboard.summary.stripeCheckoutCount} stripe</Pill>
             <Pill>{dashboard.summary.fulfilledCheckoutCount} fulfilled</Pill>
+            <Pill>{dashboard.summary.automationFailedCheckoutCount} automation failed</Pill>
             <Pill>{dashboard.summary.expiredCheckoutCount} expired</Pill>
             <Pill>{dashboard.summary.canceledCheckoutCount} canceled</Pill>
           </div>
@@ -408,6 +434,12 @@ export function StudioCommerceClient({
                 const canCancel =
                   checkout.status === "open" || checkout.status === "expired";
                 const canEditFulfillment = checkout.status === "completed";
+                const canRetryAutomation =
+                  checkout.fulfillmentProviderKind === "webhook" &&
+                  checkout.status === "completed" &&
+                  checkout.fulfillmentStatus === "unfulfilled" &&
+                  (checkout.fulfillmentAutomationStatus === "failed" ||
+                    checkout.fulfillmentAutomationStatus === "idle");
 
                 return (
                   <article className="status-banner" key={checkout.checkoutSessionId}>
@@ -422,6 +454,7 @@ export function StudioCommerceClient({
                       <Pill>{formatCheckoutStatus(checkout.status)}</Pill>
                       <Pill>{formatProviderKind(checkout.providerKind)}</Pill>
                       <Pill>{formatFulfillmentStatus(checkout.fulfillmentStatus)}</Pill>
+                      <Pill>{formatAutomationStatus(checkout.fulfillmentAutomationStatus)}</Pill>
                       <Pill>{checkout.storefrontStatus}</Pill>
                       {checkout.priceLabel ? <Pill>{checkout.priceLabel}</Pill> : null}
                     </div>
@@ -441,6 +474,18 @@ export function StudioCommerceClient({
                       <MetricTile
                         label="Fulfilled"
                         value={formatTimestamp(checkout.fulfilledAt)}
+                      />
+                      <MetricTile
+                        label="Last automation"
+                        value={formatTimestamp(
+                          checkout.fulfillmentAutomationLastAttemptedAt
+                        )}
+                      />
+                      <MetricTile
+                        label="Webhook accepted"
+                        value={formatTimestamp(
+                          checkout.fulfillmentAutomationLastSucceededAt
+                        )}
                       />
                     </div>
                     <div className="pill-row">
@@ -471,6 +516,26 @@ export function StudioCommerceClient({
                     {checkout.providerSessionId ? (
                       <div className="pill-row">
                         <Pill>{checkout.providerSessionId}</Pill>
+                      </div>
+                    ) : null}
+                    {checkout.fulfillmentProviderKind === "webhook" ? (
+                      <div className="pill-row">
+                        <Pill>fulfillment webhook</Pill>
+                        <Pill>
+                          {checkout.fulfillmentAutomationAttemptCount.toString()} attempts
+                        </Pill>
+                        {checkout.fulfillmentAutomationExternalReference ? (
+                          <Pill>{checkout.fulfillmentAutomationExternalReference}</Pill>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    {checkout.fulfillmentAutomationErrorMessage ? (
+                      <div className="status-banner status-banner--error">
+                        <strong>
+                          {checkout.fulfillmentAutomationErrorCode ??
+                            "Automation failure"}
+                        </strong>
+                        <span>{checkout.fulfillmentAutomationErrorMessage}</span>
                       </div>
                     ) : null}
                     {canCompleteManually || canCancel ? (
@@ -511,6 +576,29 @@ export function StudioCommerceClient({
                             {actionBusy ? "Working…" : "Release session"}
                           </button>
                         ) : null}
+                      </div>
+                    ) : null}
+                    {canRetryAutomation ? (
+                      <div className="pill-row">
+                        <button
+                          className="button-action"
+                          disabled={actionBusy}
+                          onClick={() => {
+                            void runCheckoutAction({
+                              checkoutSessionId: checkout.checkoutSessionId,
+                              message: "Requeueing fulfillment automation…",
+                              path: `/api/studio/commerce/checkouts/${checkout.checkoutSessionId}/fulfillment/retry`,
+                              payload: {
+                                reason: null
+                              },
+                              successMessage:
+                                "Fulfillment automation requeued."
+                            });
+                          }}
+                          type="button"
+                        >
+                          {actionBusy ? "Working…" : "Retry automation"}
+                        </button>
                       </div>
                     ) : null}
                     {canEditFulfillment ? (

@@ -15,6 +15,7 @@ import {
   createStripePaymentBoundary,
   resolveCommerceReservationTtlSeconds
 } from "./provider";
+import { enqueueCommerceFulfillmentJob } from "./queue";
 import { createCollectionCommerceService } from "./service";
 
 function createCommerceRepositories(database: DatabaseExecutor) {
@@ -51,6 +52,18 @@ export function createRuntimeCollectionCommerceService(
               : "manual"
         });
   const service = createCollectionCommerceService({
+    fulfillmentAutomation: {
+      enqueue: (input) =>
+        enqueueCommerceFulfillmentJob(
+          {
+            checkoutSessionId: input.checkoutSessionId,
+            requestedAt: new Date().toISOString(),
+            source: input.source
+          },
+          rawEnvironment
+        ).then(() => undefined),
+      providerMode: commerceEnv.COMMERCE_FULFILLMENT_PROVIDER_MODE
+    },
     now: () => new Date(),
     payment,
     repositories: createCommerceRepositories(databaseClient),
