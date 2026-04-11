@@ -331,6 +331,7 @@ model AuditLog {
 
   @@index([actorType, actorId], map: "audit_logs_actor_type_actor_id_idx")
   @@index([entityType, entityId], map: "audit_logs_entity_type_entity_id_idx")
+  @@index([entityType, entityId, createdAt], map: "audit_logs_entity_type_entity_id_created_at_idx")
   @@index([action], map: "audit_logs_action_idx")
   @@map("audit_logs")
 }

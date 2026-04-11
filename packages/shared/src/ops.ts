@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { studioWorkspaceAuditActionSchema } from "./studio-settings.js";
+
 export const opsAlertSeveritySchema = z.enum(["critical", "warning"]);
 export const opsAlertStateStatusSchema = z.enum(["active", "resolved"]);
 export const opsAlertRoutingWebhookModeSchema = z.enum([
@@ -7,10 +9,7 @@ export const opsAlertRoutingWebhookModeSchema = z.enum([
   "critical_only",
   "disabled"
 ]);
-export const opsReconciliationRunStatusSchema = z.enum([
-  "succeeded",
-  "failed"
-]);
+export const opsReconciliationRunStatusSchema = z.enum(["succeeded", "failed"]);
 export const opsReconciliationIssueStatusSchema = z.enum([
   "open",
   "repaired",
@@ -138,7 +137,8 @@ export const opsAlertRoutingPolicySummarySchema = z.object({
 export const opsAlertEscalationPolicySummarySchema = z.object({
   firstReminderDelayMinutes: opsAlertEscalationDelayMinutesSchema.nullable(),
   id: z.string().min(1).nullable(),
-  repeatReminderIntervalMinutes: opsAlertEscalationDelayMinutesSchema.nullable(),
+  repeatReminderIntervalMinutes:
+    opsAlertEscalationDelayMinutesSchema.nullable(),
   source: z.enum(["default", "owner_override"]),
   updatedAt: z.string().datetime().nullable()
 });
@@ -230,6 +230,43 @@ export const opsErrorResponseSchema = z.object({
   })
 });
 
+export const opsWorkspaceAuditCategorySchema = z.enum([
+  "all",
+  "workspace_access",
+  "ownership_transfer"
+]);
+
+export const opsWorkspaceAuditQuerySchema = z.object({
+  action: studioWorkspaceAuditActionSchema.optional(),
+  category: opsWorkspaceAuditCategorySchema.optional(),
+  cursor: z.string().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional()
+});
+
+export const opsWorkspaceAuditEntrySchema = z.object({
+  action: studioWorkspaceAuditActionSchema,
+  actorUserId: z.string().min(1),
+  actorWalletAddress: z.string().min(1).nullable(),
+  category: opsWorkspaceAuditCategorySchema.exclude(["all"]),
+  createdAt: z.string().datetime(),
+  id: z.string().min(1),
+  membershipId: z.string().min(1).nullable(),
+  requestId: z.string().min(1).nullable(),
+  role: z.enum(["owner", "operator"]).nullable(),
+  targetUserId: z.string().min(1).nullable(),
+  targetWalletAddress: z.string().min(1).nullable()
+});
+
+export const opsWorkspaceAuditResponseSchema = z.object({
+  audit: z.object({
+    actions: z.array(studioWorkspaceAuditActionSchema),
+    category: opsWorkspaceAuditCategorySchema,
+    entries: z.array(opsWorkspaceAuditEntrySchema),
+    limit: z.number().int().min(1).max(100),
+    nextCursor: z.string().min(1).nullable()
+  })
+});
+
 export type OpsAlertMuteSummary = z.infer<typeof opsAlertMuteSummarySchema>;
 export type OpsReconciliationRunStatus = z.infer<
   typeof opsReconciliationRunStatusSchema
@@ -296,6 +333,18 @@ export type OpsReconciliationIssueRepairResponse = z.infer<
   typeof opsReconciliationIssueRepairResponseSchema
 >;
 export type OpsErrorResponse = z.infer<typeof opsErrorResponseSchema>;
+export type OpsWorkspaceAuditCategory = z.infer<
+  typeof opsWorkspaceAuditCategorySchema
+>;
+export type OpsWorkspaceAuditEntry = z.infer<
+  typeof opsWorkspaceAuditEntrySchema
+>;
+export type OpsWorkspaceAuditQuery = z.infer<
+  typeof opsWorkspaceAuditQuerySchema
+>;
+export type OpsWorkspaceAuditResponse = z.infer<
+  typeof opsWorkspaceAuditResponseSchema
+>;
 
 export function isValidOpsAlertScheduleTimeZone(timezone: string) {
   try {
@@ -309,7 +358,9 @@ export function isValidOpsAlertScheduleTimeZone(timezone: string) {
   }
 }
 
-export function createOpsAlertScheduleDayMask(activeDays: OpsAlertScheduleDay[]) {
+export function createOpsAlertScheduleDayMask(
+  activeDays: OpsAlertScheduleDay[]
+) {
   return [...new Set(activeDays)].reduce(
     (mask, activeDay) => mask | opsAlertScheduleDayBitByValue[activeDay],
     0

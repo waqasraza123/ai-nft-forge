@@ -81,8 +81,10 @@ describe("database repositories", () => {
       }
     });
     const logs = await repository.listByEntity({
+      actions: ["workspace_invitation_created"],
       entityId: "workspace_1",
-      entityType: "workspace"
+      entityType: "workspace",
+      limit: 25
     });
 
     expect(database.auditLog.create).toHaveBeenCalledWith({
@@ -106,8 +108,11 @@ describe("database repositories", () => {
           id: "desc"
         }
       ],
-      take: 50,
+      take: 25,
       where: {
+        action: {
+          in: ["workspace_invitation_created"]
+        },
         entityId: "workspace_1",
         entityType: "workspace"
       }

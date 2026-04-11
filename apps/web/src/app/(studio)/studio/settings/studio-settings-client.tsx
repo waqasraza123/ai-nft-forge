@@ -267,8 +267,8 @@ export function StudioSettingsClient({
     settings?.brand ??
     null;
   const resolvedOwnerWalletAddress =
-    settings?.members.find((member) => member.role === "owner")?.walletAddress ??
-    ownerWalletAddress;
+    settings?.members.find((member) => member.role === "owner")
+      ?.walletAddress ?? ownerWalletAddress;
   const pendingRoleEscalationRequest =
     settings?.roleEscalationRequests.find(
       (request) => request.status === "pending"
@@ -1702,6 +1702,9 @@ export function StudioSettingsClient({
           <div className="pill-row">
             <Pill>{settings?.auditEntries.length ?? 0} recent events</Pill>
             <Pill>workspace audit</Pill>
+            <Link className="inline-link" href="/ops/audit">
+              Open full audit
+            </Link>
           </div>
           {settings?.auditEntries.length ? (
             <div className="collection-item-list">

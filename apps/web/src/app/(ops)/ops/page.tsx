@@ -34,6 +34,9 @@ export default async function OpsPage() {
       lead="This surface now carries public runtime health plus authenticated queue depth, rolling generation metrics, synthesized operator alerts, persisted observability history, active-alert acknowledgment and mute controls, owner-scoped webhook routing and delivery-schedule policy, capture-automation status, multi-channel alert-delivery records, recent generation activity, and owner-scoped retry controls so operator checks do not depend on a single request window or the studio asset browser alone."
       actions={
         <>
+          <Link className="action-link" href="/ops/audit">
+            Audit activity
+          </Link>
           <Link className="action-link" href="/api/health">
             Web health
           </Link>
@@ -146,6 +149,20 @@ export default async function OpsPage() {
           span={4}
           title="Operator controls"
         />
+        <SurfaceCard
+          body="Workspace activity audit now lives on a dedicated ops route with filters and CSV export, so invitation, membership, and ownership-transfer review no longer depends on the shorter settings history list."
+          eyebrow="Audit"
+          span={12}
+          title="Workspace audit review"
+        >
+          <div className="pill-row">
+            <Pill>Workspace activity</Pill>
+            <Pill>CSV export</Pill>
+            <Link className="inline-link" href="/ops/audit">
+              /ops/audit
+            </Link>
+          </div>
+        </SurfaceCard>
       </SurfaceGrid>
       <OpsOperatorPanel operator={runtime.operator} />
     </PageShell>

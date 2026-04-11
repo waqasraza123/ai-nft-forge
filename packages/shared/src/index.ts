@@ -311,6 +311,10 @@ export {
   opsAlertStateStatusSchema,
   opsAlertStateSummarySchema,
   opsAlertUnmuteResponseSchema,
+  opsWorkspaceAuditCategorySchema,
+  opsWorkspaceAuditEntrySchema,
+  opsWorkspaceAuditQuerySchema,
+  opsWorkspaceAuditResponseSchema,
   createOpsAlertScheduleDayMask,
   evaluateOpsAlertEscalationPolicy,
   evaluateOpsAlertSchedulePolicy,
@@ -344,6 +348,10 @@ export {
   type OpsAlertStateSummary,
   type OpsAlertUnmuteResponse,
   type OpsErrorResponse,
+  type OpsWorkspaceAuditCategory,
+  type OpsWorkspaceAuditEntry,
+  type OpsWorkspaceAuditQuery,
+  type OpsWorkspaceAuditResponse,
   parseOpsAlertScheduleDayMask
 } from "./ops.js";
 export {
