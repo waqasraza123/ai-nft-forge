@@ -1,4 +1,7 @@
-import { collectionPublicationMerchandisingRequestSchema } from "@ai-nft-forge/shared";
+import {
+  collectionDraftPublishRequestSchema,
+  collectionPublicationMerchandisingRequestSchema
+} from "@ai-nft-forge/shared";
 import { NextResponse } from "next/server";
 
 import {
@@ -6,6 +9,7 @@ import {
   parseJsonBody,
   requireStudioApiSession
 } from "../../../../../../server/collections/http";
+import { CollectionDraftServiceError } from "../../../../../../server/collections/error";
 import { createRuntimeCollectionDraftService } from "../../../../../../server/collections/runtime";
 
 type RouteContext = {
@@ -14,12 +18,29 @@ type RouteContext = {
   }>;
 };
 
-export async function POST(_: Request, context: RouteContext) {
+export async function POST(request: Request, context: RouteContext) {
   try {
     const session = await requireStudioApiSession();
     const { collectionDraftId } = await context.params;
+    const bodyText = await request.text();
+    let parsedBody: unknown = {};
+
+    if (bodyText.trim().length > 0) {
+      try {
+        parsedBody = JSON.parse(bodyText);
+      } catch {
+        throw new CollectionDraftServiceError(
+          "INVALID_REQUEST",
+          "Request body must be valid JSON.",
+          400
+        );
+      }
+    }
+
+    const body = collectionDraftPublishRequestSchema.parse(parsedBody);
     const result =
       await createRuntimeCollectionDraftService().publishCollectionDraft({
+        brandId: body.brandId ?? null,
         collectionDraftId,
         ownerUserId: session.user.id
       });

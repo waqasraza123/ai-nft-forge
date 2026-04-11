@@ -1,9 +1,11 @@
 import {
   defaultStudioBrandAccentColor,
-  defaultStudioBrandThemePreset,
   defaultStudioBrandLandingDescription,
   defaultStudioBrandLandingHeadline,
+  defaultStudioBrandThemePreset,
   defaultStudioFeaturedReleaseLabel,
+  studioBrandCreateRequestSchema,
+  studioBrandResponseSchema,
   studioBrandThemeSchema,
   studioSettingsResponseSchema,
   studioSettingsUpdateRequestSchema
@@ -47,8 +49,13 @@ type StudioSettingsRepositorySet = {
       themeJson: unknown;
       workspaceId: string;
     }): Promise<BrandRecord>;
+    findByIdForOwner(input: {
+      id: string;
+      ownerUserId: string;
+    }): Promise<BrandRecord | null>;
     findFirstByOwnerUserId(ownerUserId: string): Promise<BrandRecord | null>;
     findFirstBySlug(slug: string): Promise<BrandRecord | null>;
+    listByOwnerUserId(ownerUserId: string): Promise<BrandRecord[]>;
     updateByIdForOwner(input: {
       customDomain?: string | null;
       id: string;
@@ -165,32 +172,65 @@ function parseBrandTheme(themeJson: unknown) {
   };
 }
 
+function buildBrandThemeJson(input: {
+  accentColor: string;
+  featuredReleaseLabel: string;
+  heroKicker?: string | null | undefined;
+  landingDescription: string;
+  landingHeadline: string;
+  primaryCtaLabel?: string | null | undefined;
+  secondaryCtaLabel?: string | null | undefined;
+  storyBody?: string | null | undefined;
+  storyHeadline?: string | null | undefined;
+  themePreset: "editorial_warm" | "gallery_mono" | "midnight_launch";
+  wordmark?: string | null | undefined;
+}) {
+  return {
+    accentColor: input.accentColor,
+    featuredReleaseLabel: input.featuredReleaseLabel,
+    heroKicker: normalizeOptionalText(input.heroKicker),
+    landingDescription: input.landingDescription,
+    landingHeadline: input.landingHeadline,
+    primaryCtaLabel: normalizeOptionalText(input.primaryCtaLabel),
+    secondaryCtaLabel: normalizeOptionalText(input.secondaryCtaLabel),
+    storyBody: normalizeOptionalText(input.storyBody),
+    storyHeadline: normalizeOptionalText(input.storyHeadline),
+    themePreset: input.themePreset,
+    wordmark: normalizeOptionalText(input.wordmark)
+  };
+}
+
+function serializeBrand(input: BrandRecord) {
+  const theme = parseBrandTheme(input.themeJson);
+
+  return {
+    accentColor: theme.accentColor,
+    customDomain: input.customDomain,
+    featuredReleaseLabel: theme.featuredReleaseLabel,
+    heroKicker: theme.heroKicker,
+    id: input.id,
+    landingDescription: theme.landingDescription,
+    landingHeadline: theme.landingHeadline,
+    name: input.name,
+    primaryCtaLabel: theme.primaryCtaLabel,
+    publicBrandPath: `/brands/${input.slug}`,
+    secondaryCtaLabel: theme.secondaryCtaLabel,
+    slug: input.slug,
+    storyBody: theme.storyBody,
+    storyHeadline: theme.storyHeadline,
+    themePreset: theme.themePreset,
+    wordmark: theme.wordmark
+  };
+}
+
 function serializeStudioSettings(input: {
-  brand: BrandRecord;
+  brands: BrandRecord[];
   workspace: WorkspaceRecord;
 }) {
-  const theme = parseBrandTheme(input.brand.themeJson);
-
   return studioSettingsResponseSchema.parse({
     settings: {
-      brand: {
-        accentColor: theme.accentColor,
-        customDomain: input.brand.customDomain,
-        featuredReleaseLabel: theme.featuredReleaseLabel,
-        heroKicker: theme.heroKicker,
-        id: input.brand.id,
-        landingDescription: theme.landingDescription,
-        landingHeadline: theme.landingHeadline,
-        name: input.brand.name,
-        primaryCtaLabel: theme.primaryCtaLabel,
-        publicBrandPath: `/brands/${input.brand.slug}`,
-        secondaryCtaLabel: theme.secondaryCtaLabel,
-        slug: input.brand.slug,
-        storyBody: theme.storyBody,
-        storyHeadline: theme.storyHeadline,
-        themePreset: theme.themePreset,
-        wordmark: theme.wordmark
-      },
+      brand: serializeBrand(input.brands[0]!),
+      brands: input.brands.map((brand) => serializeBrand(brand)),
       workspace: {
         id: input.workspace.id,
         name: input.workspace.name,
@@ -205,23 +245,86 @@ async function loadOwnerStudioSettings(input: {
   ownerUserId: string;
   repositories: StudioSettingsRepositorySet;
 }) {
-  const [workspace, brand] = await Promise.all([
+  const [workspace, brands] = await Promise.all([
     input.repositories.workspaceRepository.findFirstByOwnerUserId(
       input.ownerUserId
     ),
-    input.repositories.brandRepository.findFirstByOwnerUserId(input.ownerUserId)
+    input.repositories.brandRepository.listByOwnerUserId(input.ownerUserId)
   ]);
 
-  if (!workspace || !brand) {
+  if (!workspace || brands.length === 0) {
     return studioSettingsResponseSchema.parse({
       settings: null
     });
   }
 
   return serializeStudioSettings({
-    brand,
+    brands,
     workspace
   });
+}
+
+async function assertWorkspaceSlugAvailable(input: {
+  existingWorkspaceId: string | null;
+  repositories: Pick<StudioSettingsRepositorySet, "workspaceRepository">;
+  workspaceSlug: string;
+}) {
+  const conflictingWorkspace =
+    await input.repositories.workspaceRepository.findBySlug(input.workspaceSlug);
+
+  if (
+    conflictingWorkspace &&
+    conflictingWorkspace.id !== input.existingWorkspaceId
+  ) {
+    throw new StudioSettingsServiceError(
+      "WORKSPACE_SLUG_CONFLICT",
+      "Workspace slug is already in use.",
+      409
+    );
+  }
+}
+
+async function assertBrandSlugAvailable(input: {
+  brandSlug: string;
+  existingBrandId: string | null;
+  repositories: Pick<StudioSettingsRepositorySet, "brandRepository">;
+}) {
+  const conflictingBrand = await input.repositories.brandRepository.findFirstBySlug(
+    input.brandSlug
+  );
+
+  if (conflictingBrand && conflictingBrand.id !== input.existingBrandId) {
+    throw new StudioSettingsServiceError(
+      "BRAND_SLUG_CONFLICT",
+      "Brand slug is already in use.",
+      409
+    );
+  }
+}
+
+async function assertPublicationRouteCompatibility(input: {
+  nextBrandSlug: string;
+  ownerUserId: string;
+  publications: PublishedCollectionRecord[];
+  repositories: Pick<StudioSettingsRepositorySet, "publishedCollectionRepository">;
+}) {
+  for (const publication of input.publications) {
+    const routeConflict =
+      await input.repositories.publishedCollectionRepository.findByBrandSlugAndCollectionSlug(
+        {
+          brandSlug: input.nextBrandSlug,
+          slug: publication.slug
+        }
+      );
+
+    if (routeConflict && routeConflict.id !== publication.id) {
+      throw new StudioSettingsServiceError(
+        "BRAND_PUBLICATION_CONFLICT",
+        "The requested brand slug would conflict with an existing published collection route.",
+        409
+      );
+    }
+  }
 }
 
 export function createStudioSettingsService(
@@ -235,8 +338,89 @@ export function createStudioSettingsService(
       });
     },
 
+    async createStudioBrand(input: {
+      accentColor: string;
+      brandName: string;
+      brandSlug: string;
+      customDomain?: string | null;
+      featuredReleaseLabel: string;
+      heroKicker?: string | null;
+      landingDescription: string;
+      landingHeadline: string;
+      ownerUserId: string;
+      primaryCtaLabel?: string | null;
+      secondaryCtaLabel?: string | null;
+      storyBody?: string | null;
+      storyHeadline?: string | null;
+      themePreset: "editorial_warm" | "gallery_mono" | "midnight_launch";
+      wordmark?: string | null;
+    }) {
+      const parsedInput = studioBrandCreateRequestSchema.parse({
+        accentColor: input.accentColor,
+        brandName: input.brandName,
+        brandSlug: input.brandSlug,
+        customDomain: input.customDomain,
+        featuredReleaseLabel: input.featuredReleaseLabel,
+        heroKicker: input.heroKicker,
+        landingDescription: input.landingDescription,
+        landingHeadline: input.landingHeadline,
+        primaryCtaLabel: input.primaryCtaLabel,
+        secondaryCtaLabel: input.secondaryCtaLabel,
+        storyBody: input.storyBody,
+        storyHeadline: input.storyHeadline,
+        themePreset: input.themePreset,
+        wordmark: input.wordmark
+      });
+
+      return dependencies.runTransaction(async (repositories) => {
+        const workspace =
+          await repositories.workspaceRepository.findFirstByOwnerUserId(
+            input.ownerUserId
+          );
+
+        if (!workspace) {
+          throw new StudioSettingsServiceError(
+            "WORKSPACE_REQUIRED",
+            "Create the workspace profile before adding additional brands.",
+            409
+          );
+        }
+
+        await assertBrandSlugAvailable({
+          brandSlug: parsedInput.brandSlug,
+          existingBrandId: null,
+          repositories
+        });
+
+        const brand = await repositories.brandRepository.create({
+          customDomain: normalizeOptionalDomain(parsedInput.customDomain),
+          name: parsedInput.brandName,
+          slug: parsedInput.brandSlug,
+          themeJson: buildBrandThemeJson({
+            accentColor: parsedInput.accentColor,
+            featuredReleaseLabel: parsedInput.featuredReleaseLabel,
+            heroKicker: parsedInput.heroKicker,
+            landingDescription: parsedInput.landingDescription,
+            landingHeadline: parsedInput.landingHeadline,
+            primaryCtaLabel: parsedInput.primaryCtaLabel,
+            secondaryCtaLabel: parsedInput.secondaryCtaLabel,
+            storyBody: parsedInput.storyBody,
+            storyHeadline: parsedInput.storyHeadline,
+            themePreset: parsedInput.themePreset,
+            wordmark: parsedInput.wordmark
+          }),
+          workspaceId: workspace.id
+        });
+
+        return studioBrandResponseSchema.parse({
+          brand: serializeBrand(brand)
+        });
+      });
+    },
+
     async updateStudioSettings(input: {
       accentColor: string;
+      brandId?: string | null;
       brandName: string;
       brandSlug: string;
       customDomain?: string | null;
@@ -256,6 +440,7 @@ export function createStudioSettingsService(
     }) {
       const parsedInput = studioSettingsUpdateRequestSchema.parse({
         accentColor: input.accentColor,
+        brandId: input.brandId,
         brandName: input.brandName,
         brandSlug: input.brandSlug,
         customDomain: input.customDomain,
@@ -274,67 +459,57 @@ export function createStudioSettingsService(
       });
 
       return dependencies.runTransaction(async (repositories) => {
-        const [existingWorkspace, existingBrand] = await Promise.all([
-          repositories.workspaceRepository.findFirstByOwnerUserId(
-            input.ownerUserId
-          ),
-          repositories.brandRepository.findFirstByOwnerUserId(input.ownerUserId)
-        ]);
+        const [existingWorkspace, existingBrands, ownedPublications] =
+          await Promise.all([
+            repositories.workspaceRepository.findFirstByOwnerUserId(
+              input.ownerUserId
+            ),
+            repositories.brandRepository.listByOwnerUserId(input.ownerUserId),
+            repositories.publishedCollectionRepository.listByOwnerUserId(
+              input.ownerUserId
+            )
+          ]);
+        const existingBrand = parsedInput.brandId
+          ? existingBrands.find((brand) => brand.id === parsedInput.brandId) ??
+            null
+          : existingBrands[0] ?? null;
 
-        const conflictingWorkspace =
-          await repositories.workspaceRepository.findBySlug(
-            parsedInput.workspaceSlug
+        if (parsedInput.brandId && !existingBrand) {
+          throw new StudioSettingsServiceError(
+            "BRAND_NOT_FOUND",
+            "The requested brand was not found.",
+            404
           );
+        }
+
+        await assertWorkspaceSlugAvailable({
+          existingWorkspaceId: existingWorkspace?.id ?? null,
+          repositories,
+          workspaceSlug: parsedInput.workspaceSlug
+        });
+        await assertBrandSlugAvailable({
+          brandSlug: parsedInput.brandSlug,
+          existingBrandId: existingBrand?.id ?? null,
+          repositories
+        });
+
+        const publicationsForBrand = existingBrand
+          ? ownedPublications.filter(
+              (publication) => publication.brandSlug === existingBrand.slug
+            )
+          : [];
 
         if (
-          conflictingWorkspace &&
-          conflictingWorkspace.id !== existingWorkspace?.id
+          existingBrand &&
+          existingBrand.slug !== parsedInput.brandSlug &&
+          publicationsForBrand.length > 0
         ) {
-          throw new StudioSettingsServiceError(
-            "WORKSPACE_SLUG_CONFLICT",
-            "Workspace slug is already in use.",
-            409
-          );
-        }
-
-        const conflictingBrand =
-          await repositories.brandRepository.findFirstBySlug(
-            parsedInput.brandSlug
-          );
-
-        if (conflictingBrand && conflictingBrand.id !== existingBrand?.id) {
-          throw new StudioSettingsServiceError(
-            "BRAND_SLUG_CONFLICT",
-            "Brand slug is already in use.",
-            409
-          );
-        }
-
-        const ownedPublications =
-          existingBrand || conflictingBrand
-            ? await repositories.publishedCollectionRepository.listByOwnerUserId(
-                input.ownerUserId
-              )
-            : [];
-
-        if (ownedPublications.length > 0) {
-          for (const publication of ownedPublications) {
-            const routeConflict =
-              await repositories.publishedCollectionRepository.findByBrandSlugAndCollectionSlug(
-                {
-                  brandSlug: parsedInput.brandSlug,
-                  slug: publication.slug
-                }
-              );
-
-            if (routeConflict && routeConflict.id !== publication.id) {
-              throw new StudioSettingsServiceError(
-                "BRAND_PUBLICATION_CONFLICT",
-                "The requested brand slug would conflict with an existing published collection route.",
-                409
-              );
-            }
-          }
+          await assertPublicationRouteCompatibility({
+            nextBrandSlug: parsedInput.brandSlug,
+            ownerUserId: input.ownerUserId,
+            publications: publicationsForBrand,
+            repositories
+          });
         }
 
         const workspace =
@@ -345,7 +520,6 @@ export function createStudioSettingsService(
             slug: parsedInput.workspaceSlug,
             status: "active"
           }));
-
         const updatedWorkspace =
           existingWorkspace?.id === workspace.id
             ? await repositories.workspaceRepository.updateByIdForOwner({
@@ -356,22 +530,19 @@ export function createStudioSettingsService(
                 status: existingWorkspace.status
               })
             : workspace;
-
-        const themeJson = {
+        const themeJson = buildBrandThemeJson({
           accentColor: parsedInput.accentColor,
           featuredReleaseLabel: parsedInput.featuredReleaseLabel,
-          heroKicker: normalizeOptionalText(parsedInput.heroKicker),
+          heroKicker: parsedInput.heroKicker,
           landingDescription: parsedInput.landingDescription,
           landingHeadline: parsedInput.landingHeadline,
-          primaryCtaLabel: normalizeOptionalText(parsedInput.primaryCtaLabel),
-          secondaryCtaLabel: normalizeOptionalText(
-            parsedInput.secondaryCtaLabel
-          ),
-          storyBody: normalizeOptionalText(parsedInput.storyBody),
-          storyHeadline: normalizeOptionalText(parsedInput.storyHeadline),
+          primaryCtaLabel: parsedInput.primaryCtaLabel,
+          secondaryCtaLabel: parsedInput.secondaryCtaLabel,
+          storyBody: parsedInput.storyBody,
+          storyHeadline: parsedInput.storyHeadline,
           themePreset: parsedInput.themePreset,
-          wordmark: normalizeOptionalText(parsedInput.wordmark)
-        };
+          wordmark: parsedInput.wordmark
+        });
         const brand =
           existingBrand ??
           (await repositories.brandRepository.create({
@@ -381,7 +552,6 @@ export function createStudioSettingsService(
             themeJson,
             workspaceId: updatedWorkspace.id
           }));
-
         const updatedBrand =
           existingBrand?.id === brand.id
             ? await repositories.brandRepository.updateByIdForOwner({
@@ -396,12 +566,13 @@ export function createStudioSettingsService(
             : brand;
 
         if (
-          ownedPublications.length > 0 &&
-          (existingBrand?.name !== parsedInput.brandName ||
-            existingBrand?.slug !== parsedInput.brandSlug)
+          existingBrand &&
+          publicationsForBrand.length > 0 &&
+          (existingBrand.name !== parsedInput.brandName ||
+            existingBrand.slug !== parsedInput.brandSlug)
         ) {
           await Promise.all(
-            ownedPublications.map((publication) =>
+            publicationsForBrand.map((publication) =>
               repositories.publishedCollectionRepository.updateByIdForOwner({
                 brandName: parsedInput.brandName,
                 brandSlug: parsedInput.brandSlug,
@@ -415,8 +586,14 @@ export function createStudioSettingsService(
           );
         }
 
+        const refreshedBrands = existingBrand
+          ? existingBrands.map((brandRecord) =>
+              brandRecord.id === updatedBrand.id ? updatedBrand : brandRecord
+            )
+          : [...existingBrands, updatedBrand];
+
         return serializeStudioSettings({
-          brand: updatedBrand,
+          brands: refreshedBrands,
           workspace: updatedWorkspace
         });
       });

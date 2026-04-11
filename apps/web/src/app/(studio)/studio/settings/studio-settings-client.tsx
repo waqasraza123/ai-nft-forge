@@ -11,11 +11,13 @@ import {
 
 import {
   defaultStudioBrandAccentColor,
-  defaultStudioBrandThemePreset,
   defaultStudioBrandLandingDescription,
   defaultStudioBrandLandingHeadline,
+  defaultStudioBrandThemePreset,
   defaultStudioFeaturedReleaseLabel,
+  studioBrandResponseSchema,
   studioSettingsResponseSchema,
+  type StudioBrandSummary,
   type StudioSettingsSummary
 } from "@ai-nft-forge/shared";
 import {
@@ -35,6 +37,32 @@ type NoticeState = {
   message: string;
   tone: "error" | "info" | "success";
 } | null;
+
+type StudioBrandEditorState = {
+  accentColor: string;
+  brandName: string;
+  brandSlug: string;
+  customDomain: string;
+  featuredReleaseLabel: string;
+  heroKicker: string;
+  landingDescription: string;
+  landingHeadline: string;
+  primaryCtaLabel: string;
+  secondaryCtaLabel: string;
+  storyBody: string;
+  storyHeadline: string;
+  themePreset: "editorial_warm" | "gallery_mono" | "midnight_launch";
+  wordmark: string;
+  workspaceName: string;
+  workspaceSlug: string;
+};
+
+type NewBrandState = {
+  accentColor: string;
+  brandName: string;
+  brandSlug: string;
+  themePreset: "editorial_warm" | "gallery_mono" | "midnight_launch";
+};
 
 function createFallbackErrorMessage(response: Response) {
   switch (response.status) {
@@ -75,28 +103,79 @@ async function parseJsonResponse<T>(input: {
 }
 
 function createInitialEditorState(settings: StudioSettingsSummary | null) {
+  const brand = settings?.brands[0] ?? settings?.brand ?? null;
+
   return {
-    accentColor: settings?.brand.accentColor ?? defaultStudioBrandAccentColor,
-    brandName: settings?.brand.name ?? "",
-    brandSlug: settings?.brand.slug ?? "",
-    customDomain: settings?.brand.customDomain ?? "",
+    accentColor: brand?.accentColor ?? defaultStudioBrandAccentColor,
+    brandName: brand?.name ?? "",
+    brandSlug: brand?.slug ?? "",
+    customDomain: brand?.customDomain ?? "",
     featuredReleaseLabel:
-      settings?.brand.featuredReleaseLabel ?? defaultStudioFeaturedReleaseLabel,
-    heroKicker: settings?.brand.heroKicker ?? "",
+      brand?.featuredReleaseLabel ?? defaultStudioFeaturedReleaseLabel,
+    heroKicker: brand?.heroKicker ?? "",
     landingDescription:
-      settings?.brand.landingDescription ??
-      defaultStudioBrandLandingDescription,
+      brand?.landingDescription ?? defaultStudioBrandLandingDescription,
     landingHeadline:
-      settings?.brand.landingHeadline ?? defaultStudioBrandLandingHeadline,
-    primaryCtaLabel: settings?.brand.primaryCtaLabel ?? "",
-    secondaryCtaLabel: settings?.brand.secondaryCtaLabel ?? "",
-    storyBody: settings?.brand.storyBody ?? "",
-    storyHeadline: settings?.brand.storyHeadline ?? "",
-    themePreset: settings?.brand.themePreset ?? defaultStudioBrandThemePreset,
-    wordmark: settings?.brand.wordmark ?? "",
+      brand?.landingHeadline ?? defaultStudioBrandLandingHeadline,
+    primaryCtaLabel: brand?.primaryCtaLabel ?? "",
+    secondaryCtaLabel: brand?.secondaryCtaLabel ?? "",
+    storyBody: brand?.storyBody ?? "",
+    storyHeadline: brand?.storyHeadline ?? "",
+    themePreset: brand?.themePreset ?? defaultStudioBrandThemePreset,
+    wordmark: brand?.wordmark ?? "",
     workspaceName: settings?.workspace.name ?? "",
     workspaceSlug: settings?.workspace.slug ?? ""
   };
+}
+
+function createEditorState(input: {
+  brand: StudioBrandSummary | null;
+  workspace: StudioSettingsSummary["workspace"] | null;
+}): StudioBrandEditorState {
+  return {
+    accentColor: input.brand?.accentColor ?? defaultStudioBrandAccentColor,
+    brandName: input.brand?.name ?? "",
+    brandSlug: input.brand?.slug ?? "",
+    customDomain: input.brand?.customDomain ?? "",
+    featuredReleaseLabel:
+      input.brand?.featuredReleaseLabel ?? defaultStudioFeaturedReleaseLabel,
+    heroKicker: input.brand?.heroKicker ?? "",
+    landingDescription:
+      input.brand?.landingDescription ?? defaultStudioBrandLandingDescription,
+    landingHeadline:
+      input.brand?.landingHeadline ?? defaultStudioBrandLandingHeadline,
+    primaryCtaLabel: input.brand?.primaryCtaLabel ?? "",
+    secondaryCtaLabel: input.brand?.secondaryCtaLabel ?? "",
+    storyBody: input.brand?.storyBody ?? "",
+    storyHeadline: input.brand?.storyHeadline ?? "",
+    themePreset: input.brand?.themePreset ?? defaultStudioBrandThemePreset,
+    wordmark: input.brand?.wordmark ?? "",
+    workspaceName: input.workspace?.name ?? "",
+    workspaceSlug: input.workspace?.slug ?? ""
+  };
+}
+
+function createInitialNewBrandState(): NewBrandState {
+  return {
+    accentColor: defaultStudioBrandAccentColor,
+    brandName: "",
+    brandSlug: "",
+    themePreset: defaultStudioBrandThemePreset
+  };
+}
+
+function resolveSelectedBrandId(input: {
+  currentBrandId: string | null;
+  settings: StudioSettingsSummary | null;
+}) {
+  if (
+    input.currentBrandId &&
+    input.settings?.brands.some((brand) => brand.id === input.currentBrandId)
+  ) {
+    return input.currentBrandId;
+  }
+
+  return input.settings?.brands[0]?.id ?? input.settings?.brand.id ?? null;
 }
 
 export function StudioSettingsClient({
@@ -104,16 +183,44 @@ export function StudioSettingsClient({
   ownerWalletAddress
 }: StudioSettingsClientProps) {
   const [settings, setSettings] = useState(initialSettings);
-  const [editorState, setEditorState] = useState(() =>
+  const [selectedBrandId, setSelectedBrandId] = useState<string | null>(
+    initialSettings?.brands[0]?.id ?? initialSettings?.brand.id ?? null
+  );
+  const [editorState, setEditorState] = useState<StudioBrandEditorState>(() =>
     createInitialEditorState(initialSettings)
+  );
+  const [newBrandState, setNewBrandState] = useState<NewBrandState>(() =>
+    createInitialNewBrandState()
   );
   const [notice, setNotice] = useState<NoticeState>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isCreatingBrand, setIsCreatingBrand] = useState(false);
+
+  const selectedBrand =
+    settings?.brands.find((brand) => brand.id === selectedBrandId) ??
+    settings?.brands[0] ??
+    settings?.brand ??
+    null;
 
   useEffect(() => {
-    setEditorState(createInitialEditorState(settings));
-  }, [settings]);
+    const nextSelectedBrandId = resolveSelectedBrandId({
+      currentBrandId: selectedBrandId,
+      settings
+    });
+
+    if (nextSelectedBrandId !== selectedBrandId) {
+      setSelectedBrandId(nextSelectedBrandId);
+      return;
+    }
+
+    setEditorState(
+      createEditorState({
+        brand: selectedBrand,
+        workspace: settings?.workspace ?? null
+      })
+    );
+  }, [selectedBrand, selectedBrandId, settings]);
 
   const refreshSettings = useEffectEvent(
     async (input?: { silent?: boolean }) => {
@@ -132,6 +239,12 @@ export function StudioSettingsClient({
 
         startTransition(() => {
           setSettings(result.settings);
+          setSelectedBrandId((currentBrandId) =>
+            resolveSelectedBrandId({
+              currentBrandId,
+              settings: result.settings
+            })
+          );
         });
       } catch (error) {
         setNotice({
@@ -162,7 +275,10 @@ export function StudioSettingsClient({
 
     try {
       const response = await fetch("/api/studio/settings", {
-        body: JSON.stringify(editorState),
+        body: JSON.stringify({
+          ...editorState,
+          brandId: selectedBrand?.id ?? null
+        }),
         headers: {
           "Content-Type": "application/json"
         },
@@ -175,6 +291,12 @@ export function StudioSettingsClient({
 
       startTransition(() => {
         setSettings(result.settings);
+        setSelectedBrandId(
+          resolveSelectedBrandId({
+            currentBrandId: selectedBrand?.id ?? null,
+            settings: result.settings
+          })
+        );
       });
       setNotice({
         message: "Studio settings saved.",
@@ -190,6 +312,68 @@ export function StudioSettingsClient({
       });
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleCreateBrand(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    setIsCreatingBrand(true);
+    setNotice({
+      message: "Creating additional brand…",
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch("/api/studio/settings/brands", {
+        body: JSON.stringify({
+          accentColor: newBrandState.accentColor,
+          brandName: newBrandState.brandName,
+          brandSlug: newBrandState.brandSlug,
+          featuredReleaseLabel: defaultStudioFeaturedReleaseLabel,
+          landingDescription: defaultStudioBrandLandingDescription,
+          landingHeadline: defaultStudioBrandLandingHeadline,
+          themePreset: newBrandState.themePreset
+        }),
+        headers: {
+          "Content-Type": "application/json"
+        },
+        method: "POST"
+      });
+      const payload = await parseJsonResponse({
+        response,
+        schema: studioBrandResponseSchema
+      });
+
+      startTransition(() => {
+        setSettings((currentSettings) => {
+          if (!currentSettings) {
+            return currentSettings;
+          }
+
+          return {
+            ...currentSettings,
+            brand: currentSettings.brand,
+            brands: [...currentSettings.brands, payload.brand]
+          };
+        });
+        setSelectedBrandId(payload.brand.id);
+        setNewBrandState(createInitialNewBrandState());
+      });
+      setNotice({
+        message: `Created ${payload.brand.name}.`,
+        tone: "success"
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Additional brand could not be created.",
+        tone: "error"
+      });
+    } finally {
+      setIsCreatingBrand(false);
     }
   }
 
@@ -234,34 +418,50 @@ export function StudioSettingsClient({
               value={settings?.workspace.slug ?? "Unconfigured"}
             />
             <MetricTile
-              label="Brand"
+              label="Primary brand"
               value={settings?.brand.slug ?? "Unconfigured"}
             />
             <MetricTile
-              label="Domain"
-              value={settings?.brand.customDomain ?? "Default route"}
+              label="Brand count"
+              value={settings?.brands.length?.toString() ?? "0"}
             />
           </div>
           <div className="pill-row">
             <Pill>/studio/settings</Pill>
+            <Pill>{selectedBrand?.publicBrandPath ?? "/brands/[brandSlug]"}</Pill>
             <Pill>
-              {settings?.brand.publicBrandPath ?? "/brands/[brandSlug]"}
+              {selectedBrand?.accentColor ?? defaultStudioBrandAccentColor}
             </Pill>
             <Pill>
-              {settings?.brand.accentColor ?? defaultStudioBrandAccentColor}
-            </Pill>
-            <Pill>
-              {settings?.brand.themePreset ?? defaultStudioBrandThemePreset}
+              {selectedBrand?.themePreset ?? defaultStudioBrandThemePreset}
             </Pill>
           </div>
         </SurfaceCard>
         <SurfaceCard
-          body="Configure the durable workspace slug, public brand slug, brand route copy, and storefront accent. These settings become the reusable source of truth for public presentation and collection publication."
+          body="Configure the shared workspace slug plus the currently selected brand profile. Multi-brand administration keeps one owner workspace and lets publication target an explicit brand instead of assuming a single storefront."
           eyebrow="Profile"
           span={8}
           title={settings ? "Update studio identity" : "Create studio identity"}
         >
           <form className="studio-form" onSubmit={handleSaveSettings}>
+            {settings?.brands.length ? (
+              <label className="field-stack">
+                <span className="field-label">Editing brand</span>
+                <select
+                  className="input-field"
+                  onChange={(event) => {
+                    setSelectedBrandId(event.target.value || null);
+                  }}
+                  value={selectedBrand?.id ?? ""}
+                >
+                  {settings.brands.map((brand) => (
+                    <option key={brand.id} value={brand.id}>
+                      {brand.name} · /brands/{brand.slug}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             <label className="field-stack">
               <span className="field-label">Workspace name</span>
               <input
@@ -545,7 +745,120 @@ export function StudioSettingsClient({
           </form>
         </SurfaceCard>
         <SurfaceCard
-          body="These values become the durable publication target for review-ready drafts and the editorial source of truth for the public brand landing. Brand slug changes are still validated against existing public collection routes before they are accepted."
+          body="Add an additional publication brand under the same owner workspace. New brands start with a minimal storefront profile and can then be refined in the main editor."
+          eyebrow="Brands"
+          span={4}
+          title="Create brand"
+        >
+          <form className="studio-form" onSubmit={handleCreateBrand}>
+            <label className="field-stack">
+              <span className="field-label">Brand name</span>
+              <input
+                className="input-field"
+                maxLength={120}
+                onChange={(event) => {
+                  setNewBrandState((current) => ({
+                    ...current,
+                    brandName: event.target.value
+                  }));
+                }}
+                placeholder="North Editions"
+                required
+                value={newBrandState.brandName}
+              />
+            </label>
+            <label className="field-stack">
+              <span className="field-label">Brand slug</span>
+              <input
+                className="input-field"
+                maxLength={80}
+                onChange={(event) => {
+                  setNewBrandState((current) => ({
+                    ...current,
+                    brandSlug: event.target.value
+                  }));
+                }}
+                pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                placeholder="north-editions"
+                required
+                value={newBrandState.brandSlug}
+              />
+            </label>
+            <label className="field-stack">
+              <span className="field-label">Theme preset</span>
+              <select
+                className="input-field"
+                onChange={(event) => {
+                  setNewBrandState((current) => ({
+                    ...current,
+                    themePreset: event.target.value as
+                      | "editorial_warm"
+                      | "gallery_mono"
+                      | "midnight_launch"
+                  }));
+                }}
+                value={newBrandState.themePreset}
+              >
+                <option value="editorial_warm">Editorial warm</option>
+                <option value="gallery_mono">Gallery mono</option>
+                <option value="midnight_launch">Midnight launch</option>
+              </select>
+            </label>
+            <label className="field-stack">
+              <span className="field-label">Accent color</span>
+              <div className="color-input-row">
+                <input
+                  className="color-swatch-input"
+                  onChange={(event) => {
+                    setNewBrandState((current) => ({
+                      ...current,
+                      accentColor: event.target.value
+                    }));
+                  }}
+                  type="color"
+                  value={newBrandState.accentColor}
+                />
+                <input
+                  className="input-field"
+                  maxLength={7}
+                  onChange={(event) => {
+                    setNewBrandState((current) => ({
+                      ...current,
+                      accentColor: event.target.value
+                    }));
+                  }}
+                  pattern="^#[0-9a-fA-F]{6}$"
+                  required
+                  value={newBrandState.accentColor}
+                />
+              </div>
+            </label>
+            <div className="pill-row">
+              <Pill>
+                {settings?.workspace.slug ??
+                  editorState.workspaceSlug ??
+                  "workspace-slug"}
+              </Pill>
+              <Pill>
+                {newBrandState.brandSlug
+                  ? `/brands/${newBrandState.brandSlug}`
+                  : "/brands/[brandSlug]"}
+              </Pill>
+              <Pill>{newBrandState.themePreset.replaceAll("_", " ")}</Pill>
+            </div>
+            <div className="studio-action-row">
+              <button
+                className="button-action"
+                disabled={isCreatingBrand || !settings?.workspace.id}
+                type="submit"
+              >
+                {isCreatingBrand ? "Creating…" : "Add brand"}
+              </button>
+            </div>
+          </form>
+        </SurfaceCard>
+        <SurfaceCard
+          body="These values become the durable publication target for the selected brand and the editorial source of truth for its public landing. Brand slug changes are still validated against existing public collection routes before they are accepted."
           eyebrow="Preview"
           span={4}
           title="Storefront preview"

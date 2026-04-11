@@ -80,9 +80,37 @@ function createStudioSettingsHarness() {
         );
       },
 
+      async findByIdForOwner(input: { id: string; ownerUserId: string }) {
+        const workspaceIds = new Set(
+          [...workspaces.values()]
+            .filter((workspace) => workspace.ownerUserId === input.ownerUserId)
+            .map((workspace) => workspace.id)
+        );
+
+        const brand = brands.get(input.id);
+
+        if (!brand || !workspaceIds.has(brand.workspaceId)) {
+          return null;
+        }
+
+        return brand;
+      },
+
       async findFirstBySlug(slug: string) {
         return (
           [...brands.values()].find((brand) => brand.slug === slug) ?? null
+        );
+      },
+
+      async listByOwnerUserId(ownerUserId: string) {
+        const workspaceIds = new Set(
+          [...workspaces.values()]
+            .filter((workspace) => workspace.ownerUserId === ownerUserId)
+            .map((workspace) => workspace.id)
+        );
+
+        return [...brands.values()].filter((brand) =>
+          workspaceIds.has(brand.workspaceId)
         );
       },
 
@@ -290,6 +318,43 @@ describe("createStudioSettingsService", () => {
       "Curated collectible releases"
     );
     expect(result.settings?.brand.featuredReleaseLabel).toBe("Hero drop");
+    expect(result.settings?.brands).toHaveLength(1);
+  });
+
+  it("creates additional brands under the existing owner workspace", async () => {
+    const harness = createStudioSettingsHarness();
+
+    await harness.service.updateStudioSettings({
+      accentColor: "#8b5e34",
+      brandName: "Forge Editions",
+      brandSlug: "forge-editions",
+      featuredReleaseLabel: "Hero drop",
+      landingDescription:
+        "A release-led storefront for collectible portraits and premium client launches.",
+      landingHeadline: "Curated collectible releases",
+      ownerUserId: "user_1",
+      themePreset: "editorial_warm",
+      workspaceName: "Forge Operations",
+      workspaceSlug: "forge-operations"
+    });
+
+    const result = await harness.service.createStudioBrand({
+      accentColor: "#244f3c",
+      brandName: "North Editions",
+      brandSlug: "north-editions",
+      featuredReleaseLabel: "North release",
+      landingDescription: "North-facing storefront copy.",
+      landingHeadline: "North collection releases",
+      ownerUserId: "user_1",
+      themePreset: "gallery_mono"
+    });
+    const settings = await harness.service.getStudioSettings({
+      ownerUserId: "user_1"
+    });
+
+    expect(result.brand.slug).toBe("north-editions");
+    expect(settings.settings?.brands).toHaveLength(2);
+    expect(settings.settings?.brands[1]?.slug).toBe("north-editions");
   });
 
   it("propagates brand identity updates across the owner's published collections", async () => {
@@ -340,6 +405,68 @@ describe("createStudioSettingsService", () => {
     );
     expect(harness.publications.get("publication_1")?.brandName).toBe(
       "Premium Forge"
+    );
+  });
+
+  it("updates only the selected brand when a brand id is supplied", async () => {
+    const harness = createStudioSettingsHarness();
+    const initialSettings = await harness.service.updateStudioSettings({
+      accentColor: "#8b5e34",
+      brandName: "Forge Editions",
+      brandSlug: "forge-editions",
+      featuredReleaseLabel: "Hero drop",
+      landingDescription:
+        "A release-led storefront for collectible portraits and premium client launches.",
+      landingHeadline: "Curated collectible releases",
+      ownerUserId: "user_1",
+      themePreset: "editorial_warm",
+      workspaceName: "Forge Operations",
+      workspaceSlug: "forge-operations"
+    });
+    const secondBrand = await harness.service.createStudioBrand({
+      accentColor: "#244f3c",
+      brandName: "North Editions",
+      brandSlug: "north-editions",
+      featuredReleaseLabel: "North release",
+      landingDescription: "North-facing storefront copy.",
+      landingHeadline: "North collection releases",
+      ownerUserId: "user_1",
+      themePreset: "gallery_mono"
+    });
+
+    harness.publications.set("publication_1", {
+      brandName: secondBrand.brand.name,
+      brandSlug: secondBrand.brand.slug,
+      description: "North release",
+      id: "publication_1",
+      ownerUserId: "user_1",
+      publishedAt: new Date("2026-04-08T00:00:00.000Z"),
+      slug: "genesis-portraits",
+      title: "Genesis Portraits",
+      updatedAt: new Date("2026-04-08T00:05:00.000Z")
+    });
+
+    const result = await harness.service.updateStudioSettings({
+      accentColor: "#21465c",
+      brandId: secondBrand.brand.id,
+      brandName: "North Atelier",
+      brandSlug: "north-atelier",
+      featuredReleaseLabel: "North feature",
+      landingDescription: "Updated north storefront copy.",
+      landingHeadline: "North releases",
+      ownerUserId: "user_1",
+      themePreset: "midnight_launch",
+      workspaceName: initialSettings.settings!.workspace.name,
+      workspaceSlug: initialSettings.settings!.workspace.slug
+    });
+
+    expect(result.settings?.brands[0]?.slug).toBe("forge-editions");
+    expect(result.settings?.brands[1]?.slug).toBe("north-atelier");
+    expect(harness.publications.get("publication_1")?.brandSlug).toBe(
+      "north-atelier"
+    );
+    expect(harness.publications.get("publication_1")?.brandName).toBe(
+      "North Atelier"
     );
   });
 

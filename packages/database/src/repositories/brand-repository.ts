@@ -52,6 +52,20 @@ export function createBrandRepository(database: BrandRepositoryDatabase) {
       });
     },
 
+    findByIdForOwner(input: {
+      id: string;
+      ownerUserId: string;
+    }): Promise<Brand | null> {
+      return database.brand.findFirst({
+        where: {
+          id: input.id,
+          workspace: {
+            ownerUserId: input.ownerUserId
+          }
+        }
+      });
+    },
+
     findFirstBySlug(slug: string): Promise<Brand | null> {
       return database.brand.findFirst({
         orderBy: [
@@ -64,6 +78,24 @@ export function createBrandRepository(database: BrandRepositoryDatabase) {
         ],
         where: {
           slug
+        }
+      });
+    },
+
+    listByOwnerUserId(ownerUserId: string): Promise<Brand[]> {
+      return database.brand.findMany({
+        orderBy: [
+          {
+            createdAt: "asc"
+          },
+          {
+            id: "asc"
+          }
+        ],
+        where: {
+          workspace: {
+            ownerUserId
+          }
         }
       });
     },

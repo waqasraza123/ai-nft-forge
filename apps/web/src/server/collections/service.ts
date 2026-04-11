@@ -107,6 +107,7 @@ type PublishedCollectionRecord = {
 };
 
 type PublicationTargetRecord = {
+  id: string;
   name: string;
   slug: string;
 };
@@ -134,9 +135,14 @@ type CollectionDraftRepositorySet = {
     updatePosition(input: { id: string; position: number }): Promise<unknown>;
   };
   brandRepository: {
+    findByIdForOwner(input: {
+      id: string;
+      ownerUserId: string;
+    }): Promise<PublicationTargetRecord | null>;
     findFirstByOwnerUserId(
       ownerUserId: string
     ): Promise<PublicationTargetRecord | null>;
+    listByOwnerUserId(ownerUserId: string): Promise<PublicationTargetRecord[]>;
   };
   collectionDraftRepository: {
     create(input: {
@@ -540,6 +546,7 @@ function serializePublication(publication: PublishedCollectionRecord) {
 
 function serializePublicationTarget(target: PublicationTargetRecord) {
   return {
+    brandId: target.id,
     brandName: target.name,
     brandSlug: target.slug,
     publicBrandPath: `/brands/${target.slug}`
@@ -718,7 +725,7 @@ async function loadSerializedCollectionDraftList(
   repositories: CollectionDraftRepositorySet,
   ownerUserId: string
 ) {
-  const [drafts, generatedAssetCandidates, publications, publicationTarget] =
+  const [drafts, generatedAssetCandidates, publications, publicationTargets] =
     await Promise.all([
       repositories.collectionDraftRepository.listByOwnerUserId(ownerUserId),
       repositories.generatedAssetRepository.listRecentForOwnerUserId({
@@ -726,7 +733,7 @@ async function loadSerializedCollectionDraftList(
         ownerUserId
       }),
       repositories.publishedCollectionRepository.listByOwnerUserId(ownerUserId),
-      repositories.brandRepository.findFirstByOwnerUserId(ownerUserId)
+      repositories.brandRepository.listByOwnerUserId(ownerUserId)
     ]);
   const publicationByDraftId = new Map(
     publications.map((publication) => [
@@ -745,9 +752,12 @@ async function loadSerializedCollectionDraftList(
     generatedAssetCandidates: generatedAssetCandidates.map((asset) =>
       serializeGeneratedAssetCandidate(asset)
     ),
-    publicationTarget: publicationTarget
-      ? serializePublicationTarget(publicationTarget)
-      : null
+    publicationTarget: publicationTargets[0]
+      ? serializePublicationTarget(publicationTargets[0])
+      : null,
+    publicationTargets: publicationTargets.map((target) =>
+      serializePublicationTarget(target)
+    )
   });
 }
 
@@ -1023,25 +1033,37 @@ export function createCollectionDraftService(
     },
 
     async publishCollectionDraft(input: {
+      brandId?: string | null;
       collectionDraftId: string;
       ownerUserId: string;
     }) {
-      collectionDraftPublishRequestSchema.parse({});
+      const parsedInput = collectionDraftPublishRequestSchema.parse({
+        brandId: input.brandId
+      });
       const draft = await loadCollectionDraftRecordById({
         collectionDraftId: input.collectionDraftId,
         ownerUserId: input.ownerUserId,
         repositories: dependencies.repositories
       });
       const publicationTarget =
-        await dependencies.repositories.brandRepository.findFirstByOwnerUserId(
-          input.ownerUserId
-        );
+        parsedInput.brandId
+          ? await dependencies.repositories.brandRepository.findByIdForOwner({
+              id: parsedInput.brandId,
+              ownerUserId: input.ownerUserId
+            })
+          : await dependencies.repositories.brandRepository.findFirstByOwnerUserId(
+              input.ownerUserId
+            );
 
       if (!publicationTarget) {
         throw new CollectionDraftServiceError(
-          "STUDIO_SETTINGS_REQUIRED",
-          "Studio settings must define a brand profile before collection publication.",
-          409
+          parsedInput.brandId
+            ? "PUBLICATION_TARGET_NOT_FOUND"
+            : "STUDIO_SETTINGS_REQUIRED",
+          parsedInput.brandId
+            ? "The selected publication brand was not found."
+            : "Studio settings must define a brand profile before collection publication.",
+          parsedInput.brandId ? 404 : 409
         );
       }
 

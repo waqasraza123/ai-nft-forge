@@ -283,7 +283,9 @@ export const collectionDraftUpdateRequestSchema = z.object({
   title: collectionDraftTitleSchema
 });
 
-export const collectionDraftPublishRequestSchema = z.object({});
+export const collectionDraftPublishRequestSchema = z.object({
+  brandId: z.string().min(1).nullish()
+});
 
 export const collectionPublicationMerchandisingRequestSchema = z
   .object({
@@ -382,16 +384,18 @@ export const collectionDraftItemReorderRequestSchema = z.object({
   itemIds: z.array(z.string().min(1)).min(1)
 });
 
+export const collectionPublicationTargetSchema = z.object({
+  brandId: z.string().min(1),
+  brandName: collectionBrandNameSchema,
+  brandSlug: collectionBrandSlugSchema,
+  publicBrandPath: z.string().min(1)
+});
+
 export const collectionDraftListResponseSchema = z.object({
   drafts: z.array(collectionDraftSummarySchema),
   generatedAssetCandidates: z.array(collectionGeneratedAssetCandidateSchema),
-  publicationTarget: z
-    .object({
-      brandName: collectionBrandNameSchema,
-      brandSlug: collectionBrandSlugSchema,
-      publicBrandPath: z.string().min(1)
-    })
-    .nullable()
+  publicationTarget: collectionPublicationTargetSchema.nullable(),
+  publicationTargets: z.array(collectionPublicationTargetSchema)
 });
 
 export const collectionDraftResponseSchema = z.object({
@@ -439,6 +443,7 @@ export const collectionDraftErrorResponseSchema = z.object({
       "ONCHAIN_TOKEN_NOT_FOUND",
       "INVALID_REQUEST",
       "INTERNAL_SERVER_ERROR",
+      "PUBLICATION_TARGET_NOT_FOUND",
       "STUDIO_SETTINGS_REQUIRED",
       "SESSION_REQUIRED"
     ]),
@@ -511,6 +516,9 @@ export type CollectionDraftItemReorderRequest = z.infer<
 >;
 export type CollectionDraftListResponse = z.infer<
   typeof collectionDraftListResponseSchema
+>;
+export type CollectionPublicationTarget = z.infer<
+  typeof collectionPublicationTargetSchema
 >;
 export type CollectionDraftResponse = z.infer<
   typeof collectionDraftResponseSchema

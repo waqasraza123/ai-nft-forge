@@ -20,6 +20,7 @@ export default async function StudioCollectionsPage() {
       initialDrafts={result.drafts}
       initialGeneratedAssetCandidates={result.generatedAssetCandidates}
       initialPublicationTarget={result.publicationTarget}
+      initialPublicationTargets={result.publicationTargets}
       ownerWalletAddress={session.user.walletAddress}
     />
   );

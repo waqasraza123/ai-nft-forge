@@ -32,6 +32,11 @@ export async function PUT(request: Request) {
     const result =
       await createRuntimeStudioSettingsService().updateStudioSettings({
         accentColor: body.accentColor,
+        ...(body.brandId !== undefined
+          ? {
+              brandId: body.brandId
+            }
+          : {}),
         brandName: body.brandName,
         brandSlug: body.brandSlug,
         featuredReleaseLabel: body.featuredReleaseLabel,

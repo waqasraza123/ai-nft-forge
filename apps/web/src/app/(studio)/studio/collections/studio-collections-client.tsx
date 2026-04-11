@@ -24,6 +24,7 @@ import {
   type CollectionDraftStatus,
   type CollectionDraftSummary,
   type CollectionGeneratedAssetCandidate,
+  type CollectionPublicationTarget,
   type GeneratedAssetModerationStatus
 } from "@ai-nft-forge/shared";
 import {
@@ -43,11 +44,8 @@ import {
 type StudioCollectionsClientProps = {
   initialDrafts: CollectionDraftSummary[];
   initialGeneratedAssetCandidates: CollectionGeneratedAssetCandidate[];
-  initialPublicationTarget: {
-    brandName: string;
-    brandSlug: string;
-    publicBrandPath: string;
-  } | null;
+  initialPublicationTarget: CollectionPublicationTarget | null;
+  initialPublicationTargets: CollectionPublicationTarget[];
   ownerWalletAddress: string;
 };
 
@@ -323,10 +321,32 @@ function buildPublishedCollectionContractPath(input: {
   return createCollectionContractPath(input);
 }
 
+function resolveSelectedPublicationTargetId(input: {
+  currentTargetId: string | null;
+  draft: CollectionDraftSummary | null;
+  publicationTargets: CollectionPublicationTarget[];
+}) {
+  if (
+    input.currentTargetId &&
+    input.publicationTargets.some((target) => target.brandId === input.currentTargetId)
+  ) {
+    return input.currentTargetId;
+  }
+
+  const publicationBrandTarget = input.draft?.publication
+    ? input.publicationTargets.find(
+        (target) => target.brandSlug === input.draft?.publication?.brandSlug
+      )
+    : null;
+
+  return publicationBrandTarget?.brandId ?? input.publicationTargets[0]?.brandId ?? null;
+}
+
 export function StudioCollectionsClient({
   initialDrafts,
   initialGeneratedAssetCandidates,
   initialPublicationTarget,
+  initialPublicationTargets,
   ownerWalletAddress
 }: StudioCollectionsClientProps) {
   const walletConnection = useConnection();
@@ -336,9 +356,13 @@ export function StudioCollectionsClient({
   const [generatedAssetCandidates, setGeneratedAssetCandidates] = useState(
     initialGeneratedAssetCandidates
   );
-  const [publicationTarget, setPublicationTarget] = useState(
-    initialPublicationTarget
+  const [publicationTargets, setPublicationTargets] = useState(
+    initialPublicationTargets
   );
+  const [selectedPublicationTargetId, setSelectedPublicationTargetId] =
+    useState<string | null>(
+      initialPublicationTarget?.brandId ?? initialPublicationTargets[0]?.brandId ?? null
+    );
   const [selectedDraftId, setSelectedDraftId] = useState<string | null>(
     initialDrafts[0]?.id ?? null
   );
@@ -393,6 +417,12 @@ export function StudioCollectionsClient({
 
   const selectedDraft =
     drafts.find((draft) => draft.id === selectedDraftId) ?? drafts[0] ?? null;
+  const selectedPublicationTarget =
+    publicationTargets.find(
+      (target) => target.brandId === selectedPublicationTargetId
+    ) ??
+    publicationTargets[0] ??
+    null;
   const selectedDraftInvalidItems =
     selectedDraft?.items.filter(
       (item) => item.generatedAsset.moderationStatus !== "approved"
@@ -452,6 +482,18 @@ export function StudioCollectionsClient({
   }, [selectedDraft]);
 
   useEffect(() => {
+    const nextPublicationTargetId = resolveSelectedPublicationTargetId({
+      currentTargetId: selectedPublicationTargetId,
+      draft: selectedDraft,
+      publicationTargets
+    });
+
+    if (nextPublicationTargetId !== selectedPublicationTargetId) {
+      setSelectedPublicationTargetId(nextPublicationTargetId);
+    }
+  }, [publicationTargets, selectedDraft, selectedPublicationTargetId]);
+
+  useEffect(() => {
     const nextConnectorId =
       connectedWalletConnector?.id === "baseAccount" ||
       connectedWalletConnector?.id === "injected"
@@ -496,7 +538,17 @@ export function StudioCollectionsClient({
       startTransition(() => {
         setDrafts(sortDrafts(result.drafts));
         setGeneratedAssetCandidates(result.generatedAssetCandidates);
-        setPublicationTarget(result.publicationTarget);
+        setPublicationTargets(result.publicationTargets);
+        setSelectedPublicationTargetId((currentTargetId) =>
+          resolveSelectedPublicationTargetId({
+            currentTargetId,
+            draft:
+              result.drafts.find((draft) => draft.id === selectedDraftId) ??
+              result.drafts[0] ??
+              null,
+            publicationTargets: result.publicationTargets
+          })
+        );
       });
     } catch (error) {
       setNotice({
@@ -1005,6 +1057,12 @@ export function StudioCollectionsClient({
       const response = await fetch(
         `/api/studio/collections/${selectedDraft.id}/publish`,
         {
+          body: JSON.stringify({
+            brandId: selectedPublicationTarget?.brandId ?? null
+          }),
+          headers: {
+            "Content-Type": "application/json"
+          },
           method: "POST"
         }
       );
@@ -1912,7 +1970,7 @@ export function StudioCollectionsClient({
           )}
         </SurfaceCard>
         <SurfaceCard
-          body="Only review-ready drafts can be published. Publication now uses the saved owner brand profile from studio settings, and published drafts can carry durable storefront merchandising controls for feature placement and ordering."
+          body="Only review-ready drafts can be published. Publication now targets an explicit saved brand, and published drafts can carry durable storefront merchandising controls for feature placement and ordering."
           eyebrow="Publication"
           span={6}
           title={
@@ -1923,15 +1981,15 @@ export function StudioCollectionsClient({
         >
           {selectedDraft ? (
             <form className="studio-form" onSubmit={handlePublishDraft}>
-              {publicationTarget ? (
+              {selectedPublicationTarget ? (
                 <div className="publication-target-card">
                   <div className="publication-target-card__copy">
-                    <strong>{publicationTarget.brandName}</strong>
-                    <span>{publicationTarget.publicBrandPath}</span>
+                    <strong>{selectedPublicationTarget.brandName}</strong>
+                    <span>{selectedPublicationTarget.publicBrandPath}</span>
                     <span>
-                      Draft route:{" "}
+                      Selected route:{" "}
                       {selectedDraft.publication?.publicPath ??
-                        `${publicationTarget.publicBrandPath}/collections/${selectedDraft.slug}`}
+                        `${selectedPublicationTarget.publicBrandPath}/collections/${selectedDraft.slug}`}
                     </span>
                   </div>
                   <Link className="inline-link" href="/studio/settings">
@@ -1944,15 +2002,50 @@ export function StudioCollectionsClient({
                   review-ready drafts.
                 </div>
               )}
+              {publicationTargets.length > 1 ? (
+                <label className="field-stack">
+                  <span className="field-label">Publication brand</span>
+                  <select
+                    className="input-field"
+                    onChange={(event) => {
+                      setSelectedPublicationTargetId(event.target.value || null);
+                    }}
+                    value={selectedPublicationTarget?.brandId ?? ""}
+                  >
+                    {publicationTargets.map((target) => (
+                      <option key={target.brandId} value={target.brandId}>
+                        {target.brandName} · {target.publicBrandPath}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              {selectedDraft.publication &&
+              selectedPublicationTarget &&
+              selectedDraft.publication.brandSlug !==
+                selectedPublicationTarget.brandSlug ? (
+                <div className="status-banner status-banner--info">
+                  <strong>Republish will move this release</strong>
+                  <span>
+                    Republishing will move the public route from{" "}
+                    {selectedDraft.publication.publicPath} to{" "}
+                    {selectedPublicationTarget.publicBrandPath}/collections/
+                    {selectedDraft.slug}.
+                  </span>
+                </div>
+              ) : null}
               <div className="pill-row">
                 <Pill>
                   {selectedDraft.publication?.publicPath ??
-                    (publicationTarget
-                      ? `${publicationTarget.publicBrandPath}/collections/${selectedDraft.slug}`
+                    (selectedPublicationTarget
+                      ? `${selectedPublicationTarget.publicBrandPath}/collections/${selectedDraft.slug}`
                       : "/brands/[brandSlug]/collections/[collectionSlug]")}
                 </Pill>
-                {publicationTarget ? (
-                  <Pill>{publicationTarget.brandSlug}</Pill>
+                {selectedPublicationTarget ? (
+                  <Pill>{selectedPublicationTarget.brandSlug}</Pill>
+                ) : null}
+                {publicationTargets.length > 1 ? (
+                  <Pill>{publicationTargets.length} brands</Pill>
                 ) : null}
                 {selectedDraft.publication ? (
                   <Pill>
@@ -2026,7 +2119,7 @@ export function StudioCollectionsClient({
                 <button
                   className="button-action button-action--accent"
                   disabled={
-                    !publicationTarget ||
+                    !selectedPublicationTarget ||
                     publishingDraftId === selectedDraft.id ||
                     selectedDraft.status !== "review_ready" ||
                     selectedDraft.itemCount === 0
@@ -2054,7 +2147,7 @@ export function StudioCollectionsClient({
                     ? "Unpublishing…"
                     : "Unpublish"}
                 </button>
-                {!publicationTarget ? (
+                {!selectedPublicationTarget ? (
                   <Link className="inline-link" href="/studio/settings">
                     Configure settings
                   </Link>
@@ -2115,10 +2208,10 @@ export function StudioCollectionsClient({
                     Open first edition metadata
                   </Link>
                 ) : null}
-                {selectedDraft.publication && publicationTarget ? (
+                {selectedDraft.publication && selectedPublicationTarget ? (
                   <Link
                     className="inline-link"
-                    href={publicationTarget.publicBrandPath}
+                    href={selectedPublicationTarget.publicBrandPath}
                     target="_blank"
                   >
                     Open brand landing

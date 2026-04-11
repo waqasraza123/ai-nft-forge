@@ -95,6 +95,7 @@ export const studioBrandSummarySchema = z.object({
 
 export const studioSettingsSummarySchema = z.object({
   brand: studioBrandSummarySchema,
+  brands: z.array(studioBrandSummarySchema),
   workspace: studioWorkspaceSummarySchema
 });
 
@@ -103,6 +104,7 @@ export const studioSettingsResponseSchema = z.object({
 });
 
 export const studioSettingsUpdateRequestSchema = z.object({
+  brandId: z.string().min(1).nullish(),
   accentColor: studioBrandAccentColorSchema,
   brandName: collectionBrandNameSchema,
   brandSlug: collectionBrandSlugSchema,
@@ -121,14 +123,39 @@ export const studioSettingsUpdateRequestSchema = z.object({
   workspaceSlug: studioWorkspaceSlugSchema
 });
 
+export const studioBrandCreateRequestSchema = z.object({
+  accentColor: studioBrandAccentColorSchema,
+  brandName: collectionBrandNameSchema,
+  brandSlug: collectionBrandSlugSchema,
+  customDomain: studioCustomDomainSchema.nullish(),
+  featuredReleaseLabel: studioFeaturedReleaseLabelSchema,
+  heroKicker: studioBrandHeroKickerSchema.nullish(),
+  landingDescription: studioBrandLandingDescriptionSchema,
+  landingHeadline: studioBrandLandingHeadlineSchema,
+  primaryCtaLabel: studioBrandCtaLabelSchema.nullish(),
+  secondaryCtaLabel: studioBrandCtaLabelSchema.nullish(),
+  storyBody: studioBrandStoryBodySchema.nullish(),
+  storyHeadline: studioBrandStoryHeadlineSchema.nullish(),
+  themePreset: studioBrandThemePresetSchema,
+  wordmark: studioBrandWordmarkSchema.nullish()
+});
+
+export const studioBrandUpdateRequestSchema = studioBrandCreateRequestSchema;
+
+export const studioBrandResponseSchema = z.object({
+  brand: studioBrandSummarySchema
+});
+
 export const studioSettingsErrorResponseSchema = z.object({
   error: z.object({
     code: z.enum([
+      "BRAND_NOT_FOUND",
       "BRAND_PUBLICATION_CONFLICT",
       "BRAND_SLUG_CONFLICT",
       "INVALID_REQUEST",
       "INTERNAL_SERVER_ERROR",
       "SESSION_REQUIRED",
+      "WORKSPACE_REQUIRED",
       "WORKSPACE_SLUG_CONFLICT"
     ]),
     message: z.string().min(1)
@@ -137,6 +164,13 @@ export const studioSettingsErrorResponseSchema = z.object({
 
 export type StudioBrandSummary = z.infer<typeof studioBrandSummarySchema>;
 export type StudioBrandTheme = z.infer<typeof studioBrandThemeSchema>;
+export type StudioBrandResponse = z.infer<typeof studioBrandResponseSchema>;
+export type StudioBrandCreateRequest = z.infer<
+  typeof studioBrandCreateRequestSchema
+>;
+export type StudioBrandUpdateRequest = z.infer<
+  typeof studioBrandUpdateRequestSchema
+>;
 export type StudioSettingsErrorResponse = z.infer<
   typeof studioSettingsErrorResponseSchema
 >;

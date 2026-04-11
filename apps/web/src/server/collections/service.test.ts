@@ -165,24 +165,31 @@ function createCollectionDraftHarness() {
   }> = [];
   const publicationTargets = new Map<
     string,
-    {
+    Array<{
+      id: string;
       name: string;
       slug: string;
-    }
+    }>
   >([
     [
       "user_1",
-      {
-        name: "Demo Studio",
-        slug: "demo-studio"
-      }
+      [
+        {
+          id: "brand_user_1_primary",
+          name: "Demo Studio",
+          slug: "demo-studio"
+        }
+      ]
     ],
     [
       "user_2",
-      {
-        name: "Demo Studio",
-        slug: "demo-studio"
-      }
+      [
+        {
+          id: "brand_user_2_primary",
+          name: "Demo Studio",
+          slug: "demo-studio"
+        }
+      ]
     ]
   ]);
   const generatedAssets = new Map<
@@ -283,6 +290,10 @@ function createCollectionDraftHarness() {
     return value;
   }
 
+  function listPublicationTargetsForOwner(ownerUserId: string) {
+    return publicationTargets.get(ownerUserId) ?? [];
+  }
+
   function listDraftItemsForDraft(collectionDraftId: string) {
     return [...draftItems.values()]
       .filter((item) => item.collectionDraftId === collectionDraftId)
@@ -330,8 +341,20 @@ function createCollectionDraftHarness() {
 
   const repositories = {
     brandRepository: {
+      async findByIdForOwner(input: { id: string; ownerUserId: string }) {
+        return (
+          listPublicationTargetsForOwner(input.ownerUserId).find(
+            (target) => target.id === input.id
+          ) ?? null
+        );
+      },
+
       async findFirstByOwnerUserId(ownerUserId: string) {
-        return publicationTargets.get(ownerUserId) ?? null;
+        return listPublicationTargetsForOwner(ownerUserId)[0] ?? null;
+      },
+
+      async listByOwnerUserId(ownerUserId: string) {
+        return listPublicationTargetsForOwner(ownerUserId);
       }
     },
     collectionDraftItemRepository: {
@@ -1017,6 +1040,7 @@ function createCollectionDraftHarness() {
     setPublicationTarget(
       ownerUserId: string,
       target: {
+        id?: string;
         name: string;
         slug: string;
       } | null
@@ -1026,7 +1050,23 @@ function createCollectionDraftHarness() {
         return;
       }
 
-      publicationTargets.set(ownerUserId, target);
+      publicationTargets.set(ownerUserId, [
+        {
+          id: target.id ?? `${ownerUserId}_primary_brand`,
+          name: target.name,
+          slug: target.slug
+        }
+      ]);
+    },
+    setPublicationTargets(
+      ownerUserId: string,
+      targets: Array<{
+        id: string;
+        name: string;
+        slug: string;
+      }>
+    ) {
+      publicationTargets.set(ownerUserId, targets);
     },
     pushOpenOnchainIssue(issue: {
       detailJson: unknown;
@@ -1081,10 +1121,19 @@ describe("createCollectionDraftService", () => {
       "approved"
     );
     expect(result.publicationTarget).toEqual({
+      brandId: "brand_user_1_primary",
       brandName: "Demo Studio",
       brandSlug: "demo-studio",
       publicBrandPath: "/brands/demo-studio"
     });
+    expect(result.publicationTargets).toEqual([
+      {
+        brandId: "brand_user_1_primary",
+        brandName: "Demo Studio",
+        brandSlug: "demo-studio",
+        publicBrandPath: "/brands/demo-studio"
+      }
+    ]);
   });
 
   it("rejects curation for generated assets that are still pending review", async () => {
@@ -1245,6 +1294,51 @@ describe("createCollectionDraftService", () => {
       [...harness.publicationItems.values()][0]?.publicStorageObjectKey
     ).toBe(
       "published-collections/draft_1/items/001-generated_asset_1-portrait-1.png"
+    );
+  });
+
+  it("publishes to an explicitly selected brand when multiple publication targets exist", async () => {
+    const harness = createCollectionDraftHarness();
+    harness.setPublicationTargets("user_1", [
+      {
+        id: "brand_user_1_primary",
+        name: "Demo Studio",
+        slug: "demo-studio"
+      },
+      {
+        id: "brand_user_1_north",
+        name: "North Editions",
+        slug: "north-editions"
+      }
+    ]);
+    const createdDraft = await harness.service.createCollectionDraft({
+      ownerUserId: "user_1",
+      title: "Genesis Portrait Set"
+    });
+
+    await harness.service.addCollectionDraftItem({
+      collectionDraftId: createdDraft.draft.id,
+      generatedAssetId: "generated_asset_1",
+      ownerUserId: "user_1"
+    });
+    await harness.service.updateCollectionDraft({
+      collectionDraftId: createdDraft.draft.id,
+      description: "Release candidate set",
+      ownerUserId: "user_1",
+      slug: createdDraft.draft.slug,
+      status: "review_ready",
+      title: createdDraft.draft.title
+    });
+
+    const result = await harness.service.publishCollectionDraft({
+      brandId: "brand_user_1_north",
+      collectionDraftId: createdDraft.draft.id,
+      ownerUserId: "user_1"
+    });
+
+    expect(result.draft.publication?.brandSlug).toBe("north-editions");
+    expect(result.draft.publication?.publicPath).toBe(
+      "/brands/north-editions/collections/genesis-portrait-set"
     );
   });
 
@@ -1500,6 +1594,42 @@ describe("createCollectionDraftService", () => {
         "STUDIO_SETTINGS_REQUIRED",
         "Studio settings must define a brand profile before collection publication.",
         409
+      )
+    );
+  });
+
+  it("rejects publication when the selected publication brand does not exist", async () => {
+    const harness = createCollectionDraftHarness();
+    const createdDraft = await harness.service.createCollectionDraft({
+      ownerUserId: "user_1",
+      title: "Genesis Portrait Set"
+    });
+
+    await harness.service.addCollectionDraftItem({
+      collectionDraftId: createdDraft.draft.id,
+      generatedAssetId: "generated_asset_1",
+      ownerUserId: "user_1"
+    });
+    await harness.service.updateCollectionDraft({
+      collectionDraftId: createdDraft.draft.id,
+      description: null,
+      ownerUserId: "user_1",
+      slug: createdDraft.draft.slug,
+      status: "review_ready",
+      title: createdDraft.draft.title
+    });
+
+    await expect(
+      harness.service.publishCollectionDraft({
+        brandId: "brand_missing",
+        collectionDraftId: createdDraft.draft.id,
+        ownerUserId: "user_1"
+      })
+    ).rejects.toEqual(
+      new CollectionDraftServiceError(
+        "PUBLICATION_TARGET_NOT_FOUND",
+        "The selected publication brand was not found.",
+        404
       )
     );
   });
