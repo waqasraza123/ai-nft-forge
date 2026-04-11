@@ -1,7 +1,11 @@
 import {
+  createAuditLogRepository,
   createAuthNonceRepository,
   createAuthSessionRepository,
   createUserRepository,
+  createWorkspaceInvitationRepository,
+  createWorkspaceMembershipRepository,
+  createWorkspaceRepository,
   getDatabaseClient,
   runDatabaseTransaction,
   type DatabaseExecutor
@@ -14,9 +18,13 @@ import { createAuthSignatureVerifier } from "./signature";
 
 function createAuthRepositories(executor: DatabaseExecutor) {
   return {
+    auditLogRepository: createAuditLogRepository(executor),
     authNonceRepository: createAuthNonceRepository(executor),
     authSessionRepository: createAuthSessionRepository(executor),
-    userRepository: createUserRepository(executor)
+    userRepository: createUserRepository(executor),
+    workspaceInvitationRepository: createWorkspaceInvitationRepository(executor),
+    workspaceMembershipRepository: createWorkspaceMembershipRepository(executor),
+    workspaceRepository: createWorkspaceRepository(executor)
   };
 }
 

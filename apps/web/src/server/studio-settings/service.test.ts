@@ -7,6 +7,8 @@ function createStudioSettingsHarness() {
   let workspaceIndex = 0;
   let brandIndex = 0;
   let membershipIndex = 0;
+  let invitationIndex = 0;
+  let auditLogIndex = 0;
   const users = new Map<
     string,
     {
@@ -61,6 +63,28 @@ function createStudioSettingsHarness() {
       workspaceId: string;
     }
   >();
+  const workspaceInvitations = new Map<
+    string,
+    {
+      createdAt: Date;
+      expiresAt: Date;
+      id: string;
+      invitedByUserId: string;
+      role: "operator";
+      walletAddress: string;
+      workspaceId: string;
+    }
+  >();
+  const auditLogs: Array<{
+    action: string;
+    actorId: string;
+    actorType: string;
+    createdAt: Date;
+    entityId: string;
+    entityType: string;
+    id: string;
+    metadataJson: unknown;
+  }> = [];
 
   function ensureUser(input: {
     avatarUrl?: string | null;
@@ -89,6 +113,58 @@ function createStudioSettingsHarness() {
   }
 
   const repositories = {
+    auditLogRepository: {
+      async create(input: {
+        action: string;
+        actorId: string;
+        actorType: string;
+        entityId: string;
+        entityType: string;
+        metadataJson: unknown;
+      }) {
+        auditLogIndex += 1;
+        const auditLog = {
+          action: input.action,
+          actorId: input.actorId,
+          actorType: input.actorType,
+          createdAt: new Date(
+            `2026-04-09T02:00:${String(auditLogIndex).padStart(2, "0")}.000Z`
+          ),
+          entityId: input.entityId,
+          entityType: input.entityType,
+          id: `audit_${auditLogIndex}`,
+          metadataJson: input.metadataJson
+        };
+
+        auditLogs.push(auditLog);
+
+        return auditLog;
+      },
+
+      async listByEntity(input: {
+        entityId: string;
+        entityType: string;
+        limit?: number;
+      }) {
+        return auditLogs
+          .filter(
+            (auditLog) =>
+              auditLog.entityId === input.entityId &&
+              auditLog.entityType === input.entityType
+          )
+          .sort((left, right) => {
+            const createdAtDifference =
+              right.createdAt.getTime() - left.createdAt.getTime();
+
+            if (createdAtDifference !== 0) {
+              return createdAtDifference;
+            }
+
+            return right.id.localeCompare(left.id);
+          })
+          .slice(0, input.limit ?? 50);
+      }
+    },
     brandRepository: {
       async create(input: {
         customDomain?: string | null;
@@ -413,6 +489,130 @@ function createStudioSettingsHarness() {
           }));
       }
     },
+    workspaceInvitationRepository: {
+      async create(input: {
+        expiresAt: Date;
+        invitedByUserId: string;
+        role?: "operator" | "owner";
+        walletAddress: string;
+        workspaceId: string;
+      }) {
+        invitationIndex += 1;
+        const invitation = {
+          createdAt: new Date(
+            `2026-04-09T01:00:${String(invitationIndex).padStart(2, "0")}.000Z`
+          ),
+          expiresAt: input.expiresAt,
+          id: `invitation_${invitationIndex}`,
+          invitedByUserId: input.invitedByUserId,
+          role: (input.role ?? "operator") as "operator",
+          walletAddress: input.walletAddress,
+          workspaceId: input.workspaceId
+        };
+
+        workspaceInvitations.set(invitation.id, invitation);
+
+        return invitation;
+      },
+
+      async deleteByIdForWorkspace(input: { id: string; workspaceId: string }) {
+        const invitation = workspaceInvitations.get(input.id);
+
+        if (!invitation || invitation.workspaceId !== input.workspaceId) {
+          return {
+            count: 0
+          };
+        }
+
+        workspaceInvitations.delete(input.id);
+
+        return {
+          count: 1
+        };
+      },
+
+      async findActiveByWorkspaceAndWalletAddress(input: {
+        now: Date;
+        walletAddress: string;
+        workspaceId: string;
+      }) {
+        return (
+          [...workspaceInvitations.values()]
+            .filter(
+              (invitation) =>
+                invitation.workspaceId === input.workspaceId &&
+                invitation.walletAddress.toLowerCase() ===
+                  input.walletAddress.toLowerCase() &&
+                invitation.expiresAt.getTime() > input.now.getTime()
+            )
+            .sort((left, right) => left.id.localeCompare(right.id))[0] ?? null
+        );
+      },
+
+      async findByIdWithWorkspace(input: { id: string }) {
+        const invitation = workspaceInvitations.get(input.id);
+
+        if (!invitation) {
+          return null;
+        }
+
+        const workspace = workspaces.get(invitation.workspaceId);
+        const invitedByUser = users.get(invitation.invitedByUserId);
+
+        if (!workspace || !invitedByUser) {
+          return null;
+        }
+
+        return {
+          ...invitation,
+          invitedByUser,
+          workspace: {
+            id: workspace.id,
+            ownerUserId: workspace.ownerUserId
+          }
+        };
+      },
+
+      async listActiveByWalletAddress(input: {
+        now: Date;
+        walletAddress: string;
+      }) {
+        return [...workspaceInvitations.values()]
+          .filter(
+            (invitation) =>
+              invitation.walletAddress.toLowerCase() ===
+                input.walletAddress.toLowerCase() &&
+              invitation.expiresAt.getTime() > input.now.getTime()
+          )
+          .sort((left, right) => left.id.localeCompare(right.id))
+          .map((invitation) => ({
+            ...invitation,
+            invitedByUser: users.get(invitation.invitedByUserId)!,
+            workspace: {
+              id: invitation.workspaceId,
+              ownerUserId: workspaces.get(invitation.workspaceId)!.ownerUserId
+            }
+          }));
+      },
+
+      async listActiveByWorkspaceId(input: { now: Date; workspaceId: string }) {
+        return [...workspaceInvitations.values()]
+          .filter(
+            (invitation) =>
+              invitation.workspaceId === input.workspaceId &&
+              invitation.expiresAt.getTime() > input.now.getTime()
+          )
+          .sort((left, right) => left.id.localeCompare(right.id))
+          .map((invitation) => ({
+            ...invitation,
+            invitedByUser: users.get(invitation.invitedByUserId)!,
+            workspace: {
+              id: invitation.workspaceId,
+              ownerUserId: workspaces.get(invitation.workspaceId)!.ownerUserId
+            }
+          }));
+      }
+    },
     workspaceRepository: {
       async create(input: {
         name: string;
@@ -490,11 +690,13 @@ function createStudioSettingsHarness() {
   });
 
   return {
+    auditLogs,
     brands,
     memberships,
     publications,
     service,
     users,
+    workspaceInvitations,
     workspaces
   };
 }
@@ -834,6 +1036,80 @@ describe("createStudioSettingsService", () => {
     expect(settings.settings?.access.role).toBe("operator");
     expect(settings.settings?.access.canManageWorkspace).toBe(false);
     expect(settings.settings?.members).toHaveLength(2);
+    expect(harness.auditLogs[0]?.action).toBe("workspace_member_added");
+  });
+
+  it("creates workspace invitations and exposes them in settings audit history", async () => {
+    const harness = createStudioSettingsHarness();
+
+    await harness.service.updateStudioSettings({
+      accentColor: "#8b5e34",
+      brandName: "Forge Editions",
+      brandSlug: "forge-editions",
+      featuredReleaseLabel: "Hero drop",
+      landingDescription: "Owner storefront copy.",
+      landingHeadline: "Curated collectible releases",
+      ownerUserId: "user_1",
+      themePreset: "editorial_warm",
+      workspaceName: "Forge Operations",
+      workspaceSlug: "forge-operations"
+    });
+
+    const invitation = await harness.service.createWorkspaceInvitation({
+      ownerUserId: "user_1",
+      walletAddress: "0x4444444444444444444444444444444444444444"
+    });
+    const settings = await harness.service.getStudioSettings({
+      ownerUserId: "user_1"
+    });
+
+    expect(invitation.invitation.walletAddress).toBe(
+      "0x4444444444444444444444444444444444444444"
+    );
+    expect(settings.settings?.invitations).toHaveLength(1);
+    expect(settings.settings?.invitations[0]?.id).toBe(invitation.invitation.id);
+    expect(settings.settings?.auditEntries[0]).toMatchObject({
+      action: "workspace_invitation_created",
+      targetWalletAddress: "0x4444444444444444444444444444444444444444"
+    });
+  });
+
+  it("cancels workspace invitations and records the lifecycle in audit history", async () => {
+    const harness = createStudioSettingsHarness();
+
+    await harness.service.updateStudioSettings({
+      accentColor: "#8b5e34",
+      brandName: "Forge Editions",
+      brandSlug: "forge-editions",
+      featuredReleaseLabel: "Hero drop",
+      landingDescription: "Owner storefront copy.",
+      landingHeadline: "Curated collectible releases",
+      ownerUserId: "user_1",
+      themePreset: "editorial_warm",
+      workspaceName: "Forge Operations",
+      workspaceSlug: "forge-operations"
+    });
+
+    const invitation = await harness.service.createWorkspaceInvitation({
+      ownerUserId: "user_1",
+      walletAddress: "0x5555555555555555555555555555555555555555"
+    });
+
+    const result = await harness.service.cancelWorkspaceInvitation({
+      invitationId: invitation.invitation.id,
+      ownerUserId: "user_1"
+    });
+    const settings = await harness.service.getStudioSettings({
+      ownerUserId: "user_1"
+    });
+
+    expect(result.removed).toBe(true);
+    expect(settings.settings?.invitations).toHaveLength(0);
+    expect(settings.settings?.auditEntries.slice(0, 2).map((entry) => entry.action))
+      .toEqual([
+        "workspace_invitation_canceled",
+        "workspace_invitation_created"
+      ]);
   });
 
   it("rejects adding wallets that already belong to another workspace", async () => {
@@ -905,5 +1181,9 @@ describe("createStudioSettingsService", () => {
 
     expect(result.removed).toBe(true);
     expect(harness.memberships.size).toBe(0);
+    expect(harness.auditLogs.slice(-2).map((entry) => entry.action)).toEqual([
+      "workspace_member_added",
+      "workspace_member_removed"
+    ]);
   });
 });

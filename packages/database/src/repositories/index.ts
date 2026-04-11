@@ -102,3 +102,7 @@ export {
   createWorkspaceMembershipRepository,
   type WorkspaceMembershipRepository
 } from "./workspace-membership-repository.js";
+export {
+  createWorkspaceInvitationRepository,
+  type WorkspaceInvitationRepository
+} from "./workspace-invitation-repository.js";

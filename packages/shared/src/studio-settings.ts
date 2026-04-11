@@ -116,10 +116,42 @@ export const studioWorkspaceMemberSummarySchema = z.object({
   walletAddress: walletAddressSchema
 });
 
+export const studioWorkspaceInvitationSummarySchema = z.object({
+  createdAt: z.string().datetime(),
+  expiresAt: z.string().datetime(),
+  id: z.string().min(1),
+  invitedByUserId: z.string().min(1),
+  invitedByWalletAddress: walletAddressSchema,
+  role: studioWorkspaceRoleSchema,
+  walletAddress: walletAddressSchema
+});
+
+export const studioWorkspaceAuditActionSchema = z.enum([
+  "workspace_invitation_accepted",
+  "workspace_invitation_canceled",
+  "workspace_invitation_created",
+  "workspace_member_added",
+  "workspace_member_removed"
+]);
+
+export const studioWorkspaceAuditEntrySchema = z.object({
+  action: studioWorkspaceAuditActionSchema,
+  actorUserId: z.string().min(1),
+  actorWalletAddress: walletAddressSchema,
+  createdAt: z.string().datetime(),
+  id: z.string().min(1),
+  membershipId: z.string().min(1).nullable(),
+  role: studioWorkspaceRoleSchema.nullable(),
+  targetUserId: z.string().min(1).nullable(),
+  targetWalletAddress: walletAddressSchema.nullable()
+});
+
 export const studioSettingsSummarySchema = z.object({
   access: studioWorkspaceAccessSchema,
+  auditEntries: z.array(studioWorkspaceAuditEntrySchema),
   brand: studioBrandSummarySchema,
   brands: z.array(studioBrandSummarySchema),
+  invitations: z.array(studioWorkspaceInvitationSummarySchema),
   members: z.array(studioWorkspaceMemberSummarySchema),
   workspace: studioWorkspaceSummarySchema
 });
@@ -184,6 +216,19 @@ export const studioWorkspaceMemberDeleteResponseSchema = z.object({
   removed: z.boolean()
 });
 
+export const studioWorkspaceInvitationCreateRequestSchema = z.object({
+  walletAddress: walletAddressSchema
+});
+
+export const studioWorkspaceInvitationResponseSchema = z.object({
+  invitation: studioWorkspaceInvitationSummarySchema
+});
+
+export const studioWorkspaceInvitationDeleteResponseSchema = z.object({
+  invitationId: z.string().min(1),
+  removed: z.boolean()
+});
+
 export const studioSettingsErrorResponseSchema = z.object({
   error: z.object({
     code: z.enum([
@@ -193,6 +238,8 @@ export const studioSettingsErrorResponseSchema = z.object({
       "FORBIDDEN",
       "INVALID_REQUEST",
       "INTERNAL_SERVER_ERROR",
+      "INVITATION_ALREADY_EXISTS",
+      "INVITATION_NOT_FOUND",
       "MEMBER_ALREADY_EXISTS",
       "MEMBER_NOT_FOUND",
       "MEMBER_WORKSPACE_CONFLICT",
@@ -235,6 +282,24 @@ export type StudioWorkspaceMemberResponse = z.infer<
 >;
 export type StudioWorkspaceMemberSummary = z.infer<
   typeof studioWorkspaceMemberSummarySchema
+>;
+export type StudioWorkspaceInvitationCreateRequest = z.infer<
+  typeof studioWorkspaceInvitationCreateRequestSchema
+>;
+export type StudioWorkspaceInvitationDeleteResponse = z.infer<
+  typeof studioWorkspaceInvitationDeleteResponseSchema
+>;
+export type StudioWorkspaceInvitationResponse = z.infer<
+  typeof studioWorkspaceInvitationResponseSchema
+>;
+export type StudioWorkspaceInvitationSummary = z.infer<
+  typeof studioWorkspaceInvitationSummarySchema
+>;
+export type StudioWorkspaceAuditAction = z.infer<
+  typeof studioWorkspaceAuditActionSchema
+>;
+export type StudioWorkspaceAuditEntry = z.infer<
+  typeof studioWorkspaceAuditEntrySchema
 >;
 export type StudioWorkspaceRole = z.infer<typeof studioWorkspaceRoleSchema>;
 export type StudioWorkspaceSummary = z.infer<

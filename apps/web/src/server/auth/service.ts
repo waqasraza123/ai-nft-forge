@@ -8,6 +8,16 @@ import { AuthServiceError } from "./error";
 import { createAuthMessage, normalizeWalletAddress } from "./message";
 
 type AuthRepositorySet = {
+  auditLogRepository: {
+    create(input: {
+      action: string;
+      actorId: string;
+      actorType: string;
+      entityId: string;
+      entityType: string;
+      metadataJson: unknown;
+    }): Promise<unknown>;
+  };
   authNonceRepository: {
     create(input: {
       expiresAt: Date;
@@ -54,6 +64,12 @@ type AuthRepositorySet = {
       id: string;
       walletAddress: string;
     } | null>;
+    findByWalletAddress(walletAddress: string): Promise<{
+      avatarUrl: string | null;
+      displayName: string | null;
+      id: string;
+      walletAddress: string;
+    } | null>;
     upsertWalletUser(input: {
       avatarUrl?: string | null;
       displayName?: string | null;
@@ -64,6 +80,46 @@ type AuthRepositorySet = {
       id: string;
       walletAddress: string;
     }>;
+  };
+  workspaceInvitationRepository: {
+    deleteByIdForWorkspace(input: {
+      id: string;
+      workspaceId: string;
+    }): Promise<{ count: number }>;
+    listActiveByWalletAddress(input: {
+      now: Date;
+      walletAddress: string;
+    }): Promise<
+      Array<{
+        id: string;
+        role: "operator" | "owner";
+        walletAddress: string;
+        workspace: {
+          id: string;
+          ownerUserId: string;
+        };
+        workspaceId: string;
+      }>
+    >;
+  };
+  workspaceMembershipRepository: {
+    create(input: {
+      role?: "operator" | "owner";
+      userId: string;
+      workspaceId: string;
+    }): Promise<{
+      id: string;
+    }>;
+    findFirstByUserId(userId: string): Promise<{
+      workspace: {
+        id: string;
+      };
+    } | null>;
+  };
+  workspaceRepository: {
+    findFirstByOwnerUserId(ownerUserId: string): Promise<{
+      id: string;
+    } | null>;
   };
 };
 
@@ -197,6 +253,76 @@ export function createAuthService(dependencies: AuthServiceDependencies) {
             ? { displayName: input.displayName }
             : {})
         });
+
+        const existingOwnedWorkspace =
+          await repositories.workspaceRepository.findFirstByOwnerUserId(user.id);
+        const existingWorkspaceMembership =
+          await repositories.workspaceMembershipRepository.findFirstByUserId(
+            user.id
+          );
+
+        if (!existingOwnedWorkspace && !existingWorkspaceMembership) {
+          const pendingInvitations =
+            await repositories.workspaceInvitationRepository.listActiveByWalletAddress(
+              {
+                now,
+                walletAddress
+              }
+            );
+          const acceptedInvitation = pendingInvitations[0] ?? null;
+
+          if (acceptedInvitation) {
+            const createdMembership =
+              await repositories.workspaceMembershipRepository.create({
+                role: acceptedInvitation.role,
+                userId: user.id,
+                workspaceId: acceptedInvitation.workspaceId
+              });
+
+            await repositories.workspaceInvitationRepository.deleteByIdForWorkspace(
+              {
+                id: acceptedInvitation.id,
+                workspaceId: acceptedInvitation.workspaceId
+              }
+            );
+            await repositories.auditLogRepository.create({
+              action: "workspace_invitation_accepted",
+              actorId: user.id,
+              actorType: "user",
+              entityId: acceptedInvitation.workspaceId,
+              entityType: "workspace",
+              metadataJson: {
+                actorWalletAddress: user.walletAddress,
+                membershipId: createdMembership.id,
+                role: acceptedInvitation.role,
+                targetUserId: user.id,
+                targetWalletAddress: user.walletAddress
+              }
+            });
+
+            for (const invitation of pendingInvitations.slice(1)) {
+              await repositories.workspaceInvitationRepository.deleteByIdForWorkspace(
+                {
+                  id: invitation.id,
+                  workspaceId: invitation.workspaceId
+                }
+              );
+              await repositories.auditLogRepository.create({
+                action: "workspace_invitation_canceled",
+                actorId: user.id,
+                actorType: "user",
+                entityId: invitation.workspaceId,
+                entityType: "workspace",
+                metadataJson: {
+                  actorWalletAddress: user.walletAddress,
+                  role: invitation.role,
+                  targetUserId: user.id,
+                  targetWalletAddress: user.walletAddress
+                }
+              });
+            }
+          }
+        }
 
         const expiresAt = new Date(now.getTime() + sessionTtlMilliseconds);
         const ipHash = input.ipAddress

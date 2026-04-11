@@ -1,7 +1,9 @@
 import {
+  createAuditLogRepository,
   createBrandRepository,
   createPublishedCollectionRepository,
   createUserRepository,
+  createWorkspaceInvitationRepository,
   createWorkspaceMembershipRepository,
   createWorkspaceRepository,
   getDatabaseClient,
@@ -13,9 +15,11 @@ import { createStudioSettingsService } from "./service";
 
 function createStudioSettingsRepositories(database: DatabaseExecutor) {
   return {
+    auditLogRepository: createAuditLogRepository(database),
     brandRepository: createBrandRepository(database),
     publishedCollectionRepository: createPublishedCollectionRepository(database),
     userRepository: createUserRepository(database),
+    workspaceInvitationRepository: createWorkspaceInvitationRepository(database),
     workspaceMembershipRepository: createWorkspaceMembershipRepository(database),
     workspaceRepository: createWorkspaceRepository(database)
   };

@@ -7,6 +7,11 @@ import {
   studioBrandCreateRequestSchema,
   studioBrandResponseSchema,
   studioBrandThemeSchema,
+  studioWorkspaceAuditActionSchema,
+  studioWorkspaceAuditEntrySchema,
+  studioWorkspaceInvitationCreateRequestSchema,
+  studioWorkspaceInvitationDeleteResponseSchema,
+  studioWorkspaceInvitationResponseSchema,
   studioSettingsResponseSchema,
   studioSettingsUpdateRequestSchema,
   studioWorkspaceMemberCreateRequestSchema,
@@ -65,7 +70,66 @@ type WorkspaceMembershipRecord = {
   workspaceId: string;
 };
 
+type WorkspaceInvitationRecord = {
+  createdAt: Date;
+  expiresAt: Date;
+  id: string;
+  invitedByUser: UserRecord;
+  invitedByUserId: string;
+  role: StudioWorkspaceRole;
+  walletAddress: string;
+  workspaceId: string;
+};
+
+type WorkspaceInvitationWithWorkspaceRecord = WorkspaceInvitationRecord & {
+  workspace: {
+    id: string;
+    ownerUserId: string;
+  };
+};
+
+type WorkspaceInvitationLookupRecord = {
+  createdAt: Date;
+  expiresAt: Date;
+  id: string;
+  role: StudioWorkspaceRole;
+  walletAddress: string;
+  workspace: {
+    id: string;
+    ownerUserId: string;
+  };
+  workspaceId: string;
+};
+
+type AuditLogRecord = {
+  action: string;
+  actorId: string;
+  actorType: string;
+  createdAt: Date;
+  entityId: string;
+  entityType: string;
+  id: string;
+  metadataJson: unknown;
+};
+
+const workspaceInvitationTtlDays = 14;
+
 type StudioSettingsRepositorySet = {
+  auditLogRepository: {
+    create(input: {
+      action: string;
+      actorId: string;
+      actorType: string;
+      entityId: string;
+      entityType: string;
+      metadataJson: unknown;
+    }): Promise<AuditLogRecord>;
+    listByEntity(input: {
+      entityId: string;
+      entityType: string;
+      limit?: number;
+    }): Promise<AuditLogRecord[]>;
+  };
   brandRepository: {
     create(input: {
       customDomain?: string | null;
@@ -156,6 +220,41 @@ type StudioSettingsRepositorySet = {
         userId: string;
       }>
     >;
+  };
+  workspaceInvitationRepository: {
+    create(input: {
+      expiresAt: Date;
+      invitedByUserId: string;
+      role?: StudioWorkspaceRole;
+      walletAddress: string;
+      workspaceId: string;
+    }): Promise<{
+      id: string;
+    }>;
+    deleteByIdForWorkspace(input: {
+      id: string;
+      workspaceId: string;
+    }): Promise<{ count: number }>;
+    findActiveByWorkspaceAndWalletAddress(input: {
+      now: Date;
+      walletAddress: string;
+      workspaceId: string;
+    }): Promise<{
+      id: string;
+      walletAddress: string;
+      workspaceId: string;
+    } | null>;
+    findByIdWithWorkspace(input: {
+      id: string;
+    }): Promise<WorkspaceInvitationWithWorkspaceRecord | null>;
+    listActiveByWalletAddress(input: {
+      now: Date;
+      walletAddress: string;
+    }): Promise<WorkspaceInvitationLookupRecord[]>;
+    listActiveByWorkspaceId(input: {
+      now: Date;
+      workspaceId: string;
+    }): Promise<WorkspaceInvitationRecord[]>;
   };
   workspaceRepository: {
     create(input: {
@@ -325,23 +424,111 @@ function serializeWorkspaceMember(input: {
   };
 }
 
+function serializeWorkspaceInvitation(input: WorkspaceInvitationRecord) {
+  return {
+    createdAt: input.createdAt.toISOString(),
+    expiresAt: input.expiresAt.toISOString(),
+    id: input.id,
+    invitedByUserId: input.invitedByUserId,
+    invitedByWalletAddress: input.invitedByUser.walletAddress,
+    role: input.role,
+    walletAddress: input.walletAddress
+  };
+}
+
+function serializeWorkspaceAuditEntry(input: AuditLogRecord) {
+  const parsedAction = studioWorkspaceAuditActionSchema.safeParse(input.action);
+
+  if (!parsedAction.success) {
+    return null;
+  }
+
+  const metadata =
+    typeof input.metadataJson === "object" && input.metadataJson !== null
+      ? input.metadataJson
+      : {};
+  const targetWalletAddress =
+    "targetWalletAddress" in metadata &&
+    typeof metadata.targetWalletAddress === "string"
+      ? metadata.targetWalletAddress
+      : null;
+  const actorWalletAddress =
+    "actorWalletAddress" in metadata &&
+    typeof metadata.actorWalletAddress === "string"
+      ? metadata.actorWalletAddress
+      : targetWalletAddress;
+  const membershipId =
+    "membershipId" in metadata && typeof metadata.membershipId === "string"
+      ? metadata.membershipId
+      : null;
+  const role =
+    "role" in metadata && typeof metadata.role === "string"
+      ? metadata.role
+      : null;
+  const targetUserId =
+    "targetUserId" in metadata && typeof metadata.targetUserId === "string"
+      ? metadata.targetUserId
+      : null;
+
+  if (!actorWalletAddress) {
+    return null;
+  }
+
+  return studioWorkspaceAuditEntrySchema.parse({
+    action: parsedAction.data,
+    actorUserId: input.actorId,
+    actorWalletAddress,
+    createdAt: input.createdAt.toISOString(),
+    id: input.id,
+    membershipId,
+    role,
+    targetUserId,
+    targetWalletAddress
+  });
+}
+
 async function serializeStudioSettings(input: {
   brands: BrandRecord[];
   owner: UserRecord;
-  repositories: Pick<StudioSettingsRepositorySet, "workspaceMembershipRepository">;
+  repositories: Pick<
+    StudioSettingsRepositorySet,
+    | "auditLogRepository"
+    | "workspaceInvitationRepository"
+    | "workspaceMembershipRepository"
+  >;
   role: StudioWorkspaceRole;
   workspace: WorkspaceRecord;
 }) {
-  const memberships =
-    await input.repositories.workspaceMembershipRepository.listByWorkspaceId(
+  const now = new Date();
+  const [memberships, invitations, auditLogs] = await Promise.all([
+    input.repositories.workspaceMembershipRepository.listByWorkspaceId(
       input.workspace.id
-    );
+    ),
+    input.repositories.workspaceInvitationRepository.listActiveByWorkspaceId({
+      now,
+      workspaceId: input.workspace.id
+    }),
+    input.repositories.auditLogRepository.listByEntity({
+      entityId: input.workspace.id,
+      entityType: "workspace",
+      limit: 25
+    })
+  ]);
+  const auditEntries = auditLogs.flatMap((auditLog) => {
+    const serializedAuditEntry = serializeWorkspaceAuditEntry(auditLog);
+
+    return serializedAuditEntry ? [serializedAuditEntry] : [];
+  });
 
   return studioSettingsResponseSchema.parse({
     settings: {
       access: createWorkspaceAccess(input.role),
+      auditEntries,
       brand: serializeBrand(input.brands[0]!),
       brands: input.brands.map((brand) => serializeBrand(brand)),
+      invitations: invitations.map((invitation) =>
+        serializeWorkspaceInvitation(invitation)
+      ),
       members: [
         serializeWorkspaceMember({
           addedAt: null,
@@ -466,6 +653,53 @@ function assertOwnerRole(role: StudioWorkspaceRole) {
       403
     );
   }
+}
+
+async function recordWorkspaceAuditLog(input: {
+  action:
+    | "workspace_invitation_accepted"
+    | "workspace_invitation_canceled"
+    | "workspace_invitation_created"
+    | "workspace_member_added"
+    | "workspace_member_removed";
+  actor: UserRecord;
+  membershipId?: string | null;
+  repositories: Pick<StudioSettingsRepositorySet, "auditLogRepository">;
+  role?: StudioWorkspaceRole | null;
+  targetUserId?: string | null;
+  targetWalletAddress?: string | null;
+  workspaceId: string;
+}) {
+  await input.repositories.auditLogRepository.create({
+    action: input.action,
+    actorId: input.actor.id,
+    actorType: "user",
+    entityId: input.workspaceId,
+    entityType: "workspace",
+    metadataJson: {
+      actorWalletAddress: input.actor.walletAddress,
+      ...(input.membershipId
+        ? {
+            membershipId: input.membershipId
+          }
+        : {}),
+      ...(input.role
+        ? {
+            role: input.role
+          }
+        : {}),
+      ...(input.targetUserId
+        ? {
+            targetUserId: input.targetUserId
+          }
+        : {}),
+      ...(input.targetWalletAddress
+        ? {
+            targetWalletAddress: input.targetWalletAddress
+          }
+        : {})
+    }
+  });
 }
 
 async function requireOwnerWorkspace(input: {
@@ -791,6 +1025,7 @@ export function createStudioSettingsService(
       });
 
       return dependencies.runTransaction(async (repositories) => {
+        const now = new Date();
         const { owner, workspace } = await requireOwnerWorkspace({
           ownerUserId: input.ownerUserId,
           repositories
@@ -889,6 +1124,17 @@ export function createStudioSettingsService(
           );
         }
 
+        await recordWorkspaceAuditLog({
+          action: "workspace_member_added",
+          actor: owner,
+          membershipId: persistedMembership.id,
+          repositories,
+          role: persistedMembership.role,
+          targetUserId: persistedMembership.user.id,
+          targetWalletAddress: persistedMembership.user.walletAddress,
+          workspaceId: workspace.id
+        });
+
         return studioWorkspaceMemberResponseSchema.parse({
           member: serializeWorkspaceMember({
             addedAt: persistedMembership.createdAt,
@@ -896,6 +1142,213 @@ export function createStudioSettingsService(
             role: persistedMembership.role,
             user: persistedMembership.user
           })
+        });
+      });
+    },
+
+    async createWorkspaceInvitation(input: {
+      ownerUserId: string;
+      role?: StudioWorkspaceRole;
+      walletAddress: string;
+    }) {
+      assertOwnerRole(input.role ?? "owner");
+
+      const parsedInput = studioWorkspaceInvitationCreateRequestSchema.parse({
+        walletAddress: input.walletAddress
+      });
+
+      return dependencies.runTransaction(async (repositories) => {
+        const now = new Date();
+        const { owner, workspace } = await requireOwnerWorkspace({
+          ownerUserId: input.ownerUserId,
+          repositories
+        });
+
+        if (
+          owner.walletAddress.toLowerCase() ===
+          parsedInput.walletAddress.toLowerCase()
+        ) {
+          throw new StudioSettingsServiceError(
+            "INVITATION_ALREADY_EXISTS",
+            "Workspace owners do not need invitations.",
+            409
+          );
+        }
+
+        const existingUser =
+          await repositories.userRepository.findByWalletAddress(
+            parsedInput.walletAddress
+          );
+
+        if (existingUser) {
+          const [ownedWorkspace, existingMembership] = await Promise.all([
+            repositories.workspaceRepository.findFirstByOwnerUserId(
+              existingUser.id
+            ),
+            repositories.workspaceMembershipRepository.findFirstByUserId(
+              existingUser.id
+            )
+          ]);
+
+          if (ownedWorkspace) {
+            throw new StudioSettingsServiceError(
+              "MEMBER_WORKSPACE_CONFLICT",
+              "That wallet already owns another workspace.",
+              409
+            );
+          }
+
+          if (existingMembership) {
+            if (existingMembership.workspace.id === workspace.id) {
+              throw new StudioSettingsServiceError(
+                "MEMBER_ALREADY_EXISTS",
+                "That wallet already has access to this workspace.",
+                409
+              );
+            }
+
+            throw new StudioSettingsServiceError(
+              "MEMBER_WORKSPACE_CONFLICT",
+              "That wallet already belongs to another workspace.",
+              409
+            );
+          }
+        }
+
+        const existingWorkspaceInvitation =
+          await repositories.workspaceInvitationRepository.findActiveByWorkspaceAndWalletAddress(
+            {
+              now,
+              walletAddress: parsedInput.walletAddress,
+              workspaceId: workspace.id
+            }
+          );
+
+        if (existingWorkspaceInvitation) {
+          throw new StudioSettingsServiceError(
+            "INVITATION_ALREADY_EXISTS",
+            "That wallet already has a pending invitation for this workspace.",
+            409
+          );
+        }
+
+        const pendingInvitations =
+          await repositories.workspaceInvitationRepository.listActiveByWalletAddress(
+            {
+              now,
+              walletAddress: parsedInput.walletAddress
+            }
+          );
+
+        if (pendingInvitations.length > 0) {
+          throw new StudioSettingsServiceError(
+            "MEMBER_WORKSPACE_CONFLICT",
+            "That wallet already has a pending invitation for another workspace.",
+            409
+          );
+        }
+
+        const expiresAt = new Date(now);
+        expiresAt.setDate(expiresAt.getDate() + workspaceInvitationTtlDays);
+
+        const invitation = await repositories.workspaceInvitationRepository.create(
+          {
+            expiresAt,
+            invitedByUserId: owner.id,
+            role: "operator",
+            walletAddress: parsedInput.walletAddress,
+            workspaceId: workspace.id
+          }
+        );
+        const persistedInvitation =
+          await repositories.workspaceInvitationRepository.findByIdWithWorkspace(
+            {
+              id: invitation.id
+            }
+          );
+
+        if (!persistedInvitation) {
+          throw new StudioSettingsServiceError(
+            "INTERNAL_SERVER_ERROR",
+            "Workspace invitation could not be loaded after creation.",
+            500
+          );
+        }
+
+        await recordWorkspaceAuditLog({
+          action: "workspace_invitation_created",
+          actor: owner,
+          repositories,
+          role: "operator",
+          targetWalletAddress: persistedInvitation.walletAddress,
+          workspaceId: workspace.id
+        });
+
+        return studioWorkspaceInvitationResponseSchema.parse({
+          invitation: serializeWorkspaceInvitation(persistedInvitation)
+        });
+      });
+    },
+
+    async cancelWorkspaceInvitation(input: {
+      invitationId: string;
+      ownerUserId: string;
+      role?: StudioWorkspaceRole;
+    }) {
+      assertOwnerRole(input.role ?? "owner");
+
+      return dependencies.runTransaction(async (repositories) => {
+        const { owner, workspace } = await requireOwnerWorkspace({
+          ownerUserId: input.ownerUserId,
+          repositories
+        });
+        const invitation =
+          await repositories.workspaceInvitationRepository.findByIdWithWorkspace(
+            {
+              id: input.invitationId
+            }
+          );
+
+        if (
+          !invitation ||
+          invitation.workspace.id !== workspace.id ||
+          invitation.workspace.ownerUserId !== input.ownerUserId
+        ) {
+          throw new StudioSettingsServiceError(
+            "INVITATION_NOT_FOUND",
+            "The requested workspace invitation was not found.",
+            404
+          );
+        }
+
+        const deleted =
+          await repositories.workspaceInvitationRepository.deleteByIdForWorkspace(
+            {
+              id: input.invitationId,
+              workspaceId: workspace.id
+            }
+          );
+
+        if (deleted.count === 0) {
+          throw new StudioSettingsServiceError(
+            "INVITATION_NOT_FOUND",
+            "The requested workspace invitation was not found.",
+            404
+          );
+        }
+
+        await recordWorkspaceAuditLog({
+          action: "workspace_invitation_canceled",
+          actor: owner,
+          repositories,
+          role: invitation.role,
+          targetWalletAddress: invitation.walletAddress,
+          workspaceId: workspace.id
+        });
+
+        return studioWorkspaceInvitationDeleteResponseSchema.parse({
+          invitationId: input.invitationId,
+          removed: true
         });
       });
     },
@@ -908,7 +1361,7 @@ export function createStudioSettingsService(
       assertOwnerRole(input.role ?? "owner");
 
       return dependencies.runTransaction(async (repositories) => {
-        const { workspace } = await requireOwnerWorkspace({
+        const { owner, workspace } = await requireOwnerWorkspace({
           ownerUserId: input.ownerUserId,
           repositories
         });
@@ -946,6 +1399,17 @@ export function createStudioSettingsService(
             404
           );
         }
+
+        await recordWorkspaceAuditLog({
+          action: "workspace_member_removed",
+          actor: owner,
+          membershipId: membership.id,
+          repositories,
+          role: membership.role,
+          targetUserId: membership.user.id,
+          targetWalletAddress: membership.user.walletAddress,
+          workspaceId: workspace.id
+        });
 
         return studioWorkspaceMemberDeleteResponseSchema.parse({
           membershipId: input.membershipId,

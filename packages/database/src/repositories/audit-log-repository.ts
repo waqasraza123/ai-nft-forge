@@ -19,6 +19,28 @@ export function createAuditLogRepository(database: AuditLogRepositoryDatabase) {
       return database.auditLog.create({
         data: input
       });
+    },
+
+    listByEntity(input: {
+      entityId: string;
+      entityType: string;
+      limit?: number;
+    }): Promise<AuditLog[]> {
+      return database.auditLog.findMany({
+        orderBy: [
+          {
+            createdAt: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        take: input.limit ?? 50,
+        where: {
+          entityId: input.entityId,
+          entityType: input.entityType
+        }
+      });
     }
   };
 }

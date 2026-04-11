@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { createAuditLogRepository } from "./audit-log-repository.js";
 import { createAuthSessionRepository } from "./auth-session-repository.js";
 import { createBrandRepository } from "./brand-repository.js";
 import { createCollectionDraftItemRepository } from "./collection-draft-item-repository.js";
@@ -21,6 +22,7 @@ import { createPublishedCollectionRepository } from "./published-collection-repo
 import { createSourceAssetRepository } from "./source-asset-repository.js";
 import { createUserRepository } from "./user-repository.js";
 import { createWorkspaceMembershipRepository } from "./workspace-membership-repository.js";
+import { createWorkspaceInvitationRepository } from "./workspace-invitation-repository.js";
 import { createWorkspaceRepository } from "./workspace-repository.js";
 
 describe("database repositories", () => {
@@ -50,6 +52,67 @@ describe("database repositories", () => {
       }
     });
     expect(result.walletAddress).toBe("0xabc");
+  });
+
+  it("delegates audit-log writes and workspace-scoped history lookup", async () => {
+    const database = {
+      auditLog: {
+        create: vi.fn().mockResolvedValue({
+          id: "audit_1"
+        }),
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "audit_1"
+          }
+        ])
+      }
+    };
+    const repository = createAuditLogRepository(database as never);
+
+    const createdLog = await repository.create({
+      action: "workspace_invitation_created",
+      actorId: "user_1",
+      actorType: "user",
+      entityId: "workspace_1",
+      entityType: "workspace",
+      metadataJson: {
+        walletAddress: "0xabc"
+      }
+    });
+    const logs = await repository.listByEntity({
+      entityId: "workspace_1",
+      entityType: "workspace"
+    });
+
+    expect(database.auditLog.create).toHaveBeenCalledWith({
+      data: {
+        action: "workspace_invitation_created",
+        actorId: "user_1",
+        actorType: "user",
+        entityId: "workspace_1",
+        entityType: "workspace",
+        metadataJson: {
+          walletAddress: "0xabc"
+        }
+      }
+    });
+    expect(database.auditLog.findMany).toHaveBeenCalledWith({
+      orderBy: [
+        {
+          createdAt: "desc"
+        },
+        {
+          id: "desc"
+        }
+      ],
+      take: 50,
+      where: {
+        entityId: "workspace_1",
+        entityType: "workspace"
+      }
+    });
+    expect(createdLog.id).toBe("audit_1");
+    expect(logs[0]?.id).toBe("audit_1");
   });
 
   it("delegates active session lookup through the auth session repository", async () => {
@@ -437,6 +500,199 @@ describe("database repositories", () => {
     expect(memberWorkspace?.id).toBe("membership_1");
     expect(workspaceMembers[0]?.id).toBe("membership_1");
     expect(removableMembership?.workspace.ownerUserId).toBe("user_1");
+  });
+
+  it("delegates workspace invitation lookup and persistence through the invitation repository", async () => {
+    const now = new Date("2026-04-11T00:00:00.000Z");
+    const database = {
+      workspaceInvitation: {
+        create: vi.fn().mockResolvedValue({
+          id: "invite_1"
+        }),
+        deleteMany: vi.fn().mockResolvedValue({
+          count: 1
+        }),
+        findFirst: vi.fn().mockResolvedValue({
+          id: "invite_1"
+        }),
+        findMany: vi
+          .fn()
+          .mockResolvedValueOnce([
+            {
+              id: "invite_1",
+              workspace: {
+                id: "workspace_1",
+                ownerUserId: "user_1"
+              }
+            }
+          ])
+          .mockResolvedValueOnce([
+            {
+              createdAt: now,
+              id: "invite_1",
+              invitedByUser: {
+                avatarUrl: null,
+                displayName: "Owner",
+                id: "user_1",
+                walletAddress: "0xowner"
+              },
+              role: "operator",
+              walletAddress: "0xinvitee"
+            }
+          ]),
+        findUnique: vi.fn().mockResolvedValue({
+          id: "invite_1",
+          invitedByUser: {
+            avatarUrl: null,
+            displayName: "Owner",
+            id: "user_1",
+            walletAddress: "0xowner"
+          },
+          workspace: {
+            id: "workspace_1",
+            ownerUserId: "user_1"
+          }
+        })
+      }
+    };
+    const repository = createWorkspaceInvitationRepository(database as never);
+
+    const createdInvitation = await repository.create({
+      expiresAt: now,
+      invitedByUserId: "user_1",
+      walletAddress: "0xinvitee",
+      workspaceId: "workspace_1"
+    });
+    const existingInvitation =
+      await repository.findActiveByWorkspaceAndWalletAddress({
+        now,
+        walletAddress: "0xinvitee",
+        workspaceId: "workspace_1"
+      });
+    const walletInvitations = await repository.listActiveByWalletAddress({
+      now,
+      walletAddress: "0xinvitee"
+    });
+    const workspaceInvitations = await repository.listActiveByWorkspaceId({
+      now,
+      workspaceId: "workspace_1"
+    });
+    const invitation = await repository.findByIdWithWorkspace({
+      id: "invite_1"
+    });
+    await repository.deleteByIdForWorkspace({
+      id: "invite_1",
+      workspaceId: "workspace_1"
+    });
+
+    expect(database.workspaceInvitation.create).toHaveBeenCalledWith({
+      data: {
+        expiresAt: now,
+        invitedByUserId: "user_1",
+        role: "operator",
+        walletAddress: "0xinvitee",
+        workspaceId: "workspace_1"
+      }
+    });
+    expect(database.workspaceInvitation.findFirst).toHaveBeenCalledWith({
+      orderBy: [
+        {
+          createdAt: "asc"
+        },
+        {
+          id: "asc"
+        }
+      ],
+      where: {
+        expiresAt: {
+          gt: now
+        },
+        walletAddress: "0xinvitee",
+        workspaceId: "workspace_1"
+      }
+    });
+    expect(database.workspaceInvitation.findMany).toHaveBeenNthCalledWith(1, {
+      include: {
+        workspace: {
+          select: {
+            id: true,
+            ownerUserId: true
+          }
+        }
+      },
+      orderBy: [
+        {
+          createdAt: "asc"
+        },
+        {
+          id: "asc"
+        }
+      ],
+      where: {
+        expiresAt: {
+          gt: now
+        },
+        walletAddress: "0xinvitee"
+      }
+    });
+    expect(database.workspaceInvitation.findMany).toHaveBeenNthCalledWith(2, {
+      include: {
+        invitedByUser: {
+          select: {
+            avatarUrl: true,
+            displayName: true,
+            id: true,
+            walletAddress: true
+          }
+        }
+      },
+      orderBy: [
+        {
+          createdAt: "asc"
+        },
+        {
+          id: "asc"
+        }
+      ],
+      where: {
+        expiresAt: {
+          gt: now
+        },
+        workspaceId: "workspace_1"
+      }
+    });
+    expect(database.workspaceInvitation.findUnique).toHaveBeenCalledWith({
+      include: {
+        invitedByUser: {
+          select: {
+            avatarUrl: true,
+            displayName: true,
+            id: true,
+            walletAddress: true
+          }
+        },
+        workspace: {
+          select: {
+            id: true,
+            ownerUserId: true
+          }
+        }
+      },
+      where: {
+        id: "invite_1"
+      }
+    });
+    expect(database.workspaceInvitation.deleteMany).toHaveBeenCalledWith({
+      where: {
+        id: "invite_1",
+        workspaceId: "workspace_1"
+      }
+    });
+    expect(createdInvitation.id).toBe("invite_1");
+    expect(existingInvitation?.id).toBe("invite_1");
+    expect(walletInvitations[0]?.workspace.id).toBe("workspace_1");
+    expect(workspaceInvitations[0]?.walletAddress).toBe("0xinvitee");
+    expect(invitation?.workspace.ownerUserId).toBe("user_1");
   });
 
   it("delegates active generation lookup through the generation request repository", async () => {

@@ -45,10 +45,65 @@ function createInMemoryAuthHarness() {
       userId: string;
     }
   >();
+  const workspaces = new Map<
+    string,
+    {
+      id: string;
+      ownerUserId: string;
+    }
+  >();
+  const workspaceMemberships = new Map<
+    string,
+    {
+      id: string;
+      role: "operator";
+      userId: string;
+      workspaceId: string;
+    }
+  >();
+  const workspaceInvitations = new Map<
+    string,
+    {
+      createdAt: Date;
+      expiresAt: Date;
+      id: string;
+      role: "operator";
+      walletAddress: string;
+      workspaceId: string;
+    }
+  >();
+  const auditLogs: Array<{
+    action: string;
+    actorId: string;
+    entityId: string;
+    metadataJson: unknown;
+  }> = [];
   let currentTime = new Date("2026-04-05T00:00:00.000Z");
   let nonceIndex = 0;
 
   const repositories = {
+    auditLogRepository: {
+      async create(input: {
+        action: string;
+        actorId: string;
+        actorType: string;
+        entityId: string;
+        entityType: string;
+        metadataJson: unknown;
+      }) {
+        auditLogs.push({
+          action: input.action,
+          actorId: input.actorId,
+          entityId: input.entityId,
+          metadataJson: input.metadataJson
+        });
+
+        return {
+          id: randomUUID(),
+          ...input
+        };
+      }
+    },
     authNonceRepository: {
       async create(input: {
         expiresAt: Date;
@@ -160,6 +215,13 @@ function createInMemoryAuthHarness() {
         return [...users.values()].find((user) => user.id === id) ?? null;
       },
 
+      async findByWalletAddress(walletAddress: string) {
+        return (
+          [...users.values()].find((user) => user.walletAddress === walletAddress) ??
+          null
+        );
+      },
+
       async upsertWalletUser(input: {
         avatarUrl?: string | null;
         displayName?: string | null;
@@ -197,6 +259,87 @@ function createInMemoryAuthHarness() {
         users.set(createdUser.id, createdUser);
 
         return createdUser;
+      }
+    },
+    workspaceInvitationRepository: {
+      async deleteByIdForWorkspace(input: { id: string; workspaceId: string }) {
+        const invitation = workspaceInvitations.get(input.id);
+
+        if (!invitation || invitation.workspaceId !== input.workspaceId) {
+          return {
+            count: 0
+          };
+        }
+
+        workspaceInvitations.delete(input.id);
+
+        return {
+          count: 1
+        };
+      },
+
+      async listActiveByWalletAddress(input: {
+        now: Date;
+        walletAddress: string;
+      }) {
+        return [...workspaceInvitations.values()]
+          .filter(
+            (invitation) =>
+              invitation.walletAddress === input.walletAddress &&
+              invitation.expiresAt.getTime() > input.now.getTime()
+          )
+          .sort((left, right) => left.id.localeCompare(right.id))
+          .map((invitation) => ({
+            ...invitation,
+            workspace: {
+              id: invitation.workspaceId,
+              ownerUserId:
+                workspaces.get(invitation.workspaceId)?.ownerUserId ??
+                "user_owner"
+            }
+          }));
+      }
+    },
+    workspaceMembershipRepository: {
+      async create(input: {
+        role?: "operator" | "owner";
+        userId: string;
+        workspaceId: string;
+      }) {
+        const membership = {
+          id: randomUUID(),
+          role: (input.role ?? "operator") as "operator",
+          userId: input.userId,
+          workspaceId: input.workspaceId
+        };
+
+        workspaceMemberships.set(membership.id, membership);
+
+        return membership;
+      },
+
+      async findFirstByUserId(userId: string) {
+        const membership =
+          [...workspaceMemberships.values()].find(
+            (currentMembership) => currentMembership.userId === userId
+          ) ?? null;
+
+        return membership
+          ? {
+              workspace: {
+                id: membership.workspaceId
+              }
+            }
+          : null;
+      }
+    },
+    workspaceRepository: {
+      async findFirstByOwnerUserId(ownerUserId: string) {
+        return (
+          [...workspaces.values()].find(
+            (workspace) => workspace.ownerUserId === ownerUserId
+          ) ?? null
+        );
       }
     }
   };
@@ -237,7 +380,12 @@ function createInMemoryAuthHarness() {
       });
     },
     service,
-    sessions
+    sessions,
+    auditLogs,
+    users,
+    workspaceInvitations,
+    workspaceMemberships,
+    workspaces
   };
 }
 
@@ -370,5 +518,62 @@ describe("auth service", () => {
       code: "NONCE_INVALID",
       statusCode: 401
     });
+  });
+
+  it("accepts the oldest pending workspace invitation on first sign-in", async () => {
+    const harness = createInMemoryAuthHarness();
+    const ownerUserId = randomUUID();
+
+    harness.workspaces.set("workspace_1", {
+      id: "workspace_1",
+      ownerUserId
+    });
+    harness.workspaces.set("workspace_2", {
+      id: "workspace_2",
+      ownerUserId: randomUUID()
+    });
+    harness.workspaceInvitations.set("invitation_1", {
+      createdAt: new Date("2026-04-04T00:00:00.000Z"),
+      expiresAt: new Date("2026-04-20T00:00:00.000Z"),
+      id: "invitation_1",
+      role: "operator",
+      walletAddress: harness.account.address,
+      workspaceId: "workspace_1"
+    });
+    harness.workspaceInvitations.set("invitation_2", {
+      createdAt: new Date("2026-04-04T00:05:00.000Z"),
+      expiresAt: new Date("2026-04-20T00:00:00.000Z"),
+      id: "invitation_2",
+      role: "operator",
+      walletAddress: harness.account.address,
+      workspaceId: "workspace_2"
+    });
+
+    const nonceResponse = await harness.service.issueNonce({
+      walletAddress: harness.account.address
+    });
+    const signature = await harness.account.signMessage({
+      message: harness.createMessage(nonceResponse.nonce)
+    });
+
+    const verificationResult = await harness.service.verifyAndCreateSession({
+      ipAddress: "127.0.0.1",
+      nonce: nonceResponse.nonce,
+      signature,
+      userAgent: "vitest",
+      walletAddress: harness.account.address
+    });
+
+    const signedInUserId = verificationResult.session.user.id;
+    const membership = [...harness.workspaceMemberships.values()][0];
+
+    expect(membership?.userId).toBe(signedInUserId);
+    expect(membership?.workspaceId).toBe("workspace_1");
+    expect(harness.workspaceInvitations.has("invitation_1")).toBe(false);
+    expect(harness.workspaceInvitations.has("invitation_2")).toBe(false);
+    expect(harness.auditLogs.map((entry) => entry.action)).toEqual([
+      "workspace_invitation_accepted",
+      "workspace_invitation_canceled"
+    ]);
   });
 });

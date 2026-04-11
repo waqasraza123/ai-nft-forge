@@ -185,6 +185,7 @@ model User {
   ownedSourceAssets SourceAsset[] @relation("SourceAssetOwner")
   ownedWorkspaces    Workspace[]         @relation("WorkspaceOwner")
   workspaceMemberships WorkspaceMembership[]
+  workspaceInvitationsSent WorkspaceInvitation[] @relation("WorkspaceInvitationInvitedBy")
 
   @@map("users")
 }
@@ -225,6 +226,7 @@ model Workspace {
   createdAt   DateTime        @default(now()) @map("created_at")
   updatedAt   DateTime        @updatedAt @map("updated_at")
   brands      Brand[]
+  invitations WorkspaceInvitation[]
   memberships WorkspaceMembership[]
   ownerUser   User            @relation("WorkspaceOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
 
@@ -246,6 +248,25 @@ model WorkspaceMembership {
   @@index([workspaceId], map: "workspace_memberships_workspace_id_idx")
   @@index([userId], map: "workspace_memberships_user_id_idx")
   @@map("workspace_memberships")
+}
+
+model WorkspaceInvitation {
+  id              String                  @id @default(cuid()) @map("id")
+  workspaceId     String                  @map("workspace_id")
+  invitedByUserId String                  @map("invited_by_user_id")
+  walletAddress   String                  @map("wallet_address")
+  role            WorkspaceMembershipRole @default(operator) @map("role")
+  expiresAt       DateTime                @map("expires_at")
+  createdAt       DateTime                @default(now()) @map("created_at")
+  updatedAt       DateTime                @updatedAt @map("updated_at")
+  invitedByUser   User                    @relation("WorkspaceInvitationInvitedBy", fields: [invitedByUserId], references: [id], onDelete: Cascade)
+  workspace       Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, walletAddress], map: "workspace_invitations_workspace_id_wallet_address_key")
+  @@index([walletAddress], map: "workspace_invitations_wallet_address_idx")
+  @@index([workspaceId], map: "workspace_invitations_workspace_id_idx")
+  @@index([expiresAt], map: "workspace_invitations_expires_at_idx")
+  @@map("workspace_invitations")
 }
 
 model Brand {

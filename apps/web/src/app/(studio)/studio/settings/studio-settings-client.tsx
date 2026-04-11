@@ -17,10 +17,12 @@ import {
   defaultStudioFeaturedReleaseLabel,
   studioBrandResponseSchema,
   studioSettingsResponseSchema,
+  studioWorkspaceInvitationDeleteResponseSchema,
+  studioWorkspaceInvitationResponseSchema,
   studioWorkspaceMemberDeleteResponseSchema,
-  studioWorkspaceMemberResponseSchema,
   type StudioBrandSummary,
   type StudioSettingsSummary,
+  type StudioWorkspaceInvitationSummary,
   type StudioWorkspaceMemberSummary
 } from "@ai-nft-forge/shared";
 import {
@@ -70,6 +72,17 @@ type NewBrandState = {
 type MemberState = {
   walletAddress: string;
 };
+
+function formatTimestamp(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(new Date(value));
+}
 
 function createFallbackErrorMessage(response: Response) {
   switch (response.status) {
@@ -214,7 +227,10 @@ export function StudioSettingsClient({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isCreatingBrand, setIsCreatingBrand] = useState(false);
-  const [isAddingMember, setIsAddingMember] = useState(false);
+  const [isCreatingInvitation, setIsCreatingInvitation] = useState(false);
+  const [cancelingInvitationId, setCancelingInvitationId] = useState<
+    string | null
+  >(null);
   const [removingMembershipId, setRemovingMembershipId] = useState<
     string | null
   >(null);
@@ -426,25 +442,25 @@ export function StudioSettingsClient({
     }
   }
 
-  async function handleAddMember(event: FormEvent<HTMLFormElement>) {
+  async function handleCreateInvitation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!canManageMembers) {
       setNotice({
-        message: "Only workspace owners can manage operators.",
+        message: "Only workspace owners can manage invitations.",
         tone: "error"
       });
       return;
     }
 
-    setIsAddingMember(true);
+    setIsCreatingInvitation(true);
     setNotice({
-      message: "Adding workspace operator…",
+      message: "Creating workspace invitation…",
       tone: "info"
     });
 
     try {
-      const response = await fetch("/api/studio/settings/members", {
+      const response = await fetch("/api/studio/settings/invitations", {
         body: JSON.stringify({
           walletAddress: memberState.walletAddress
         }),
@@ -455,7 +471,7 @@ export function StudioSettingsClient({
       });
       const payload = await parseJsonResponse({
         response,
-        schema: studioWorkspaceMemberResponseSchema
+        schema: studioWorkspaceInvitationResponseSchema
       });
 
       startTransition(() => {
@@ -466,25 +482,87 @@ export function StudioSettingsClient({
 
           return {
             ...currentSettings,
-            members: [...currentSettings.members, payload.member]
+            invitations: [...currentSettings.invitations, payload.invitation]
           };
         });
         setMemberState(createInitialMemberState());
       });
       setNotice({
-        message: `Added ${payload.member.walletAddress} as an operator.`,
+        message: `Invited ${payload.invitation.walletAddress}.`,
         tone: "success"
+      });
+      await refreshSettings({
+        silent: true
       });
     } catch (error) {
       setNotice({
         message:
           error instanceof Error
             ? error.message
-            : "Workspace operator could not be added.",
+            : "Workspace invitation could not be created.",
         tone: "error"
       });
     } finally {
-      setIsAddingMember(false);
+      setIsCreatingInvitation(false);
+    }
+  }
+
+  async function handleCancelInvitation(
+    invitation: StudioWorkspaceInvitationSummary
+  ) {
+    if (!canManageMembers) {
+      return;
+    }
+
+    setCancelingInvitationId(invitation.id);
+    setNotice({
+      message: `Canceling ${invitation.walletAddress}…`,
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch(
+        `/api/studio/settings/invitations/${invitation.id}`,
+        {
+          method: "DELETE"
+        }
+      );
+      await parseJsonResponse({
+        response,
+        schema: studioWorkspaceInvitationDeleteResponseSchema
+      });
+
+      startTransition(() => {
+        setSettings((currentSettings) => {
+          if (!currentSettings) {
+            return currentSettings;
+          }
+
+          return {
+            ...currentSettings,
+            invitations: currentSettings.invitations.filter(
+              (currentInvitation) => currentInvitation.id !== invitation.id
+            )
+          };
+        });
+      });
+      setNotice({
+        message: `Canceled the invitation for ${invitation.walletAddress}.`,
+        tone: "success"
+      });
+      await refreshSettings({
+        silent: true
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Workspace invitation could not be canceled.",
+        tone: "error"
+      });
+    } finally {
+      setCancelingInvitationId(null);
     }
   }
 
@@ -595,6 +673,10 @@ export function StudioSettingsClient({
             <MetricTile
               label="Members"
               value={settings?.members.length?.toString() ?? "1"}
+            />
+            <MetricTile
+              label="Pending invites"
+              value={settings?.invitations.length?.toString() ?? "0"}
             />
           </div>
           <div className="pill-row">
@@ -1052,19 +1134,22 @@ export function StudioSettingsClient({
           </form>
         </SurfaceCard>
         <SurfaceCard
-          body="Workspace roles now support owner-governed operator access. Operators inherit the same workspace and brand context for day-to-day studio work, while ownership retains the high-risk settings and publication controls."
+          body="Workspace access now uses owner-governed invitations, active memberships, and durable audit history. Operators inherit the same workspace and brand context for day-to-day studio work, while ownership retains the high-risk settings and publication controls."
           eyebrow="Access"
           span={4}
-          title="Workspace members"
+          title="Workspace access"
         >
           <div className="pill-row">
             <Pill>{access.role}</Pill>
             <Pill>{settings?.members.length ?? 1} total members</Pill>
+            <Pill>{settings?.invitations.length ?? 0} pending invites</Pill>
           </div>
           {!canManageMembers ? (
             <div className="status-banner status-banner--info">
               <strong>Operator read-only</strong>
-              <span>Only workspace owners can add or remove members.</span>
+              <span>
+                Only workspace owners can create invitations or remove members.
+              </span>
             </div>
           ) : null}
           {settings?.members.length ? (
@@ -1077,10 +1162,7 @@ export function StudioSettingsClient({
                     <span>
                       {member.role === "owner" ? "Owner" : "Operator"}
                       {member.addedAt
-                        ? ` · added ${new Intl.DateTimeFormat("en-US", {
-                            dateStyle: "medium",
-                            timeStyle: "short"
-                          }).format(new Date(member.addedAt))}`
+                        ? ` · added ${formatTimestamp(member.addedAt)}`
                         : ""}
                     </span>
                   </div>
@@ -1115,10 +1197,50 @@ export function StudioSettingsClient({
               No workspace members are configured yet.
             </div>
           )}
-          <form className="studio-form" onSubmit={handleAddMember}>
-            <fieldset disabled={!canManageMembers || isAddingMember}>
+          <div className="collection-item-list">
+            {settings?.invitations.length ? (
+              settings.invitations.map((invitation) => (
+                <div className="collection-item-card" key={invitation.id}>
+                  <div className="collection-item-card__copy">
+                    <strong>{invitation.walletAddress}</strong>
+                    <span>
+                      Pending operator invitation
+                      {invitation.role === "owner" ? " owner" : ""}
+                    </span>
+                    <span>
+                      Sent {formatTimestamp(invitation.createdAt)} · expires{" "}
+                      {formatTimestamp(invitation.expiresAt)}
+                    </span>
+                  </div>
+                  <div className="collection-item-card__actions">
+                    <button
+                      className="button-action"
+                      disabled={
+                        !canManageMembers ||
+                        cancelingInvitationId === invitation.id
+                      }
+                      onClick={() => {
+                        void handleCancelInvitation(invitation);
+                      }}
+                      type="button"
+                    >
+                      {cancelingInvitationId === invitation.id
+                        ? "Canceling…"
+                        : "Cancel"}
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="collection-empty-state">
+                No pending invitations.
+              </div>
+            )}
+          </div>
+          <form className="studio-form" onSubmit={handleCreateInvitation}>
+            <fieldset disabled={!canManageMembers || isCreatingInvitation}>
               <label className="field-stack">
-                <span className="field-label">Operator wallet</span>
+                <span className="field-label">Invite operator wallet</span>
                 <input
                   className="input-field"
                   onChange={(event) => {
@@ -1134,14 +1256,50 @@ export function StudioSettingsClient({
               <div className="studio-action-row">
                 <button
                   className="button-action"
-                  disabled={!canManageMembers || isAddingMember}
+                  disabled={!canManageMembers || isCreatingInvitation}
                   type="submit"
                 >
-                  {isAddingMember ? "Adding…" : "Add operator"}
+                  {isCreatingInvitation ? "Inviting…" : "Send invitation"}
                 </button>
               </div>
             </fieldset>
           </form>
+        </SurfaceCard>
+        <SurfaceCard
+          body="Member lifecycle actions are written to the workspace audit stream so owners can trace invitation creation, invitation cancellation, acceptance, and explicit member removal without inspecting the database."
+          eyebrow="Audit"
+          span={8}
+          title="Member lifecycle history"
+        >
+          <div className="pill-row">
+            <Pill>{settings?.auditEntries.length ?? 0} recent events</Pill>
+            <Pill>workspace audit</Pill>
+          </div>
+          {settings?.auditEntries.length ? (
+            <div className="collection-item-list">
+              {settings.auditEntries.map((entry) => (
+                <div className="collection-item-card" key={entry.id}>
+                  <div className="collection-item-card__copy">
+                    <strong>{entry.action.replaceAll("_", " ")}</strong>
+                    <span>
+                      Actor {entry.actorWalletAddress}
+                      {entry.targetWalletAddress
+                        ? ` · target ${entry.targetWalletAddress}`
+                        : ""}
+                    </span>
+                    <span>
+                      {formatTimestamp(entry.createdAt)}
+                      {entry.role ? ` · role ${entry.role}` : ""}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="collection-empty-state">
+              No member lifecycle events have been recorded yet.
+            </div>
+          )}
         </SurfaceCard>
         <SurfaceCard
           body="These values become the durable publication target for the selected brand and the editorial source of truth for its public landing. Brand slug changes are still validated against existing public collection routes before they are accepted."
