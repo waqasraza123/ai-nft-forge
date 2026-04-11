@@ -100,6 +100,8 @@ export const studioWorkspaceAccessSchema = z.object({
   canManageMembers: z.boolean(),
   canManageOnchain: z.boolean(),
   canManageOpsPolicy: z.boolean(),
+  canManageRoleEscalations: z.boolean(),
+  canRequestRoleEscalation: z.boolean(),
   canManageWorkspace: z.boolean(),
   canPublishCollections: z.boolean(),
   role: studioWorkspaceRoleSchema
@@ -126,12 +128,45 @@ export const studioWorkspaceInvitationSummarySchema = z.object({
   walletAddress: walletAddressSchema
 });
 
+export const studioWorkspaceRoleEscalationRequestStatusSchema = z.enum([
+  "pending",
+  "approved",
+  "rejected",
+  "canceled"
+]);
+
+export const studioWorkspaceRoleEscalationJustificationSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(280);
+
+export const studioWorkspaceRoleEscalationSummarySchema = z.object({
+  createdAt: z.string().datetime(),
+  id: z.string().min(1),
+  justification: studioWorkspaceRoleEscalationJustificationSchema.nullable(),
+  requestedByUserId: z.string().min(1),
+  requestedByWalletAddress: walletAddressSchema,
+  requestedRole: studioWorkspaceRoleSchema,
+  resolvedAt: z.string().datetime().nullable(),
+  resolvedByUserId: z.string().min(1).nullable(),
+  resolvedByWalletAddress: walletAddressSchema.nullable(),
+  status: studioWorkspaceRoleEscalationRequestStatusSchema,
+  targetUserId: z.string().min(1),
+  targetWalletAddress: walletAddressSchema
+});
+
 export const studioWorkspaceAuditActionSchema = z.enum([
   "workspace_invitation_accepted",
   "workspace_invitation_canceled",
   "workspace_invitation_created",
   "workspace_member_added",
-  "workspace_member_removed"
+  "workspace_member_removed",
+  "workspace_owner_transferred",
+  "workspace_role_escalation_approved",
+  "workspace_role_escalation_canceled",
+  "workspace_role_escalation_rejected",
+  "workspace_role_escalation_requested"
 ]);
 
 export const studioWorkspaceAuditEntrySchema = z.object({
@@ -153,6 +188,7 @@ export const studioSettingsSummarySchema = z.object({
   brands: z.array(studioBrandSummarySchema),
   invitations: z.array(studioWorkspaceInvitationSummarySchema),
   members: z.array(studioWorkspaceMemberSummarySchema),
+  roleEscalationRequests: z.array(studioWorkspaceRoleEscalationSummarySchema),
   workspace: studioWorkspaceSummarySchema
 });
 
@@ -229,6 +265,19 @@ export const studioWorkspaceInvitationDeleteResponseSchema = z.object({
   removed: z.boolean()
 });
 
+export const studioWorkspaceRoleEscalationCreateRequestSchema = z.object({
+  justification: studioWorkspaceRoleEscalationJustificationSchema.nullish()
+});
+
+export const studioWorkspaceRoleEscalationResponseSchema = z.object({
+  roleEscalationRequest: studioWorkspaceRoleEscalationSummarySchema
+});
+
+export const studioWorkspaceRoleEscalationActionResponseSchema = z.object({
+  requestId: z.string().min(1),
+  status: studioWorkspaceRoleEscalationRequestStatusSchema
+});
+
 export const studioSettingsErrorResponseSchema = z.object({
   error: z.object({
     code: z.enum([
@@ -243,6 +292,10 @@ export const studioSettingsErrorResponseSchema = z.object({
       "MEMBER_ALREADY_EXISTS",
       "MEMBER_NOT_FOUND",
       "MEMBER_WORKSPACE_CONFLICT",
+      "ROLE_ESCALATION_ALREADY_PENDING",
+      "ROLE_ESCALATION_INVALID_TARGET",
+      "ROLE_ESCALATION_NOT_FOUND",
+      "ROLE_ESCALATION_NOT_PENDING",
       "SESSION_REQUIRED",
       "WORKSPACE_REQUIRED",
       "WORKSPACE_SLUG_CONFLICT"
@@ -294,6 +347,21 @@ export type StudioWorkspaceInvitationResponse = z.infer<
 >;
 export type StudioWorkspaceInvitationSummary = z.infer<
   typeof studioWorkspaceInvitationSummarySchema
+>;
+export type StudioWorkspaceRoleEscalationActionResponse = z.infer<
+  typeof studioWorkspaceRoleEscalationActionResponseSchema
+>;
+export type StudioWorkspaceRoleEscalationCreateRequest = z.infer<
+  typeof studioWorkspaceRoleEscalationCreateRequestSchema
+>;
+export type StudioWorkspaceRoleEscalationRequestStatus = z.infer<
+  typeof studioWorkspaceRoleEscalationRequestStatusSchema
+>;
+export type StudioWorkspaceRoleEscalationResponse = z.infer<
+  typeof studioWorkspaceRoleEscalationResponseSchema
+>;
+export type StudioWorkspaceRoleEscalationSummary = z.infer<
+  typeof studioWorkspaceRoleEscalationSummarySchema
 >;
 export type StudioWorkspaceAuditAction = z.infer<
   typeof studioWorkspaceAuditActionSchema

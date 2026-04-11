@@ -5,6 +5,7 @@ import {
   createUserRepository,
   createWorkspaceInvitationRepository,
   createWorkspaceMembershipRepository,
+  createWorkspaceRoleEscalationRequestRepository,
   createWorkspaceRepository,
   getDatabaseClient,
   runDatabaseTransaction,
@@ -17,10 +18,15 @@ function createStudioSettingsRepositories(database: DatabaseExecutor) {
   return {
     auditLogRepository: createAuditLogRepository(database),
     brandRepository: createBrandRepository(database),
-    publishedCollectionRepository: createPublishedCollectionRepository(database),
+    publishedCollectionRepository:
+      createPublishedCollectionRepository(database),
     userRepository: createUserRepository(database),
-    workspaceInvitationRepository: createWorkspaceInvitationRepository(database),
-    workspaceMembershipRepository: createWorkspaceMembershipRepository(database),
+    workspaceInvitationRepository:
+      createWorkspaceInvitationRepository(database),
+    workspaceMembershipRepository:
+      createWorkspaceMembershipRepository(database),
+    workspaceRoleEscalationRequestRepository:
+      createWorkspaceRoleEscalationRequestRepository(database),
     workspaceRepository: createWorkspaceRepository(database)
   };
 }

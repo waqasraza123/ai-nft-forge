@@ -8,6 +8,7 @@ function createStudioSettingsHarness() {
   let brandIndex = 0;
   let membershipIndex = 0;
   let invitationIndex = 0;
+  let roleEscalationRequestIndex = 0;
   let auditLogIndex = 0;
   const users = new Map<
     string,
@@ -75,6 +76,21 @@ function createStudioSettingsHarness() {
       workspaceId: string;
     }
   >();
+  const workspaceRoleEscalationRequests = new Map<
+    string,
+    {
+      createdAt: Date;
+      id: string;
+      justification: string | null;
+      requestedByUserId: string;
+      requestedRole: "owner" | "operator";
+      resolvedAt: Date | null;
+      resolvedByUserId: string | null;
+      status: "pending" | "approved" | "rejected" | "canceled";
+      targetUserId: string;
+      workspaceId: string;
+    }
+  >();
   const auditLogs: Array<{
     action: string;
     actorId: string;
@@ -104,7 +120,9 @@ function createStudioSettingsHarness() {
       id: input.id,
       walletAddress:
         input.walletAddress ??
-        `0x${String(users.size + 1).padStart(40, "1").slice(-40)}`
+        `0x${String(users.size + 1)
+          .padStart(40, "1")
+          .slice(-40)}`
     };
 
     users.set(user.id, user);
@@ -391,7 +409,9 @@ function createStudioSettingsHarness() {
       }) {
         membershipIndex += 1;
         const membership = {
-          createdAt: new Date(`2026-04-09T00:00:${String(membershipIndex).padStart(2, "0")}.000Z`),
+          createdAt: new Date(
+            `2026-04-09T00:00:${String(membershipIndex).padStart(2, "0")}.000Z`
+          ),
           id: `membership_${membershipIndex}`,
           role: (input.role ?? "operator") as "operator",
           userId: input.userId,
@@ -416,6 +436,27 @@ function createStudioSettingsHarness() {
 
         return {
           count: 1
+        };
+      },
+
+      async deleteByWorkspaceAndUserId(input: {
+        userId: string;
+        workspaceId: string;
+      }) {
+        const matchingMembershipIds = [...memberships.values()]
+          .filter(
+            (membership) =>
+              membership.userId === input.userId &&
+              membership.workspaceId === input.workspaceId
+          )
+          .map((membership) => membership.id);
+
+        for (const membershipId of matchingMembershipIds) {
+          memberships.delete(membershipId);
+        }
+
+        return {
+          count: matchingMembershipIds.length
         };
       },
 
@@ -613,6 +654,140 @@ function createStudioSettingsHarness() {
           }));
       }
     },
+    workspaceRoleEscalationRequestRepository: {
+      async create(input: {
+        justification?: string | null;
+        requestedByUserId: string;
+        requestedRole?: "owner" | "operator";
+        targetUserId: string;
+        workspaceId: string;
+      }) {
+        roleEscalationRequestIndex += 1;
+        const request = {
+          createdAt: new Date(
+            `2026-04-09T03:00:${String(roleEscalationRequestIndex).padStart(2, "0")}.000Z`
+          ),
+          id: `role_escalation_${roleEscalationRequestIndex}`,
+          justification: input.justification ?? null,
+          requestedByUserId: input.requestedByUserId,
+          requestedRole: input.requestedRole ?? "owner",
+          resolvedAt: null,
+          resolvedByUserId: null,
+          status: "pending" as const,
+          targetUserId: input.targetUserId,
+          workspaceId: input.workspaceId
+        };
+
+        workspaceRoleEscalationRequests.set(request.id, request);
+
+        return request;
+      },
+
+      async findByIdWithRelations(input: { id: string }) {
+        const request = workspaceRoleEscalationRequests.get(input.id);
+
+        if (!request) {
+          return null;
+        }
+
+        return {
+          ...request,
+          requestedByUser: users.get(request.requestedByUserId)!,
+          resolvedByUser: request.resolvedByUserId
+            ? (users.get(request.resolvedByUserId) ?? null)
+            : null,
+          targetUser: users.get(request.targetUserId)!,
+          workspace: {
+            id: request.workspaceId,
+            ownerUserId: workspaces.get(request.workspaceId)!.ownerUserId
+          }
+        };
+      },
+
+      async findPendingByWorkspaceAndRequestedRole(input: {
+        requestedRole: "owner" | "operator";
+        workspaceId: string;
+      }) {
+        const request =
+          [...workspaceRoleEscalationRequests.values()]
+            .filter(
+              (currentRequest) =>
+                currentRequest.workspaceId === input.workspaceId &&
+                currentRequest.requestedRole === input.requestedRole &&
+                currentRequest.status === "pending"
+            )
+            .sort((left, right) => left.id.localeCompare(right.id))[0] ?? null;
+
+        if (!request) {
+          return null;
+        }
+
+        return {
+          ...request,
+          requestedByUser: users.get(request.requestedByUserId)!,
+          resolvedByUser: request.resolvedByUserId
+            ? (users.get(request.resolvedByUserId) ?? null)
+            : null,
+          targetUser: users.get(request.targetUserId)!,
+          workspace: {
+            id: request.workspaceId,
+            ownerUserId: workspaces.get(request.workspaceId)!.ownerUserId
+          }
+        };
+      },
+
+      async listByWorkspaceId(input: { limit?: number; workspaceId: string }) {
+        return [...workspaceRoleEscalationRequests.values()]
+          .filter((request) => request.workspaceId === input.workspaceId)
+          .sort((left, right) => {
+            const createdAtDifference =
+              right.createdAt.getTime() - left.createdAt.getTime();
+
+            if (createdAtDifference !== 0) {
+              return createdAtDifference;
+            }
+
+            return right.id.localeCompare(left.id);
+          })
+          .slice(0, input.limit ?? 25)
+          .map((request) => ({
+            ...request,
+            requestedByUser: users.get(request.requestedByUserId)!,
+            resolvedByUser: request.resolvedByUserId
+              ? (users.get(request.resolvedByUserId) ?? null)
+              : null,
+            targetUser: users.get(request.targetUserId)!,
+            workspace: {
+              id: request.workspaceId,
+              ownerUserId: workspaces.get(request.workspaceId)!.ownerUserId
+            }
+          }));
+      },
+
+      async resolveById(input: {
+        id: string;
+        resolvedAt: Date;
+        resolvedByUserId: string;
+        status: "approved" | "rejected" | "canceled";
+      }) {
+        const request = workspaceRoleEscalationRequests.get(input.id);
+
+        if (!request) {
+          throw new Error("Unexpected role escalation request mismatch.");
+        }
+
+        const updatedRequest = {
+          ...request,
+          resolvedAt: input.resolvedAt,
+          resolvedByUserId: input.resolvedByUserId,
+          status: input.status
+        };
+
+        workspaceRoleEscalationRequests.set(updatedRequest.id, updatedRequest);
+
+        return updatedRequest;
+      }
+    },
     workspaceRepository: {
       async create(input: {
         name: string;
@@ -676,6 +851,27 @@ function createStudioSettingsHarness() {
         workspaces.set(updatedWorkspace.id, updatedWorkspace);
 
         return updatedWorkspace;
+      },
+
+      async transferOwnershipById(input: {
+        currentOwnerUserId: string;
+        id: string;
+        nextOwnerUserId: string;
+      }) {
+        const workspace = workspaces.get(input.id);
+
+        if (!workspace || workspace.ownerUserId !== input.currentOwnerUserId) {
+          throw new Error("Unexpected workspace ownership mismatch.");
+        }
+
+        const updatedWorkspace = {
+          ...workspace,
+          ownerUserId: input.nextOwnerUserId
+        };
+
+        workspaces.set(updatedWorkspace.id, updatedWorkspace);
+
+        return updatedWorkspace;
       }
     }
   };
@@ -694,6 +890,7 @@ function createStudioSettingsHarness() {
     brands,
     memberships,
     publications,
+    workspaceRoleEscalationRequests,
     service,
     users,
     workspaceInvitations,
@@ -1067,7 +1264,9 @@ describe("createStudioSettingsService", () => {
       "0x4444444444444444444444444444444444444444"
     );
     expect(settings.settings?.invitations).toHaveLength(1);
-    expect(settings.settings?.invitations[0]?.id).toBe(invitation.invitation.id);
+    expect(settings.settings?.invitations[0]?.id).toBe(
+      invitation.invitation.id
+    );
     expect(settings.settings?.auditEntries[0]).toMatchObject({
       action: "workspace_invitation_created",
       targetWalletAddress: "0x4444444444444444444444444444444444444444"
@@ -1105,11 +1304,196 @@ describe("createStudioSettingsService", () => {
 
     expect(result.removed).toBe(true);
     expect(settings.settings?.invitations).toHaveLength(0);
-    expect(settings.settings?.auditEntries.slice(0, 2).map((entry) => entry.action))
-      .toEqual([
-        "workspace_invitation_canceled",
-        "workspace_invitation_created"
-      ]);
+    expect(
+      settings.settings?.auditEntries.slice(0, 2).map((entry) => entry.action)
+    ).toEqual([
+      "workspace_invitation_canceled",
+      "workspace_invitation_created"
+    ]);
+  });
+
+  it("lets an operator request ownership transfer and exposes the pending request in settings", async () => {
+    const harness = createStudioSettingsHarness();
+
+    await harness.service.updateStudioSettings({
+      accentColor: "#8b5e34",
+      brandName: "Forge Editions",
+      brandSlug: "forge-editions",
+      featuredReleaseLabel: "Hero drop",
+      landingDescription: "Owner storefront copy.",
+      landingHeadline: "Curated collectible releases",
+      ownerUserId: "user_1",
+      themePreset: "editorial_warm",
+      workspaceName: "Forge Operations",
+      workspaceSlug: "forge-operations"
+    });
+    const addedMember = await harness.service.addWorkspaceMember({
+      ownerUserId: "user_1",
+      walletAddress: "0x6666666666666666666666666666666666666666"
+    });
+
+    const result = await harness.service.requestWorkspaceRoleEscalation({
+      actorUserId: addedMember.member.userId,
+      justification: "Primary operator should take over release approvals.",
+      ownerUserId: "user_1",
+      role: "operator"
+    });
+    const settings = await harness.service.getStudioSettings({
+      ownerUserId: "user_1"
+    });
+
+    expect(result.roleEscalationRequest.status).toBe("pending");
+    expect(result.roleEscalationRequest.targetUserId).toBe(
+      addedMember.member.userId
+    );
+    expect(settings.settings?.roleEscalationRequests).toHaveLength(1);
+    expect(settings.settings?.auditEntries[0]).toMatchObject({
+      action: "workspace_role_escalation_requested",
+      targetWalletAddress: "0x6666666666666666666666666666666666666666"
+    });
+  });
+
+  it("approves ownership transfer requests and swaps workspace ownership safely", async () => {
+    const harness = createStudioSettingsHarness();
+
+    await harness.service.updateStudioSettings({
+      accentColor: "#8b5e34",
+      brandName: "Forge Editions",
+      brandSlug: "forge-editions",
+      featuredReleaseLabel: "Hero drop",
+      landingDescription: "Owner storefront copy.",
+      landingHeadline: "Curated collectible releases",
+      ownerUserId: "user_1",
+      themePreset: "editorial_warm",
+      workspaceName: "Forge Operations",
+      workspaceSlug: "forge-operations"
+    });
+    const addedMember = await harness.service.addWorkspaceMember({
+      ownerUserId: "user_1",
+      walletAddress: "0x7777777777777777777777777777777777777777"
+    });
+    const request = await harness.service.requestWorkspaceRoleEscalation({
+      actorUserId: addedMember.member.userId,
+      justification: "Transfer ownership to the day-to-day operator.",
+      ownerUserId: "user_1",
+      role: "operator"
+    });
+
+    const result = await harness.service.approveWorkspaceRoleEscalation({
+      ownerUserId: "user_1",
+      requestId: request.roleEscalationRequest.id
+    });
+    const transferredWorkspace = [...harness.workspaces.values()][0]!;
+    const newOwnerSettings = await harness.service.getStudioSettings({
+      ownerUserId: addedMember.member.userId
+    });
+
+    expect(result.status).toBe("approved");
+    expect(transferredWorkspace.ownerUserId).toBe(addedMember.member.userId);
+    expect(newOwnerSettings.settings?.access.role).toBe("owner");
+    expect(
+      newOwnerSettings.settings?.members.some(
+        (member) => member.userId === "user_1" && member.role === "operator"
+      )
+    ).toBe(true);
+    expect(
+      newOwnerSettings.settings?.members.some(
+        (member) =>
+          member.userId === addedMember.member.userId &&
+          member.membershipId !== null
+      )
+    ).toBe(false);
+    expect(harness.auditLogs.slice(-2).map((entry) => entry.action)).toEqual([
+      "workspace_role_escalation_approved",
+      "workspace_owner_transferred"
+    ]);
+  });
+
+  it("lets the requesting operator cancel a pending ownership transfer request", async () => {
+    const harness = createStudioSettingsHarness();
+
+    await harness.service.updateStudioSettings({
+      accentColor: "#8b5e34",
+      brandName: "Forge Editions",
+      brandSlug: "forge-editions",
+      featuredReleaseLabel: "Hero drop",
+      landingDescription: "Owner storefront copy.",
+      landingHeadline: "Curated collectible releases",
+      ownerUserId: "user_1",
+      themePreset: "editorial_warm",
+      workspaceName: "Forge Operations",
+      workspaceSlug: "forge-operations"
+    });
+    const addedMember = await harness.service.addWorkspaceMember({
+      ownerUserId: "user_1",
+      walletAddress: "0x8888888888888888888888888888888888888888"
+    });
+    const request = await harness.service.requestWorkspaceRoleEscalation({
+      actorUserId: addedMember.member.userId,
+      ownerUserId: "user_1",
+      role: "operator"
+    });
+
+    const result = await harness.service.cancelWorkspaceRoleEscalation({
+      actorUserId: addedMember.member.userId,
+      ownerUserId: "user_1",
+      requestId: request.roleEscalationRequest.id,
+      role: "operator"
+    });
+
+    expect(result.status).toBe("canceled");
+    expect(
+      harness.workspaceRoleEscalationRequests.get(
+        request.roleEscalationRequest.id
+      )?.status
+    ).toBe("canceled");
+    expect(harness.auditLogs.slice(-1)[0]?.action).toBe(
+      "workspace_role_escalation_canceled"
+    );
+  });
+
+  it("rejects approving ownership transfer when the target operator no longer has access", async () => {
+    const harness = createStudioSettingsHarness();
+
+    await harness.service.updateStudioSettings({
+      accentColor: "#8b5e34",
+      brandName: "Forge Editions",
+      brandSlug: "forge-editions",
+      featuredReleaseLabel: "Hero drop",
+      landingDescription: "Owner storefront copy.",
+      landingHeadline: "Curated collectible releases",
+      ownerUserId: "user_1",
+      themePreset: "editorial_warm",
+      workspaceName: "Forge Operations",
+      workspaceSlug: "forge-operations"
+    });
+    const addedMember = await harness.service.addWorkspaceMember({
+      ownerUserId: "user_1",
+      walletAddress: "0x9999999999999999999999999999999999999999"
+    });
+    const request = await harness.service.requestWorkspaceRoleEscalation({
+      actorUserId: addedMember.member.userId,
+      ownerUserId: "user_1",
+      role: "operator"
+    });
+
+    await harness.service.removeWorkspaceMember({
+      membershipId: addedMember.member.membershipId!,
+      ownerUserId: "user_1"
+    });
+
+    await expect(
+      harness.service.approveWorkspaceRoleEscalation({
+        ownerUserId: "user_1",
+        requestId: request.roleEscalationRequest.id
+      })
+    ).rejects.toEqual(
+      new StudioSettingsServiceError(
+        "ROLE_ESCALATION_INVALID_TARGET",
+        "The target operator no longer has active workspace access.",
+        409
+      )
+    );
   });
 
   it("rejects adding wallets that already belong to another workspace", async () => {

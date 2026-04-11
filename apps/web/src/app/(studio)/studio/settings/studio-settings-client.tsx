@@ -20,10 +20,13 @@ import {
   studioWorkspaceInvitationDeleteResponseSchema,
   studioWorkspaceInvitationResponseSchema,
   studioWorkspaceMemberDeleteResponseSchema,
+  studioWorkspaceRoleEscalationActionResponseSchema,
+  studioWorkspaceRoleEscalationResponseSchema,
   type StudioBrandSummary,
   type StudioSettingsSummary,
   type StudioWorkspaceInvitationSummary,
-  type StudioWorkspaceMemberSummary
+  type StudioWorkspaceMemberSummary,
+  type StudioWorkspaceRoleEscalationSummary
 } from "@ai-nft-forge/shared";
 import {
   MetricTile,
@@ -34,6 +37,7 @@ import {
 } from "@ai-nft-forge/ui";
 
 type StudioSettingsClientProps = {
+  currentWalletAddress: string;
   initialSettings: StudioSettingsSummary | null;
   ownerWalletAddress: string;
 };
@@ -207,6 +211,7 @@ function resolveSelectedBrandId(input: {
 }
 
 export function StudioSettingsClient({
+  currentWalletAddress,
   initialSettings,
   ownerWalletAddress
 }: StudioSettingsClientProps) {
@@ -228,6 +233,12 @@ export function StudioSettingsClient({
   const [isSaving, setIsSaving] = useState(false);
   const [isCreatingBrand, setIsCreatingBrand] = useState(false);
   const [isCreatingInvitation, setIsCreatingInvitation] = useState(false);
+  const [roleEscalationJustification, setRoleEscalationJustification] =
+    useState("");
+  const [isRequestingRoleEscalation, setIsRequestingRoleEscalation] =
+    useState(false);
+  const [actingRoleEscalationRequestId, setActingRoleEscalationRequestId] =
+    useState<string | null>(null);
   const [cancelingInvitationId, setCancelingInvitationId] = useState<
     string | null
   >(null);
@@ -239,11 +250,15 @@ export function StudioSettingsClient({
     canManageMembers: true,
     canManageOnchain: true,
     canManageOpsPolicy: true,
+    canManageRoleEscalations: true,
+    canRequestRoleEscalation: false,
     canManageWorkspace: true,
     canPublishCollections: true,
     role: "owner" as const
   };
   const canManageMembers = access.canManageMembers;
+  const canManageRoleEscalations = access.canManageRoleEscalations;
+  const canRequestRoleEscalation = access.canRequestRoleEscalation;
   const canManageWorkspace = access.canManageWorkspace;
 
   const selectedBrand =
@@ -251,6 +266,20 @@ export function StudioSettingsClient({
     settings?.brands[0] ??
     settings?.brand ??
     null;
+  const resolvedOwnerWalletAddress =
+    settings?.members.find((member) => member.role === "owner")?.walletAddress ??
+    ownerWalletAddress;
+  const pendingRoleEscalationRequest =
+    settings?.roleEscalationRequests.find(
+      (request) => request.status === "pending"
+    ) ?? null;
+  const actorRoleEscalationRequest =
+    settings?.roleEscalationRequests.find(
+      (request) =>
+        request.status === "pending" &&
+        request.targetWalletAddress.toLowerCase() ===
+          currentWalletAddress.toLowerCase()
+    ) ?? null;
 
   useEffect(() => {
     const nextSelectedBrandId = resolveSelectedBrandId({
@@ -621,6 +650,196 @@ export function StudioSettingsClient({
     }
   }
 
+  async function handleRequestRoleEscalation(
+    event: FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
+
+    if (!canRequestRoleEscalation) {
+      setNotice({
+        message: "Only workspace operators can request ownership transfer.",
+        tone: "error"
+      });
+      return;
+    }
+
+    setIsRequestingRoleEscalation(true);
+    setNotice({
+      message: "Submitting ownership transfer request…",
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch("/api/studio/settings/role-escalations", {
+        body: JSON.stringify({
+          justification: roleEscalationJustification
+        }),
+        headers: {
+          "Content-Type": "application/json"
+        },
+        method: "POST"
+      });
+      await parseJsonResponse({
+        response,
+        schema: studioWorkspaceRoleEscalationResponseSchema
+      });
+
+      setRoleEscalationJustification("");
+      await refreshSettings({
+        silent: true
+      });
+      setNotice({
+        message: "Ownership transfer request submitted for owner review.",
+        tone: "success"
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Ownership transfer request could not be submitted.",
+        tone: "error"
+      });
+    } finally {
+      setIsRequestingRoleEscalation(false);
+    }
+  }
+
+  async function handleApproveRoleEscalation(
+    request: StudioWorkspaceRoleEscalationSummary
+  ) {
+    if (!canManageRoleEscalations) {
+      return;
+    }
+
+    setActingRoleEscalationRequestId(request.id);
+    setNotice({
+      message: `Approving ownership transfer for ${request.targetWalletAddress}…`,
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch(
+        `/api/studio/settings/role-escalations/${request.id}/approve`,
+        {
+          method: "POST"
+        }
+      );
+      await parseJsonResponse({
+        response,
+        schema: studioWorkspaceRoleEscalationActionResponseSchema
+      });
+
+      await refreshSettings({
+        silent: true
+      });
+      setNotice({
+        message: "Ownership transferred and workspace access refreshed.",
+        tone: "success"
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Ownership transfer could not be approved.",
+        tone: "error"
+      });
+    } finally {
+      setActingRoleEscalationRequestId(null);
+    }
+  }
+
+  async function handleRejectRoleEscalation(
+    request: StudioWorkspaceRoleEscalationSummary
+  ) {
+    if (!canManageRoleEscalations) {
+      return;
+    }
+
+    setActingRoleEscalationRequestId(request.id);
+    setNotice({
+      message: `Rejecting ownership transfer for ${request.targetWalletAddress}…`,
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch(
+        `/api/studio/settings/role-escalations/${request.id}/reject`,
+        {
+          method: "POST"
+        }
+      );
+      await parseJsonResponse({
+        response,
+        schema: studioWorkspaceRoleEscalationActionResponseSchema
+      });
+
+      await refreshSettings({
+        silent: true
+      });
+      setNotice({
+        message: "Ownership transfer request rejected.",
+        tone: "success"
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Ownership transfer request could not be rejected.",
+        tone: "error"
+      });
+    } finally {
+      setActingRoleEscalationRequestId(null);
+    }
+  }
+
+  async function handleCancelRoleEscalation(
+    request: StudioWorkspaceRoleEscalationSummary
+  ) {
+    if (!canRequestRoleEscalation) {
+      return;
+    }
+
+    setActingRoleEscalationRequestId(request.id);
+    setNotice({
+      message: "Canceling ownership transfer request…",
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch(
+        `/api/studio/settings/role-escalations/${request.id}`,
+        {
+          method: "DELETE"
+        }
+      );
+      await parseJsonResponse({
+        response,
+        schema: studioWorkspaceRoleEscalationActionResponseSchema
+      });
+
+      await refreshSettings({
+        silent: true
+      });
+      setNotice({
+        message: "Ownership transfer request canceled.",
+        tone: "success"
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Ownership transfer request could not be canceled.",
+        tone: "error"
+      });
+    } finally {
+      setActingRoleEscalationRequestId(null);
+    }
+  }
+
   return (
     <PageShell
       eyebrow="Settings"
@@ -656,7 +875,8 @@ export function StudioSettingsClient({
           title="Owner-scoped studio profile"
         >
           <div className="metric-list">
-            <MetricTile label="Owner" value={ownerWalletAddress} />
+            <MetricTile label="Owner" value={resolvedOwnerWalletAddress} />
+            <MetricTile label="Current actor" value={currentWalletAddress} />
             <MetricTile label="Role" value={access.role} />
             <MetricTile
               label="Workspace"
@@ -678,10 +898,20 @@ export function StudioSettingsClient({
               label="Pending invites"
               value={settings?.invitations.length?.toString() ?? "0"}
             />
+            <MetricTile
+              label="Role escalation"
+              value={(
+                settings?.roleEscalationRequests.filter(
+                  (request) => request.status === "pending"
+                ).length ?? 0
+              ).toString()}
+            />
           </div>
           <div className="pill-row">
             <Pill>/studio/settings</Pill>
-            <Pill>{selectedBrand?.publicBrandPath ?? "/brands/[brandSlug]"}</Pill>
+            <Pill>
+              {selectedBrand?.publicBrandPath ?? "/brands/[brandSlug]"}
+            </Pill>
             <Pill>
               {selectedBrand?.accentColor ?? defaultStudioBrandAccentColor}
             </Pill>
@@ -700,311 +930,311 @@ export function StudioSettingsClient({
             <div className="status-banner status-banner--info">
               <strong>Operator read-only</strong>
               <span>
-                Operators can review workspace identity and brand
-                configuration, but only workspace owners can change it.
+                Operators can review workspace identity and brand configuration,
+                but only workspace owners can change it.
               </span>
             </div>
           ) : null}
           <form className="studio-form" onSubmit={handleSaveSettings}>
             <fieldset disabled={!canManageWorkspace || isSaving}>
-            {settings?.brands.length ? (
+              {settings?.brands.length ? (
+                <label className="field-stack">
+                  <span className="field-label">Editing brand</span>
+                  <select
+                    className="input-field"
+                    onChange={(event) => {
+                      setSelectedBrandId(event.target.value || null);
+                    }}
+                    value={selectedBrand?.id ?? ""}
+                  >
+                    {settings.brands.map((brand) => (
+                      <option key={brand.id} value={brand.id}>
+                        {brand.name} · /brands/{brand.slug}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
               <label className="field-stack">
-                <span className="field-label">Editing brand</span>
+                <span className="field-label">Workspace name</span>
+                <input
+                  className="input-field"
+                  maxLength={120}
+                  onChange={(event) => {
+                    setEditorState((current) => ({
+                      ...current,
+                      workspaceName: event.target.value
+                    }));
+                  }}
+                  placeholder="Forge Operations"
+                  required
+                  value={editorState.workspaceName}
+                />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">Workspace slug</span>
+                <input
+                  className="input-field"
+                  maxLength={80}
+                  onChange={(event) => {
+                    setEditorState((current) => ({
+                      ...current,
+                      workspaceSlug: event.target.value
+                    }));
+                  }}
+                  pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                  placeholder="forge-operations"
+                  required
+                  value={editorState.workspaceSlug}
+                />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">Brand name</span>
+                <input
+                  className="input-field"
+                  maxLength={120}
+                  onChange={(event) => {
+                    setEditorState((current) => ({
+                      ...current,
+                      brandName: event.target.value
+                    }));
+                  }}
+                  placeholder="Forge Editions"
+                  required
+                  value={editorState.brandName}
+                />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">Brand slug</span>
+                <input
+                  className="input-field"
+                  maxLength={80}
+                  onChange={(event) => {
+                    setEditorState((current) => ({
+                      ...current,
+                      brandSlug: event.target.value
+                    }));
+                  }}
+                  pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                  placeholder="forge-editions"
+                  required
+                  value={editorState.brandSlug}
+                />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">Custom domain</span>
+                <input
+                  className="input-field"
+                  maxLength={253}
+                  onChange={(event) => {
+                    setEditorState((current) => ({
+                      ...current,
+                      customDomain: event.target.value
+                    }));
+                  }}
+                  placeholder="collections.example.com"
+                  value={editorState.customDomain}
+                />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">Theme preset</span>
                 <select
                   className="input-field"
                   onChange={(event) => {
-                    setSelectedBrandId(event.target.value || null);
+                    setEditorState((current) => ({
+                      ...current,
+                      themePreset: event.target.value as
+                        | "editorial_warm"
+                        | "gallery_mono"
+                        | "midnight_launch"
+                    }));
                   }}
-                  value={selectedBrand?.id ?? ""}
+                  value={editorState.themePreset}
                 >
-                  {settings.brands.map((brand) => (
-                    <option key={brand.id} value={brand.id}>
-                      {brand.name} · /brands/{brand.slug}
-                    </option>
-                  ))}
+                  <option value="editorial_warm">Editorial warm</option>
+                  <option value="gallery_mono">Gallery mono</option>
+                  <option value="midnight_launch">Midnight launch</option>
                 </select>
               </label>
-            ) : null}
-            <label className="field-stack">
-              <span className="field-label">Workspace name</span>
-              <input
-                className="input-field"
-                maxLength={120}
-                onChange={(event) => {
-                  setEditorState((current) => ({
-                    ...current,
-                    workspaceName: event.target.value
-                  }));
-                }}
-                placeholder="Forge Operations"
-                required
-                value={editorState.workspaceName}
-              />
-            </label>
-            <label className="field-stack">
-              <span className="field-label">Workspace slug</span>
-              <input
-                className="input-field"
-                maxLength={80}
-                onChange={(event) => {
-                  setEditorState((current) => ({
-                    ...current,
-                    workspaceSlug: event.target.value
-                  }));
-                }}
-                pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
-                placeholder="forge-operations"
-                required
-                value={editorState.workspaceSlug}
-              />
-            </label>
-            <label className="field-stack">
-              <span className="field-label">Brand name</span>
-              <input
-                className="input-field"
-                maxLength={120}
-                onChange={(event) => {
-                  setEditorState((current) => ({
-                    ...current,
-                    brandName: event.target.value
-                  }));
-                }}
-                placeholder="Forge Editions"
-                required
-                value={editorState.brandName}
-              />
-            </label>
-            <label className="field-stack">
-              <span className="field-label">Brand slug</span>
-              <input
-                className="input-field"
-                maxLength={80}
-                onChange={(event) => {
-                  setEditorState((current) => ({
-                    ...current,
-                    brandSlug: event.target.value
-                  }));
-                }}
-                pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
-                placeholder="forge-editions"
-                required
-                value={editorState.brandSlug}
-              />
-            </label>
-            <label className="field-stack">
-              <span className="field-label">Custom domain</span>
-              <input
-                className="input-field"
-                maxLength={253}
-                onChange={(event) => {
-                  setEditorState((current) => ({
-                    ...current,
-                    customDomain: event.target.value
-                  }));
-                }}
-                placeholder="collections.example.com"
-                value={editorState.customDomain}
-              />
-            </label>
-            <label className="field-stack">
-              <span className="field-label">Theme preset</span>
-              <select
-                className="input-field"
-                onChange={(event) => {
-                  setEditorState((current) => ({
-                    ...current,
-                    themePreset: event.target.value as
-                      | "editorial_warm"
-                      | "gallery_mono"
-                      | "midnight_launch"
-                  }));
-                }}
-                value={editorState.themePreset}
-              >
-                <option value="editorial_warm">Editorial warm</option>
-                <option value="gallery_mono">Gallery mono</option>
-                <option value="midnight_launch">Midnight launch</option>
-              </select>
-            </label>
-            <label className="field-stack">
-              <span className="field-label">Landing headline</span>
-              <input
-                className="input-field"
-                maxLength={120}
-                onChange={(event) => {
-                  setEditorState((current) => ({
-                    ...current,
-                    landingHeadline: event.target.value
-                  }));
-                }}
-                placeholder="Curated collectible releases"
-                required
-                value={editorState.landingHeadline}
-              />
-            </label>
-            <label className="field-stack">
-              <span className="field-label">Landing description</span>
-              <textarea
-                className="input-field input-field--multiline"
-                maxLength={280}
-                onChange={(event) => {
-                  setEditorState((current) => ({
-                    ...current,
-                    landingDescription: event.target.value
-                  }));
-                }}
-                rows={5}
-                value={editorState.landingDescription}
-              />
-            </label>
-            <label className="field-stack">
-              <span className="field-label">Wordmark</span>
-              <input
-                className="input-field"
-                maxLength={40}
-                onChange={(event) => {
-                  setEditorState((current) => ({
-                    ...current,
-                    wordmark: event.target.value
-                  }));
-                }}
-                placeholder="Forge Editions"
-                value={editorState.wordmark}
-              />
-            </label>
-            <label className="field-stack">
-              <span className="field-label">Hero kicker</span>
-              <input
-                className="input-field"
-                maxLength={60}
-                onChange={(event) => {
-                  setEditorState((current) => ({
-                    ...current,
-                    heroKicker: event.target.value
-                  }));
-                }}
-                placeholder="Season three launch"
-                value={editorState.heroKicker}
-              />
-            </label>
-            <label className="field-stack">
-              <span className="field-label">Story headline</span>
-              <input
-                className="input-field"
-                maxLength={120}
-                onChange={(event) => {
-                  setEditorState((current) => ({
-                    ...current,
-                    storyHeadline: event.target.value
-                  }));
-                }}
-                placeholder="A collectible portrait program built for premium launches."
-                value={editorState.storyHeadline}
-              />
-            </label>
-            <label className="field-stack">
-              <span className="field-label">Story body</span>
-              <textarea
-                className="input-field input-field--multiline"
-                maxLength={600}
-                onChange={(event) => {
-                  setEditorState((current) => ({
-                    ...current,
-                    storyBody: event.target.value
-                  }));
-                }}
-                rows={5}
-                value={editorState.storyBody}
-              />
-            </label>
-            <label className="field-stack">
-              <span className="field-label">Featured release label</span>
-              <input
-                className="input-field"
-                maxLength={40}
-                onChange={(event) => {
-                  setEditorState((current) => ({
-                    ...current,
-                    featuredReleaseLabel: event.target.value
-                  }));
-                }}
-                placeholder="Featured release"
-                required
-                value={editorState.featuredReleaseLabel}
-              />
-            </label>
-            <label className="field-stack">
-              <span className="field-label">Primary CTA label</span>
-              <input
-                className="input-field"
-                maxLength={40}
-                onChange={(event) => {
-                  setEditorState((current) => ({
-                    ...current,
-                    primaryCtaLabel: event.target.value
-                  }));
-                }}
-                placeholder="View featured release"
-                value={editorState.primaryCtaLabel}
-              />
-            </label>
-            <label className="field-stack">
-              <span className="field-label">Secondary CTA label</span>
-              <input
-                className="input-field"
-                maxLength={40}
-                onChange={(event) => {
-                  setEditorState((current) => ({
-                    ...current,
-                    secondaryCtaLabel: event.target.value
-                  }));
-                }}
-                placeholder="Browse archive"
-                value={editorState.secondaryCtaLabel}
-              />
-            </label>
-            <label className="field-stack">
-              <span className="field-label">Accent color</span>
-              <div className="color-input-row">
-                <input
-                  className="color-swatch-input"
-                  onChange={(event) => {
-                    setEditorState((current) => ({
-                      ...current,
-                      accentColor: event.target.value
-                    }));
-                  }}
-                  type="color"
-                  value={editorState.accentColor}
-                />
+              <label className="field-stack">
+                <span className="field-label">Landing headline</span>
                 <input
                   className="input-field"
-                  maxLength={7}
+                  maxLength={120}
                   onChange={(event) => {
                     setEditorState((current) => ({
                       ...current,
-                      accentColor: event.target.value
+                      landingHeadline: event.target.value
                     }));
                   }}
-                  pattern="^#[0-9a-fA-F]{6}$"
+                  placeholder="Curated collectible releases"
                   required
-                  value={editorState.accentColor}
+                  value={editorState.landingHeadline}
                 />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">Landing description</span>
+                <textarea
+                  className="input-field input-field--multiline"
+                  maxLength={280}
+                  onChange={(event) => {
+                    setEditorState((current) => ({
+                      ...current,
+                      landingDescription: event.target.value
+                    }));
+                  }}
+                  rows={5}
+                  value={editorState.landingDescription}
+                />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">Wordmark</span>
+                <input
+                  className="input-field"
+                  maxLength={40}
+                  onChange={(event) => {
+                    setEditorState((current) => ({
+                      ...current,
+                      wordmark: event.target.value
+                    }));
+                  }}
+                  placeholder="Forge Editions"
+                  value={editorState.wordmark}
+                />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">Hero kicker</span>
+                <input
+                  className="input-field"
+                  maxLength={60}
+                  onChange={(event) => {
+                    setEditorState((current) => ({
+                      ...current,
+                      heroKicker: event.target.value
+                    }));
+                  }}
+                  placeholder="Season three launch"
+                  value={editorState.heroKicker}
+                />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">Story headline</span>
+                <input
+                  className="input-field"
+                  maxLength={120}
+                  onChange={(event) => {
+                    setEditorState((current) => ({
+                      ...current,
+                      storyHeadline: event.target.value
+                    }));
+                  }}
+                  placeholder="A collectible portrait program built for premium launches."
+                  value={editorState.storyHeadline}
+                />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">Story body</span>
+                <textarea
+                  className="input-field input-field--multiline"
+                  maxLength={600}
+                  onChange={(event) => {
+                    setEditorState((current) => ({
+                      ...current,
+                      storyBody: event.target.value
+                    }));
+                  }}
+                  rows={5}
+                  value={editorState.storyBody}
+                />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">Featured release label</span>
+                <input
+                  className="input-field"
+                  maxLength={40}
+                  onChange={(event) => {
+                    setEditorState((current) => ({
+                      ...current,
+                      featuredReleaseLabel: event.target.value
+                    }));
+                  }}
+                  placeholder="Featured release"
+                  required
+                  value={editorState.featuredReleaseLabel}
+                />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">Primary CTA label</span>
+                <input
+                  className="input-field"
+                  maxLength={40}
+                  onChange={(event) => {
+                    setEditorState((current) => ({
+                      ...current,
+                      primaryCtaLabel: event.target.value
+                    }));
+                  }}
+                  placeholder="View featured release"
+                  value={editorState.primaryCtaLabel}
+                />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">Secondary CTA label</span>
+                <input
+                  className="input-field"
+                  maxLength={40}
+                  onChange={(event) => {
+                    setEditorState((current) => ({
+                      ...current,
+                      secondaryCtaLabel: event.target.value
+                    }));
+                  }}
+                  placeholder="Browse archive"
+                  value={editorState.secondaryCtaLabel}
+                />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">Accent color</span>
+                <div className="color-input-row">
+                  <input
+                    className="color-swatch-input"
+                    onChange={(event) => {
+                      setEditorState((current) => ({
+                        ...current,
+                        accentColor: event.target.value
+                      }));
+                    }}
+                    type="color"
+                    value={editorState.accentColor}
+                  />
+                  <input
+                    className="input-field"
+                    maxLength={7}
+                    onChange={(event) => {
+                      setEditorState((current) => ({
+                        ...current,
+                        accentColor: event.target.value
+                      }));
+                    }}
+                    pattern="^#[0-9a-fA-F]{6}$"
+                    required
+                    value={editorState.accentColor}
+                  />
+                </div>
+              </label>
+              <div className="studio-action-row">
+                <button
+                  className="button-action button-action--accent"
+                  disabled={!canManageWorkspace || isSaving}
+                  type="submit"
+                >
+                  {isSaving
+                    ? "Saving…"
+                    : settings
+                      ? "Save settings"
+                      : "Create settings"}
+                </button>
               </div>
-            </label>
-            <div className="studio-action-row">
-              <button
-                className="button-action button-action--accent"
-                disabled={!canManageWorkspace || isSaving}
-                type="submit"
-              >
-                {isSaving
-                  ? "Saving…"
-                  : settings
-                    ? "Save settings"
-                    : "Create settings"}
-              </button>
-            </div>
             </fieldset>
           </form>
         </SurfaceCard>
@@ -1022,114 +1252,114 @@ export function StudioSettingsClient({
           ) : null}
           <form className="studio-form" onSubmit={handleCreateBrand}>
             <fieldset disabled={!canManageWorkspace || isCreatingBrand}>
-            <label className="field-stack">
-              <span className="field-label">Brand name</span>
-              <input
-                className="input-field"
-                maxLength={120}
-                onChange={(event) => {
-                  setNewBrandState((current) => ({
-                    ...current,
-                    brandName: event.target.value
-                  }));
-                }}
-                placeholder="North Editions"
-                required
-                value={newBrandState.brandName}
-              />
-            </label>
-            <label className="field-stack">
-              <span className="field-label">Brand slug</span>
-              <input
-                className="input-field"
-                maxLength={80}
-                onChange={(event) => {
-                  setNewBrandState((current) => ({
-                    ...current,
-                    brandSlug: event.target.value
-                  }));
-                }}
-                pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
-                placeholder="north-editions"
-                required
-                value={newBrandState.brandSlug}
-              />
-            </label>
-            <label className="field-stack">
-              <span className="field-label">Theme preset</span>
-              <select
-                className="input-field"
-                onChange={(event) => {
-                  setNewBrandState((current) => ({
-                    ...current,
-                    themePreset: event.target.value as
-                      | "editorial_warm"
-                      | "gallery_mono"
-                      | "midnight_launch"
-                  }));
-                }}
-                value={newBrandState.themePreset}
-              >
-                <option value="editorial_warm">Editorial warm</option>
-                <option value="gallery_mono">Gallery mono</option>
-                <option value="midnight_launch">Midnight launch</option>
-              </select>
-            </label>
-            <label className="field-stack">
-              <span className="field-label">Accent color</span>
-              <div className="color-input-row">
-                <input
-                  className="color-swatch-input"
-                  onChange={(event) => {
-                    setNewBrandState((current) => ({
-                      ...current,
-                      accentColor: event.target.value
-                    }));
-                  }}
-                  type="color"
-                  value={newBrandState.accentColor}
-                />
+              <label className="field-stack">
+                <span className="field-label">Brand name</span>
                 <input
                   className="input-field"
-                  maxLength={7}
+                  maxLength={120}
                   onChange={(event) => {
                     setNewBrandState((current) => ({
                       ...current,
-                      accentColor: event.target.value
+                      brandName: event.target.value
                     }));
                   }}
-                  pattern="^#[0-9a-fA-F]{6}$"
+                  placeholder="North Editions"
                   required
-                  value={newBrandState.accentColor}
+                  value={newBrandState.brandName}
                 />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">Brand slug</span>
+                <input
+                  className="input-field"
+                  maxLength={80}
+                  onChange={(event) => {
+                    setNewBrandState((current) => ({
+                      ...current,
+                      brandSlug: event.target.value
+                    }));
+                  }}
+                  pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                  placeholder="north-editions"
+                  required
+                  value={newBrandState.brandSlug}
+                />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">Theme preset</span>
+                <select
+                  className="input-field"
+                  onChange={(event) => {
+                    setNewBrandState((current) => ({
+                      ...current,
+                      themePreset: event.target.value as
+                        | "editorial_warm"
+                        | "gallery_mono"
+                        | "midnight_launch"
+                    }));
+                  }}
+                  value={newBrandState.themePreset}
+                >
+                  <option value="editorial_warm">Editorial warm</option>
+                  <option value="gallery_mono">Gallery mono</option>
+                  <option value="midnight_launch">Midnight launch</option>
+                </select>
+              </label>
+              <label className="field-stack">
+                <span className="field-label">Accent color</span>
+                <div className="color-input-row">
+                  <input
+                    className="color-swatch-input"
+                    onChange={(event) => {
+                      setNewBrandState((current) => ({
+                        ...current,
+                        accentColor: event.target.value
+                      }));
+                    }}
+                    type="color"
+                    value={newBrandState.accentColor}
+                  />
+                  <input
+                    className="input-field"
+                    maxLength={7}
+                    onChange={(event) => {
+                      setNewBrandState((current) => ({
+                        ...current,
+                        accentColor: event.target.value
+                      }));
+                    }}
+                    pattern="^#[0-9a-fA-F]{6}$"
+                    required
+                    value={newBrandState.accentColor}
+                  />
+                </div>
+              </label>
+              <div className="pill-row">
+                <Pill>
+                  {settings?.workspace.slug ??
+                    editorState.workspaceSlug ??
+                    "workspace-slug"}
+                </Pill>
+                <Pill>
+                  {newBrandState.brandSlug
+                    ? `/brands/${newBrandState.brandSlug}`
+                    : "/brands/[brandSlug]"}
+                </Pill>
+                <Pill>{newBrandState.themePreset.replaceAll("_", " ")}</Pill>
               </div>
-            </label>
-            <div className="pill-row">
-              <Pill>
-                {settings?.workspace.slug ??
-                  editorState.workspaceSlug ??
-                  "workspace-slug"}
-              </Pill>
-              <Pill>
-                {newBrandState.brandSlug
-                  ? `/brands/${newBrandState.brandSlug}`
-                  : "/brands/[brandSlug]"}
-              </Pill>
-              <Pill>{newBrandState.themePreset.replaceAll("_", " ")}</Pill>
-            </div>
-            <div className="studio-action-row">
-              <button
-                className="button-action"
-                disabled={
-                  !canManageWorkspace ||
-                  isCreatingBrand ||
-                  !settings?.workspace.id
-                }
-                type="submit"
-              >
-                {isCreatingBrand ? "Creating…" : "Add brand"}
-              </button>
-            </div>
+              <div className="studio-action-row">
+                <button
+                  className="button-action"
+                  disabled={
+                    !canManageWorkspace ||
+                    isCreatingBrand ||
+                    !settings?.workspace.id
+                  }
+                  type="submit"
+                >
+                  {isCreatingBrand ? "Creating…" : "Add brand"}
+                </button>
+              </div>
             </fieldset>
           </form>
         </SurfaceCard>
@@ -1157,7 +1387,9 @@ export function StudioSettingsClient({
               {settings.members.map((member) => (
                 <div className="collection-item-card" key={member.id}>
                   <div className="collection-item-card__copy">
-                    <strong>{member.userDisplayName ?? member.walletAddress}</strong>
+                    <strong>
+                      {member.userDisplayName ?? member.walletAddress}
+                    </strong>
                     <span>{member.walletAddress}</span>
                     <span>
                       {member.role === "owner" ? "Owner" : "Operator"}
@@ -1266,7 +1498,203 @@ export function StudioSettingsClient({
           </form>
         </SurfaceCard>
         <SurfaceCard
-          body="Member lifecycle actions are written to the workspace audit stream so owners can trace invitation creation, invitation cancellation, acceptance, and explicit member removal without inspecting the database."
+          body="Ownership transfer is now gated behind an explicit operator escalation request and owner review. Approval promotes the requesting operator to workspace owner, demotes the prior owner to operator, and records the full lifecycle in the workspace audit stream."
+          eyebrow="Escalation"
+          span={4}
+          title="Role escalation"
+        >
+          <div className="pill-row">
+            <Pill>{settings?.roleEscalationRequests.length ?? 0} requests</Pill>
+            <Pill>
+              {pendingRoleEscalationRequest
+                ? "pending review"
+                : "no pending request"}
+            </Pill>
+            <Pill>
+              {access.role === "owner" ? "owner review" : "operator request"}
+            </Pill>
+          </div>
+          {canRequestRoleEscalation ? (
+            actorRoleEscalationRequest ? (
+              <div className="collection-item-card">
+                <div className="collection-item-card__copy">
+                  <strong>Ownership transfer request submitted</strong>
+                  <span>
+                    Submitted{" "}
+                    {formatTimestamp(actorRoleEscalationRequest.createdAt)}
+                  </span>
+                  <span>
+                    {actorRoleEscalationRequest.justification ||
+                      "No request note provided."}
+                  </span>
+                </div>
+                <div className="collection-item-card__actions">
+                  <button
+                    className="button-action"
+                    disabled={
+                      actingRoleEscalationRequestId ===
+                      actorRoleEscalationRequest.id
+                    }
+                    onClick={() => {
+                      void handleCancelRoleEscalation(
+                        actorRoleEscalationRequest
+                      );
+                    }}
+                    type="button"
+                  >
+                    {actingRoleEscalationRequestId ===
+                    actorRoleEscalationRequest.id
+                      ? "Canceling…"
+                      : "Cancel"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {pendingRoleEscalationRequest ? (
+                  <div className="status-banner status-banner--info">
+                    <strong>Owner review already pending</strong>
+                    <span>
+                      Another ownership transfer request is already open for
+                      this workspace. Wait for the current request to resolve
+                      before submitting a new one.
+                    </span>
+                  </div>
+                ) : null}
+                <form
+                  className="studio-form"
+                  onSubmit={handleRequestRoleEscalation}
+                >
+                  <fieldset
+                    disabled={
+                      !canRequestRoleEscalation ||
+                      isRequestingRoleEscalation ||
+                      Boolean(pendingRoleEscalationRequest)
+                    }
+                  >
+                    <label className="field-stack">
+                      <span className="field-label">Request note</span>
+                      <textarea
+                        className="input-field input-field--multiline"
+                        maxLength={280}
+                        onChange={(event) => {
+                          setRoleEscalationJustification(event.target.value);
+                        }}
+                        placeholder="Explain why ownership transfer is needed and what should happen after approval."
+                        rows={5}
+                        value={roleEscalationJustification}
+                      />
+                    </label>
+                    <div className="studio-action-row">
+                      <button
+                        className="button-action"
+                        disabled={
+                          !canRequestRoleEscalation ||
+                          isRequestingRoleEscalation ||
+                          Boolean(pendingRoleEscalationRequest)
+                        }
+                        type="submit"
+                      >
+                        {isRequestingRoleEscalation
+                          ? "Submitting…"
+                          : "Request ownership transfer"}
+                      </button>
+                    </div>
+                  </fieldset>
+                </form>
+              </>
+            )
+          ) : null}
+          {canManageRoleEscalations ? (
+            <>
+              {settings?.roleEscalationRequests.some(
+                (request) => request.status === "pending"
+              ) ? (
+                <div className="collection-item-list">
+                  {(settings?.roleEscalationRequests ?? [])
+                    .filter((request) => request.status === "pending")
+                    .map((request) => (
+                      <div className="collection-item-card" key={request.id}>
+                        <div className="collection-item-card__copy">
+                          <strong>{request.targetWalletAddress}</strong>
+                          <span>
+                            Requested {formatTimestamp(request.createdAt)}
+                          </span>
+                          <span>
+                            {request.justification ||
+                              "No request note provided."}
+                          </span>
+                        </div>
+                        <div className="collection-item-card__actions">
+                          <button
+                            className="button-action button-action--accent"
+                            disabled={
+                              actingRoleEscalationRequestId === request.id
+                            }
+                            onClick={() => {
+                              void handleApproveRoleEscalation(request);
+                            }}
+                            type="button"
+                          >
+                            {actingRoleEscalationRequestId === request.id
+                              ? "Working…"
+                              : "Approve"}
+                          </button>
+                          <button
+                            className="button-action"
+                            disabled={
+                              actingRoleEscalationRequestId === request.id
+                            }
+                            onClick={() => {
+                              void handleRejectRoleEscalation(request);
+                            }}
+                            type="button"
+                          >
+                            {actingRoleEscalationRequestId === request.id
+                              ? "Working…"
+                              : "Reject"}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <div className="collection-empty-state">
+                  No pending role escalation requests.
+                </div>
+              )}
+            </>
+          ) : null}
+          <div className="collection-item-list">
+            {settings?.roleEscalationRequests.length ? (
+              settings.roleEscalationRequests.map((request) => (
+                <div className="collection-item-card" key={request.id}>
+                  <div className="collection-item-card__copy">
+                    <strong>
+                      {request.status.replaceAll("_", " ")} ·{" "}
+                      {request.targetWalletAddress}
+                    </strong>
+                    <span>
+                      Requested {formatTimestamp(request.createdAt)}
+                      {request.resolvedAt
+                        ? ` · resolved ${formatTimestamp(request.resolvedAt)}`
+                        : ""}
+                    </span>
+                    <span>
+                      {request.justification || "No request note provided."}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="collection-empty-state">
+                No role escalation requests have been recorded yet.
+              </div>
+            )}
+          </div>
+        </SurfaceCard>
+        <SurfaceCard
+          body="Member lifecycle and ownership-transfer actions are written to the workspace audit stream so owners can trace invitation creation, invitation cancellation, acceptance, explicit member removal, and role escalation outcomes without inspecting the database."
           eyebrow="Audit"
           span={8}
           title="Member lifecycle history"

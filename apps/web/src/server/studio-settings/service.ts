@@ -7,6 +7,7 @@ import {
   studioBrandCreateRequestSchema,
   studioBrandResponseSchema,
   studioBrandThemeSchema,
+  studioWorkspaceRoleEscalationActionResponseSchema,
   studioWorkspaceAuditActionSchema,
   studioWorkspaceAuditEntrySchema,
   studioWorkspaceInvitationCreateRequestSchema,
@@ -17,6 +18,8 @@ import {
   studioWorkspaceMemberCreateRequestSchema,
   studioWorkspaceMemberDeleteResponseSchema,
   studioWorkspaceMemberResponseSchema,
+  studioWorkspaceRoleEscalationCreateRequestSchema,
+  studioWorkspaceRoleEscalationResponseSchema,
   type StudioWorkspaceRole
 } from "@ai-nft-forge/shared";
 
@@ -94,6 +97,32 @@ type WorkspaceInvitationLookupRecord = {
   id: string;
   role: StudioWorkspaceRole;
   walletAddress: string;
+  workspace: {
+    id: string;
+    ownerUserId: string;
+  };
+  workspaceId: string;
+};
+
+type WorkspaceRoleEscalationRequestStatusRecord =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "canceled";
+
+type WorkspaceRoleEscalationRequestRecord = {
+  createdAt: Date;
+  id: string;
+  justification: string | null;
+  requestedByUser: UserRecord;
+  requestedByUserId: string;
+  requestedRole: StudioWorkspaceRole;
+  resolvedAt: Date | null;
+  resolvedByUser: UserRecord | null;
+  resolvedByUserId: string | null;
+  status: WorkspaceRoleEscalationRequestStatusRecord;
+  targetUser: UserRecord;
+  targetUserId: string;
   workspace: {
     id: string;
     ownerUserId: string;
@@ -194,6 +223,10 @@ type StudioSettingsRepositorySet = {
       id: string;
       workspaceId: string;
     }): Promise<{ count: number }>;
+    deleteByWorkspaceAndUserId(input: {
+      userId: string;
+      workspaceId: string;
+    }): Promise<{ count: number }>;
     findByIdWithUserAndWorkspace(input: {
       id: string;
     }): Promise<WorkspaceMembershipRecord | null>;
@@ -256,6 +289,37 @@ type StudioSettingsRepositorySet = {
       workspaceId: string;
     }): Promise<WorkspaceInvitationRecord[]>;
   };
+  workspaceRoleEscalationRequestRepository: {
+    create(input: {
+      justification?: string | null;
+      requestedByUserId: string;
+      requestedRole?: StudioWorkspaceRole;
+      targetUserId: string;
+      workspaceId: string;
+    }): Promise<{
+      id: string;
+    }>;
+    findByIdWithRelations(input: {
+      id: string;
+    }): Promise<WorkspaceRoleEscalationRequestRecord | null>;
+    findPendingByWorkspaceAndRequestedRole(input: {
+      requestedRole: StudioWorkspaceRole;
+      workspaceId: string;
+    }): Promise<WorkspaceRoleEscalationRequestRecord | null>;
+    listByWorkspaceId(input: {
+      limit?: number;
+      workspaceId: string;
+    }): Promise<WorkspaceRoleEscalationRequestRecord[]>;
+    resolveById(input: {
+      id: string;
+      resolvedAt: Date;
+      resolvedByUserId: string;
+      status: Exclude<WorkspaceRoleEscalationRequestStatusRecord, "pending">;
+    }): Promise<{
+      id: string;
+      status: WorkspaceRoleEscalationRequestStatusRecord;
+    }>;
+  };
   workspaceRepository: {
     create(input: {
       name: string;
@@ -273,6 +337,11 @@ type StudioSettingsRepositorySet = {
       ownerUserId: string;
       slug: string;
       status: "active" | "archived" | "suspended";
+    }): Promise<WorkspaceRecord>;
+    transferOwnershipById(input: {
+      currentOwnerUserId: string;
+      id: string;
+      nextOwnerUserId: string;
     }): Promise<WorkspaceRecord>;
   };
 };
@@ -400,6 +469,8 @@ function createWorkspaceAccess(role: StudioWorkspaceRole) {
     canManageMembers: role === "owner",
     canManageOnchain: role === "owner",
     canManageOpsPolicy: role === "owner",
+    canManageRoleEscalations: role === "owner",
+    canRequestRoleEscalation: role === "operator",
     canManageWorkspace: role === "owner",
     canPublishCollections: role === "owner",
     role
@@ -433,6 +504,25 @@ function serializeWorkspaceInvitation(input: WorkspaceInvitationRecord) {
     invitedByWalletAddress: input.invitedByUser.walletAddress,
     role: input.role,
     walletAddress: input.walletAddress
+  };
+}
+
+function serializeWorkspaceRoleEscalationRequest(
+  input: WorkspaceRoleEscalationRequestRecord
+) {
+  return {
+    createdAt: input.createdAt.toISOString(),
+    id: input.id,
+    justification: input.justification,
+    requestedByUserId: input.requestedByUserId,
+    requestedByWalletAddress: input.requestedByUser.walletAddress,
+    requestedRole: input.requestedRole,
+    resolvedAt: input.resolvedAt?.toISOString() ?? null,
+    resolvedByUserId: input.resolvedByUserId,
+    resolvedByWalletAddress: input.resolvedByUser?.walletAddress ?? null,
+    status: input.status,
+    targetUserId: input.targetUserId,
+    targetWalletAddress: input.targetUser.walletAddress
   };
 }
 
@@ -494,26 +584,33 @@ async function serializeStudioSettings(input: {
     StudioSettingsRepositorySet,
     | "auditLogRepository"
     | "workspaceInvitationRepository"
+    | "workspaceRoleEscalationRequestRepository"
     | "workspaceMembershipRepository"
   >;
   role: StudioWorkspaceRole;
   workspace: WorkspaceRecord;
 }) {
   const now = new Date();
-  const [memberships, invitations, auditLogs] = await Promise.all([
-    input.repositories.workspaceMembershipRepository.listByWorkspaceId(
-      input.workspace.id
-    ),
-    input.repositories.workspaceInvitationRepository.listActiveByWorkspaceId({
-      now,
-      workspaceId: input.workspace.id
-    }),
-    input.repositories.auditLogRepository.listByEntity({
-      entityId: input.workspace.id,
-      entityType: "workspace",
-      limit: 25
-    })
-  ]);
+  const [memberships, invitations, roleEscalationRequests, auditLogs] =
+    await Promise.all([
+      input.repositories.workspaceMembershipRepository.listByWorkspaceId(
+        input.workspace.id
+      ),
+      input.repositories.workspaceInvitationRepository.listActiveByWorkspaceId({
+        now,
+        workspaceId: input.workspace.id
+      }),
+      input.repositories.workspaceRoleEscalationRequestRepository.listByWorkspaceId(
+        {
+          workspaceId: input.workspace.id
+        }
+      ),
+      input.repositories.auditLogRepository.listByEntity({
+        entityId: input.workspace.id,
+        entityType: "workspace",
+        limit: 25
+      })
+    ]);
   const auditEntries = auditLogs.flatMap((auditLog) => {
     const serializedAuditEntry = serializeWorkspaceAuditEntry(auditLog);
 
@@ -545,6 +642,9 @@ async function serializeStudioSettings(input: {
           })
         )
       ],
+      roleEscalationRequests: roleEscalationRequests.map((request) =>
+        serializeWorkspaceRoleEscalationRequest(request)
+      ),
       workspace: {
         id: input.workspace.id,
         name: input.workspace.name,
@@ -589,7 +689,9 @@ async function assertWorkspaceSlugAvailable(input: {
   workspaceSlug: string;
 }) {
   const conflictingWorkspace =
-    await input.repositories.workspaceRepository.findBySlug(input.workspaceSlug);
+    await input.repositories.workspaceRepository.findBySlug(
+      input.workspaceSlug
+    );
 
   if (
     conflictingWorkspace &&
@@ -608,9 +710,8 @@ async function assertBrandSlugAvailable(input: {
   existingBrandId: string | null;
   repositories: Pick<StudioSettingsRepositorySet, "brandRepository">;
 }) {
-  const conflictingBrand = await input.repositories.brandRepository.findFirstBySlug(
-    input.brandSlug
-  );
+  const conflictingBrand =
+    await input.repositories.brandRepository.findFirstBySlug(input.brandSlug);
 
   if (conflictingBrand && conflictingBrand.id !== input.existingBrandId) {
     throw new StudioSettingsServiceError(
@@ -624,7 +725,10 @@ async function assertBrandSlugAvailable(input: {
 async function assertPublicationRouteCompatibility(input: {
   nextBrandSlug: string;
   publications: PublishedCollectionRecord[];
-  repositories: Pick<StudioSettingsRepositorySet, "publishedCollectionRepository">;
+  repositories: Pick<
+    StudioSettingsRepositorySet,
+    "publishedCollectionRepository"
+  >;
 }) {
   for (const publication of input.publications) {
     const routeConflict =
@@ -655,15 +759,31 @@ function assertOwnerRole(role: StudioWorkspaceRole) {
   }
 }
 
+function assertOperatorRole(role: StudioWorkspaceRole) {
+  if (role !== "operator") {
+    throw new StudioSettingsServiceError(
+      "FORBIDDEN",
+      "Only workspace operators can request role escalation.",
+      403
+    );
+  }
+}
+
 async function recordWorkspaceAuditLog(input: {
   action:
     | "workspace_invitation_accepted"
     | "workspace_invitation_canceled"
     | "workspace_invitation_created"
     | "workspace_member_added"
-    | "workspace_member_removed";
+    | "workspace_member_removed"
+    | "workspace_owner_transferred"
+    | "workspace_role_escalation_approved"
+    | "workspace_role_escalation_canceled"
+    | "workspace_role_escalation_rejected"
+    | "workspace_role_escalation_requested";
   actor: UserRecord;
   membershipId?: string | null;
+  requestId?: string | null;
   repositories: Pick<StudioSettingsRepositorySet, "auditLogRepository">;
   role?: StudioWorkspaceRole | null;
   targetUserId?: string | null;
@@ -681,6 +801,11 @@ async function recordWorkspaceAuditLog(input: {
       ...(input.membershipId
         ? {
             membershipId: input.membershipId
+          }
+        : {}),
+      ...(input.requestId
+        ? {
+            requestId: input.requestId
           }
         : {}),
       ...(input.role
@@ -728,6 +853,62 @@ async function requireOwnerWorkspace(input: {
     owner,
     workspace
   };
+}
+
+async function requireWorkspaceMember(input: {
+  repositories: Pick<
+    StudioSettingsRepositorySet,
+    "userRepository" | "workspaceMembershipRepository"
+  >;
+  userId: string;
+  workspaceId: string;
+}) {
+  const [user, membership] = await Promise.all([
+    input.repositories.userRepository.findById(input.userId),
+    input.repositories.workspaceMembershipRepository.findByWorkspaceAndUserId({
+      userId: input.userId,
+      workspaceId: input.workspaceId
+    })
+  ]);
+
+  if (!user || !membership) {
+    throw new StudioSettingsServiceError(
+      "ROLE_ESCALATION_NOT_FOUND",
+      "The requested role escalation could not be resolved for this workspace.",
+      404
+    );
+  }
+
+  return {
+    membership,
+    user
+  };
+}
+
+async function requireRoleEscalationRequest(input: {
+  repositories: Pick<
+    StudioSettingsRepositorySet,
+    "workspaceRoleEscalationRequestRepository"
+  >;
+  requestId: string;
+  workspaceId: string;
+}) {
+  const request =
+    await input.repositories.workspaceRoleEscalationRequestRepository.findByIdWithRelations(
+      {
+        id: input.requestId
+      }
+    );
+
+  if (!request || request.workspaceId !== input.workspaceId) {
+    throw new StudioSettingsServiceError(
+      "ROLE_ESCALATION_NOT_FOUND",
+      "The requested role escalation was not found.",
+      404
+    );
+  }
+
+  return request;
 }
 
 export function createStudioSettingsService(
@@ -883,9 +1064,9 @@ export function createStudioSettingsService(
             )
           ]);
         const existingBrand = parsedInput.brandId
-          ? existingBrands.find((brand) => brand.id === parsedInput.brandId) ??
-            null
-          : existingBrands[0] ?? null;
+          ? (existingBrands.find((brand) => brand.id === parsedInput.brandId) ??
+            null)
+          : (existingBrands[0] ?? null);
 
         if (parsedInput.brandId && !existingBrand) {
           throw new StudioSettingsServiceError(
@@ -1251,15 +1432,14 @@ export function createStudioSettingsService(
         const expiresAt = new Date(now);
         expiresAt.setDate(expiresAt.getDate() + workspaceInvitationTtlDays);
 
-        const invitation = await repositories.workspaceInvitationRepository.create(
-          {
+        const invitation =
+          await repositories.workspaceInvitationRepository.create({
             expiresAt,
             invitedByUserId: owner.id,
             role: "operator",
             walletAddress: parsedInput.walletAddress,
             workspaceId: workspace.id
-          }
-        );
+          });
         const persistedInvitation =
           await repositories.workspaceInvitationRepository.findByIdWithWorkspace(
             {
@@ -1349,6 +1529,344 @@ export function createStudioSettingsService(
         return studioWorkspaceInvitationDeleteResponseSchema.parse({
           invitationId: input.invitationId,
           removed: true
+        });
+      });
+    },
+
+    async requestWorkspaceRoleEscalation(input: {
+      actorUserId: string;
+      justification?: string | null;
+      ownerUserId: string;
+      role?: StudioWorkspaceRole;
+    }) {
+      assertOperatorRole(input.role ?? "owner");
+
+      const parsedInput =
+        studioWorkspaceRoleEscalationCreateRequestSchema.parse({
+          justification: input.justification
+        });
+
+      return dependencies.runTransaction(async (repositories) => {
+        const workspace =
+          await repositories.workspaceRepository.findFirstByOwnerUserId(
+            input.ownerUserId
+          );
+
+        if (!workspace) {
+          throw new StudioSettingsServiceError(
+            "WORKSPACE_REQUIRED",
+            "Workspace operators can only request escalation inside an active workspace.",
+            409
+          );
+        }
+
+        const { membership, user: actor } = await requireWorkspaceMember({
+          repositories,
+          userId: input.actorUserId,
+          workspaceId: workspace.id
+        });
+
+        if (membership.role !== "operator") {
+          throw new StudioSettingsServiceError(
+            "FORBIDDEN",
+            "Only workspace operators can request ownership transfer.",
+            403
+          );
+        }
+
+        const pendingRequest =
+          await repositories.workspaceRoleEscalationRequestRepository.findPendingByWorkspaceAndRequestedRole(
+            {
+              requestedRole: "owner",
+              workspaceId: workspace.id
+            }
+          );
+
+        if (pendingRequest) {
+          throw new StudioSettingsServiceError(
+            "ROLE_ESCALATION_ALREADY_PENDING",
+            pendingRequest.targetUserId === actor.id
+              ? "An ownership transfer request is already pending for this operator."
+              : "An ownership transfer request is already pending for this workspace.",
+            409
+          );
+        }
+
+        const createdRequest =
+          await repositories.workspaceRoleEscalationRequestRepository.create({
+            justification:
+              normalizeOptionalText(parsedInput.justification) ?? null,
+            requestedByUserId: actor.id,
+            requestedRole: "owner",
+            targetUserId: actor.id,
+            workspaceId: workspace.id
+          });
+        const persistedRequest =
+          await repositories.workspaceRoleEscalationRequestRepository.findByIdWithRelations(
+            {
+              id: createdRequest.id
+            }
+          );
+
+        if (!persistedRequest) {
+          throw new StudioSettingsServiceError(
+            "INTERNAL_SERVER_ERROR",
+            "Role escalation request could not be loaded after creation.",
+            500
+          );
+        }
+
+        await recordWorkspaceAuditLog({
+          action: "workspace_role_escalation_requested",
+          actor,
+          repositories,
+          requestId: persistedRequest.id,
+          role: persistedRequest.requestedRole,
+          targetUserId: persistedRequest.targetUserId,
+          targetWalletAddress: persistedRequest.targetUser.walletAddress,
+          workspaceId: workspace.id
+        });
+
+        return studioWorkspaceRoleEscalationResponseSchema.parse({
+          roleEscalationRequest:
+            serializeWorkspaceRoleEscalationRequest(persistedRequest)
+        });
+      });
+    },
+
+    async approveWorkspaceRoleEscalation(input: {
+      ownerUserId: string;
+      requestId: string;
+      role?: StudioWorkspaceRole;
+    }) {
+      assertOwnerRole(input.role ?? "owner");
+
+      return dependencies.runTransaction(async (repositories) => {
+        const now = new Date();
+        const { owner, workspace } = await requireOwnerWorkspace({
+          ownerUserId: input.ownerUserId,
+          repositories
+        });
+        const request = await requireRoleEscalationRequest({
+          repositories,
+          requestId: input.requestId,
+          workspaceId: workspace.id
+        });
+
+        if (request.status !== "pending") {
+          throw new StudioSettingsServiceError(
+            "ROLE_ESCALATION_NOT_PENDING",
+            "Only pending role escalation requests can be approved.",
+            409
+          );
+        }
+
+        const targetMembership =
+          await repositories.workspaceMembershipRepository.findByWorkspaceAndUserId(
+            {
+              userId: request.targetUserId,
+              workspaceId: workspace.id
+            }
+          );
+
+        if (!targetMembership || targetMembership.role !== "operator") {
+          throw new StudioSettingsServiceError(
+            "ROLE_ESCALATION_INVALID_TARGET",
+            "The target operator no longer has active workspace access.",
+            409
+          );
+        }
+
+        const priorOwnerMembership =
+          await repositories.workspaceMembershipRepository.findByWorkspaceAndUserId(
+            {
+              userId: owner.id,
+              workspaceId: workspace.id
+            }
+          );
+
+        if (!priorOwnerMembership) {
+          await repositories.workspaceMembershipRepository.create({
+            role: "operator",
+            userId: owner.id,
+            workspaceId: workspace.id
+          });
+        }
+
+        await repositories.workspaceRepository.transferOwnershipById({
+          currentOwnerUserId: owner.id,
+          id: workspace.id,
+          nextOwnerUserId: request.targetUserId
+        });
+        await repositories.workspaceMembershipRepository.deleteByWorkspaceAndUserId(
+          {
+            userId: request.targetUserId,
+            workspaceId: workspace.id
+          }
+        );
+        await repositories.workspaceRoleEscalationRequestRepository.resolveById(
+          {
+            id: request.id,
+            resolvedAt: now,
+            resolvedByUserId: owner.id,
+            status: "approved"
+          }
+        );
+
+        await recordWorkspaceAuditLog({
+          action: "workspace_role_escalation_approved",
+          actor: owner,
+          repositories,
+          requestId: request.id,
+          role: request.requestedRole,
+          targetUserId: request.targetUserId,
+          targetWalletAddress: request.targetUser.walletAddress,
+          workspaceId: workspace.id
+        });
+        await recordWorkspaceAuditLog({
+          action: "workspace_owner_transferred",
+          actor: owner,
+          repositories,
+          requestId: request.id,
+          role: "owner",
+          targetUserId: request.targetUserId,
+          targetWalletAddress: request.targetUser.walletAddress,
+          workspaceId: workspace.id
+        });
+
+        return studioWorkspaceRoleEscalationActionResponseSchema.parse({
+          requestId: request.id,
+          status: "approved"
+        });
+      });
+    },
+
+    async rejectWorkspaceRoleEscalation(input: {
+      ownerUserId: string;
+      requestId: string;
+      role?: StudioWorkspaceRole;
+    }) {
+      assertOwnerRole(input.role ?? "owner");
+
+      return dependencies.runTransaction(async (repositories) => {
+        const now = new Date();
+        const { owner, workspace } = await requireOwnerWorkspace({
+          ownerUserId: input.ownerUserId,
+          repositories
+        });
+        const request = await requireRoleEscalationRequest({
+          repositories,
+          requestId: input.requestId,
+          workspaceId: workspace.id
+        });
+
+        if (request.status !== "pending") {
+          throw new StudioSettingsServiceError(
+            "ROLE_ESCALATION_NOT_PENDING",
+            "Only pending role escalation requests can be rejected.",
+            409
+          );
+        }
+
+        await repositories.workspaceRoleEscalationRequestRepository.resolveById(
+          {
+            id: request.id,
+            resolvedAt: now,
+            resolvedByUserId: owner.id,
+            status: "rejected"
+          }
+        );
+
+        await recordWorkspaceAuditLog({
+          action: "workspace_role_escalation_rejected",
+          actor: owner,
+          repositories,
+          requestId: request.id,
+          role: request.requestedRole,
+          targetUserId: request.targetUserId,
+          targetWalletAddress: request.targetUser.walletAddress,
+          workspaceId: workspace.id
+        });
+
+        return studioWorkspaceRoleEscalationActionResponseSchema.parse({
+          requestId: request.id,
+          status: "rejected"
+        });
+      });
+    },
+
+    async cancelWorkspaceRoleEscalation(input: {
+      actorUserId: string;
+      ownerUserId: string;
+      requestId: string;
+      role?: StudioWorkspaceRole;
+    }) {
+      assertOperatorRole(input.role ?? "owner");
+
+      return dependencies.runTransaction(async (repositories) => {
+        const workspace =
+          await repositories.workspaceRepository.findFirstByOwnerUserId(
+            input.ownerUserId
+          );
+
+        if (!workspace) {
+          throw new StudioSettingsServiceError(
+            "WORKSPACE_REQUIRED",
+            "Workspace operators can only cancel escalation inside an active workspace.",
+            409
+          );
+        }
+
+        const request = await requireRoleEscalationRequest({
+          repositories,
+          requestId: input.requestId,
+          workspaceId: workspace.id
+        });
+
+        if (request.status !== "pending") {
+          throw new StudioSettingsServiceError(
+            "ROLE_ESCALATION_NOT_PENDING",
+            "Only pending role escalation requests can be canceled.",
+            409
+          );
+        }
+
+        if (
+          request.requestedByUserId !== input.actorUserId ||
+          request.targetUserId !== input.actorUserId
+        ) {
+          throw new StudioSettingsServiceError(
+            "FORBIDDEN",
+            "Only the requesting operator can cancel this role escalation.",
+            403
+          );
+        }
+
+        const actor = request.requestedByUser;
+
+        await repositories.workspaceRoleEscalationRequestRepository.resolveById(
+          {
+            id: request.id,
+            resolvedAt: new Date(),
+            resolvedByUserId: actor.id,
+            status: "canceled"
+          }
+        );
+
+        await recordWorkspaceAuditLog({
+          action: "workspace_role_escalation_canceled",
+          actor,
+          repositories,
+          requestId: request.id,
+          role: request.requestedRole,
+          targetUserId: request.targetUserId,
+          targetWalletAddress: request.targetUser.walletAddress,
+          workspaceId: workspace.id
+        });
+
+        return studioWorkspaceRoleEscalationActionResponseSchema.parse({
+          requestId: request.id,
+          status: "canceled"
         });
       });
     },

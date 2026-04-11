@@ -17,6 +17,7 @@ export default async function StudioSettingsPage() {
 
   return (
     <StudioSettingsClient
+      currentWalletAddress={access.session.user.walletAddress}
       initialSettings={result.settings}
       ownerWalletAddress={access.owner.walletAddress}
     />

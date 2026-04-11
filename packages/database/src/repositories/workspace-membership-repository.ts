@@ -1,4 +1,8 @@
-import type { Prisma, WorkspaceMembership, WorkspaceMembershipRole } from "@prisma/client";
+import type {
+  Prisma,
+  WorkspaceMembership,
+  WorkspaceMembershipRole
+} from "@prisma/client";
 
 import type { DatabaseExecutor } from "../client.js";
 
@@ -83,9 +87,19 @@ export function createWorkspaceMembershipRepository(
       });
     },
 
-    findByIdWithUserAndWorkspace(input: {
-      id: string;
-    }): Promise<
+    deleteByWorkspaceAndUserId(input: {
+      userId: string;
+      workspaceId: string;
+    }): Promise<{ count: number }> {
+      return database.workspaceMembership.deleteMany({
+        where: {
+          userId: input.userId,
+          workspaceId: input.workspaceId
+        }
+      });
+    },
+
+    findByIdWithUserAndWorkspace(input: { id: string }): Promise<
       | (WorkspaceMembership & {
           user: {
             avatarUrl: string | null;

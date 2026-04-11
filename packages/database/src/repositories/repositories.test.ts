@@ -23,6 +23,7 @@ import { createSourceAssetRepository } from "./source-asset-repository.js";
 import { createUserRepository } from "./user-repository.js";
 import { createWorkspaceMembershipRepository } from "./workspace-membership-repository.js";
 import { createWorkspaceInvitationRepository } from "./workspace-invitation-repository.js";
+import { createWorkspaceRoleEscalationRequestRepository } from "./workspace-role-escalation-request-repository.js";
 import { createWorkspaceRepository } from "./workspace-repository.js";
 
 describe("database repositories", () => {
@@ -198,6 +199,11 @@ describe("database repositories", () => {
       slug: "forge-ops",
       status: "active"
     });
+    const transferredWorkspace = await repository.transferOwnershipById({
+      currentOwnerUserId: "user_1",
+      id: "workspace_1",
+      nextOwnerUserId: "user_2"
+    });
 
     expect(database.workspace.findFirst).toHaveBeenCalledWith({
       orderBy: [
@@ -228,8 +234,292 @@ describe("database repositories", () => {
         id: "workspace_1"
       }
     });
+    expect(database.workspace.updateMany).toHaveBeenNthCalledWith(2, {
+      data: {
+        ownerUserId: "user_2"
+      },
+      where: {
+        id: "workspace_1",
+        ownerUserId: "user_1"
+      }
+    });
     expect(workspace?.id).toBe("workspace_1");
     expect(updatedWorkspace.slug).toBe("forge-ops");
+    expect(transferredWorkspace.id).toBe("workspace_1");
+  });
+
+  it("delegates workspace role escalation persistence through the role escalation repository", async () => {
+    const now = new Date("2026-04-11T00:00:00.000Z");
+    const database = {
+      workspaceRoleEscalationRequest: {
+        create: vi.fn().mockResolvedValue({
+          id: "request_1"
+        }),
+        findFirst: vi.fn().mockResolvedValue({
+          id: "request_1",
+          requestedByUser: {
+            avatarUrl: null,
+            displayName: "Operator",
+            id: "user_2",
+            walletAddress: "0xoperator"
+          },
+          resolvedByUser: null,
+          targetUser: {
+            avatarUrl: null,
+            displayName: "Operator",
+            id: "user_2",
+            walletAddress: "0xoperator"
+          },
+          workspace: {
+            id: "workspace_1",
+            ownerUserId: "user_1"
+          }
+        }),
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "request_1",
+            requestedByUser: {
+              avatarUrl: null,
+              displayName: "Operator",
+              id: "user_2",
+              walletAddress: "0xoperator"
+            },
+            resolvedByUser: {
+              avatarUrl: null,
+              displayName: "Owner",
+              id: "user_1",
+              walletAddress: "0xowner"
+            },
+            targetUser: {
+              avatarUrl: null,
+              displayName: "Operator",
+              id: "user_2",
+              walletAddress: "0xoperator"
+            },
+            workspace: {
+              id: "workspace_1",
+              ownerUserId: "user_1"
+            }
+          }
+        ]),
+        findUnique: vi.fn().mockResolvedValue({
+          id: "request_1",
+          requestedByUser: {
+            avatarUrl: null,
+            displayName: "Operator",
+            id: "user_2",
+            walletAddress: "0xoperator"
+          },
+          resolvedByUser: null,
+          targetUser: {
+            avatarUrl: null,
+            displayName: "Operator",
+            id: "user_2",
+            walletAddress: "0xoperator"
+          },
+          workspace: {
+            id: "workspace_1",
+            ownerUserId: "user_1"
+          }
+        }),
+        update: vi.fn().mockResolvedValue({
+          id: "request_1",
+          status: "approved"
+        })
+      }
+    };
+    const repository = createWorkspaceRoleEscalationRequestRepository(
+      database as never
+    );
+
+    const createdRequest = await repository.create({
+      justification: "Promote the lead operator.",
+      requestedByUserId: "user_2",
+      targetUserId: "user_2",
+      workspaceId: "workspace_1"
+    });
+    const request = await repository.findByIdWithRelations({
+      id: "request_1"
+    });
+    const pendingRequest =
+      await repository.findPendingByWorkspaceAndRequestedRole({
+        requestedRole: "owner",
+        workspaceId: "workspace_1"
+      });
+    const requests = await repository.listByWorkspaceId({
+      workspaceId: "workspace_1"
+    });
+    const resolvedRequest = await repository.resolveById({
+      id: "request_1",
+      resolvedAt: now,
+      resolvedByUserId: "user_1",
+      status: "approved"
+    });
+
+    expect(database.workspaceRoleEscalationRequest.create).toHaveBeenCalledWith(
+      {
+        data: {
+          justification: "Promote the lead operator.",
+          requestedByUserId: "user_2",
+          requestedRole: "owner",
+          targetUserId: "user_2",
+          workspaceId: "workspace_1"
+        }
+      }
+    );
+    expect(
+      database.workspaceRoleEscalationRequest.findUnique
+    ).toHaveBeenCalledWith({
+      include: {
+        requestedByUser: {
+          select: {
+            avatarUrl: true,
+            displayName: true,
+            id: true,
+            walletAddress: true
+          }
+        },
+        resolvedByUser: {
+          select: {
+            avatarUrl: true,
+            displayName: true,
+            id: true,
+            walletAddress: true
+          }
+        },
+        targetUser: {
+          select: {
+            avatarUrl: true,
+            displayName: true,
+            id: true,
+            walletAddress: true
+          }
+        },
+        workspace: {
+          select: {
+            id: true,
+            ownerUserId: true
+          }
+        }
+      },
+      where: {
+        id: "request_1"
+      }
+    });
+    expect(
+      database.workspaceRoleEscalationRequest.findFirst
+    ).toHaveBeenCalledWith({
+      include: {
+        requestedByUser: {
+          select: {
+            avatarUrl: true,
+            displayName: true,
+            id: true,
+            walletAddress: true
+          }
+        },
+        resolvedByUser: {
+          select: {
+            avatarUrl: true,
+            displayName: true,
+            id: true,
+            walletAddress: true
+          }
+        },
+        targetUser: {
+          select: {
+            avatarUrl: true,
+            displayName: true,
+            id: true,
+            walletAddress: true
+          }
+        },
+        workspace: {
+          select: {
+            id: true,
+            ownerUserId: true
+          }
+        }
+      },
+      orderBy: [
+        {
+          createdAt: "asc"
+        },
+        {
+          id: "asc"
+        }
+      ],
+      where: {
+        requestedRole: "owner",
+        status: "pending",
+        workspaceId: "workspace_1"
+      }
+    });
+    expect(
+      database.workspaceRoleEscalationRequest.findMany
+    ).toHaveBeenCalledWith({
+      include: {
+        requestedByUser: {
+          select: {
+            avatarUrl: true,
+            displayName: true,
+            id: true,
+            walletAddress: true
+          }
+        },
+        resolvedByUser: {
+          select: {
+            avatarUrl: true,
+            displayName: true,
+            id: true,
+            walletAddress: true
+          }
+        },
+        targetUser: {
+          select: {
+            avatarUrl: true,
+            displayName: true,
+            id: true,
+            walletAddress: true
+          }
+        },
+        workspace: {
+          select: {
+            id: true,
+            ownerUserId: true
+          }
+        }
+      },
+      orderBy: [
+        {
+          createdAt: "desc"
+        },
+        {
+          id: "desc"
+        }
+      ],
+      take: 25,
+      where: {
+        workspaceId: "workspace_1"
+      }
+    });
+    expect(database.workspaceRoleEscalationRequest.update).toHaveBeenCalledWith(
+      {
+        data: {
+          resolvedAt: now,
+          resolvedByUserId: "user_1",
+          status: "approved"
+        },
+        where: {
+          id: "request_1"
+        }
+      }
+    );
+    expect(createdRequest.id).toBe("request_1");
+    expect(request?.workspace.ownerUserId).toBe("user_1");
+    expect(pendingRequest?.id).toBe("request_1");
+    expect(requests[0]?.id).toBe("request_1");
+    expect(resolvedRequest.status).toBe("approved");
   });
 
   it("delegates owner-scoped brand lookup and update through the brand repository", async () => {
@@ -400,6 +690,10 @@ describe("database repositories", () => {
       id: "membership_1",
       workspaceId: "workspace_1"
     });
+    await repository.deleteByWorkspaceAndUserId({
+      userId: "user_2",
+      workspaceId: "workspace_1"
+    });
 
     expect(database.workspaceMembership.create).toHaveBeenCalledWith({
       data: {
@@ -492,6 +786,12 @@ describe("database repositories", () => {
     expect(database.workspaceMembership.deleteMany).toHaveBeenCalledWith({
       where: {
         id: "membership_1",
+        workspaceId: "workspace_1"
+      }
+    });
+    expect(database.workspaceMembership.deleteMany).toHaveBeenNthCalledWith(2, {
+      where: {
+        userId: "user_2",
         workspaceId: "workspace_1"
       }
     });
@@ -1282,10 +1582,11 @@ describe("database repositories", () => {
     const listed = await repository.listByPublishedCollectionId(
       "published_collection_1"
     );
-    const foundByPosition = await repository.findByPositionForPublishedCollection({
-      position: 2,
-      publishedCollectionId: "published_collection_1"
-    });
+    const foundByPosition =
+      await repository.findByPositionForPublishedCollection({
+        position: 2,
+        publishedCollectionId: "published_collection_1"
+      });
     const deleted = await repository.deleteByPublishedCollectionId(
       "published_collection_1"
     );
@@ -1367,7 +1668,8 @@ describe("database repositories", () => {
       publishedCollectionItemId: "published_item_1",
       recipientWalletAddress: "0x1111111111111111111111111111111111111111",
       tokenId: 1,
-      txHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      txHash:
+        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     });
     const found = await repository.findByTokenIdForPublishedCollection({
       publishedCollectionId: "published_collection_1",
@@ -1385,7 +1687,8 @@ describe("database repositories", () => {
         publishedCollectionItemId: "published_item_1",
         recipientWalletAddress: "0x1111111111111111111111111111111111111111",
         tokenId: 1,
-        txHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        txHash:
+          "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       }
     });
     expect(database.publishedCollectionMint.findFirst).toHaveBeenCalledWith({

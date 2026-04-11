@@ -99,6 +99,10 @@ export {
   type WorkspaceRepository
 } from "./workspace-repository.js";
 export {
+  createWorkspaceRoleEscalationRequestRepository,
+  type WorkspaceRoleEscalationRequestRepository
+} from "./workspace-role-escalation-request-repository.js";
+export {
   createWorkspaceMembershipRepository,
   type WorkspaceMembershipRepository
 } from "./workspace-membership-repository.js";

@@ -71,6 +71,30 @@ export function createWorkspaceRepository(
             }
           })
         );
+    },
+
+    transferOwnershipById(input: {
+      currentOwnerUserId: string;
+      id: string;
+      nextOwnerUserId: string;
+    }): Promise<Workspace> {
+      return database.workspace
+        .updateMany({
+          data: {
+            ownerUserId: input.nextOwnerUserId
+          },
+          where: {
+            id: input.id,
+            ownerUserId: input.currentOwnerUserId
+          }
+        })
+        .then(() =>
+          database.workspace.findUniqueOrThrow({
+            where: {
+              id: input.id
+            }
+          })
+        );
     }
   };
 }
