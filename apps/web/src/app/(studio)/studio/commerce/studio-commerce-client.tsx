@@ -96,9 +96,7 @@ function formatTimestamp(value: string | null) {
   }).format(new Date(value));
 }
 
-function formatCheckoutStatus(
-  status: StudioCommerceCheckoutSummary["status"]
-) {
+function formatCheckoutStatus(status: StudioCommerceCheckoutSummary["status"]) {
   switch (status) {
     case "completed":
       return "Completed";
@@ -118,9 +116,7 @@ function formatFulfillmentStatus(
   return status === "fulfilled" ? "Fulfilled" : "Unfulfilled";
 }
 
-function formatAutomationStatus(
-  status: CommerceFulfillmentAutomationStatus
-) {
+function formatAutomationStatus(status: CommerceFulfillmentAutomationStatus) {
   switch (status) {
     case "queued":
       return "Queued";
@@ -138,8 +134,14 @@ function formatAutomationStatus(
   }
 }
 
-function formatProviderKind(providerKind: StudioCommerceCheckoutSummary["providerKind"]) {
+function formatProviderKind(
+  providerKind: StudioCommerceCheckoutSummary["providerKind"]
+) {
   return providerKind === "stripe" ? "Stripe" : "Manual";
+}
+
+function formatPercent(value: number) {
+  return `${value.toFixed(1)}%`;
 }
 
 function createCommerceDashboardPath(brandSlug: string | null) {
@@ -156,6 +158,31 @@ function createCommerceDashboardPath(brandSlug: string | null) {
   }
 
   return `/api/studio/commerce?brandSlug=${encodeURIComponent(parsedQuery.brandSlug)}`;
+}
+
+function createCommerceReportPath(brandSlug: string | null, format?: "csv") {
+  const parsedQuery = studioCommerceDashboardQuerySchema.parse({
+    ...(brandSlug
+      ? {
+          brandSlug
+        }
+      : {})
+  });
+  const params = new URLSearchParams();
+
+  if (parsedQuery.brandSlug) {
+    params.set("brandSlug", parsedQuery.brandSlug);
+  }
+
+  if (format) {
+    params.set("format", format);
+  }
+
+  const query = params.toString();
+
+  return query.length > 0
+    ? `/api/studio/commerce/report?${query}`
+    : "/api/studio/commerce/report";
 }
 
 function createInitialFulfillmentEditors(
@@ -192,43 +219,81 @@ export function StudioCommerceClient({
   }, [dashboard]);
 
   const activeBrand =
-    dashboard.brands.find((brand) => brand.brandSlug === dashboard.activeBrandSlug) ??
-    null;
+    dashboard.brands.find(
+      (brand) => brand.brandSlug === dashboard.activeBrandSlug
+    ) ?? null;
+  const completionRate =
+    dashboard.summary.totalCheckoutCount === 0
+      ? 0
+      : (dashboard.summary.completedCheckoutCount /
+          dashboard.summary.totalCheckoutCount) *
+        100;
+  const fulfillmentRate =
+    dashboard.summary.completedCheckoutCount === 0
+      ? 0
+      : (dashboard.summary.fulfilledCheckoutCount /
+          dashboard.summary.completedCheckoutCount) *
+        100;
+  const latestCompletedCheckoutAt = dashboard.checkouts.reduce<string | null>(
+    (latest, checkout) =>
+      checkout.completedAt !== null &&
+      (latest === null || checkout.completedAt > latest)
+        ? checkout.completedAt
+        : latest,
+    null
+  );
+  const latestFulfilledCheckoutAt = dashboard.checkouts.reduce<string | null>(
+    (latest, checkout) =>
+      checkout.fulfilledAt !== null &&
+      (latest === null || checkout.fulfilledAt > latest)
+        ? checkout.fulfilledAt
+        : latest,
+    null
+  );
+  const commerceReportPath = createCommerceReportPath(
+    dashboard.activeBrandSlug
+  );
+  const commerceReportCsvPath = createCommerceReportPath(
+    dashboard.activeBrandSlug,
+    "csv"
+  );
 
-  const refreshDashboard = useEffectEvent(async (input?: { silent?: boolean }) => {
-    if (!input?.silent) {
-      setIsRefreshing(true);
-    }
-
-    try {
-      const response = await fetch(
-        createCommerceDashboardPath(dashboard.activeBrandSlug),
-        {
-          cache: "no-store"
-        }
-      );
-      const result = await parseJsonResponse({
-        response,
-        schema: studioCommerceDashboardResponseSchema
-      });
-
-      startTransition(() => {
-        setDashboard(result.dashboard);
-      });
-    } catch (error) {
-      setNotice({
-        message:
-          error instanceof Error
-            ? error.message
-            : "Commerce administration data could not be refreshed.",
-        tone: "error"
-      });
-    } finally {
+  const refreshDashboard = useEffectEvent(
+    async (input?: { silent?: boolean }) => {
       if (!input?.silent) {
-        setIsRefreshing(false);
+        setIsRefreshing(true);
+      }
+
+      try {
+        const response = await fetch(
+          createCommerceDashboardPath(dashboard.activeBrandSlug),
+          {
+            cache: "no-store"
+          }
+        );
+        const result = await parseJsonResponse({
+          response,
+          schema: studioCommerceDashboardResponseSchema
+        });
+
+        startTransition(() => {
+          setDashboard(result.dashboard);
+        });
+      } catch (error) {
+        setNotice({
+          message:
+            error instanceof Error
+              ? error.message
+              : "Commerce administration data could not be refreshed.",
+          tone: "error"
+        });
+      } finally {
+        if (!input?.silent) {
+          setIsRefreshing(false);
+        }
       }
     }
-  });
+  );
 
   async function handleBrandScopeChange(brandSlug: string | null) {
     setNotice({
@@ -378,10 +443,7 @@ export function StudioCommerceClient({
           title="Owner-side commerce operations"
         >
           <div className="metric-list">
-            <MetricTile
-              label="Owner"
-              value={ownerWalletAddress}
-            />
+            <MetricTile label="Owner" value={ownerWalletAddress} />
             <MetricTile
               label="Scope"
               value={activeBrand?.brandSlug ?? "all brands"}
@@ -434,7 +496,10 @@ export function StudioCommerceClient({
             <Pill>{dashboard.summary.manualCheckoutCount} manual</Pill>
             <Pill>{dashboard.summary.stripeCheckoutCount} stripe</Pill>
             <Pill>{dashboard.summary.fulfilledCheckoutCount} fulfilled</Pill>
-            <Pill>{dashboard.summary.automationFailedCheckoutCount} automation failed</Pill>
+            <Pill>
+              {dashboard.summary.automationFailedCheckoutCount} automation
+              failed
+            </Pill>
             <Pill>{dashboard.summary.expiredCheckoutCount} expired</Pill>
             <Pill>{dashboard.summary.canceledCheckoutCount} canceled</Pill>
           </div>
@@ -466,7 +531,11 @@ export function StudioCommerceClient({
                   total checkouts across the workspace
                 </span>
                 <div className="pill-row">
-                  <Pill>{dashboard.activeBrandSlug === null ? "active" : "workspace"}</Pill>
+                  <Pill>
+                    {dashboard.activeBrandSlug === null
+                      ? "active"
+                      : "workspace"}
+                  </Pill>
                 </div>
               </button>
               {dashboard.brands.map((brand) => (
@@ -480,8 +549,8 @@ export function StudioCommerceClient({
                 >
                   <strong>{brand.brandName}</strong>
                   <span>
-                    {brand.totalCheckoutCount} total, {brand.openCheckoutCount} open,{" "}
-                    {brand.unfulfilledCheckoutCount} unfulfilled
+                    {brand.totalCheckoutCount} total, {brand.openCheckoutCount}{" "}
+                    open, {brand.unfulfilledCheckoutCount} unfulfilled
                   </span>
                   <div className="pill-row">
                     <Pill>{brand.brandSlug}</Pill>
@@ -512,7 +581,10 @@ export function StudioCommerceClient({
           ) : (
             <div className="stack-list">
               {dashboard.collections.map((collection) => (
-                <div className="status-banner" key={collection.collectionPublicPath}>
+                <div
+                  className="status-banner"
+                  key={collection.collectionPublicPath}
+                >
                   <strong>{collection.title}</strong>
                   <span>
                     {collection.openCheckoutCount} open,{" "}
@@ -533,6 +605,54 @@ export function StudioCommerceClient({
               ))}
             </div>
           )}
+        </SurfaceCard>
+
+        <SurfaceCard
+          body="Export the current workspace or brand scope as a durable checkout-session report. The CSV export uses the same active brand filter as the dashboard so handoffs and offline review do not drift from what operators are seeing live."
+          eyebrow="Reports"
+          span={4}
+          title={
+            activeBrand
+              ? `Reporting for ${activeBrand.brandName}`
+              : "Reporting across all brands"
+          }
+        >
+          <div className="metric-list">
+            <MetricTile
+              label="Completion rate"
+              value={formatPercent(completionRate)}
+            />
+            <MetricTile
+              label="Fulfillment rate"
+              value={formatPercent(fulfillmentRate)}
+            />
+            <MetricTile
+              label="Last paid"
+              value={formatTimestamp(latestCompletedCheckoutAt)}
+            />
+            <MetricTile
+              label="Last fulfilled"
+              value={formatTimestamp(latestFulfilledCheckoutAt)}
+            />
+          </div>
+          <div className="studio-action-row">
+            <a className="action-link" href={commerceReportCsvPath}>
+              Export CSV
+            </a>
+            <a
+              className="inline-link"
+              href={commerceReportPath}
+              rel="noreferrer"
+              target="_blank"
+            >
+              Open report JSON
+            </a>
+          </div>
+          <div className="pill-row">
+            <Pill>{dashboard.activeBrandSlug ?? "all-brands"}</Pill>
+            <Pill>{dashboard.checkouts.length} rows in scope</Pill>
+            <Pill>{dashboard.collections.length} collections</Pill>
+          </div>
         </SurfaceCard>
 
         <SurfaceCard
@@ -572,7 +692,9 @@ export function StudioCommerceClient({
           ) : (
             <div className="stack-list">
               {dashboard.checkouts.map((checkout) => {
-                const editor = fulfillmentEditors[checkout.checkoutSessionId] ?? {
+                const editor = fulfillmentEditors[
+                  checkout.checkoutSessionId
+                ] ?? {
                   fulfillmentNotes: checkout.fulfillmentNotes ?? "",
                   fulfillmentStatus: checkout.fulfillmentStatus
                 };
@@ -592,7 +714,10 @@ export function StudioCommerceClient({
                     checkout.fulfillmentAutomationStatus === "idle");
 
                 return (
-                  <article className="status-banner" key={checkout.checkoutSessionId}>
+                  <article
+                    className="status-banner"
+                    key={checkout.checkoutSessionId}
+                  >
                     <strong>{checkout.title}</strong>
                     <span>
                       {checkout.buyerDisplayName
@@ -604,10 +729,18 @@ export function StudioCommerceClient({
                       <Pill>{checkout.brandSlug}</Pill>
                       <Pill>{formatCheckoutStatus(checkout.status)}</Pill>
                       <Pill>{formatProviderKind(checkout.providerKind)}</Pill>
-                      <Pill>{formatFulfillmentStatus(checkout.fulfillmentStatus)}</Pill>
-                      <Pill>{formatAutomationStatus(checkout.fulfillmentAutomationStatus)}</Pill>
+                      <Pill>
+                        {formatFulfillmentStatus(checkout.fulfillmentStatus)}
+                      </Pill>
+                      <Pill>
+                        {formatAutomationStatus(
+                          checkout.fulfillmentAutomationStatus
+                        )}
+                      </Pill>
                       <Pill>{checkout.storefrontStatus}</Pill>
-                      {checkout.priceLabel ? <Pill>{checkout.priceLabel}</Pill> : null}
+                      {checkout.priceLabel ? (
+                        <Pill>{checkout.priceLabel}</Pill>
+                      ) : null}
                     </div>
                     <div className="metric-list">
                       <MetricTile
@@ -673,10 +806,13 @@ export function StudioCommerceClient({
                       <div className="pill-row">
                         <Pill>fulfillment webhook</Pill>
                         <Pill>
-                          {checkout.fulfillmentAutomationAttemptCount.toString()} attempts
+                          {checkout.fulfillmentAutomationAttemptCount.toString()}{" "}
+                          attempts
                         </Pill>
                         {checkout.fulfillmentAutomationExternalReference ? (
-                          <Pill>{checkout.fulfillmentAutomationExternalReference}</Pill>
+                          <Pill>
+                            {checkout.fulfillmentAutomationExternalReference}
+                          </Pill>
                         ) : null}
                       </div>
                     ) : null}
@@ -686,7 +822,9 @@ export function StudioCommerceClient({
                           {checkout.fulfillmentAutomationErrorCode ??
                             "Automation failure"}
                         </strong>
-                        <span>{checkout.fulfillmentAutomationErrorMessage}</span>
+                        <span>
+                          {checkout.fulfillmentAutomationErrorMessage}
+                        </span>
                       </div>
                     ) : null}
                     {canCompleteManually || canCancel ? (
@@ -718,8 +856,7 @@ export function StudioCommerceClient({
                                 checkoutSessionId: checkout.checkoutSessionId,
                                 message: "Releasing checkout session…",
                                 path: `/api/studio/commerce/checkouts/${checkout.checkoutSessionId}/cancel`,
-                                successMessage:
-                                  "Checkout session released."
+                                successMessage: "Checkout session released."
                               });
                             }}
                             type="button"
@@ -742,8 +879,7 @@ export function StudioCommerceClient({
                               payload: {
                                 reason: null
                               },
-                              successMessage:
-                                "Fulfillment automation requeued."
+                              successMessage: "Fulfillment automation requeued."
                             });
                           }}
                           type="button"
@@ -760,7 +896,9 @@ export function StudioCommerceClient({
                         }}
                       >
                         <label className="field-stack">
-                          <span className="field-label">Fulfillment status</span>
+                          <span className="field-label">
+                            Fulfillment status
+                          </span>
                           <select
                             className="input-field"
                             onChange={(event) => {
@@ -770,7 +908,8 @@ export function StudioCommerceClient({
                               setFulfillmentEditors((current) => ({
                                 ...current,
                                 [checkout.checkoutSessionId]: {
-                                  ...(current[checkout.checkoutSessionId] ?? editor),
+                                  ...(current[checkout.checkoutSessionId] ??
+                                    editor),
                                   fulfillmentStatus: nextStatus
                                 }
                               }));
@@ -789,7 +928,8 @@ export function StudioCommerceClient({
                               setFulfillmentEditors((current) => ({
                                 ...current,
                                 [checkout.checkoutSessionId]: {
-                                  ...(current[checkout.checkoutSessionId] ?? editor),
+                                  ...(current[checkout.checkoutSessionId] ??
+                                    editor),
                                   fulfillmentNotes: event.target.value
                                 }
                               }));

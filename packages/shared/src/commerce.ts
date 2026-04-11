@@ -20,10 +20,7 @@ export const commerceCheckoutProviderModeSchema = z.enum([
   "stripe"
 ]);
 
-export const commerceCheckoutProviderKindSchema = z.enum([
-  "manual",
-  "stripe"
-]);
+export const commerceCheckoutProviderKindSchema = z.enum(["manual", "stripe"]);
 
 export const commerceFulfillmentProviderKindSchema = z.enum([
   "manual",
@@ -206,12 +203,36 @@ export const studioCommerceDashboardQuerySchema = z.object({
   brandSlug: commerceBrandSlugSchema.nullish()
 });
 
+export const studioCommerceReportQuerySchema = z.object({
+  brandSlug: commerceBrandSlugSchema.nullish()
+});
+
 export const studioCommerceDashboardResponseSchema = z.object({
   dashboard: z.object({
     activeBrandSlug: commerceBrandSlugSchema.nullable(),
     brands: z.array(studioCommerceBrandSummarySchema),
     checkouts: z.array(studioCommerceCheckoutSummarySchema),
     collections: z.array(studioCommerceCollectionSummarySchema),
+    summary: studioCommerceDashboardSummarySchema
+  })
+});
+
+export const studioCommerceReportMetricsSchema = z.object({
+  checkoutCompletionRatePercent: z.number().min(0).max(100),
+  fulfillmentCompletionRatePercent: z.number().min(0).max(100),
+  latestCheckoutCompletedAt: z.string().datetime().nullable(),
+  latestCheckoutCreatedAt: z.string().datetime().nullable(),
+  latestCheckoutFulfilledAt: z.string().datetime().nullable()
+});
+
+export const studioCommerceReportResponseSchema = z.object({
+  report: z.object({
+    activeBrandSlug: commerceBrandSlugSchema.nullable(),
+    brands: z.array(studioCommerceBrandSummarySchema),
+    collections: z.array(studioCommerceCollectionSummarySchema),
+    generatedAt: z.string().datetime(),
+    metrics: studioCommerceReportMetricsSchema,
+    scopeLabel: z.string().trim().min(1).max(160),
     summary: studioCommerceDashboardSummarySchema
   })
 });
@@ -315,8 +336,17 @@ export type StudioCommerceDashboardSummary = z.infer<
 export type StudioCommerceDashboardQuery = z.infer<
   typeof studioCommerceDashboardQuerySchema
 >;
+export type StudioCommerceReportQuery = z.infer<
+  typeof studioCommerceReportQuerySchema
+>;
 export type StudioCommerceDashboardResponse = z.infer<
   typeof studioCommerceDashboardResponseSchema
+>;
+export type StudioCommerceReportMetrics = z.infer<
+  typeof studioCommerceReportMetricsSchema
+>;
+export type StudioCommerceReportResponse = z.infer<
+  typeof studioCommerceReportResponseSchema
 >;
 export type StudioCommerceCheckoutActionResponse = z.infer<
   typeof studioCommerceCheckoutActionResponseSchema

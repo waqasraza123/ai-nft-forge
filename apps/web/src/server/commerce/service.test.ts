@@ -65,14 +65,13 @@ function createCommerceHarness(input?: {
     ...createPublicationRecord(),
     ...input?.publicationOverrides
   };
-  const brands =
-    input?.brandRecords ?? [
-      {
-        id: "brand_1",
-        name: publication.brandName,
-        slug: publication.brandSlug
-      }
-    ];
+  const brands = input?.brandRecords ?? [
+    {
+      id: "brand_1",
+      name: publication.brandName,
+      slug: publication.brandSlug
+    }
+  ];
   const reservations = (input?.reservationStatuses ?? []).map(
     (status, index) => ({
       id: `reservation_${index + 1}`,
@@ -165,7 +164,8 @@ function createCommerceHarness(input?: {
 
         const item =
           publication.items.find(
-            (candidate) => candidate.id === reservation.publishedCollectionItemId
+            (candidate) =>
+              candidate.id === reservation.publishedCollectionItemId
           ) ?? publication.items[0]!;
 
         const record = {
@@ -464,7 +464,9 @@ function createCommerceHarness(input?: {
           checkoutUrl: `/checkout/${checkoutSessionId}`,
           providerKind: input?.providerMode === "stripe" ? "stripe" : "manual",
           providerSessionId:
-            input?.providerMode === "stripe" ? `cs_test_${checkoutSessionId}` : null
+            input?.providerMode === "stripe"
+              ? `cs_test_${checkoutSessionId}`
+              : null
         };
       },
       async expireCheckoutSession({ providerSessionId }) {
@@ -752,6 +754,171 @@ describe("createCollectionCommerceService", () => {
       code: "BRAND_NOT_FOUND",
       statusCode: 404
     });
+  });
+
+  it("builds owner commerce reports with workspace metrics and brand partitions", async () => {
+    const harness = createCommerceHarness({
+      brandRecords: [
+        {
+          id: "brand_1",
+          name: "Demo Studio",
+          slug: "demo-studio"
+        },
+        {
+          id: "brand_2",
+          name: "North Editions",
+          slug: "north-editions"
+        }
+      ]
+    });
+    const checkout = await harness.service.createCheckoutSession({
+      body: {
+        buyerEmail: "collector@example.com"
+      },
+      brandSlug: "demo-studio",
+      collectionSlug: "genesis-portrait-set",
+      origin: "https://demo.example"
+    });
+
+    await harness.service.completeOwnerManualCheckout({
+      checkoutSessionId: checkout.checkout.checkoutSessionId,
+      ownerUserId: "user_1"
+    });
+    await harness.service.updateOwnerCheckoutFulfillment({
+      body: {
+        fulfillmentNotes: "Delivered",
+        fulfillmentStatus: "fulfilled"
+      },
+      checkoutSessionId: checkout.checkout.checkoutSessionId,
+      ownerUserId: "user_1"
+    });
+
+    const firstSession = harness.checkoutSessions.get(
+      checkout.checkout.checkoutSessionId
+    );
+
+    if (!firstSession) {
+      throw new Error("Expected checkout session.");
+    }
+
+    harness.checkoutSessions.set("chk_brand_2", {
+      ...firstSession,
+      checkoutUrl: "/checkout/chk_brand_2",
+      completedAt: null,
+      fulfilledAt: null,
+      id: "checkout_record_2",
+      publicId: "chk_brand_2",
+      publishedCollection: {
+        ...firstSession.publishedCollection,
+        brandName: "North Editions",
+        brandSlug: "north-editions",
+        id: "publication_2",
+        slug: "north-drop",
+        title: "North Drop"
+      },
+      reservation: {
+        ...firstSession.reservation,
+        buyerEmail: "north@example.com",
+        completedAt: null,
+        id: "reservation_2",
+        publishedCollectionItem: {
+          id: "published_item_2",
+          position: 2
+        },
+        status: "pending"
+      },
+      status: "open"
+    });
+
+    const result = await harness.service.getOwnerCommerceReport({
+      ownerUserId: "user_1"
+    });
+
+    expect(result.report.scopeLabel).toBe("All brands");
+    expect(result.report.summary.totalCheckoutCount).toBe(2);
+    expect(result.report.summary.completedCheckoutCount).toBe(1);
+    expect(result.report.metrics.checkoutCompletionRatePercent).toBe(50);
+    expect(result.report.metrics.fulfillmentCompletionRatePercent).toBe(100);
+    expect(result.report.metrics.latestCheckoutCompletedAt).toBe(
+      "2026-04-10T10:00:00.000Z"
+    );
+    expect(result.report.metrics.latestCheckoutFulfilledAt).toBe(
+      "2026-04-10T10:00:00.000Z"
+    );
+    expect(
+      result.report.brands.find((brand) => brand.brandSlug === "north-editions")
+    ).toMatchObject({
+      openCheckoutCount: 1,
+      totalCheckoutCount: 1
+    });
+  });
+
+  it("exports brand-scoped commerce report csv", async () => {
+    const harness = createCommerceHarness({
+      brandRecords: [
+        {
+          id: "brand_1",
+          name: "Demo Studio",
+          slug: "demo-studio"
+        },
+        {
+          id: "brand_2",
+          name: "North Editions",
+          slug: "north-editions"
+        }
+      ]
+    });
+    const checkout = await harness.service.createCheckoutSession({
+      body: {
+        buyerEmail: "collector@example.com"
+      },
+      brandSlug: "demo-studio",
+      collectionSlug: "genesis-portrait-set",
+      origin: "https://demo.example"
+    });
+
+    const firstSession = harness.checkoutSessions.get(
+      checkout.checkout.checkoutSessionId
+    );
+
+    if (!firstSession) {
+      throw new Error("Expected checkout session.");
+    }
+
+    harness.checkoutSessions.set("chk_brand_2", {
+      ...firstSession,
+      checkoutUrl: "/checkout/chk_brand_2",
+      id: "checkout_record_2",
+      publicId: "chk_brand_2",
+      publishedCollection: {
+        ...firstSession.publishedCollection,
+        brandName: "North Editions",
+        brandSlug: "north-editions",
+        id: "publication_2",
+        slug: "north-drop",
+        title: "North Drop"
+      },
+      reservation: {
+        ...firstSession.reservation,
+        buyerEmail: "north@example.com",
+        id: "reservation_2",
+        publishedCollectionItem: {
+          id: "published_item_2",
+          position: 2
+        }
+      }
+    });
+
+    const result = await harness.service.exportOwnerCommerceReportCsv({
+      brandSlug: "north-editions",
+      ownerUserId: "user_1"
+    });
+
+    expect(result.filename).toBe("commerce-report-north-editions.csv");
+    expect(result.csv).toContain("brand_slug");
+    expect(result.csv).toContain("north-editions");
+    expect(result.csv).not.toContain("demo-studio,genesis-portrait-set");
+    expect(result.csv.trim().split("\n")).toHaveLength(2);
   });
 
   it("cancels open stripe checkout sessions and expires the provider session", async () => {

@@ -7,6 +7,8 @@ import {
   studioCommerceCheckoutActionResponseSchema,
   studioCommerceDashboardQuerySchema,
   studioCommerceDashboardResponseSchema,
+  studioCommerceReportResponseSchema,
+  studioCommerceReportQuerySchema,
   studioCommerceFulfillmentRetryRequestSchema,
   studioCommerceFulfillmentUpdateRequestSchema,
   type CollectionStorefrontStatus,
@@ -131,7 +133,9 @@ type CommerceRepositorySet = {
       publishedCollectionId: string;
     }): Promise<{ count: number }>;
     findByPublicId(publicId: string): Promise<CheckoutSessionRecord | null>;
-    listDetailedByOwnerUserId(ownerUserId: string): Promise<CheckoutSessionRecord[]>;
+    listDetailedByOwnerUserId(
+      ownerUserId: string
+    ): Promise<CheckoutSessionRecord[]>;
     updateFulfillmentById(input: {
       fulfillmentNotes?: string | null;
       fulfillmentStatus: CommerceCheckoutFulfillmentStatus;
@@ -282,8 +286,10 @@ function serializeCheckoutSession(input: { session: CheckoutSessionRecord }) {
         buyerDisplayName: input.session.reservation.buyerDisplayName,
         buyerEmail: input.session.reservation.buyerEmail,
         buyerWalletAddress: input.session.reservation.buyerWalletAddress,
-        completedAt: input.session.reservation.completedAt?.toISOString() ?? null,
-        editionNumber: input.session.reservation.publishedCollectionItem.position,
+        completedAt:
+          input.session.reservation.completedAt?.toISOString() ?? null,
+        editionNumber:
+          input.session.reservation.publishedCollectionItem.position,
         expiresAt: input.session.reservation.expiresAt.toISOString(),
         reservationId: input.session.reservation.id,
         status: input.session.reservation.status
@@ -301,7 +307,23 @@ function buildCollectionPublicPath(input: {
   return `/brands/${input.brandSlug}/collections/${input.collectionSlug}`;
 }
 
-function serializeStudioCheckoutSession(input: { session: CheckoutSessionRecord }) {
+function escapeCsvValue(value: string | number | null) {
+  if (value === null) {
+    return "";
+  }
+
+  const normalizedValue = value.toString();
+
+  if (!/[",\n]/.test(normalizedValue)) {
+    return normalizedValue;
+  }
+
+  return `"${normalizedValue.replaceAll('"', '""')}"`;
+}
+
+function serializeStudioCheckoutSession(input: {
+  session: CheckoutSessionRecord;
+}) {
   return studioCommerceCheckoutActionResponseSchema.shape.checkout.parse({
     brandName: input.session.publishedCollection.brandName,
     brandSlug: input.session.publishedCollection.brandSlug,
@@ -350,7 +372,9 @@ function serializeStudioCheckoutSession(input: { session: CheckoutSessionRecord 
   });
 }
 
-function serializeStudioCheckoutAction(input: { session: CheckoutSessionRecord }) {
+function serializeStudioCheckoutAction(input: {
+  session: CheckoutSessionRecord;
+}) {
   return studioCommerceCheckoutActionResponseSchema.parse({
     checkout: serializeStudioCheckoutSession(input)
   });
@@ -396,7 +420,10 @@ async function refreshCheckoutSession(
     return null;
   }
 
-  if (session.status !== "open" || session.expiresAt.getTime() > dependencies.now().getTime()) {
+  if (
+    session.status !== "open" ||
+    session.expiresAt.getTime() > dependencies.now().getTime()
+  ) {
     return session;
   }
 
@@ -418,10 +445,12 @@ async function refreshCheckoutSession(
       id: current.id,
       status: "expired"
     });
-    await repositories.publishedCollectionReservationRepository.updateStatusById({
-      id: current.reservation.id,
-      status: "expired"
-    });
+    await repositories.publishedCollectionReservationRepository.updateStatusById(
+      {
+        id: current.reservation.id,
+        status: "expired"
+      }
+    );
   });
 
   return dependencies.repositories.commerceCheckoutSessionRepository.findByPublicId(
@@ -442,52 +471,57 @@ async function scheduleFulfillmentAutomationIfNeeded(
     );
   }
 
-  const queuedSession = await dependencies.runTransaction(async (repositories) => {
-    const session =
-      await repositories.commerceCheckoutSessionRepository.findByPublicId(
-        input.checkoutSessionId
+  const queuedSession = await dependencies.runTransaction(
+    async (repositories) => {
+      const session =
+        await repositories.commerceCheckoutSessionRepository.findByPublicId(
+          input.checkoutSessionId
+        );
+
+      if (!session) {
+        return null;
+      }
+
+      if (
+        session.status !== "completed" ||
+        session.fulfillmentStatus === "fulfilled"
+      ) {
+        return session;
+      }
+
+      if (input.source === "manual_retry") {
+        if (!["failed", "idle"].includes(session.fulfillmentAutomationStatus)) {
+          throw new CommerceServiceError(
+            "FULFILLMENT_NOT_ALLOWED",
+            "This checkout is not eligible for fulfillment retry.",
+            409
+          );
+        }
+      } else if (
+        ["queued", "processing", "submitted", "completed"].includes(
+          session.fulfillmentAutomationStatus
+        )
+      ) {
+        return session;
+      }
+
+      await repositories.commerceCheckoutSessionRepository.updateFulfillmentAutomationById(
+        {
+          fulfillmentAutomationErrorCode: null,
+          fulfillmentAutomationErrorMessage: null,
+          fulfillmentAutomationNextRetryAt: null,
+          fulfillmentAutomationQueuedAt: dependencies.now(),
+          fulfillmentAutomationStatus: "queued",
+          fulfillmentProviderKind: "webhook",
+          id: session.id
+        }
       );
 
-    if (!session) {
-      return null;
+      return repositories.commerceCheckoutSessionRepository.findByPublicId(
+        input.checkoutSessionId
+      );
     }
-
-    if (session.status !== "completed" || session.fulfillmentStatus === "fulfilled") {
-      return session;
-    }
-
-    if (input.source === "manual_retry") {
-      if (!["failed", "idle"].includes(session.fulfillmentAutomationStatus)) {
-        throw new CommerceServiceError(
-          "FULFILLMENT_NOT_ALLOWED",
-          "This checkout is not eligible for fulfillment retry.",
-          409
-        );
-      }
-    } else if (
-      ["queued", "processing", "submitted", "completed"].includes(
-        session.fulfillmentAutomationStatus
-      )
-    ) {
-      return session;
-    }
-
-    await repositories.commerceCheckoutSessionRepository.updateFulfillmentAutomationById(
-      {
-        fulfillmentAutomationErrorCode: null,
-        fulfillmentAutomationErrorMessage: null,
-        fulfillmentAutomationNextRetryAt: null,
-        fulfillmentAutomationQueuedAt: dependencies.now(),
-        fulfillmentAutomationStatus: "queued",
-        fulfillmentProviderKind: "webhook",
-        id: session.id
-      }
-    );
-
-    return repositories.commerceCheckoutSessionRepository.findByPublicId(
-      input.checkoutSessionId
-    );
-  });
+  );
 
   if (!queuedSession) {
     return null;
@@ -618,11 +652,13 @@ async function completeCheckoutSessionRecord(input: {
     completedItemIds.has(session.reservation.publishedCollectionItem.id) ||
     mintedItemIds.has(session.reservation.publishedCollectionItem.id)
   ) {
-    await input.repositories.commerceCheckoutSessionRepository.updateStatusById({
-      canceledAt: input.now,
-      id: session.id,
-      status: "canceled"
-    });
+    await input.repositories.commerceCheckoutSessionRepository.updateStatusById(
+      {
+        canceledAt: input.now,
+        id: session.id,
+        status: "canceled"
+      }
+    );
     await input.repositories.publishedCollectionReservationRepository.updateStatusById(
       {
         canceledAt: input.now,
@@ -643,11 +679,13 @@ async function completeCheckoutSessionRecord(input: {
     id: session.id,
     status: "completed"
   });
-  await input.repositories.publishedCollectionReservationRepository.updateStatusById({
-    completedAt: input.now,
-    id: session.reservation.id,
-    status: "completed"
-  });
+  await input.repositories.publishedCollectionReservationRepository.updateStatusById(
+    {
+      completedAt: input.now,
+      id: session.reservation.id,
+      status: "completed"
+    }
+  );
 
   const nextSoldCount = publication.soldCount + 1;
   const nextStorefrontStatus =
@@ -768,9 +806,9 @@ async function transitionCheckoutSessionRecord(input: {
 export function createCollectionCommerceService(
   dependencies: CommerceServiceDependencies
 ) {
-  function buildDashboardSummary(
-    checkouts: Array<ReturnType<typeof serializeStudioCheckoutSession>>
-  ) {
+  type SerializedCheckout = ReturnType<typeof serializeStudioCheckoutSession>;
+
+  function buildDashboardSummary(checkouts: SerializedCheckout[]) {
     return {
       automationFailedCheckoutCount: checkouts.filter(
         (checkout) => checkout.fulfillmentAutomationStatus === "failed"
@@ -802,8 +840,9 @@ export function createCollectionCommerceService(
       manualCheckoutCount: checkouts.filter(
         (checkout) => checkout.providerKind === "manual"
       ).length,
-      openCheckoutCount: checkouts.filter((checkout) => checkout.status === "open")
-        .length,
+      openCheckoutCount: checkouts.filter(
+        (checkout) => checkout.status === "open"
+      ).length,
       stripeCheckoutCount: checkouts.filter(
         (checkout) => checkout.providerKind === "stripe"
       ).length,
@@ -813,6 +852,342 @@ export function createCollectionCommerceService(
           checkout.status === "completed" &&
           checkout.fulfillmentStatus === "unfulfilled"
       ).length
+    };
+  }
+
+  function buildReportMetrics(checkouts: SerializedCheckout[]) {
+    const completedCheckouts = checkouts.filter(
+      (checkout) => checkout.status === "completed"
+    );
+    const fulfilledCheckouts = completedCheckouts.filter(
+      (checkout) => checkout.fulfillmentStatus === "fulfilled"
+    );
+    const latestCreatedAt = checkouts.reduce<string | null>(
+      (latest, checkout) =>
+        latest === null || checkout.createdAt > latest
+          ? checkout.createdAt
+          : latest,
+      null
+    );
+    const latestCompletedAt = completedCheckouts.reduce<string | null>(
+      (latest, checkout) =>
+        checkout.completedAt !== null &&
+        (latest === null || checkout.completedAt > latest)
+          ? checkout.completedAt
+          : latest,
+      null
+    );
+    const latestFulfilledAt = fulfilledCheckouts.reduce<string | null>(
+      (latest, checkout) =>
+        checkout.fulfilledAt !== null &&
+        (latest === null || checkout.fulfilledAt > latest)
+          ? checkout.fulfilledAt
+          : latest,
+      null
+    );
+
+    return {
+      checkoutCompletionRatePercent:
+        checkouts.length === 0
+          ? 0
+          : Number(
+              ((completedCheckouts.length / checkouts.length) * 100).toFixed(1)
+            ),
+      fulfillmentCompletionRatePercent:
+        completedCheckouts.length === 0
+          ? 0
+          : Number(
+              (
+                (fulfilledCheckouts.length / completedCheckouts.length) *
+                100
+              ).toFixed(1)
+            ),
+      latestCheckoutCompletedAt: latestCompletedAt,
+      latestCheckoutCreatedAt: latestCreatedAt,
+      latestCheckoutFulfilledAt: latestFulfilledAt
+    };
+  }
+
+  function buildReportScopeLabel(input: {
+    activeBrandSlug: string | null;
+    brands: Array<{
+      brandName: string;
+      brandSlug: string;
+    }>;
+  }) {
+    if (!input.activeBrandSlug) {
+      return "All brands";
+    }
+
+    const activeBrand =
+      input.brands.find((brand) => brand.brandSlug === input.activeBrandSlug) ??
+      null;
+
+    return activeBrand
+      ? `${activeBrand.brandName} (${activeBrand.brandSlug})`
+      : input.activeBrandSlug;
+  }
+
+  function buildCommerceReportCsv(input: { checkouts: SerializedCheckout[] }) {
+    const header = [
+      "created_at",
+      "completed_at",
+      "fulfilled_at",
+      "brand_name",
+      "brand_slug",
+      "collection_title",
+      "collection_slug",
+      "collection_public_path",
+      "checkout_session_id",
+      "checkout_url",
+      "edition_number",
+      "buyer_display_name",
+      "buyer_email",
+      "buyer_wallet_address",
+      "status",
+      "reservation_status",
+      "provider_kind",
+      "provider_session_id",
+      "price_label",
+      "storefront_status",
+      "fulfillment_status",
+      "fulfillment_provider_kind",
+      "fulfillment_notes",
+      "automation_status",
+      "automation_attempt_count",
+      "automation_error_code",
+      "automation_error_message",
+      "automation_external_reference",
+      "automation_last_attempted_at",
+      "automation_last_succeeded_at",
+      "automation_next_retry_at",
+      "automation_queued_at",
+      "expires_at"
+    ].join(",");
+    const rows = input.checkouts.map((checkout) =>
+      [
+        checkout.createdAt,
+        checkout.completedAt,
+        checkout.fulfilledAt,
+        checkout.brandName,
+        checkout.brandSlug,
+        checkout.title,
+        checkout.collectionSlug,
+        checkout.collectionPublicPath,
+        checkout.checkoutSessionId,
+        checkout.checkoutUrl,
+        checkout.editionNumber,
+        checkout.buyerDisplayName,
+        checkout.buyerEmail,
+        checkout.buyerWalletAddress,
+        checkout.status,
+        checkout.reservationStatus,
+        checkout.providerKind,
+        checkout.providerSessionId,
+        checkout.priceLabel,
+        checkout.storefrontStatus,
+        checkout.fulfillmentStatus,
+        checkout.fulfillmentProviderKind,
+        checkout.fulfillmentNotes,
+        checkout.fulfillmentAutomationStatus,
+        checkout.fulfillmentAutomationAttemptCount,
+        checkout.fulfillmentAutomationErrorCode,
+        checkout.fulfillmentAutomationErrorMessage,
+        checkout.fulfillmentAutomationExternalReference,
+        checkout.fulfillmentAutomationLastAttemptedAt,
+        checkout.fulfillmentAutomationLastSucceededAt,
+        checkout.fulfillmentAutomationNextRetryAt,
+        checkout.fulfillmentAutomationQueuedAt,
+        checkout.expiresAt
+      ]
+        .map((value) => escapeCsvValue(value))
+        .join(",")
+    );
+
+    return [header, ...rows].join("\n");
+  }
+
+  async function loadOwnerCommerceSnapshot(input: {
+    brandSlug?: string | null;
+    ownerUserId: string;
+  }) {
+    const parsedQuery = studioCommerceDashboardQuerySchema.parse({
+      brandSlug: input.brandSlug ?? undefined
+    });
+    const brands =
+      await dependencies.repositories.brandRepository.listByOwnerUserId(
+        input.ownerUserId
+      );
+    const activeBrandSlug = parsedQuery.brandSlug ?? null;
+
+    if (
+      activeBrandSlug &&
+      !brands.some((brand) => brand.slug === activeBrandSlug)
+    ) {
+      throw new CommerceServiceError(
+        "BRAND_NOT_FOUND",
+        "The requested commerce brand was not found.",
+        404
+      );
+    }
+
+    const sessions =
+      await dependencies.repositories.commerceCheckoutSessionRepository.listDetailedByOwnerUserId(
+        input.ownerUserId
+      );
+    const refreshedSessions = await Promise.all(
+      sessions.map(async (session) => {
+        if (
+          session.status === "open" &&
+          session.expiresAt.getTime() <= dependencies.now().getTime()
+        ) {
+          return refreshCheckoutSession(dependencies, session.publicId);
+        }
+
+        return session;
+      })
+    );
+    const visibleSessions = refreshedSessions.filter(
+      (session): session is CheckoutSessionRecord => session !== null
+    );
+    const allCheckouts = visibleSessions.map((session) =>
+      serializeStudioCheckoutSession({ session })
+    );
+    const brandMap = new Map<
+      string,
+      {
+        brandName: string;
+        brandSlug: string;
+        completedCheckoutCount: number;
+        fulfilledCheckoutCount: number;
+        openCheckoutCount: number;
+        totalCheckoutCount: number;
+        unfulfilledCheckoutCount: number;
+      }
+    >(
+      brands.map((brand) => [
+        brand.slug,
+        {
+          brandName: brand.name,
+          brandSlug: brand.slug,
+          completedCheckoutCount: 0,
+          fulfilledCheckoutCount: 0,
+          openCheckoutCount: 0,
+          totalCheckoutCount: 0,
+          unfulfilledCheckoutCount: 0
+        }
+      ])
+    );
+
+    for (const checkout of allCheckouts) {
+      const current = brandMap.get(checkout.brandSlug) ?? {
+        brandName: checkout.brandName,
+        brandSlug: checkout.brandSlug,
+        completedCheckoutCount: 0,
+        fulfilledCheckoutCount: 0,
+        openCheckoutCount: 0,
+        totalCheckoutCount: 0,
+        unfulfilledCheckoutCount: 0
+      };
+
+      current.totalCheckoutCount += 1;
+
+      if (checkout.status === "open") {
+        current.openCheckoutCount += 1;
+      }
+
+      if (checkout.status === "completed") {
+        current.completedCheckoutCount += 1;
+
+        if (checkout.fulfillmentStatus === "fulfilled") {
+          current.fulfilledCheckoutCount += 1;
+        } else {
+          current.unfulfilledCheckoutCount += 1;
+        }
+      }
+
+      brandMap.set(checkout.brandSlug, current);
+    }
+
+    const checkouts = activeBrandSlug
+      ? allCheckouts.filter(
+          (checkout) => checkout.brandSlug === activeBrandSlug
+        )
+      : allCheckouts;
+    const collectionMap = new Map<
+      string,
+      {
+        brandName: string;
+        brandSlug: string;
+        collectionPublicPath: string;
+        collectionSlug: string;
+        completedCheckoutCount: number;
+        fulfilledCheckoutCount: number;
+        openCheckoutCount: number;
+        storefrontStatus: CollectionStorefrontStatus;
+        title: string;
+        totalCheckoutCount: number;
+        unfulfilledCheckoutCount: number;
+      }
+    >();
+
+    for (const checkout of checkouts) {
+      const collectionKey = `${checkout.brandSlug}:${checkout.collectionSlug}`;
+      const current = collectionMap.get(collectionKey) ?? {
+        brandName: checkout.brandName,
+        brandSlug: checkout.brandSlug,
+        collectionPublicPath: checkout.collectionPublicPath,
+        collectionSlug: checkout.collectionSlug,
+        completedCheckoutCount: 0,
+        fulfilledCheckoutCount: 0,
+        openCheckoutCount: 0,
+        storefrontStatus: checkout.storefrontStatus,
+        title: checkout.title,
+        totalCheckoutCount: 0,
+        unfulfilledCheckoutCount: 0
+      };
+
+      current.totalCheckoutCount += 1;
+
+      if (checkout.status === "open") {
+        current.openCheckoutCount += 1;
+      }
+
+      if (checkout.status === "completed") {
+        current.completedCheckoutCount += 1;
+
+        if (checkout.fulfillmentStatus === "fulfilled") {
+          current.fulfilledCheckoutCount += 1;
+        } else {
+          current.unfulfilledCheckoutCount += 1;
+        }
+      }
+
+      collectionMap.set(collectionKey, current);
+    }
+
+    return {
+      activeBrandSlug,
+      brands: [...brandMap.values()].sort((left, right) => {
+        if (left.totalCheckoutCount !== right.totalCheckoutCount) {
+          return right.totalCheckoutCount - left.totalCheckoutCount;
+        }
+
+        return left.brandName.localeCompare(right.brandName);
+      }),
+      checkouts,
+      collections: [...collectionMap.values()].sort((left, right) => {
+        if (left.openCheckoutCount !== right.openCheckoutCount) {
+          return right.openCheckoutCount - left.openCheckoutCount;
+        }
+
+        if (left.unfulfilledCheckoutCount !== right.unfulfilledCheckoutCount) {
+          return right.unfulfilledCheckoutCount - left.unfulfilledCheckoutCount;
+        }
+
+        return left.title.localeCompare(right.title);
+      }),
+      summary: buildDashboardSummary(checkouts)
     };
   }
 
@@ -831,8 +1206,9 @@ export function createCollectionCommerceService(
         );
       }
 
-      const parsedInput =
-        collectionCheckoutCreateRequestSchema.safeParse(input.body);
+      const parsedInput = collectionCheckoutCreateRequestSchema.safeParse(
+        input.body
+      );
 
       if (!parsedInput.success) {
         throw new CommerceServiceError(
@@ -1083,11 +1459,14 @@ export function createCollectionCommerceService(
         source: "automatic"
       });
 
-      const refreshed = await dependencies.repositories.commerceCheckoutSessionRepository.findByPublicId(
-        input.checkoutSessionId
-      );
+      const refreshed =
+        await dependencies.repositories.commerceCheckoutSessionRepository.findByPublicId(
+          input.checkoutSessionId
+        );
 
-      return refreshed ? serializeCheckoutSession({ session: refreshed }) : result;
+      return refreshed
+        ? serializeCheckoutSession({ session: refreshed })
+        : result;
     },
 
     async cancelCheckoutSession(input: {
@@ -1127,7 +1506,8 @@ export function createCollectionCommerceService(
         }
 
         const nextStatus =
-          session.status === "expired" || session.expiresAt.getTime() <= now.getTime()
+          session.status === "expired" ||
+          session.expiresAt.getTime() <= now.getTime()
             ? "expired"
             : "canceled";
 
@@ -1182,11 +1562,14 @@ export function createCollectionCommerceService(
         source: "automatic"
       });
 
-      const refreshed = await dependencies.repositories.commerceCheckoutSessionRepository.findByPublicId(
-        input.checkoutSessionId
-      );
+      const refreshed =
+        await dependencies.repositories.commerceCheckoutSessionRepository.findByPublicId(
+          input.checkoutSessionId
+        );
 
-      return refreshed ? serializeCheckoutSession({ session: refreshed }) : result;
+      return refreshed
+        ? serializeCheckoutSession({ session: refreshed })
+        : result;
     },
 
     async expireProviderCheckoutSession(input: {
@@ -1246,191 +1629,73 @@ export function createCollectionCommerceService(
       brandSlug?: string | null;
       ownerUserId: string;
     }) {
-      const parsedQuery = studioCommerceDashboardQuerySchema.parse({
-        brandSlug: input.brandSlug ?? undefined
-      });
-      const brands = await dependencies.repositories.brandRepository.listByOwnerUserId(
-        input.ownerUserId
-      );
-      const activeBrandSlug = parsedQuery.brandSlug ?? null;
-
-      if (
-        activeBrandSlug &&
-        !brands.some((brand) => brand.slug === activeBrandSlug)
-      ) {
-        throw new CommerceServiceError(
-          "BRAND_NOT_FOUND",
-          "The requested commerce brand was not found.",
-          404
-        );
-      }
-
-      const sessions =
-        await dependencies.repositories.commerceCheckoutSessionRepository.listDetailedByOwnerUserId(
-          input.ownerUserId
-        );
-      const refreshedSessions = await Promise.all(
-        sessions.map(async (session) => {
-          if (
-            session.status === "open" &&
-            session.expiresAt.getTime() <= dependencies.now().getTime()
-          ) {
-            return refreshCheckoutSession(dependencies, session.publicId);
-          }
-
-          return session;
-        })
-      );
-      const visibleSessions = refreshedSessions.filter(
-        (session): session is CheckoutSessionRecord => session !== null
-      );
-      const allCheckouts = visibleSessions.map((session) =>
-        serializeStudioCheckoutSession({ session })
-      );
-      const brandMap = new Map<
-        string,
-        {
-          brandName: string;
-          brandSlug: string;
-          completedCheckoutCount: number;
-          fulfilledCheckoutCount: number;
-          openCheckoutCount: number;
-          totalCheckoutCount: number;
-          unfulfilledCheckoutCount: number;
-        }
-      >(
-        brands.map((brand) => [
-          brand.slug,
-          {
-            brandName: brand.name,
-            brandSlug: brand.slug,
-            completedCheckoutCount: 0,
-            fulfilledCheckoutCount: 0,
-            openCheckoutCount: 0,
-            totalCheckoutCount: 0,
-            unfulfilledCheckoutCount: 0
-          }
-        ])
-      );
-
-      for (const checkout of allCheckouts) {
-        const current =
-          brandMap.get(checkout.brandSlug) ??
-          {
-            brandName: checkout.brandName,
-            brandSlug: checkout.brandSlug,
-            completedCheckoutCount: 0,
-            fulfilledCheckoutCount: 0,
-            openCheckoutCount: 0,
-            totalCheckoutCount: 0,
-            unfulfilledCheckoutCount: 0
-          };
-
-        current.totalCheckoutCount += 1;
-
-        if (checkout.status === "open") {
-          current.openCheckoutCount += 1;
-        }
-
-        if (checkout.status === "completed") {
-          current.completedCheckoutCount += 1;
-
-          if (checkout.fulfillmentStatus === "fulfilled") {
-            current.fulfilledCheckoutCount += 1;
-          } else {
-            current.unfulfilledCheckoutCount += 1;
-          }
-        }
-
-        brandMap.set(checkout.brandSlug, current);
-      }
-
-      const checkouts = activeBrandSlug
-        ? allCheckouts.filter((checkout) => checkout.brandSlug === activeBrandSlug)
-        : allCheckouts;
-      const collectionMap = new Map<
-        string,
-        {
-          brandName: string;
-          brandSlug: string;
-          collectionPublicPath: string;
-          collectionSlug: string;
-          completedCheckoutCount: number;
-          fulfilledCheckoutCount: number;
-          openCheckoutCount: number;
-          storefrontStatus: CollectionStorefrontStatus;
-          title: string;
-          totalCheckoutCount: number;
-          unfulfilledCheckoutCount: number;
-        }
-      >();
-
-      for (const checkout of checkouts) {
-        const collectionKey = `${checkout.brandSlug}:${checkout.collectionSlug}`;
-        const current =
-          collectionMap.get(collectionKey) ??
-          {
-            brandName: checkout.brandName,
-            brandSlug: checkout.brandSlug,
-            collectionPublicPath: checkout.collectionPublicPath,
-            collectionSlug: checkout.collectionSlug,
-            completedCheckoutCount: 0,
-            fulfilledCheckoutCount: 0,
-            openCheckoutCount: 0,
-            storefrontStatus: checkout.storefrontStatus,
-            title: checkout.title,
-            totalCheckoutCount: 0,
-            unfulfilledCheckoutCount: 0
-          };
-
-        current.totalCheckoutCount += 1;
-
-        if (checkout.status === "open") {
-          current.openCheckoutCount += 1;
-        }
-
-        if (checkout.status === "completed") {
-          current.completedCheckoutCount += 1;
-
-          if (checkout.fulfillmentStatus === "fulfilled") {
-            current.fulfilledCheckoutCount += 1;
-          } else {
-            current.unfulfilledCheckoutCount += 1;
-          }
-        }
-
-        collectionMap.set(collectionKey, current);
-      }
+      const snapshot = await loadOwnerCommerceSnapshot(input);
 
       return studioCommerceDashboardResponseSchema.parse({
         dashboard: {
-          activeBrandSlug,
-          brands: [...brandMap.values()].sort((left, right) => {
-            if (left.totalCheckoutCount !== right.totalCheckoutCount) {
-              return right.totalCheckoutCount - left.totalCheckoutCount;
-            }
-
-            return left.brandName.localeCompare(right.brandName);
-          }),
-          checkouts,
-          collections: [...collectionMap.values()].sort((left, right) => {
-            if (left.openCheckoutCount !== right.openCheckoutCount) {
-              return right.openCheckoutCount - left.openCheckoutCount;
-            }
-
-            if (
-              left.unfulfilledCheckoutCount !== right.unfulfilledCheckoutCount
-            ) {
-              return (
-                right.unfulfilledCheckoutCount - left.unfulfilledCheckoutCount
-              );
-            }
-
-            return left.title.localeCompare(right.title);
-          }),
-          summary: buildDashboardSummary(checkouts)
+          activeBrandSlug: snapshot.activeBrandSlug,
+          brands: snapshot.brands,
+          checkouts: snapshot.checkouts,
+          collections: snapshot.collections,
+          summary: snapshot.summary
         }
       });
+    },
+
+    async getOwnerCommerceReport(input: {
+      brandSlug?: string | null;
+      ownerUserId: string;
+    }) {
+      const parsedQuery = studioCommerceReportQuerySchema.parse({
+        brandSlug: input.brandSlug ?? undefined
+      });
+      const snapshot = await loadOwnerCommerceSnapshot({
+        ...(parsedQuery.brandSlug
+          ? {
+              brandSlug: parsedQuery.brandSlug
+            }
+          : {}),
+        ownerUserId: input.ownerUserId
+      });
+
+      return studioCommerceReportResponseSchema.parse({
+        report: {
+          activeBrandSlug: snapshot.activeBrandSlug,
+          brands: snapshot.brands,
+          collections: snapshot.collections,
+          generatedAt: dependencies.now().toISOString(),
+          metrics: buildReportMetrics(snapshot.checkouts),
+          scopeLabel: buildReportScopeLabel({
+            activeBrandSlug: snapshot.activeBrandSlug,
+            brands: snapshot.brands
+          }),
+          summary: snapshot.summary
+        }
+      });
+    },
+
+    async exportOwnerCommerceReportCsv(input: {
+      brandSlug?: string | null;
+      ownerUserId: string;
+    }) {
+      const parsedQuery = studioCommerceReportQuerySchema.parse({
+        brandSlug: input.brandSlug ?? undefined
+      });
+      const snapshot = await loadOwnerCommerceSnapshot({
+        ...(parsedQuery.brandSlug
+          ? {
+              brandSlug: parsedQuery.brandSlug
+            }
+          : {}),
+        ownerUserId: input.ownerUserId
+      });
+
+      return {
+        csv: buildCommerceReportCsv({
+          checkouts: snapshot.checkouts
+        }),
+        filename: `commerce-report-${snapshot.activeBrandSlug ?? "all-brands"}.csv`
+      };
     },
 
     async completeOwnerManualCheckout(input: {
@@ -1498,9 +1763,10 @@ export function createCollectionCommerceService(
         source: "automatic"
       });
 
-      const refreshed = await dependencies.repositories.commerceCheckoutSessionRepository.findByPublicId(
-        input.checkoutSessionId
-      );
+      const refreshed =
+        await dependencies.repositories.commerceCheckoutSessionRepository.findByPublicId(
+          input.checkoutSessionId
+        );
 
       if (!refreshed) {
         throw new CommerceServiceError(
@@ -1718,8 +1984,9 @@ export function createCollectionCommerceService(
       checkoutSessionId: string;
       ownerUserId: string;
     }) {
-      const parsedInput =
-        studioCommerceFulfillmentRetryRequestSchema.safeParse(input.body);
+      const parsedInput = studioCommerceFulfillmentRetryRequestSchema.safeParse(
+        input.body
+      );
 
       if (!parsedInput.success) {
         throw new CommerceServiceError(
@@ -1772,8 +2039,9 @@ export function createCollectionCommerceService(
     },
 
     async recordFulfillmentAutomationCallback(input: { body: unknown }) {
-      const parsedInput =
-        commerceFulfillmentCallbackRequestSchema.safeParse(input.body);
+      const parsedInput = commerceFulfillmentCallbackRequestSchema.safeParse(
+        input.body
+      );
 
       if (!parsedInput.success) {
         throw new CommerceServiceError(
