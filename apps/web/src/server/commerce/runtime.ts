@@ -1,4 +1,5 @@
 import {
+  createBrandRepository,
   createCommerceCheckoutSessionRepository,
   createPublishedCollectionRepository,
   createPublishedCollectionReservationRepository,
@@ -20,6 +21,7 @@ import { createCollectionCommerceService } from "./service";
 
 function createCommerceRepositories(database: DatabaseExecutor) {
   return {
+    brandRepository: createBrandRepository(database),
     commerceCheckoutSessionRepository:
       createCommerceCheckoutSessionRepository(database),
     publishedCollectionRepository: createPublishedCollectionRepository(database),

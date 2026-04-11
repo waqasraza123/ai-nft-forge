@@ -5,6 +5,7 @@ import {
   collectionCheckoutSessionResponseSchema,
   collectionCheckoutCreateRequestSchema,
   studioCommerceCheckoutActionResponseSchema,
+  studioCommerceDashboardQuerySchema,
   studioCommerceDashboardResponseSchema,
   studioCommerceFulfillmentRetryRequestSchema,
   studioCommerceFulfillmentUpdateRequestSchema,
@@ -94,7 +95,16 @@ type CheckoutSessionRecord = {
   status: "open" | "completed" | "expired" | "canceled";
 };
 
+type BrandRecord = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
 type CommerceRepositorySet = {
+  brandRepository: {
+    listByOwnerUserId(ownerUserId: string): Promise<BrandRecord[]>;
+  };
   commerceCheckoutSessionRepository: {
     create(input: {
       checkoutUrl: string;
@@ -758,6 +768,54 @@ async function transitionCheckoutSessionRecord(input: {
 export function createCollectionCommerceService(
   dependencies: CommerceServiceDependencies
 ) {
+  function buildDashboardSummary(
+    checkouts: Array<ReturnType<typeof serializeStudioCheckoutSession>>
+  ) {
+    return {
+      automationFailedCheckoutCount: checkouts.filter(
+        (checkout) => checkout.fulfillmentAutomationStatus === "failed"
+      ).length,
+      automationQueuedCheckoutCount: checkouts.filter(
+        (checkout) =>
+          checkout.fulfillmentAutomationStatus === "queued" ||
+          checkout.fulfillmentAutomationStatus === "processing"
+      ).length,
+      automationSubmittedCheckoutCount: checkouts.filter(
+        (checkout) =>
+          checkout.fulfillmentAutomationStatus === "submitted" ||
+          checkout.fulfillmentAutomationStatus === "completed"
+      ).length,
+      canceledCheckoutCount: checkouts.filter(
+        (checkout) => checkout.status === "canceled"
+      ).length,
+      completedCheckoutCount: checkouts.filter(
+        (checkout) => checkout.status === "completed"
+      ).length,
+      expiredCheckoutCount: checkouts.filter(
+        (checkout) => checkout.status === "expired"
+      ).length,
+      fulfilledCheckoutCount: checkouts.filter(
+        (checkout) =>
+          checkout.status === "completed" &&
+          checkout.fulfillmentStatus === "fulfilled"
+      ).length,
+      manualCheckoutCount: checkouts.filter(
+        (checkout) => checkout.providerKind === "manual"
+      ).length,
+      openCheckoutCount: checkouts.filter((checkout) => checkout.status === "open")
+        .length,
+      stripeCheckoutCount: checkouts.filter(
+        (checkout) => checkout.providerKind === "stripe"
+      ).length,
+      totalCheckoutCount: checkouts.length,
+      unfulfilledCheckoutCount: checkouts.filter(
+        (checkout) =>
+          checkout.status === "completed" &&
+          checkout.fulfillmentStatus === "unfulfilled"
+      ).length
+    };
+  }
+
   return {
     async createCheckoutSession(input: {
       body: unknown;
@@ -1184,7 +1242,29 @@ export function createCollectionCommerceService(
       });
     },
 
-    async getOwnerCommerceDashboard(input: { ownerUserId: string }) {
+    async getOwnerCommerceDashboard(input: {
+      brandSlug?: string | null;
+      ownerUserId: string;
+    }) {
+      const parsedQuery = studioCommerceDashboardQuerySchema.parse({
+        brandSlug: input.brandSlug ?? undefined
+      });
+      const brands = await dependencies.repositories.brandRepository.listByOwnerUserId(
+        input.ownerUserId
+      );
+      const activeBrandSlug = parsedQuery.brandSlug ?? null;
+
+      if (
+        activeBrandSlug &&
+        !brands.some((brand) => brand.slug === activeBrandSlug)
+      ) {
+        throw new CommerceServiceError(
+          "BRAND_NOT_FOUND",
+          "The requested commerce brand was not found.",
+          404
+        );
+      }
+
       const sessions =
         await dependencies.repositories.commerceCheckoutSessionRepository.listDetailedByOwnerUserId(
           input.ownerUserId
@@ -1204,9 +1284,70 @@ export function createCollectionCommerceService(
       const visibleSessions = refreshedSessions.filter(
         (session): session is CheckoutSessionRecord => session !== null
       );
-      const checkouts = visibleSessions.map((session) =>
+      const allCheckouts = visibleSessions.map((session) =>
         serializeStudioCheckoutSession({ session })
       );
+      const brandMap = new Map<
+        string,
+        {
+          brandName: string;
+          brandSlug: string;
+          completedCheckoutCount: number;
+          fulfilledCheckoutCount: number;
+          openCheckoutCount: number;
+          totalCheckoutCount: number;
+          unfulfilledCheckoutCount: number;
+        }
+      >(
+        brands.map((brand) => [
+          brand.slug,
+          {
+            brandName: brand.name,
+            brandSlug: brand.slug,
+            completedCheckoutCount: 0,
+            fulfilledCheckoutCount: 0,
+            openCheckoutCount: 0,
+            totalCheckoutCount: 0,
+            unfulfilledCheckoutCount: 0
+          }
+        ])
+      );
+
+      for (const checkout of allCheckouts) {
+        const current =
+          brandMap.get(checkout.brandSlug) ??
+          {
+            brandName: checkout.brandName,
+            brandSlug: checkout.brandSlug,
+            completedCheckoutCount: 0,
+            fulfilledCheckoutCount: 0,
+            openCheckoutCount: 0,
+            totalCheckoutCount: 0,
+            unfulfilledCheckoutCount: 0
+          };
+
+        current.totalCheckoutCount += 1;
+
+        if (checkout.status === "open") {
+          current.openCheckoutCount += 1;
+        }
+
+        if (checkout.status === "completed") {
+          current.completedCheckoutCount += 1;
+
+          if (checkout.fulfillmentStatus === "fulfilled") {
+            current.fulfilledCheckoutCount += 1;
+          } else {
+            current.unfulfilledCheckoutCount += 1;
+          }
+        }
+
+        brandMap.set(checkout.brandSlug, current);
+      }
+
+      const checkouts = activeBrandSlug
+        ? allCheckouts.filter((checkout) => checkout.brandSlug === activeBrandSlug)
+        : allCheckouts;
       const collectionMap = new Map<
         string,
         {
@@ -1263,6 +1404,14 @@ export function createCollectionCommerceService(
 
       return studioCommerceDashboardResponseSchema.parse({
         dashboard: {
+          activeBrandSlug,
+          brands: [...brandMap.values()].sort((left, right) => {
+            if (left.totalCheckoutCount !== right.totalCheckoutCount) {
+              return right.totalCheckoutCount - left.totalCheckoutCount;
+            }
+
+            return left.brandName.localeCompare(right.brandName);
+          }),
           checkouts,
           collections: [...collectionMap.values()].sort((left, right) => {
             if (left.openCheckoutCount !== right.openCheckoutCount) {
@@ -1279,50 +1428,7 @@ export function createCollectionCommerceService(
 
             return left.title.localeCompare(right.title);
           }),
-          summary: {
-            automationFailedCheckoutCount: checkouts.filter(
-              (checkout) => checkout.fulfillmentAutomationStatus === "failed"
-            ).length,
-            automationQueuedCheckoutCount: checkouts.filter(
-              (checkout) =>
-                checkout.fulfillmentAutomationStatus === "queued" ||
-                checkout.fulfillmentAutomationStatus === "processing"
-            ).length,
-            automationSubmittedCheckoutCount: checkouts.filter(
-              (checkout) =>
-                checkout.fulfillmentAutomationStatus === "submitted" ||
-                checkout.fulfillmentAutomationStatus === "completed"
-            ).length,
-            canceledCheckoutCount: checkouts.filter(
-              (checkout) => checkout.status === "canceled"
-            ).length,
-            completedCheckoutCount: checkouts.filter(
-              (checkout) => checkout.status === "completed"
-            ).length,
-            expiredCheckoutCount: checkouts.filter(
-              (checkout) => checkout.status === "expired"
-            ).length,
-            fulfilledCheckoutCount: checkouts.filter(
-              (checkout) =>
-                checkout.status === "completed" &&
-                checkout.fulfillmentStatus === "fulfilled"
-            ).length,
-            manualCheckoutCount: checkouts.filter(
-              (checkout) => checkout.providerKind === "manual"
-            ).length,
-            openCheckoutCount: checkouts.filter(
-              (checkout) => checkout.status === "open"
-            ).length,
-            stripeCheckoutCount: checkouts.filter(
-              (checkout) => checkout.providerKind === "stripe"
-            ).length,
-            totalCheckoutCount: checkouts.length,
-            unfulfilledCheckoutCount: checkouts.filter(
-              (checkout) =>
-                checkout.status === "completed" &&
-                checkout.fulfillmentStatus === "unfulfilled"
-            ).length
-          }
+          summary: buildDashboardSummary(checkouts)
         }
       });
     },

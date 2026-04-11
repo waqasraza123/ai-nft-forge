@@ -177,6 +177,16 @@ export const studioCommerceCollectionSummarySchema = z.object({
   unfulfilledCheckoutCount: z.number().int().min(0)
 });
 
+export const studioCommerceBrandSummarySchema = z.object({
+  brandName: commerceBrandNameSchema,
+  brandSlug: commerceBrandSlugSchema,
+  completedCheckoutCount: z.number().int().min(0),
+  fulfilledCheckoutCount: z.number().int().min(0),
+  openCheckoutCount: z.number().int().min(0),
+  totalCheckoutCount: z.number().int().min(0),
+  unfulfilledCheckoutCount: z.number().int().min(0)
+});
+
 export const studioCommerceDashboardSummarySchema = z.object({
   automationFailedCheckoutCount: z.number().int().min(0),
   automationQueuedCheckoutCount: z.number().int().min(0),
@@ -192,8 +202,14 @@ export const studioCommerceDashboardSummarySchema = z.object({
   unfulfilledCheckoutCount: z.number().int().min(0)
 });
 
+export const studioCommerceDashboardQuerySchema = z.object({
+  brandSlug: commerceBrandSlugSchema.nullish()
+});
+
 export const studioCommerceDashboardResponseSchema = z.object({
   dashboard: z.object({
+    activeBrandSlug: commerceBrandSlugSchema.nullable(),
+    brands: z.array(studioCommerceBrandSummarySchema),
     checkouts: z.array(studioCommerceCheckoutSummarySchema),
     collections: z.array(studioCommerceCollectionSummarySchema),
     summary: studioCommerceDashboardSummarySchema
@@ -230,6 +246,7 @@ export const collectionCommerceErrorResponseSchema = z.object({
       "CHECKOUT_SESSION_EXPIRED",
       "CHECKOUT_SESSION_NOT_FOUND",
       "CHECKOUT_SESSION_NOT_OPEN",
+      "BRAND_NOT_FOUND",
       "COLLECTION_NOT_FOUND",
       "COLLECTION_NOT_LIVE",
       "FULFILLMENT_CALLBACK_UNAUTHORIZED",
@@ -289,8 +306,14 @@ export type StudioCommerceCheckoutSummary = z.infer<
 export type StudioCommerceCollectionSummary = z.infer<
   typeof studioCommerceCollectionSummarySchema
 >;
+export type StudioCommerceBrandSummary = z.infer<
+  typeof studioCommerceBrandSummarySchema
+>;
 export type StudioCommerceDashboardSummary = z.infer<
   typeof studioCommerceDashboardSummarySchema
+>;
+export type StudioCommerceDashboardQuery = z.infer<
+  typeof studioCommerceDashboardQuerySchema
 >;
 export type StudioCommerceDashboardResponse = z.infer<
   typeof studioCommerceDashboardResponseSchema

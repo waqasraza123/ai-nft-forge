@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   startTransition,
   type FormEvent,
@@ -10,6 +11,7 @@ import {
 } from "react";
 
 import {
+  studioCommerceDashboardQuerySchema,
   studioCommerceCheckoutActionResponseSchema,
   studioCommerceDashboardResponseSchema,
   type CommerceCheckoutFulfillmentStatus,
@@ -140,6 +142,22 @@ function formatProviderKind(providerKind: StudioCommerceCheckoutSummary["provide
   return providerKind === "stripe" ? "Stripe" : "Manual";
 }
 
+function createCommerceDashboardPath(brandSlug: string | null) {
+  const parsedQuery = studioCommerceDashboardQuerySchema.parse({
+    ...(brandSlug
+      ? {
+          brandSlug
+        }
+      : {})
+  });
+
+  if (!parsedQuery.brandSlug) {
+    return "/api/studio/commerce";
+  }
+
+  return `/api/studio/commerce?brandSlug=${encodeURIComponent(parsedQuery.brandSlug)}`;
+}
+
 function createInitialFulfillmentEditors(
   dashboard: StudioCommerceDashboardResponse["dashboard"]
 ): FulfillmentEditorState {
@@ -158,6 +176,7 @@ export function StudioCommerceClient({
   initialDashboard,
   ownerWalletAddress
 }: StudioCommerceClientProps) {
+  const router = useRouter();
   const [dashboard, setDashboard] = useState(initialDashboard);
   const [notice, setNotice] = useState<NoticeState>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -172,15 +191,22 @@ export function StudioCommerceClient({
     setFulfillmentEditors(createInitialFulfillmentEditors(dashboard));
   }, [dashboard]);
 
+  const activeBrand =
+    dashboard.brands.find((brand) => brand.brandSlug === dashboard.activeBrandSlug) ??
+    null;
+
   const refreshDashboard = useEffectEvent(async (input?: { silent?: boolean }) => {
     if (!input?.silent) {
       setIsRefreshing(true);
     }
 
     try {
-      const response = await fetch("/api/studio/commerce", {
-        cache: "no-store"
-      });
+      const response = await fetch(
+        createCommerceDashboardPath(dashboard.activeBrandSlug),
+        {
+          cache: "no-store"
+        }
+      );
       const result = await parseJsonResponse({
         response,
         schema: studioCommerceDashboardResponseSchema
@@ -203,6 +229,43 @@ export function StudioCommerceClient({
       }
     }
   });
+
+  async function handleBrandScopeChange(brandSlug: string | null) {
+    setNotice({
+      message: brandSlug
+        ? `Loading ${brandSlug} commerce activity…`
+        : "Loading commerce activity across all brands…",
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch(createCommerceDashboardPath(brandSlug), {
+        cache: "no-store"
+      });
+      const result = await parseJsonResponse({
+        response,
+        schema: studioCommerceDashboardResponseSchema
+      });
+
+      startTransition(() => {
+        setDashboard(result.dashboard);
+      });
+      router.replace(
+        brandSlug
+          ? `/studio/commerce?brandSlug=${encodeURIComponent(brandSlug)}`
+          : "/studio/commerce"
+      );
+      setNotice(null);
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Commerce brand scope could not be changed.",
+        tone: "error"
+      });
+    }
+  }
 
   async function runCheckoutAction(input: {
     checkoutSessionId: string;
@@ -320,6 +383,10 @@ export function StudioCommerceClient({
               value={ownerWalletAddress}
             />
             <MetricTile
+              label="Scope"
+              value={activeBrand?.brandSlug ?? "all brands"}
+            />
+            <MetricTile
               label="Checkouts"
               value={dashboard.summary.totalCheckoutCount.toString()}
             />
@@ -344,8 +411,26 @@ export function StudioCommerceClient({
               value={dashboard.summary.stripeCheckoutCount.toString()}
             />
           </div>
+          <label className="field-stack">
+            <span className="field-label">Commerce scope</span>
+            <select
+              className="input-field"
+              onChange={(event) => {
+                void handleBrandScopeChange(event.target.value || null);
+              }}
+              value={dashboard.activeBrandSlug ?? ""}
+            >
+              <option value="">All brands</option>
+              {dashboard.brands.map((brand) => (
+                <option key={brand.brandSlug} value={brand.brandSlug}>
+                  {brand.brandName} · {brand.totalCheckoutCount} checkouts
+                </option>
+              ))}
+            </select>
+          </label>
           <div className="pill-row">
             <Pill>/studio/commerce</Pill>
+            <Pill>{dashboard.brands.length} brands</Pill>
             <Pill>{dashboard.summary.manualCheckoutCount} manual</Pill>
             <Pill>{dashboard.summary.stripeCheckoutCount} stripe</Pill>
             <Pill>{dashboard.summary.fulfilledCheckoutCount} fulfilled</Pill>
@@ -356,10 +441,71 @@ export function StudioCommerceClient({
         </SurfaceCard>
 
         <SurfaceCard
+          body="Brand partitions keep workspace-level commerce from flattening multi-brand performance. Switch scope at the top to review one storefront without losing the cross-brand backlog picture."
+          eyebrow="Brands"
+          span={4}
+          title="Commerce partitions"
+        >
+          {dashboard.brands.length === 0 ? (
+            <div className="empty-state">No brands are configured yet.</div>
+          ) : (
+            <div className="stack-list">
+              <button
+                className="status-banner"
+                onClick={() => {
+                  void handleBrandScopeChange(null);
+                }}
+                type="button"
+              >
+                <strong>All brands</strong>
+                <span>
+                  {dashboard.brands.reduce(
+                    (total, brand) => total + brand.totalCheckoutCount,
+                    0
+                  )}{" "}
+                  total checkouts across the workspace
+                </span>
+                <div className="pill-row">
+                  <Pill>{dashboard.activeBrandSlug === null ? "active" : "workspace"}</Pill>
+                </div>
+              </button>
+              {dashboard.brands.map((brand) => (
+                <button
+                  className="status-banner"
+                  key={brand.brandSlug}
+                  onClick={() => {
+                    void handleBrandScopeChange(brand.brandSlug);
+                  }}
+                  type="button"
+                >
+                  <strong>{brand.brandName}</strong>
+                  <span>
+                    {brand.totalCheckoutCount} total, {brand.openCheckoutCount} open,{" "}
+                    {brand.unfulfilledCheckoutCount} unfulfilled
+                  </span>
+                  <div className="pill-row">
+                    <Pill>{brand.brandSlug}</Pill>
+                    <Pill>
+                      {dashboard.activeBrandSlug === brand.brandSlug
+                        ? "active"
+                        : "view brand"}
+                    </Pill>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </SurfaceCard>
+
+        <SurfaceCard
           body="These collection-level aggregates make it obvious where the active queue or fulfillment backlog sits before drilling into individual sessions."
           eyebrow="Collections"
           span={4}
-          title="Checkout backlog by release"
+          title={
+            activeBrand
+              ? `Checkout backlog in ${activeBrand.brandName}`
+              : "Checkout backlog by release"
+          }
         >
           {dashboard.collections.length === 0 ? (
             <div className="empty-state">No checkout sessions exist yet.</div>
@@ -393,7 +539,11 @@ export function StudioCommerceClient({
           body="Each session card exposes the current payment state, owner recovery actions, and fulfillment controls for completed sales."
           eyebrow="Sessions"
           span={8}
-          title="Recent checkout sessions"
+          title={
+            activeBrand
+              ? `Recent checkout sessions in ${activeBrand.brandName}`
+              : "Recent checkout sessions"
+          }
         >
           {notice ? (
             <div
@@ -451,6 +601,7 @@ export function StudioCommerceClient({
                       {checkout.buyerEmail} · edition #{checkout.editionNumber}
                     </span>
                     <div className="pill-row">
+                      <Pill>{checkout.brandSlug}</Pill>
                       <Pill>{formatCheckoutStatus(checkout.status)}</Pill>
                       <Pill>{formatProviderKind(checkout.providerKind)}</Pill>
                       <Pill>{formatFulfillmentStatus(checkout.fulfillmentStatus)}</Pill>
