@@ -22,7 +22,7 @@ export async function POST(request: Request, context: RouteContext) {
         {
           body: await parseJsonBody(request),
           checkoutSessionId,
-          ownerUserId: session.user.id
+          ownerUserId: session.ownerUserId
         }
       );
 

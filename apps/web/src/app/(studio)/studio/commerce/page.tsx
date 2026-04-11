@@ -1,24 +1,24 @@
-import { getCurrentAuthSession } from "../../../../server/auth/session";
+import { getCurrentStudioAccess } from "../../../../server/studio/access";
 import { createRuntimeCollectionCommerceService } from "../../../../server/commerce/runtime";
 
 import { StudioCommerceClient } from "./studio-commerce-client";
 
 export default async function StudioCommercePage() {
-  const session = await getCurrentAuthSession();
+  const access = await getCurrentStudioAccess();
 
-  if (!session) {
+  if (!access) {
     return null;
   }
 
   const result =
     await createRuntimeCollectionCommerceService().getOwnerCommerceDashboard({
-      ownerUserId: session.user.id
+      ownerUserId: access.ownerUserId
     });
 
   return (
     <StudioCommerceClient
       initialDashboard={result.dashboard}
-      ownerWalletAddress={session.user.walletAddress}
+      ownerWalletAddress={access.owner.walletAddress}
     />
   );
 }

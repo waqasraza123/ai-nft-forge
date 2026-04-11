@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 
 import {
   createOpsErrorResponse,
-  requireOpsApiSession
+  requireOpsOwnerApiSession
 } from "../../../../server/ops/http";
 import { createRuntimeOpsService } from "../../../../server/ops/runtime-service";
 
@@ -20,10 +20,10 @@ async function parseAlertRoutingPolicyRequest(
 
 export async function POST(request: Request) {
   try {
-    const session = await requireOpsApiSession();
+    const session = await requireOpsOwnerApiSession();
     const payload = await parseAlertRoutingPolicyRequest(request);
     const result = await createRuntimeOpsService().updateAlertRoutingPolicy({
-      ownerUserId: session.user.id,
+      ownerUserId: session.ownerUserId,
       webhookMode: payload.webhookMode
     });
 
@@ -37,9 +37,9 @@ export async function POST(request: Request) {
 
 export async function DELETE() {
   try {
-    const session = await requireOpsApiSession();
+    const session = await requireOpsOwnerApiSession();
     const result = await createRuntimeOpsService().resetAlertRoutingPolicy({
-      ownerUserId: session.user.id
+      ownerUserId: session.ownerUserId
     });
 
     return NextResponse.json(result, {

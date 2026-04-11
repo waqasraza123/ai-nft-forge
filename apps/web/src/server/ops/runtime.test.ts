@@ -93,12 +93,26 @@ describe("loadOpsRuntime", () => {
         )
       );
     const resolveSession = vi.fn().mockResolvedValue({
-      expiresAt: "2026-04-07T12:00:00.000Z",
-      user: {
-        avatarUrl: null,
-        displayName: null,
-        id: "user_1",
+      owner: {
+        userId: "user_1",
         walletAddress: "0x1111111111111111111111111111111111111111"
+      },
+      ownerUserId: "user_1",
+      role: "owner",
+      session: {
+        expiresAt: "2026-04-07T12:00:00.000Z",
+        user: {
+          avatarUrl: null,
+          displayName: null,
+          id: "user_1",
+          walletAddress: "0x1111111111111111111111111111111111111111"
+        }
+      },
+      workspace: {
+        id: "workspace_1",
+        name: "Forge Operations",
+        slug: "forge-operations",
+        status: "active"
       }
     });
     const loadQueueSnapshot = vi.fn().mockResolvedValue({
@@ -346,6 +360,10 @@ describe("loadOpsRuntime", () => {
       referenceTime: new Date("2026-04-06T12:00:00.000Z")
     });
     expect(runtime.operator.session?.user.id).toBe("user_1");
+    expect(runtime.operator.access).toEqual({
+      canManageOpsPolicy: true,
+      role: "owner"
+    });
     expect(runtime.operator.queue).toMatchObject({
       status: "ok"
     });

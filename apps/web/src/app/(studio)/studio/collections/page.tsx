@@ -1,18 +1,18 @@
-import { getCurrentAuthSession } from "../../../../server/auth/session";
+import { getCurrentStudioAccess } from "../../../../server/studio/access";
 import { createRuntimeCollectionDraftService } from "../../../../server/collections/runtime";
 
 import { StudioCollectionsClient } from "./studio-collections-client";
 
 export default async function StudioCollectionsPage() {
-  const session = await getCurrentAuthSession();
+  const access = await getCurrentStudioAccess();
 
-  if (!session) {
+  if (!access) {
     return null;
   }
 
   const result =
     await createRuntimeCollectionDraftService().listCollectionDrafts({
-      ownerUserId: session.user.id
+      ownerUserId: access.ownerUserId
     });
 
   return (
@@ -21,7 +21,8 @@ export default async function StudioCollectionsPage() {
       initialGeneratedAssetCandidates={result.generatedAssetCandidates}
       initialPublicationTarget={result.publicationTarget}
       initialPublicationTargets={result.publicationTargets}
-      ownerWalletAddress={session.user.walletAddress}
+      ownerWalletAddress={access.owner.walletAddress}
+      studioRole={access.role}
     />
   );
 }

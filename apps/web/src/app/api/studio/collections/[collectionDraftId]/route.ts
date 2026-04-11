@@ -25,7 +25,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       await createRuntimeCollectionDraftService().updateCollectionDraft({
         collectionDraftId,
         description: body.description,
-        ownerUserId: session.user.id,
+        ownerUserId: session.ownerUserId,
         slug: body.slug,
         status: body.status,
         title: body.title

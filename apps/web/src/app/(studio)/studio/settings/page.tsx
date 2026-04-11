@@ -1,23 +1,24 @@
-import { getCurrentAuthSession } from "../../../../server/auth/session";
+import { getCurrentStudioAccess } from "../../../../server/studio/access";
 import { createRuntimeStudioSettingsService } from "../../../../server/studio-settings/runtime";
 
 import { StudioSettingsClient } from "./studio-settings-client";
 
 export default async function StudioSettingsPage() {
-  const session = await getCurrentAuthSession();
+  const access = await getCurrentStudioAccess();
 
-  if (!session) {
+  if (!access) {
     return null;
   }
 
   const result = await createRuntimeStudioSettingsService().getStudioSettings({
-    ownerUserId: session.user.id
+    ownerUserId: access.ownerUserId,
+    role: access.role
   });
 
   return (
     <StudioSettingsClient
       initialSettings={result.settings}
-      ownerWalletAddress={session.user.walletAddress}
+      ownerWalletAddress={access.owner.walletAddress}
     />
   );
 }

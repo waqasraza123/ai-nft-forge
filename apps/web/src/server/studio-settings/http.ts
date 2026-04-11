@@ -34,6 +34,20 @@ export async function requireStudioApiSession() {
   return session;
 }
 
+export async function requireStudioOwnerApiSession() {
+  const session = await requireStudioApiSession();
+
+  if (session.role !== "owner") {
+    throw new StudioSettingsServiceError(
+      "FORBIDDEN",
+      "Only workspace owners can change these settings.",
+      403
+    );
+  }
+
+  return session;
+}
+
 export function createStudioSettingsErrorResponse(error: unknown): NextResponse {
   if (error instanceof StudioSettingsServiceError) {
     return NextResponse.json(

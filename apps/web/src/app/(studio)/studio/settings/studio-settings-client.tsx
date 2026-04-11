@@ -17,8 +17,11 @@ import {
   defaultStudioFeaturedReleaseLabel,
   studioBrandResponseSchema,
   studioSettingsResponseSchema,
+  studioWorkspaceMemberDeleteResponseSchema,
+  studioWorkspaceMemberResponseSchema,
   type StudioBrandSummary,
-  type StudioSettingsSummary
+  type StudioSettingsSummary,
+  type StudioWorkspaceMemberSummary
 } from "@ai-nft-forge/shared";
 import {
   MetricTile,
@@ -64,10 +67,16 @@ type NewBrandState = {
   themePreset: "editorial_warm" | "gallery_mono" | "midnight_launch";
 };
 
+type MemberState = {
+  walletAddress: string;
+};
+
 function createFallbackErrorMessage(response: Response) {
   switch (response.status) {
     case 401:
       return "An active studio session is required.";
+    case 403:
+      return "Only workspace owners can change these studio settings.";
     case 409:
       return "The requested studio settings conflict with existing records.";
     default:
@@ -164,6 +173,12 @@ function createInitialNewBrandState(): NewBrandState {
   };
 }
 
+function createInitialMemberState(): MemberState {
+  return {
+    walletAddress: ""
+  };
+}
+
 function resolveSelectedBrandId(input: {
   currentBrandId: string | null;
   settings: StudioSettingsSummary | null;
@@ -192,10 +207,28 @@ export function StudioSettingsClient({
   const [newBrandState, setNewBrandState] = useState<NewBrandState>(() =>
     createInitialNewBrandState()
   );
+  const [memberState, setMemberState] = useState<MemberState>(() =>
+    createInitialMemberState()
+  );
   const [notice, setNotice] = useState<NoticeState>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isCreatingBrand, setIsCreatingBrand] = useState(false);
+  const [isAddingMember, setIsAddingMember] = useState(false);
+  const [removingMembershipId, setRemovingMembershipId] = useState<
+    string | null
+  >(null);
+
+  const access = settings?.access ?? {
+    canManageMembers: true,
+    canManageOnchain: true,
+    canManageOpsPolicy: true,
+    canManageWorkspace: true,
+    canPublishCollections: true,
+    role: "owner" as const
+  };
+  const canManageMembers = access.canManageMembers;
+  const canManageWorkspace = access.canManageWorkspace;
 
   const selectedBrand =
     settings?.brands.find((brand) => brand.id === selectedBrandId) ??
@@ -265,6 +298,14 @@ export function StudioSettingsClient({
   async function handleSaveSettings(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (!canManageWorkspace) {
+      setNotice({
+        message: "Only workspace owners can change studio identity.",
+        tone: "error"
+      });
+      return;
+    }
+
     setIsSaving(true);
     setNotice({
       message: settings
@@ -317,6 +358,14 @@ export function StudioSettingsClient({
 
   async function handleCreateBrand(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!canManageWorkspace) {
+      setNotice({
+        message: "Only workspace owners can add brands.",
+        tone: "error"
+      });
+      return;
+    }
 
     setIsCreatingBrand(true);
     setNotice({
@@ -377,6 +426,123 @@ export function StudioSettingsClient({
     }
   }
 
+  async function handleAddMember(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!canManageMembers) {
+      setNotice({
+        message: "Only workspace owners can manage operators.",
+        tone: "error"
+      });
+      return;
+    }
+
+    setIsAddingMember(true);
+    setNotice({
+      message: "Adding workspace operator…",
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch("/api/studio/settings/members", {
+        body: JSON.stringify({
+          walletAddress: memberState.walletAddress
+        }),
+        headers: {
+          "Content-Type": "application/json"
+        },
+        method: "POST"
+      });
+      const payload = await parseJsonResponse({
+        response,
+        schema: studioWorkspaceMemberResponseSchema
+      });
+
+      startTransition(() => {
+        setSettings((currentSettings) => {
+          if (!currentSettings) {
+            return currentSettings;
+          }
+
+          return {
+            ...currentSettings,
+            members: [...currentSettings.members, payload.member]
+          };
+        });
+        setMemberState(createInitialMemberState());
+      });
+      setNotice({
+        message: `Added ${payload.member.walletAddress} as an operator.`,
+        tone: "success"
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Workspace operator could not be added.",
+        tone: "error"
+      });
+    } finally {
+      setIsAddingMember(false);
+    }
+  }
+
+  async function handleRemoveMember(member: StudioWorkspaceMemberSummary) {
+    if (!member.membershipId || !canManageMembers) {
+      return;
+    }
+
+    setRemovingMembershipId(member.membershipId);
+    setNotice({
+      message: `Removing ${member.walletAddress}…`,
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch(
+        `/api/studio/settings/members/${member.membershipId}`,
+        {
+          method: "DELETE"
+        }
+      );
+      await parseJsonResponse({
+        response,
+        schema: studioWorkspaceMemberDeleteResponseSchema
+      });
+
+      startTransition(() => {
+        setSettings((currentSettings) => {
+          if (!currentSettings) {
+            return currentSettings;
+          }
+
+          return {
+            ...currentSettings,
+            members: currentSettings.members.filter(
+              (currentMember) =>
+                currentMember.membershipId !== member.membershipId
+            )
+          };
+        });
+      });
+      setNotice({
+        message: `Removed ${member.walletAddress} from the workspace.`,
+        tone: "success"
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Workspace operator could not be removed.",
+        tone: "error"
+      });
+    } finally {
+      setRemovingMembershipId(null);
+    }
+  }
+
   return (
     <PageShell
       eyebrow="Settings"
@@ -413,6 +579,7 @@ export function StudioSettingsClient({
         >
           <div className="metric-list">
             <MetricTile label="Owner" value={ownerWalletAddress} />
+            <MetricTile label="Role" value={access.role} />
             <MetricTile
               label="Workspace"
               value={settings?.workspace.slug ?? "Unconfigured"}
@@ -424,6 +591,10 @@ export function StudioSettingsClient({
             <MetricTile
               label="Brand count"
               value={settings?.brands.length?.toString() ?? "0"}
+            />
+            <MetricTile
+              label="Members"
+              value={settings?.members.length?.toString() ?? "1"}
             />
           </div>
           <div className="pill-row">
@@ -443,7 +614,17 @@ export function StudioSettingsClient({
           span={8}
           title={settings ? "Update studio identity" : "Create studio identity"}
         >
+          {!canManageWorkspace ? (
+            <div className="status-banner status-banner--info">
+              <strong>Operator read-only</strong>
+              <span>
+                Operators can review workspace identity and brand
+                configuration, but only workspace owners can change it.
+              </span>
+            </div>
+          ) : null}
           <form className="studio-form" onSubmit={handleSaveSettings}>
+            <fieldset disabled={!canManageWorkspace || isSaving}>
             {settings?.brands.length ? (
               <label className="field-stack">
                 <span className="field-label">Editing brand</span>
@@ -732,7 +913,7 @@ export function StudioSettingsClient({
             <div className="studio-action-row">
               <button
                 className="button-action button-action--accent"
-                disabled={isSaving}
+                disabled={!canManageWorkspace || isSaving}
                 type="submit"
               >
                 {isSaving
@@ -742,6 +923,7 @@ export function StudioSettingsClient({
                     : "Create settings"}
               </button>
             </div>
+            </fieldset>
           </form>
         </SurfaceCard>
         <SurfaceCard
@@ -750,7 +932,14 @@ export function StudioSettingsClient({
           span={4}
           title="Create brand"
         >
+          {!canManageWorkspace ? (
+            <div className="status-banner status-banner--info">
+              <strong>Owner action required</strong>
+              <span>Only workspace owners can create additional brands.</span>
+            </div>
+          ) : null}
           <form className="studio-form" onSubmit={handleCreateBrand}>
+            <fieldset disabled={!canManageWorkspace || isCreatingBrand}>
             <label className="field-stack">
               <span className="field-label">Brand name</span>
               <input
@@ -849,12 +1038,109 @@ export function StudioSettingsClient({
             <div className="studio-action-row">
               <button
                 className="button-action"
-                disabled={isCreatingBrand || !settings?.workspace.id}
+                disabled={
+                  !canManageWorkspace ||
+                  isCreatingBrand ||
+                  !settings?.workspace.id
+                }
                 type="submit"
               >
                 {isCreatingBrand ? "Creating…" : "Add brand"}
               </button>
             </div>
+            </fieldset>
+          </form>
+        </SurfaceCard>
+        <SurfaceCard
+          body="Workspace roles now support owner-governed operator access. Operators inherit the same workspace and brand context for day-to-day studio work, while ownership retains the high-risk settings and publication controls."
+          eyebrow="Access"
+          span={4}
+          title="Workspace members"
+        >
+          <div className="pill-row">
+            <Pill>{access.role}</Pill>
+            <Pill>{settings?.members.length ?? 1} total members</Pill>
+          </div>
+          {!canManageMembers ? (
+            <div className="status-banner status-banner--info">
+              <strong>Operator read-only</strong>
+              <span>Only workspace owners can add or remove members.</span>
+            </div>
+          ) : null}
+          {settings?.members.length ? (
+            <div className="collection-item-list">
+              {settings.members.map((member) => (
+                <div className="collection-item-card" key={member.id}>
+                  <div className="collection-item-card__copy">
+                    <strong>{member.userDisplayName ?? member.walletAddress}</strong>
+                    <span>{member.walletAddress}</span>
+                    <span>
+                      {member.role === "owner" ? "Owner" : "Operator"}
+                      {member.addedAt
+                        ? ` · added ${new Intl.DateTimeFormat("en-US", {
+                            dateStyle: "medium",
+                            timeStyle: "short"
+                          }).format(new Date(member.addedAt))}`
+                        : ""}
+                    </span>
+                  </div>
+                  {member.membershipId ? (
+                    <div className="collection-item-card__actions">
+                      <button
+                        className="button-action"
+                        disabled={
+                          !canManageMembers ||
+                          removingMembershipId === member.membershipId
+                        }
+                        onClick={() => {
+                          void handleRemoveMember(member);
+                        }}
+                        type="button"
+                      >
+                        {removingMembershipId === member.membershipId
+                          ? "Removing…"
+                          : "Remove"}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="collection-item-card__actions">
+                      <Pill>Owner</Pill>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="collection-empty-state">
+              No workspace members are configured yet.
+            </div>
+          )}
+          <form className="studio-form" onSubmit={handleAddMember}>
+            <fieldset disabled={!canManageMembers || isAddingMember}>
+              <label className="field-stack">
+                <span className="field-label">Operator wallet</span>
+                <input
+                  className="input-field"
+                  onChange={(event) => {
+                    setMemberState({
+                      walletAddress: event.target.value
+                    });
+                  }}
+                  placeholder="0x..."
+                  required
+                  value={memberState.walletAddress}
+                />
+              </label>
+              <div className="studio-action-row">
+                <button
+                  className="button-action"
+                  disabled={!canManageMembers || isAddingMember}
+                  type="submit"
+                >
+                  {isAddingMember ? "Adding…" : "Add operator"}
+                </button>
+              </div>
+            </fieldset>
           </form>
         </SurfaceCard>
         <SurfaceCard

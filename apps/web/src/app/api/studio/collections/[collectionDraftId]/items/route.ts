@@ -25,7 +25,7 @@ export async function POST(request: Request, context: RouteContext) {
       await createRuntimeCollectionDraftService().addCollectionDraftItem({
         collectionDraftId,
         generatedAssetId: body.generatedAssetId,
-        ownerUserId: session.user.id
+        ownerUserId: session.ownerUserId
       });
 
     return NextResponse.json(result, {

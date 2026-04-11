@@ -1,23 +1,23 @@
-import { getCurrentAuthSession } from "../../../../server/auth/session";
+import { getCurrentStudioAccess } from "../../../../server/studio/access";
 import { createRuntimeSourceAssetService } from "../../../../server/source-assets/runtime";
 
 import { StudioAssetsClient } from "./studio-assets-client";
 
 export default async function StudioAssetsPage() {
-  const session = await getCurrentAuthSession();
+  const access = await getCurrentStudioAccess();
 
-  if (!session) {
+  if (!access) {
     return null;
   }
 
   const result = await createRuntimeSourceAssetService().listSourceAssets({
-    ownerUserId: session.user.id
+    ownerUserId: access.ownerUserId
   });
 
   return (
     <StudioAssetsClient
       initialAssets={result.assets}
-      ownerWalletAddress={session.user.walletAddress}
+      ownerWalletAddress={access.owner.walletAddress}
     />
   );
 }

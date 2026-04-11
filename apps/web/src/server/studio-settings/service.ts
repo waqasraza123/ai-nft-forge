@@ -8,7 +8,11 @@ import {
   studioBrandResponseSchema,
   studioBrandThemeSchema,
   studioSettingsResponseSchema,
-  studioSettingsUpdateRequestSchema
+  studioSettingsUpdateRequestSchema,
+  studioWorkspaceMemberCreateRequestSchema,
+  studioWorkspaceMemberDeleteResponseSchema,
+  studioWorkspaceMemberResponseSchema,
+  type StudioWorkspaceRole
 } from "@ai-nft-forge/shared";
 
 import { StudioSettingsServiceError } from "./error";
@@ -16,6 +20,7 @@ import { StudioSettingsServiceError } from "./error";
 type WorkspaceRecord = {
   id: string;
   name: string;
+  ownerUserId: string;
   slug: string;
   status: "active" | "archived" | "suspended";
 };
@@ -38,6 +43,26 @@ type PublishedCollectionRecord = {
   slug: string;
   title: string;
   updatedAt: Date;
+};
+
+type UserRecord = {
+  avatarUrl: string | null;
+  displayName: string | null;
+  id: string;
+  walletAddress: string;
+};
+
+type WorkspaceMembershipRecord = {
+  createdAt: Date;
+  id: string;
+  role: StudioWorkspaceRole;
+  user: UserRecord;
+  userId: string;
+  workspace: {
+    id: string;
+    ownerUserId: string;
+  };
+  workspaceId: string;
 };
 
 type StudioSettingsRepositorySet = {
@@ -83,6 +108,54 @@ type StudioSettingsRepositorySet = {
       slug: string;
       title: string;
     }): Promise<{ id: string }>;
+  };
+  userRepository: {
+    findById(id: string): Promise<UserRecord | null>;
+    findByWalletAddress(walletAddress: string): Promise<UserRecord | null>;
+    upsertWalletUser(input: {
+      avatarUrl?: string | null;
+      displayName?: string | null;
+      walletAddress: string;
+    }): Promise<UserRecord>;
+  };
+  workspaceMembershipRepository: {
+    create(input: {
+      role?: StudioWorkspaceRole;
+      userId: string;
+      workspaceId: string;
+    }): Promise<{
+      id: string;
+    }>;
+    deleteByIdForWorkspace(input: {
+      id: string;
+      workspaceId: string;
+    }): Promise<{ count: number }>;
+    findByIdWithUserAndWorkspace(input: {
+      id: string;
+    }): Promise<WorkspaceMembershipRecord | null>;
+    findByWorkspaceAndUserId(input: {
+      userId: string;
+      workspaceId: string;
+    }): Promise<{
+      id: string;
+      role: StudioWorkspaceRole;
+      userId: string;
+      workspaceId: string;
+    } | null>;
+    findFirstByUserId(userId: string): Promise<{
+      workspace: {
+        id: string;
+      };
+    } | null>;
+    listByWorkspaceId(workspaceId: string): Promise<
+      Array<{
+        createdAt: Date;
+        id: string;
+        role: StudioWorkspaceRole;
+        user: UserRecord;
+        userId: string;
+      }>
+    >;
   };
   workspaceRepository: {
     create(input: {
@@ -223,14 +296,68 @@ function serializeBrand(input: BrandRecord) {
   };
 }
 
-function serializeStudioSettings(input: {
+function createWorkspaceAccess(role: StudioWorkspaceRole) {
+  return {
+    canManageMembers: role === "owner",
+    canManageOnchain: role === "owner",
+    canManageOpsPolicy: role === "owner",
+    canManageWorkspace: role === "owner",
+    canPublishCollections: role === "owner",
+    role
+  };
+}
+
+function serializeWorkspaceMember(input: {
+  addedAt: Date | null;
+  membershipId: string | null;
+  role: StudioWorkspaceRole;
+  user: UserRecord;
+}) {
+  return {
+    addedAt: input.addedAt?.toISOString() ?? null,
+    id: input.membershipId ?? `owner:${input.user.id}`,
+    membershipId: input.membershipId,
+    role: input.role,
+    userAvatarUrl: input.user.avatarUrl,
+    userDisplayName: input.user.displayName,
+    userId: input.user.id,
+    walletAddress: input.user.walletAddress
+  };
+}
+
+async function serializeStudioSettings(input: {
   brands: BrandRecord[];
+  owner: UserRecord;
+  repositories: Pick<StudioSettingsRepositorySet, "workspaceMembershipRepository">;
+  role: StudioWorkspaceRole;
   workspace: WorkspaceRecord;
 }) {
+  const memberships =
+    await input.repositories.workspaceMembershipRepository.listByWorkspaceId(
+      input.workspace.id
+    );
+
   return studioSettingsResponseSchema.parse({
     settings: {
+      access: createWorkspaceAccess(input.role),
       brand: serializeBrand(input.brands[0]!),
       brands: input.brands.map((brand) => serializeBrand(brand)),
+      members: [
+        serializeWorkspaceMember({
+          addedAt: null,
+          membershipId: null,
+          role: "owner",
+          user: input.owner
+        }),
+        ...memberships.map((membership) =>
+          serializeWorkspaceMember({
+            addedAt: membership.createdAt,
+            membershipId: membership.id,
+            role: membership.role,
+            user: membership.user
+          })
+        )
+      ],
       workspace: {
         id: input.workspace.id,
         name: input.workspace.name,
@@ -244,15 +371,17 @@ function serializeStudioSettings(input: {
 async function loadOwnerStudioSettings(input: {
   ownerUserId: string;
   repositories: StudioSettingsRepositorySet;
+  role: StudioWorkspaceRole;
 }) {
-  const [workspace, brands] = await Promise.all([
+  const [owner, workspace, brands] = await Promise.all([
+    input.repositories.userRepository.findById(input.ownerUserId),
     input.repositories.workspaceRepository.findFirstByOwnerUserId(
       input.ownerUserId
     ),
     input.repositories.brandRepository.listByOwnerUserId(input.ownerUserId)
   ]);
 
-  if (!workspace || brands.length === 0) {
+  if (!workspace || brands.length === 0 || !owner) {
     return studioSettingsResponseSchema.parse({
       settings: null
     });
@@ -260,6 +389,9 @@ async function loadOwnerStudioSettings(input: {
 
   return serializeStudioSettings({
     brands,
+    owner,
+    repositories: input.repositories,
+    role: input.role,
     workspace
   });
 }
@@ -304,7 +436,6 @@ async function assertBrandSlugAvailable(input: {
 
 async function assertPublicationRouteCompatibility(input: {
   nextBrandSlug: string;
-  ownerUserId: string;
   publications: PublishedCollectionRecord[];
   repositories: Pick<StudioSettingsRepositorySet, "publishedCollectionRepository">;
 }) {
@@ -327,14 +458,56 @@ async function assertPublicationRouteCompatibility(input: {
   }
 }
 
+function assertOwnerRole(role: StudioWorkspaceRole) {
+  if (role !== "owner") {
+    throw new StudioSettingsServiceError(
+      "FORBIDDEN",
+      "Only workspace owners can change these settings.",
+      403
+    );
+  }
+}
+
+async function requireOwnerWorkspace(input: {
+  ownerUserId: string;
+  repositories: Pick<
+    StudioSettingsRepositorySet,
+    "userRepository" | "workspaceRepository"
+  >;
+}) {
+  const [owner, workspace] = await Promise.all([
+    input.repositories.userRepository.findById(input.ownerUserId),
+    input.repositories.workspaceRepository.findFirstByOwnerUserId(
+      input.ownerUserId
+    )
+  ]);
+
+  if (!owner || !workspace) {
+    throw new StudioSettingsServiceError(
+      "WORKSPACE_REQUIRED",
+      "Create the workspace profile before managing operators.",
+      409
+    );
+  }
+
+  return {
+    owner,
+    workspace
+  };
+}
+
 export function createStudioSettingsService(
   dependencies: StudioSettingsServiceDependencies
 ) {
   return {
-    async getStudioSettings(input: { ownerUserId: string }) {
+    async getStudioSettings(input: {
+      ownerUserId: string;
+      role?: StudioWorkspaceRole;
+    }) {
       return loadOwnerStudioSettings({
         ownerUserId: input.ownerUserId,
-        repositories: dependencies.repositories
+        repositories: dependencies.repositories,
+        role: input.role ?? "owner"
       });
     },
 
@@ -349,12 +522,15 @@ export function createStudioSettingsService(
       landingHeadline: string;
       ownerUserId: string;
       primaryCtaLabel?: string | null;
+      role?: StudioWorkspaceRole;
       secondaryCtaLabel?: string | null;
       storyBody?: string | null;
       storyHeadline?: string | null;
       themePreset: "editorial_warm" | "gallery_mono" | "midnight_launch";
       wordmark?: string | null;
     }) {
+      assertOwnerRole(input.role ?? "owner");
+
       const parsedInput = studioBrandCreateRequestSchema.parse({
         accentColor: input.accentColor,
         brandName: input.brandName,
@@ -430,6 +606,7 @@ export function createStudioSettingsService(
       landingHeadline: string;
       ownerUserId: string;
       primaryCtaLabel?: string | null;
+      role?: StudioWorkspaceRole;
       secondaryCtaLabel?: string | null;
       storyBody?: string | null;
       storyHeadline?: string | null;
@@ -438,6 +615,8 @@ export function createStudioSettingsService(
       workspaceName: string;
       workspaceSlug: string;
     }) {
+      assertOwnerRole(input.role ?? "owner");
+
       const parsedInput = studioSettingsUpdateRequestSchema.parse({
         accentColor: input.accentColor,
         brandId: input.brandId,
@@ -506,7 +685,6 @@ export function createStudioSettingsService(
         ) {
           await assertPublicationRouteCompatibility({
             nextBrandSlug: parsedInput.brandSlug,
-            ownerUserId: input.ownerUserId,
             publications: publicationsForBrand,
             repositories
           });
@@ -520,62 +698,69 @@ export function createStudioSettingsService(
             slug: parsedInput.workspaceSlug,
             status: "active"
           }));
-        const updatedWorkspace =
-          existingWorkspace?.id === workspace.id
-            ? await repositories.workspaceRepository.updateByIdForOwner({
-                id: existingWorkspace.id,
-                name: parsedInput.workspaceName,
-                ownerUserId: input.ownerUserId,
-                slug: parsedInput.workspaceSlug,
-                status: existingWorkspace.status
-              })
-            : workspace;
-        const themeJson = buildBrandThemeJson({
-          accentColor: parsedInput.accentColor,
-          featuredReleaseLabel: parsedInput.featuredReleaseLabel,
-          heroKicker: parsedInput.heroKicker,
-          landingDescription: parsedInput.landingDescription,
-          landingHeadline: parsedInput.landingHeadline,
-          primaryCtaLabel: parsedInput.primaryCtaLabel,
-          secondaryCtaLabel: parsedInput.secondaryCtaLabel,
-          storyBody: parsedInput.storyBody,
-          storyHeadline: parsedInput.storyHeadline,
-          themePreset: parsedInput.themePreset,
-          wordmark: parsedInput.wordmark
-        });
+
+        const persistedWorkspace =
+          existingWorkspace &&
+          (await repositories.workspaceRepository.updateByIdForOwner({
+            id: existingWorkspace.id,
+            name: parsedInput.workspaceName,
+            ownerUserId: input.ownerUserId,
+            slug: parsedInput.workspaceSlug,
+            status: existingWorkspace.status
+          }));
+
         const brand =
           existingBrand ??
           (await repositories.brandRepository.create({
             customDomain: normalizeOptionalDomain(parsedInput.customDomain),
             name: parsedInput.brandName,
             slug: parsedInput.brandSlug,
-            themeJson,
-            workspaceId: updatedWorkspace.id
+            themeJson: buildBrandThemeJson({
+              accentColor: parsedInput.accentColor,
+              featuredReleaseLabel: parsedInput.featuredReleaseLabel,
+              heroKicker: parsedInput.heroKicker,
+              landingDescription: parsedInput.landingDescription,
+              landingHeadline: parsedInput.landingHeadline,
+              primaryCtaLabel: parsedInput.primaryCtaLabel,
+              secondaryCtaLabel: parsedInput.secondaryCtaLabel,
+              storyBody: parsedInput.storyBody,
+              storyHeadline: parsedInput.storyHeadline,
+              themePreset: parsedInput.themePreset,
+              wordmark: parsedInput.wordmark
+            }),
+            workspaceId: workspace.id
           }));
-        const updatedBrand =
-          existingBrand?.id === brand.id
-            ? await repositories.brandRepository.updateByIdForOwner({
-                customDomain: normalizeOptionalDomain(parsedInput.customDomain),
-                id: existingBrand.id,
-                name: parsedInput.brandName,
-                ownerUserId: input.ownerUserId,
-                slug: parsedInput.brandSlug,
-                themeJson,
-                workspaceId: updatedWorkspace.id
-              })
-            : brand;
 
-        if (
+        const updatedBrand =
           existingBrand &&
-          publicationsForBrand.length > 0 &&
-          (existingBrand.name !== parsedInput.brandName ||
-            existingBrand.slug !== parsedInput.brandSlug)
-        ) {
+          (await repositories.brandRepository.updateByIdForOwner({
+            customDomain: normalizeOptionalDomain(parsedInput.customDomain),
+            id: existingBrand.id,
+            name: parsedInput.brandName,
+            ownerUserId: input.ownerUserId,
+            slug: parsedInput.brandSlug,
+            themeJson: buildBrandThemeJson({
+              accentColor: parsedInput.accentColor,
+              featuredReleaseLabel: parsedInput.featuredReleaseLabel,
+              heroKicker: parsedInput.heroKicker,
+              landingDescription: parsedInput.landingDescription,
+              landingHeadline: parsedInput.landingHeadline,
+              primaryCtaLabel: parsedInput.primaryCtaLabel,
+              secondaryCtaLabel: parsedInput.secondaryCtaLabel,
+              storyBody: parsedInput.storyBody,
+              storyHeadline: parsedInput.storyHeadline,
+              themePreset: parsedInput.themePreset,
+              wordmark: parsedInput.wordmark
+            }),
+            workspaceId: workspace.id
+          }));
+
+        if (existingBrand && updatedBrand && publicationsForBrand.length > 0) {
           await Promise.all(
             publicationsForBrand.map((publication) =>
               repositories.publishedCollectionRepository.updateByIdForOwner({
-                brandName: parsedInput.brandName,
-                brandSlug: parsedInput.brandSlug,
+                brandName: updatedBrand.name,
+                brandSlug: updatedBrand.slug,
                 description: publication.description,
                 id: publication.id,
                 ownerUserId: input.ownerUserId,
@@ -586,15 +771,185 @@ export function createStudioSettingsService(
           );
         }
 
-        const refreshedBrands = existingBrand
-          ? existingBrands.map((brandRecord) =>
-              brandRecord.id === updatedBrand.id ? updatedBrand : brandRecord
-            )
-          : [...existingBrands, updatedBrand];
+        return loadOwnerStudioSettings({
+          ownerUserId: input.ownerUserId,
+          repositories,
+          role: "owner"
+        });
+      });
+    },
 
-        return serializeStudioSettings({
-          brands: refreshedBrands,
-          workspace: updatedWorkspace
+    async addWorkspaceMember(input: {
+      ownerUserId: string;
+      role?: StudioWorkspaceRole;
+      walletAddress: string;
+    }) {
+      assertOwnerRole(input.role ?? "owner");
+
+      const parsedInput = studioWorkspaceMemberCreateRequestSchema.parse({
+        walletAddress: input.walletAddress
+      });
+
+      return dependencies.runTransaction(async (repositories) => {
+        const { owner, workspace } = await requireOwnerWorkspace({
+          ownerUserId: input.ownerUserId,
+          repositories
+        });
+
+        if (
+          owner.walletAddress.toLowerCase() ===
+          parsedInput.walletAddress.toLowerCase()
+        ) {
+          throw new StudioSettingsServiceError(
+            "MEMBER_ALREADY_EXISTS",
+            "Workspace owners already have full access.",
+            409
+          );
+        }
+
+        const existingUser =
+          await repositories.userRepository.findByWalletAddress(
+            parsedInput.walletAddress
+          );
+
+        if (existingUser) {
+          const [ownedWorkspace, existingMembership] = await Promise.all([
+            repositories.workspaceRepository.findFirstByOwnerUserId(
+              existingUser.id
+            ),
+            repositories.workspaceMembershipRepository.findFirstByUserId(
+              existingUser.id
+            )
+          ]);
+
+          if (ownedWorkspace) {
+            throw new StudioSettingsServiceError(
+              "MEMBER_WORKSPACE_CONFLICT",
+              "That wallet already owns another workspace.",
+              409
+            );
+          }
+
+          if (existingMembership) {
+            if (existingMembership.workspace.id === workspace.id) {
+              throw new StudioSettingsServiceError(
+                "MEMBER_ALREADY_EXISTS",
+                "That wallet already has access to this workspace.",
+                409
+              );
+            }
+
+            throw new StudioSettingsServiceError(
+              "MEMBER_WORKSPACE_CONFLICT",
+              "That wallet already belongs to another workspace.",
+              409
+            );
+          }
+        }
+
+        const member =
+          existingUser ??
+          (await repositories.userRepository.upsertWalletUser({
+            walletAddress: parsedInput.walletAddress
+          }));
+        const existingWorkspaceMembership =
+          await repositories.workspaceMembershipRepository.findByWorkspaceAndUserId(
+            {
+              userId: member.id,
+              workspaceId: workspace.id
+            }
+          );
+
+        if (existingWorkspaceMembership) {
+          throw new StudioSettingsServiceError(
+            "MEMBER_ALREADY_EXISTS",
+            "That wallet already has access to this workspace.",
+            409
+          );
+        }
+
+        const createdMembership =
+          await repositories.workspaceMembershipRepository.create({
+            role: "operator",
+            userId: member.id,
+            workspaceId: workspace.id
+          });
+        const persistedMembership =
+          await repositories.workspaceMembershipRepository.findByIdWithUserAndWorkspace(
+            {
+              id: createdMembership.id
+            }
+          );
+
+        if (!persistedMembership) {
+          throw new StudioSettingsServiceError(
+            "INTERNAL_SERVER_ERROR",
+            "Workspace member could not be loaded after creation.",
+            500
+          );
+        }
+
+        return studioWorkspaceMemberResponseSchema.parse({
+          member: serializeWorkspaceMember({
+            addedAt: persistedMembership.createdAt,
+            membershipId: persistedMembership.id,
+            role: persistedMembership.role,
+            user: persistedMembership.user
+          })
+        });
+      });
+    },
+
+    async removeWorkspaceMember(input: {
+      membershipId: string;
+      ownerUserId: string;
+      role?: StudioWorkspaceRole;
+    }) {
+      assertOwnerRole(input.role ?? "owner");
+
+      return dependencies.runTransaction(async (repositories) => {
+        const { workspace } = await requireOwnerWorkspace({
+          ownerUserId: input.ownerUserId,
+          repositories
+        });
+        const membership =
+          await repositories.workspaceMembershipRepository.findByIdWithUserAndWorkspace(
+            {
+              id: input.membershipId
+            }
+          );
+
+        if (
+          !membership ||
+          membership.workspace.id !== workspace.id ||
+          membership.workspace.ownerUserId !== input.ownerUserId
+        ) {
+          throw new StudioSettingsServiceError(
+            "MEMBER_NOT_FOUND",
+            "The requested workspace member was not found.",
+            404
+          );
+        }
+
+        const deleted =
+          await repositories.workspaceMembershipRepository.deleteByIdForWorkspace(
+            {
+              id: input.membershipId,
+              workspaceId: workspace.id
+            }
+          );
+
+        if (deleted.count === 0) {
+          throw new StudioSettingsServiceError(
+            "MEMBER_NOT_FOUND",
+            "The requested workspace member was not found.",
+            404
+          );
+        }
+
+        return studioWorkspaceMemberDeleteResponseSchema.parse({
+          membershipId: input.membershipId,
+          removed: true
         });
       });
     }

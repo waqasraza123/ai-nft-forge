@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     );
     const result =
       await createRuntimeGenerationService().createGenerationRequest({
-        ownerUserId: session.user.id,
+        ownerUserId: session.ownerUserId,
         pipelineKey: body.pipelineKey,
         sourceAssetId: body.sourceAssetId,
         variantCount: body.variantCount

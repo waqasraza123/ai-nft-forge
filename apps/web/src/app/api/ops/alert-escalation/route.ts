@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 
 import {
   createOpsErrorResponse,
-  requireOpsApiSession
+  requireOpsOwnerApiSession
 } from "../../../../server/ops/http";
 import { createRuntimeOpsService } from "../../../../server/ops/runtime-service";
 
@@ -20,11 +20,11 @@ async function parseAlertEscalationPolicyRequest(
 
 export async function POST(request: Request) {
   try {
-    const session = await requireOpsApiSession();
+    const session = await requireOpsOwnerApiSession();
     const payload = await parseAlertEscalationPolicyRequest(request);
     const result = await createRuntimeOpsService().updateAlertEscalationPolicy({
       firstReminderDelayMinutes: payload.firstReminderDelayMinutes,
-      ownerUserId: session.user.id,
+      ownerUserId: session.ownerUserId,
       repeatReminderIntervalMinutes: payload.repeatReminderIntervalMinutes
     });
 
@@ -38,9 +38,9 @@ export async function POST(request: Request) {
 
 export async function DELETE() {
   try {
-    const session = await requireOpsApiSession();
+    const session = await requireOpsOwnerApiSession();
     const result = await createRuntimeOpsService().resetAlertEscalationPolicy({
-      ownerUserId: session.user.id
+      ownerUserId: session.ownerUserId
     });
 
     return NextResponse.json(result, {

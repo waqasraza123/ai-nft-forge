@@ -4,13 +4,13 @@ import { NextResponse } from "next/server";
 import {
   createStudioSettingsErrorResponse,
   parseJsonBody,
-  requireStudioApiSession
+  requireStudioOwnerApiSession
 } from "../../../../../server/studio-settings/http";
 import { createRuntimeStudioSettingsService } from "../../../../../server/studio-settings/runtime";
 
 export async function POST(request: Request) {
   try {
-    const session = await requireStudioApiSession();
+    const session = await requireStudioOwnerApiSession();
     const body = studioBrandCreateRequestSchema.parse(await parseJsonBody(request));
     const result = await createRuntimeStudioSettingsService().createStudioBrand({
       accentColor: body.accentColor,
@@ -19,7 +19,8 @@ export async function POST(request: Request) {
       featuredReleaseLabel: body.featuredReleaseLabel,
       landingDescription: body.landingDescription,
       landingHeadline: body.landingHeadline,
-      ownerUserId: session.user.id,
+      ownerUserId: session.ownerUserId,
+      role: session.role,
       themePreset: body.themePreset,
       ...(body.customDomain !== undefined
         ? {

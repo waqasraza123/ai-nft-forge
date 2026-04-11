@@ -1,6 +1,8 @@
 import {
   createBrandRepository,
   createPublishedCollectionRepository,
+  createUserRepository,
+  createWorkspaceMembershipRepository,
   createWorkspaceRepository,
   getDatabaseClient,
   runDatabaseTransaction,
@@ -13,6 +15,8 @@ function createStudioSettingsRepositories(database: DatabaseExecutor) {
   return {
     brandRepository: createBrandRepository(database),
     publishedCollectionRepository: createPublishedCollectionRepository(database),
+    userRepository: createUserRepository(database),
+    workspaceMembershipRepository: createWorkspaceMembershipRepository(database),
     workspaceRepository: createWorkspaceRepository(database)
   };
 }

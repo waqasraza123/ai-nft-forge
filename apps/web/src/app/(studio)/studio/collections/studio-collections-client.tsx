@@ -25,7 +25,8 @@ import {
   type CollectionDraftSummary,
   type CollectionGeneratedAssetCandidate,
   type CollectionPublicationTarget,
-  type GeneratedAssetModerationStatus
+  type GeneratedAssetModerationStatus,
+  type StudioWorkspaceRole
 } from "@ai-nft-forge/shared";
 import {
   MetricTile,
@@ -47,6 +48,7 @@ type StudioCollectionsClientProps = {
   initialPublicationTarget: CollectionPublicationTarget | null;
   initialPublicationTargets: CollectionPublicationTarget[];
   ownerWalletAddress: string;
+  studioRole: StudioWorkspaceRole;
 };
 
 type NoticeState = {
@@ -155,6 +157,8 @@ function createFallbackErrorMessage(response: Response) {
   switch (response.status) {
     case 401:
       return "An active studio session is required.";
+    case 403:
+      return "Only workspace owners can publish collections or manage onchain state.";
     case 404:
       return "The requested collection draft record was not found.";
     case 409:
@@ -347,7 +351,8 @@ export function StudioCollectionsClient({
   initialGeneratedAssetCandidates,
   initialPublicationTarget,
   initialPublicationTargets,
-  ownerWalletAddress
+  ownerWalletAddress,
+  studioRole
 }: StudioCollectionsClientProps) {
   const walletConnection = useConnection();
   const { connectAsync, connectors } = useConnect();
@@ -450,6 +455,8 @@ export function StudioCollectionsClient({
       getAddress(ownerWalletAddress)
     );
   const connectedWalletChainLabel = getWalletChainLabel(connectedWalletChainId);
+  const canManagePublication = studioRole === "owner";
+  const canManageOnchain = studioRole === "owner";
 
   useEffect(() => {
     if (!selectedDraft && selectedDraftId) {
@@ -1981,6 +1988,16 @@ export function StudioCollectionsClient({
         >
           {selectedDraft ? (
             <form className="studio-form" onSubmit={handlePublishDraft}>
+              {!canManagePublication ? (
+                <div className="status-banner status-banner--info">
+                  <strong>Operator read-only</strong>
+                  <span>
+                    Operators can curate drafts, but only workspace owners can
+                    publish releases, republish routes, or change storefront
+                    merchandising.
+                  </span>
+                </div>
+              ) : null}
               {selectedPublicationTarget ? (
                 <div className="publication-target-card">
                   <div className="publication-target-card__copy">
@@ -2007,6 +2024,7 @@ export function StudioCollectionsClient({
                   <span className="field-label">Publication brand</span>
                   <select
                     className="input-field"
+                    disabled={!canManagePublication}
                     onChange={(event) => {
                       setSelectedPublicationTargetId(event.target.value || null);
                     }}
@@ -2119,6 +2137,7 @@ export function StudioCollectionsClient({
                 <button
                   className="button-action button-action--accent"
                   disabled={
+                    !canManagePublication ||
                     !selectedPublicationTarget ||
                     publishingDraftId === selectedDraft.id ||
                     selectedDraft.status !== "review_ready" ||
@@ -2135,6 +2154,7 @@ export function StudioCollectionsClient({
                 <button
                   className="button-action"
                   disabled={
+                    !canManagePublication ||
                     !selectedDraft.publication ||
                     unpublishingDraftId === selectedDraft.id
                   }
@@ -2233,6 +2253,9 @@ export function StudioCollectionsClient({
                   className="studio-form publication-merchandising-form"
                   onSubmit={handleSavePublicationMerchandising}
                 >
+                  <fieldset
+                    disabled={!canManagePublication || savingPublicationDraftId === selectedDraft.id}
+                  >
                   <label className="field-stack">
                     <span className="field-label">Storefront status</span>
                     <select
@@ -2506,7 +2529,10 @@ export function StudioCollectionsClient({
                   <div className="studio-action-row">
                     <button
                       className="button-action"
-                      disabled={savingPublicationDraftId === selectedDraft.id}
+                      disabled={
+                        !canManagePublication ||
+                        savingPublicationDraftId === selectedDraft.id
+                      }
                       type="submit"
                     >
                       {savingPublicationDraftId === selectedDraft.id
@@ -2514,6 +2540,7 @@ export function StudioCollectionsClient({
                         : "Save merchandising"}
                     </button>
                   </div>
+                  </fieldset>
                 </form>
               ) : null}
             </form>
@@ -2531,6 +2558,16 @@ export function StudioCollectionsClient({
         >
           {selectedDraft?.publication ? (
             <div className="studio-form">
+              {!canManageOnchain ? (
+                <div className="status-banner status-banner--info">
+                  <strong>Owner action required</strong>
+                  <span>
+                    Deployment and mint recording stay owner-only because they
+                    depend on verified owner wallet actions and immutable
+                    published state.
+                  </span>
+                </div>
+              ) : null}
               <div className="pill-row">
                 <Pill>
                   {walletProviderAvailable
@@ -2579,6 +2616,7 @@ export function StudioCollectionsClient({
                   {selectedDraft.publication.mintedTokenCount === 1 ? "" : "s"}
                 </Pill>
               </div>
+              <fieldset disabled={!canManageOnchain}>
               <label className="field-stack">
                 <span className="field-label">Wallet path</span>
                 <select
@@ -2771,6 +2809,7 @@ export function StudioCollectionsClient({
                   </label>
                 ) : null}
               </div>
+              </fieldset>
               {selectedDraft.publication.mints.length > 0 ? (
                 <div className="collection-item-list">
                   {selectedDraft.publication.mints.map((mint) => (

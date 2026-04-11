@@ -20,6 +20,7 @@ import { createPublishedCollectionMintRepository } from "./published-collection-
 import { createPublishedCollectionRepository } from "./published-collection-repository.js";
 import { createSourceAssetRepository } from "./source-asset-repository.js";
 import { createUserRepository } from "./user-repository.js";
+import { createWorkspaceMembershipRepository } from "./workspace-membership-repository.js";
 import { createWorkspaceRepository } from "./workspace-repository.js";
 
 describe("database repositories", () => {
@@ -259,6 +260,183 @@ describe("database repositories", () => {
     expect(ownerBrand?.id).toBe("brand_1");
     expect(slugBrand?.id).toBe("brand_2");
     expect(updatedBrand.slug).toBe("forge-editions");
+  });
+
+  it("delegates workspace membership lookup and persistence through the membership repository", async () => {
+    const database = {
+      workspaceMembership: {
+        create: vi.fn().mockResolvedValue({
+          id: "membership_1",
+          role: "operator",
+          userId: "user_2",
+          workspaceId: "workspace_1"
+        }),
+        deleteMany: vi.fn().mockResolvedValue({
+          count: 1
+        }),
+        findFirst: vi.fn().mockResolvedValue({
+          id: "membership_1",
+          workspace: {
+            id: "workspace_1",
+            name: "Forge Ops",
+            ownerUser: {
+              walletAddress: "0xowner"
+            },
+            ownerUserId: "user_1",
+            slug: "forge-ops",
+            status: "active"
+          }
+        }),
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "membership_1",
+            user: {
+              avatarUrl: null,
+              displayName: "Operator",
+              id: "user_2",
+              walletAddress: "0xoperator"
+            }
+          }
+        ]),
+        findUnique: vi
+          .fn()
+          .mockResolvedValueOnce({
+            id: "membership_1"
+          })
+          .mockResolvedValueOnce({
+            id: "membership_1",
+            user: {
+              avatarUrl: null,
+              displayName: "Operator",
+              id: "user_2",
+              walletAddress: "0xoperator"
+            },
+            workspace: {
+              id: "workspace_1",
+              ownerUserId: "user_1"
+            }
+          })
+      }
+    };
+    const repository = createWorkspaceMembershipRepository(database as never);
+
+    const createdMembership = await repository.create({
+      userId: "user_2",
+      workspaceId: "workspace_1"
+    });
+    const existingMembership = await repository.findByWorkspaceAndUserId({
+      userId: "user_2",
+      workspaceId: "workspace_1"
+    });
+    const memberWorkspace = await repository.findFirstByUserId("user_2");
+    const workspaceMembers = await repository.listByWorkspaceId("workspace_1");
+    const removableMembership = await repository.findByIdWithUserAndWorkspace({
+      id: "membership_1"
+    });
+    await repository.deleteByIdForWorkspace({
+      id: "membership_1",
+      workspaceId: "workspace_1"
+    });
+
+    expect(database.workspaceMembership.create).toHaveBeenCalledWith({
+      data: {
+        role: "operator",
+        userId: "user_2",
+        workspaceId: "workspace_1"
+      }
+    });
+    expect(database.workspaceMembership.findUnique).toHaveBeenNthCalledWith(1, {
+      where: {
+        workspaceId_userId: {
+          userId: "user_2",
+          workspaceId: "workspace_1"
+        }
+      }
+    });
+    expect(database.workspaceMembership.findFirst).toHaveBeenCalledWith({
+      include: {
+        workspace: {
+          select: {
+            id: true,
+            name: true,
+            ownerUser: {
+              select: {
+                walletAddress: true
+              }
+            },
+            ownerUserId: true,
+            slug: true,
+            status: true
+          }
+        }
+      },
+      orderBy: [
+        {
+          createdAt: "asc"
+        },
+        {
+          id: "asc"
+        }
+      ],
+      where: {
+        userId: "user_2"
+      }
+    });
+    expect(database.workspaceMembership.findMany).toHaveBeenCalledWith({
+      include: {
+        user: {
+          select: {
+            avatarUrl: true,
+            displayName: true,
+            id: true,
+            walletAddress: true
+          }
+        }
+      },
+      orderBy: [
+        {
+          createdAt: "asc"
+        },
+        {
+          id: "asc"
+        }
+      ],
+      where: {
+        workspaceId: "workspace_1"
+      }
+    });
+    expect(database.workspaceMembership.findUnique).toHaveBeenNthCalledWith(2, {
+      include: {
+        user: {
+          select: {
+            avatarUrl: true,
+            displayName: true,
+            id: true,
+            walletAddress: true
+          }
+        },
+        workspace: {
+          select: {
+            id: true,
+            ownerUserId: true
+          }
+        }
+      },
+      where: {
+        id: "membership_1"
+      }
+    });
+    expect(database.workspaceMembership.deleteMany).toHaveBeenCalledWith({
+      where: {
+        id: "membership_1",
+        workspaceId: "workspace_1"
+      }
+    });
+    expect(createdMembership.id).toBe("membership_1");
+    expect(existingMembership?.id).toBe("membership_1");
+    expect(memberWorkspace?.id).toBe("membership_1");
+    expect(workspaceMembers[0]?.id).toBe("membership_1");
+    expect(removableMembership?.workspace.ownerUserId).toBe("user_1");
   });
 
   it("delegates active generation lookup through the generation request repository", async () => {

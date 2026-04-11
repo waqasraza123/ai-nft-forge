@@ -428,6 +428,7 @@ export const collectionDraftErrorResponseSchema = z.object({
       "DRAFT_NOT_READY",
       "DRAFT_REORDER_MISMATCH",
       "DRAFT_SLUG_CONFLICT",
+      "FORBIDDEN",
       "GENERATED_ASSET_ALREADY_INCLUDED",
       "GENERATED_ASSET_NOT_FOUND",
       "GENERATED_ASSET_NOT_APPROVED",

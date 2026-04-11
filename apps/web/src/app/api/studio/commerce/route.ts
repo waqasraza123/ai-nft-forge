@@ -11,7 +11,7 @@ export async function GET() {
     const session = await requireStudioApiSession();
     const result =
       await createRuntimeCollectionCommerceService().getOwnerCommerceDashboard({
-        ownerUserId: session.user.id
+        ownerUserId: session.ownerUserId
       });
 
     return NextResponse.json(result);

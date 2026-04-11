@@ -20,7 +20,7 @@ export async function POST(_: Request, context: RouteContext) {
       await createRuntimeCollectionCommerceService().cancelOwnerCheckoutSession(
         {
           checkoutSessionId,
-          ownerUserId: session.user.id
+          ownerUserId: session.ownerUserId
         }
       );
 

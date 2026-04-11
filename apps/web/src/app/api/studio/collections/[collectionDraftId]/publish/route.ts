@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 import {
   createCollectionDraftErrorResponse,
   parseJsonBody,
-  requireStudioApiSession
+  requireStudioOwnerApiSession
 } from "../../../../../../server/collections/http";
 import { CollectionDraftServiceError } from "../../../../../../server/collections/error";
 import { createRuntimeCollectionDraftService } from "../../../../../../server/collections/runtime";
@@ -20,7 +20,7 @@ type RouteContext = {
 
 export async function POST(request: Request, context: RouteContext) {
   try {
-    const session = await requireStudioApiSession();
+    const session = await requireStudioOwnerApiSession();
     const { collectionDraftId } = await context.params;
     const bodyText = await request.text();
     let parsedBody: unknown = {};
@@ -42,7 +42,7 @@ export async function POST(request: Request, context: RouteContext) {
       await createRuntimeCollectionDraftService().publishCollectionDraft({
         brandId: body.brandId ?? null,
         collectionDraftId,
-        ownerUserId: session.user.id
+        ownerUserId: session.ownerUserId
       });
 
     return NextResponse.json(result);
@@ -53,12 +53,12 @@ export async function POST(request: Request, context: RouteContext) {
 
 export async function DELETE(_: Request, context: RouteContext) {
   try {
-    const session = await requireStudioApiSession();
+    const session = await requireStudioOwnerApiSession();
     const { collectionDraftId } = await context.params;
     const result =
       await createRuntimeCollectionDraftService().unpublishCollectionDraft({
         collectionDraftId,
-        ownerUserId: session.user.id
+        ownerUserId: session.ownerUserId
       });
 
     return NextResponse.json(result);
@@ -69,7 +69,7 @@ export async function DELETE(_: Request, context: RouteContext) {
 
 export async function PATCH(request: Request, context: RouteContext) {
   try {
-    const session = await requireStudioApiSession();
+    const session = await requireStudioOwnerApiSession();
     const { collectionDraftId } = await context.params;
     const body = collectionPublicationMerchandisingRequestSchema.parse(
       await parseJsonBody(request)
@@ -83,7 +83,7 @@ export async function PATCH(request: Request, context: RouteContext) {
           heroGeneratedAssetId: body.heroGeneratedAssetId ?? null,
           isFeatured: body.isFeatured,
           launchAt: body.launchAt ?? null,
-          ownerUserId: session.user.id,
+          ownerUserId: session.ownerUserId,
           priceAmountMinor: body.priceAmountMinor ?? null,
           priceCurrency: body.priceCurrency ?? null,
           priceLabel: body.priceLabel ?? null,

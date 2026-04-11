@@ -34,6 +34,20 @@ export async function requireStudioApiSession() {
   return session;
 }
 
+export async function requireStudioOwnerApiSession() {
+  const session = await requireStudioApiSession();
+
+  if (session.role !== "owner") {
+    throw new CollectionDraftServiceError(
+      "FORBIDDEN",
+      "Only workspace owners can publish or manage onchain collection state.",
+      403
+    );
+  }
+
+  return session;
+}
+
 export function createCollectionDraftErrorResponse(
   error: unknown
 ): NextResponse {

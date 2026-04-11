@@ -10,7 +10,7 @@ export async function GET() {
   try {
     const session = await requireStudioApiSession();
     const result = await createRuntimeSourceAssetService().listSourceAssets({
-      ownerUserId: session.user.id
+      ownerUserId: session.ownerUserId
     });
 
     return NextResponse.json(result, {

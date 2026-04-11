@@ -36,13 +36,14 @@ import {
   type OpsAlertScheduleDay
 } from "@ai-nft-forge/shared";
 
-import { getCurrentAuthSession } from "../auth/session";
 import { getGenerationDispatchQueueCounts } from "../generations/queue";
 import { createHealthPayload, type HealthPayload } from "../health";
+import { getCurrentStudioAccess, type StudioAccessRole } from "../studio/access";
 
 type FetchLike = typeof fetch;
 
 type CurrentSession = AuthSessionResponse["session"];
+type CurrentStudioAccess = Awaited<ReturnType<typeof getCurrentStudioAccess>>;
 
 type GenerationBackendHealthState =
   | {
@@ -327,6 +328,10 @@ export type OpsRuntimeSnapshot = {
   };
   operator: {
     activity: OwnerGenerationActivity | null;
+    access: {
+      canManageOpsPolicy: boolean;
+      role: StudioAccessRole;
+    } | null;
     alertEscalation: OpsAlertEscalation | null;
     alertRouting: OpsAlertRouting | null;
     alertSchedule: OpsAlertSchedule | null;
@@ -383,7 +388,7 @@ type LoadOpsRuntimeInput = {
   }) => Promise<OpsQueueSnapshot>;
   now?: () => Date;
   rawEnvironment?: NodeJS.ProcessEnv;
-  resolveSession?: () => Promise<CurrentSession>;
+  resolveSession?: () => Promise<CurrentStudioAccess>;
 };
 
 type EndpointSet = {
@@ -1971,8 +1976,8 @@ export async function loadOpsRuntime(
   const checkedAt = referenceTime.toISOString();
   const endpoints = resolveGenerationBackendEndpoints(rawEnvironment);
   const resolveSession =
-    input.resolveSession ?? (() => getCurrentAuthSession());
-  const [health, readiness, session] = await Promise.all([
+    input.resolveSession ?? (() => getCurrentStudioAccess());
+  const [health, readiness, access] = await Promise.all([
     loadGenerationBackendHealth({
       checkedAt,
       endpoints,
@@ -1997,7 +2002,7 @@ export async function loadOpsRuntime(
   let operatorReconciliation: OpsReconciliationSummary | null = null;
   let operatorReconciliationAutomation: OpsReconciliationAutomation | null = null;
 
-  if (session?.user.id) {
+  if (access?.session.user.id) {
     const queueSnapshotLoader = input.loadQueueSnapshot ?? loadQueueSnapshot;
     const operatorActivityLoader =
       input.loadOperatorActivity ?? loadOwnerGenerationActivity;
@@ -2028,28 +2033,28 @@ export async function loadOpsRuntime(
         rawEnvironment
       }),
       operatorActivityLoader({
-        ownerUserId: session.user.id,
+        ownerUserId: access.ownerUserId,
         rawEnvironment
       }),
       operatorAlertEscalationLoader({
-        ownerUserId: session.user.id,
+        ownerUserId: access.ownerUserId,
         rawEnvironment
       }),
       operatorAlertRoutingLoader({
-        ownerUserId: session.user.id,
+        ownerUserId: access.ownerUserId,
         rawEnvironment
       }),
       operatorAlertScheduleLoader({
-        ownerUserId: session.user.id,
+        ownerUserId: access.ownerUserId,
         rawEnvironment,
         referenceTime
       }),
       operatorHistoryLoader({
-        ownerUserId: session.user.id,
+        ownerUserId: access.ownerUserId,
         rawEnvironment
       }),
       operatorReconciliationLoader({
-        ownerUserId: session.user.id,
+        ownerUserId: access.ownerUserId,
         rawEnvironment,
         referenceTime
       })
@@ -2058,7 +2063,7 @@ export async function loadOpsRuntime(
     operatorObservability = await operatorObservabilityLoader({
       checkedAt,
       generationBackendReadiness: readiness,
-      ownerUserId: session.user.id,
+      ownerUserId: access.ownerUserId,
       queueSnapshot: operatorQueue,
       rawEnvironment,
       referenceTime
@@ -2087,6 +2092,12 @@ export async function loadOpsRuntime(
     },
     operator: {
       activity: operatorActivity,
+      access: access
+        ? {
+            canManageOpsPolicy: access.role === "owner",
+            role: access.role
+          }
+        : null,
       alertEscalation: operatorAlertEscalation,
       alertRouting: operatorAlertRouting,
       alertSchedule: operatorAlertSchedule,
@@ -2096,7 +2107,7 @@ export async function loadOpsRuntime(
       queue: operatorQueue,
       reconciliation: operatorReconciliation,
       reconciliationAutomation: operatorReconciliationAutomation,
-      session
+      session: access?.session ?? null
     },
     web: createHealthPayload()
   };

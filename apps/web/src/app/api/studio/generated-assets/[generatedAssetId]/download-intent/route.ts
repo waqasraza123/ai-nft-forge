@@ -19,7 +19,7 @@ export async function POST(_: Request, context: RouteContext) {
     const result =
       await createRuntimeGeneratedAssetService().createDownloadIntent({
         generatedAssetId,
-        ownerUserId: session.user.id
+        ownerUserId: session.ownerUserId
       });
 
     return NextResponse.json(result);

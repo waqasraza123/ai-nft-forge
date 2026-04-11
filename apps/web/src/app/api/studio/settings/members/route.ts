@@ -1,0 +1,31 @@
+import { studioWorkspaceMemberCreateRequestSchema } from "@ai-nft-forge/shared";
+import { NextResponse } from "next/server";
+
+import {
+  createStudioSettingsErrorResponse,
+  parseJsonBody,
+  requireStudioOwnerApiSession
+} from "../../../../../server/studio-settings/http";
+import { createRuntimeStudioSettingsService } from "../../../../../server/studio-settings/runtime";
+
+export async function POST(request: Request) {
+  try {
+    const session = await requireStudioOwnerApiSession();
+    const body = studioWorkspaceMemberCreateRequestSchema.parse(
+      await parseJsonBody(request)
+    );
+    const result = await createRuntimeStudioSettingsService().addWorkspaceMember(
+      {
+        ownerUserId: session.ownerUserId,
+        role: session.role,
+        walletAddress: body.walletAddress
+      }
+    );
+
+    return NextResponse.json(result, {
+      status: 201
+    });
+  } catch (error) {
+    return createStudioSettingsErrorResponse(error);
+  }
+}

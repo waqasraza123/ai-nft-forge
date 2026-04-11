@@ -19,6 +19,20 @@ export async function requireOpsApiSession() {
   return session;
 }
 
+export async function requireOpsOwnerApiSession() {
+  const session = await requireOpsApiSession();
+
+  if (session.role !== "owner") {
+    throw new OpsServiceError(
+      "FORBIDDEN",
+      "Only workspace owners can manage ops policy.",
+      403
+    );
+  }
+
+  return session;
+}
+
 export function createOpsErrorResponse(error: unknown): NextResponse {
   if (error instanceof OpsServiceError) {
     return NextResponse.json(

@@ -12,6 +12,11 @@ enum WorkspaceStatus {
   archived
 }
 
+enum WorkspaceMembershipRole {
+  owner
+  operator
+}
+
 enum SourceAssetStatus {
   pending_upload
   uploaded
@@ -179,6 +184,7 @@ model User {
   commerceCheckoutSessions CommerceCheckoutSession[] @relation("CommerceCheckoutSessionOwner")
   ownedSourceAssets SourceAsset[] @relation("SourceAssetOwner")
   ownedWorkspaces    Workspace[]         @relation("WorkspaceOwner")
+  workspaceMemberships WorkspaceMembership[]
 
   @@map("users")
 }
@@ -219,10 +225,27 @@ model Workspace {
   createdAt   DateTime        @default(now()) @map("created_at")
   updatedAt   DateTime        @updatedAt @map("updated_at")
   brands      Brand[]
+  memberships WorkspaceMembership[]
   ownerUser   User            @relation("WorkspaceOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
 
   @@index([ownerUserId], map: "workspaces_owner_user_id_idx")
   @@map("workspaces")
+}
+
+model WorkspaceMembership {
+  id          String                  @id @default(cuid()) @map("id")
+  workspaceId String                  @map("workspace_id")
+  userId      String                  @map("user_id")
+  role        WorkspaceMembershipRole @default(operator) @map("role")
+  createdAt   DateTime                @default(now()) @map("created_at")
+  updatedAt   DateTime                @updatedAt @map("updated_at")
+  workspace   Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId], map: "workspace_memberships_workspace_id_user_id_key")
+  @@index([workspaceId], map: "workspace_memberships_workspace_id_idx")
+  @@index([userId], map: "workspace_memberships_user_id_idx")
+  @@map("workspace_memberships")
 }
 
 model Brand {

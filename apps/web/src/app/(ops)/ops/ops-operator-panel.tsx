@@ -706,6 +706,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
   const [runningReconciliation, setRunningReconciliation] = useState(false);
   const [retryingGenerationRequestId, setRetryingGenerationRequestId] =
     useState<string | null>(null);
+  const canManageOpsPolicy = operator.access?.canManageOpsPolicy ?? false;
+  const operatorRoleLabel =
+    operator.access?.role === "owner" ? "Owner" : "Operator";
 
   useEffect(() => {
     setAlertEscalationDraft(createAlertEscalationDraft(operator.alertEscalation));
@@ -1488,6 +1491,15 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
       >
         {alertRouting ? (
           <>
+            {!canManageOpsPolicy ? (
+              <div className="status-banner status-banner--info">
+                <strong>Operator read-only</strong>
+                <span>
+                  {operatorRoleLabel} access can inspect routing state, but only
+                  workspace owners can change delivery policy.
+                </span>
+              </div>
+            ) : null}
             <div className={`status-banner status-banner--${alertRoutingTone}`}>
               <strong>{alertRouting.status}</strong>
               <span>{alertRouting.message}</span>
@@ -1511,6 +1523,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
               <button
                 className="button-action"
                 disabled={
+                  !canManageOpsPolicy ||
                   savingAlertRoutingAction !== null ||
                   alertRouting.policy.webhookMode === "all"
                 }
@@ -1526,6 +1539,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
               <button
                 className="button-action"
                 disabled={
+                  !canManageOpsPolicy ||
                   savingAlertRoutingAction !== null ||
                   alertRouting.policy.webhookMode === "critical_only"
                 }
@@ -1541,6 +1555,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
               <button
                 className="button-action"
                 disabled={
+                  !canManageOpsPolicy ||
                   savingAlertRoutingAction !== null ||
                   alertRouting.policy.webhookMode === "disabled"
                 }
@@ -1556,7 +1571,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
               {alertRouting.policy.source === "owner_override" ? (
                 <button
                   className="button-action"
-                  disabled={savingAlertRoutingAction !== null}
+                  disabled={
+                    !canManageOpsPolicy || savingAlertRoutingAction !== null
+                  }
                   onClick={() => {
                     void resetAlertRoutingPolicy();
                   }}
@@ -1582,6 +1599,15 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
       >
         {alertSchedule ? (
           <>
+            {!canManageOpsPolicy ? (
+              <div className="status-banner status-banner--info">
+                <strong>Operator read-only</strong>
+                <span>
+                  {operatorRoleLabel} access can inspect schedule state, but
+                  only workspace owners can change alert hours.
+                </span>
+              </div>
+            ) : null}
             <div className={`status-banner status-banner--${alertScheduleTone}`}>
               <strong>{alertSchedule.status}</strong>
               <span>{alertSchedule.message}</span>
@@ -1621,7 +1647,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                 <span>Timezone</span>
                 <input
                   className="studio-input"
-                  disabled={savingAlertScheduleAction !== null}
+                  disabled={
+                    !canManageOpsPolicy || savingAlertScheduleAction !== null
+                  }
                   onChange={(event) => {
                     setAlertScheduleDraft((currentDraft) => ({
                       ...currentDraft,
@@ -1637,6 +1665,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                 <input
                   className="studio-input"
                   disabled={
+                    !canManageOpsPolicy ||
                     savingAlertScheduleAction !== null ||
                     alertScheduleDraft.allDay
                   }
@@ -1656,6 +1685,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                 <input
                   className="studio-input"
                   disabled={
+                    !canManageOpsPolicy ||
                     savingAlertScheduleAction !== null ||
                     alertScheduleDraft.allDay
                   }
@@ -1673,7 +1703,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
               <label className="studio-checkbox">
                 <input
                   checked={alertScheduleDraft.allDay}
-                  disabled={savingAlertScheduleAction !== null}
+                  disabled={
+                    !canManageOpsPolicy || savingAlertScheduleAction !== null
+                  }
                   onChange={(event) => {
                     setAlertScheduleDraft((currentDraft) => ({
                       ...currentDraft,
@@ -1694,7 +1726,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                   <button
                     aria-pressed={selected}
                     className="button-action"
-                    disabled={savingAlertScheduleAction !== null}
+                    disabled={
+                      !canManageOpsPolicy || savingAlertScheduleAction !== null
+                    }
                     key={activeDay}
                     onClick={() => {
                       setAlertScheduleDraft((currentDraft) => ({
@@ -1721,7 +1755,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
             <div className="studio-action-row">
               <button
                 className="button-action"
-                disabled={savingAlertScheduleAction !== null}
+                disabled={
+                  !canManageOpsPolicy || savingAlertScheduleAction !== null
+                }
                 onClick={() => {
                   void updateAlertSchedulePolicy();
                 }}
@@ -1734,7 +1770,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
               {alertSchedule.policy.source === "owner_override" ? (
                 <button
                   className="button-action"
-                  disabled={savingAlertScheduleAction !== null}
+                  disabled={
+                    !canManageOpsPolicy || savingAlertScheduleAction !== null
+                  }
                   onClick={() => {
                     void resetAlertSchedulePolicy();
                   }}
@@ -1760,6 +1798,15 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
       >
         {alertEscalation ? (
           <>
+            {!canManageOpsPolicy ? (
+              <div className="status-banner status-banner--info">
+                <strong>Operator read-only</strong>
+                <span>
+                  {operatorRoleLabel} access can inspect escalation state, but
+                  only workspace owners can change reminder policy.
+                </span>
+              </div>
+            ) : null}
             <div
               className={`status-banner status-banner--${alertEscalationTone}`}
             >
@@ -1801,7 +1848,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                 <span>First reminder (minutes)</span>
                 <input
                   className="studio-input"
-                  disabled={savingAlertEscalationAction !== null}
+                  disabled={
+                    !canManageOpsPolicy ||
+                    savingAlertEscalationAction !== null
+                  }
                   min={1}
                   onChange={(event) => {
                     setAlertEscalationDraft((currentDraft) => ({
@@ -1818,7 +1868,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                 <span>Repeat interval (minutes)</span>
                 <input
                   className="studio-input"
-                  disabled={savingAlertEscalationAction !== null}
+                  disabled={
+                    !canManageOpsPolicy ||
+                    savingAlertEscalationAction !== null
+                  }
                   min={1}
                   onChange={(event) => {
                     setAlertEscalationDraft((currentDraft) => ({
@@ -1835,7 +1888,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
             <div className="studio-action-row">
               <button
                 className="button-action"
-                disabled={savingAlertEscalationAction !== null}
+                disabled={
+                  !canManageOpsPolicy ||
+                  savingAlertEscalationAction !== null
+                }
                 onClick={() => {
                   void updateAlertEscalationPolicy();
                 }}
@@ -1848,7 +1904,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
               {alertEscalation.policy.source === "owner_override" ? (
                 <button
                   className="button-action"
-                  disabled={savingAlertEscalationAction !== null}
+                  disabled={
+                    !canManageOpsPolicy ||
+                    savingAlertEscalationAction !== null
+                  }
                   onClick={() => {
                     void resetAlertEscalationPolicy();
                   }}

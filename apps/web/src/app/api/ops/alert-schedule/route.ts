@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 
 import {
   createOpsErrorResponse,
-  requireOpsApiSession
+  requireOpsOwnerApiSession
 } from "../../../../server/ops/http";
 import { createRuntimeOpsService } from "../../../../server/ops/runtime-service";
 
@@ -20,12 +20,12 @@ async function parseAlertSchedulePolicyRequest(
 
 export async function POST(request: Request) {
   try {
-    const session = await requireOpsApiSession();
+    const session = await requireOpsOwnerApiSession();
     const payload = await parseAlertSchedulePolicyRequest(request);
     const result = await createRuntimeOpsService().updateAlertSchedulePolicy({
       activeDays: payload.activeDays,
       endMinuteOfDay: payload.endMinuteOfDay,
-      ownerUserId: session.user.id,
+      ownerUserId: session.ownerUserId,
       startMinuteOfDay: payload.startMinuteOfDay,
       timezone: payload.timezone
     });
@@ -40,9 +40,9 @@ export async function POST(request: Request) {
 
 export async function DELETE() {
   try {
-    const session = await requireOpsApiSession();
+    const session = await requireOpsOwnerApiSession();
     const result = await createRuntimeOpsService().resetAlertSchedulePolicy({
-      ownerUserId: session.user.id
+      ownerUserId: session.ownerUserId
     });
 
     return NextResponse.json(result, {

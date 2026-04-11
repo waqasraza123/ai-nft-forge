@@ -21,7 +21,7 @@ export async function POST(
     const { issueId } = await context.params;
     const result = await createRuntimeOpsService().repairReconciliationIssue({
       issueId,
-      ownerUserId: session.user.id
+      ownerUserId: session.ownerUserId
     });
 
     return NextResponse.json(result, {

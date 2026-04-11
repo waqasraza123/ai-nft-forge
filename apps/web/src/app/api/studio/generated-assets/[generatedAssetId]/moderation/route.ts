@@ -23,7 +23,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     const result = await createRuntimeGeneratedAssetService().updateModeration({
       generatedAssetId,
       moderationStatus: body.moderationStatus,
-      ownerUserId: session.user.id
+      ownerUserId: session.ownerUserId
     });
 
     return NextResponse.json(result);

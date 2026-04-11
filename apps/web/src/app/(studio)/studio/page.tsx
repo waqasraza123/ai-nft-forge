@@ -2,10 +2,10 @@ import Link from "next/link";
 
 import { PageShell, Pill, SurfaceCard, SurfaceGrid } from "@ai-nft-forge/ui";
 
-import { getCurrentAuthSession } from "../../../server/auth/session";
+import { getCurrentStudioAccess } from "../../../server/studio/access";
 
 export default async function StudioPage() {
-  const session = await getCurrentAuthSession();
+  const access = await getCurrentStudioAccess();
 
   return (
     <PageShell
@@ -40,7 +40,8 @@ export default async function StudioPage() {
           title="Protected source asset intake"
         >
           <div className="pill-row">
-            <Pill>{session?.user.walletAddress ?? "Session required"}</Pill>
+            <Pill>{access?.owner.walletAddress ?? "Session required"}</Pill>
+            <Pill>{access?.role === "owner" ? "Owner access" : "Operator access"}</Pill>
             <Link className="inline-link" href="/studio/assets">
               /studio/assets
             </Link>

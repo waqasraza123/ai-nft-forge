@@ -21,7 +21,7 @@ export async function POST(
     const { alertStateId } = await context.params;
     const result = await createRuntimeOpsService().acknowledgeAlert({
       alertStateId,
-      ownerUserId: session.user.id
+      ownerUserId: session.ownerUserId
     });
 
     return NextResponse.json(result, {

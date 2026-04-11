@@ -5,6 +5,7 @@ import {
   collectionBrandSlugSchema,
   collectionDraftSlugSchema
 } from "./collections.js";
+import { walletAddressSchema } from "./auth.js";
 
 export const studioWorkspaceNameSchema = z.string().trim().min(1).max(120);
 export const studioWorkspaceSlugSchema = collectionDraftSlugSchema;
@@ -93,9 +94,33 @@ export const studioBrandSummarySchema = z.object({
   wordmark: studioBrandWordmarkSchema.nullable()
 });
 
+export const studioWorkspaceRoleSchema = z.enum(["owner", "operator"]);
+
+export const studioWorkspaceAccessSchema = z.object({
+  canManageMembers: z.boolean(),
+  canManageOnchain: z.boolean(),
+  canManageOpsPolicy: z.boolean(),
+  canManageWorkspace: z.boolean(),
+  canPublishCollections: z.boolean(),
+  role: studioWorkspaceRoleSchema
+});
+
+export const studioWorkspaceMemberSummarySchema = z.object({
+  addedAt: z.string().datetime().nullable(),
+  id: z.string().min(1),
+  membershipId: z.string().min(1).nullable(),
+  role: studioWorkspaceRoleSchema,
+  userAvatarUrl: z.string().url().nullable(),
+  userDisplayName: z.string().nullable(),
+  userId: z.string().min(1),
+  walletAddress: walletAddressSchema
+});
+
 export const studioSettingsSummarySchema = z.object({
+  access: studioWorkspaceAccessSchema,
   brand: studioBrandSummarySchema,
   brands: z.array(studioBrandSummarySchema),
+  members: z.array(studioWorkspaceMemberSummarySchema),
   workspace: studioWorkspaceSummarySchema
 });
 
@@ -146,14 +171,31 @@ export const studioBrandResponseSchema = z.object({
   brand: studioBrandSummarySchema
 });
 
+export const studioWorkspaceMemberCreateRequestSchema = z.object({
+  walletAddress: walletAddressSchema
+});
+
+export const studioWorkspaceMemberResponseSchema = z.object({
+  member: studioWorkspaceMemberSummarySchema
+});
+
+export const studioWorkspaceMemberDeleteResponseSchema = z.object({
+  membershipId: z.string().min(1),
+  removed: z.boolean()
+});
+
 export const studioSettingsErrorResponseSchema = z.object({
   error: z.object({
     code: z.enum([
       "BRAND_NOT_FOUND",
       "BRAND_PUBLICATION_CONFLICT",
       "BRAND_SLUG_CONFLICT",
+      "FORBIDDEN",
       "INVALID_REQUEST",
       "INTERNAL_SERVER_ERROR",
+      "MEMBER_ALREADY_EXISTS",
+      "MEMBER_NOT_FOUND",
+      "MEMBER_WORKSPACE_CONFLICT",
       "SESSION_REQUIRED",
       "WORKSPACE_REQUIRED",
       "WORKSPACE_SLUG_CONFLICT"
@@ -181,6 +223,20 @@ export type StudioSettingsSummary = z.infer<typeof studioSettingsSummarySchema>;
 export type StudioSettingsUpdateRequest = z.infer<
   typeof studioSettingsUpdateRequestSchema
 >;
+export type StudioWorkspaceAccess = z.infer<typeof studioWorkspaceAccessSchema>;
+export type StudioWorkspaceMemberCreateRequest = z.infer<
+  typeof studioWorkspaceMemberCreateRequestSchema
+>;
+export type StudioWorkspaceMemberDeleteResponse = z.infer<
+  typeof studioWorkspaceMemberDeleteResponseSchema
+>;
+export type StudioWorkspaceMemberResponse = z.infer<
+  typeof studioWorkspaceMemberResponseSchema
+>;
+export type StudioWorkspaceMemberSummary = z.infer<
+  typeof studioWorkspaceMemberSummarySchema
+>;
+export type StudioWorkspaceRole = z.infer<typeof studioWorkspaceRoleSchema>;
 export type StudioWorkspaceSummary = z.infer<
   typeof studioWorkspaceSummarySchema
 >;

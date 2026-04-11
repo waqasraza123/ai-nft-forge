@@ -18,7 +18,7 @@ export async function POST(_: Request, context: RouteContext) {
     const { assetId } = await context.params;
     const result = await createRuntimeSourceAssetService().completeUpload({
       assetId,
-      ownerUserId: session.user.id
+      ownerUserId: session.ownerUserId
     });
 
     return NextResponse.json(result);

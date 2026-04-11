@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import {
   createCollectionDraftErrorResponse,
   parseJsonBody,
-  requireStudioApiSession
+  requireStudioOwnerApiSession
 } from "../../../../../../../server/collections/http";
 import { createRuntimeCollectionDraftService } from "../../../../../../../server/collections/runtime";
 
@@ -16,7 +16,7 @@ type RouteContext = {
 
 export async function POST(request: Request, context: RouteContext) {
   try {
-    const session = await requireStudioApiSession();
+    const session = await requireStudioOwnerApiSession();
     const { collectionDraftId } = await context.params;
     const body = collectionContractDeploymentRecordRequestSchema.parse(
       await parseJsonBody(request)
@@ -28,8 +28,8 @@ export async function POST(request: Request, context: RouteContext) {
           collectionDraftId,
           deployTxHash: body.deployTxHash,
           origin: new URL(request.url).origin,
-          ownerUserId: session.user.id,
-          ownerWalletAddress: session.user.walletAddress
+          ownerUserId: session.ownerUserId,
+          ownerWalletAddress: session.owner.walletAddress
         }
       );
 

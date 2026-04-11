@@ -183,7 +183,13 @@ export {
   studioSettingsResponseSchema,
   studioSettingsSummarySchema,
   studioSettingsUpdateRequestSchema,
+  studioWorkspaceAccessSchema,
+  studioWorkspaceMemberCreateRequestSchema,
+  studioWorkspaceMemberDeleteResponseSchema,
+  studioWorkspaceMemberResponseSchema,
+  studioWorkspaceMemberSummarySchema,
   studioWorkspaceNameSchema,
+  studioWorkspaceRoleSchema,
   studioWorkspaceSlugSchema,
   studioWorkspaceSummarySchema,
   type StudioBrandCreateRequest,
@@ -195,6 +201,12 @@ export {
   type StudioSettingsResponse,
   type StudioSettingsSummary,
   type StudioSettingsUpdateRequest,
+  type StudioWorkspaceAccess,
+  type StudioWorkspaceMemberCreateRequest,
+  type StudioWorkspaceMemberDeleteResponse,
+  type StudioWorkspaceMemberResponse,
+  type StudioWorkspaceMemberSummary,
+  type StudioWorkspaceRole,
   type StudioWorkspaceSummary
 } from "./studio-settings.js";
 export {

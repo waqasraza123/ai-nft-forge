@@ -6,6 +6,16 @@ import { createStudioSettingsService } from "./service";
 function createStudioSettingsHarness() {
   let workspaceIndex = 0;
   let brandIndex = 0;
+  let membershipIndex = 0;
+  const users = new Map<
+    string,
+    {
+      avatarUrl: string | null;
+      displayName: string | null;
+      id: string;
+      walletAddress: string;
+    }
+  >();
   const workspaces = new Map<
     string,
     {
@@ -41,6 +51,42 @@ function createStudioSettingsHarness() {
       updatedAt: Date;
     }
   >();
+  const memberships = new Map<
+    string,
+    {
+      createdAt: Date;
+      id: string;
+      role: "operator";
+      userId: string;
+      workspaceId: string;
+    }
+  >();
+
+  function ensureUser(input: {
+    avatarUrl?: string | null;
+    displayName?: string | null;
+    id: string;
+    walletAddress?: string;
+  }) {
+    const existingUser = users.get(input.id);
+
+    if (existingUser) {
+      return existingUser;
+    }
+
+    const user = {
+      avatarUrl: input.avatarUrl ?? null,
+      displayName: input.displayName ?? null,
+      id: input.id,
+      walletAddress:
+        input.walletAddress ??
+        `0x${String(users.size + 1).padStart(40, "1").slice(-40)}`
+    };
+
+    users.set(user.id, user);
+
+    return user;
+  }
 
   const repositories = {
     brandRepository: {
@@ -199,6 +245,174 @@ function createStudioSettingsHarness() {
         };
       }
     },
+    userRepository: {
+      async findById(id: string) {
+        return users.get(id) ?? null;
+      },
+
+      async findByWalletAddress(walletAddress: string) {
+        return (
+          [...users.values()].find(
+            (user) =>
+              user.walletAddress.toLowerCase() === walletAddress.toLowerCase()
+          ) ?? null
+        );
+      },
+
+      async upsertWalletUser(input: {
+        avatarUrl?: string | null;
+        displayName?: string | null;
+        walletAddress: string;
+      }) {
+        const existingUser =
+          [...users.values()].find(
+            (user) =>
+              user.walletAddress.toLowerCase() ===
+              input.walletAddress.toLowerCase()
+          ) ?? null;
+
+        if (existingUser) {
+          const updatedUser = {
+            ...existingUser,
+            avatarUrl:
+              input.avatarUrl === undefined
+                ? existingUser.avatarUrl
+                : input.avatarUrl,
+            displayName:
+              input.displayName === undefined
+                ? existingUser.displayName
+                : input.displayName
+          };
+
+          users.set(updatedUser.id, updatedUser);
+
+          return updatedUser;
+        }
+
+        const user = ensureUser({
+          id: `user_wallet_${users.size + 1}`,
+          ...(input.avatarUrl !== undefined
+            ? {
+                avatarUrl: input.avatarUrl
+              }
+            : {}),
+          ...(input.displayName !== undefined
+            ? {
+                displayName: input.displayName
+              }
+            : {}),
+          walletAddress: input.walletAddress
+        });
+
+        return user;
+      }
+    },
+    workspaceMembershipRepository: {
+      async create(input: {
+        role?: "operator" | "owner";
+        userId: string;
+        workspaceId: string;
+      }) {
+        membershipIndex += 1;
+        const membership = {
+          createdAt: new Date(`2026-04-09T00:00:${String(membershipIndex).padStart(2, "0")}.000Z`),
+          id: `membership_${membershipIndex}`,
+          role: (input.role ?? "operator") as "operator",
+          userId: input.userId,
+          workspaceId: input.workspaceId
+        };
+
+        memberships.set(membership.id, membership);
+
+        return membership;
+      },
+
+      async deleteByIdForWorkspace(input: { id: string; workspaceId: string }) {
+        const membership = memberships.get(input.id);
+
+        if (!membership || membership.workspaceId !== input.workspaceId) {
+          return {
+            count: 0
+          };
+        }
+
+        memberships.delete(input.id);
+
+        return {
+          count: 1
+        };
+      },
+
+      async findByIdWithUserAndWorkspace(input: { id: string }) {
+        const membership = memberships.get(input.id);
+
+        if (!membership) {
+          return null;
+        }
+
+        const user = users.get(membership.userId);
+        const workspace = workspaces.get(membership.workspaceId);
+
+        if (!user || !workspace) {
+          return null;
+        }
+
+        return {
+          ...membership,
+          user,
+          workspace: {
+            id: workspace.id,
+            ownerUserId: workspace.ownerUserId
+          }
+        };
+      },
+
+      async findByWorkspaceAndUserId(input: {
+        userId: string;
+        workspaceId: string;
+      }) {
+        return (
+          [...memberships.values()].find(
+            (membership) =>
+              membership.userId === input.userId &&
+              membership.workspaceId === input.workspaceId
+          ) ?? null
+        );
+      },
+
+      async findFirstByUserId(userId: string) {
+        const membership =
+          [...memberships.values()].find(
+            (currentMembership) => currentMembership.userId === userId
+          ) ?? null;
+
+        if (!membership) {
+          return null;
+        }
+
+        const workspace = workspaces.get(membership.workspaceId);
+
+        return workspace
+          ? {
+              workspace: {
+                id: workspace.id
+              }
+            }
+          : null;
+      },
+
+      async listByWorkspaceId(workspaceId: string) {
+        return [...memberships.values()]
+          .filter((membership) => membership.workspaceId === workspaceId)
+          .map((membership) => ({
+            createdAt: membership.createdAt,
+            id: membership.id,
+            role: membership.role,
+            user: users.get(membership.userId)!,
+            userId: membership.userId
+          }));
+      }
+    },
     workspaceRepository: {
       async create(input: {
         name: string;
@@ -206,6 +420,9 @@ function createStudioSettingsHarness() {
         slug: string;
         status?: "active" | "archived" | "suspended";
       }) {
+        ensureUser({
+          id: input.ownerUserId
+        });
         workspaceIndex += 1;
         const workspace = {
           id: `workspace_${workspaceIndex}`,
@@ -274,8 +491,10 @@ function createStudioSettingsHarness() {
 
   return {
     brands,
+    memberships,
     publications,
     service,
+    users,
     workspaces
   };
 }
@@ -547,6 +766,12 @@ describe("createStudioSettingsService", () => {
   it("returns default storefront copy for older brand themes that only stored an accent color", async () => {
     const harness = createStudioSettingsHarness();
 
+    harness.users.set("user_legacy", {
+      avatarUrl: null,
+      displayName: "Legacy Owner",
+      id: "user_legacy",
+      walletAddress: "0x1111111111111111111111111111111111111119"
+    });
     harness.workspaces.set("workspace_legacy", {
       id: "workspace_legacy",
       name: "Legacy Operations",
@@ -578,5 +803,107 @@ describe("createStudioSettingsService", () => {
     );
     expect(result.settings?.brand.themePreset).toBe("editorial_warm");
     expect(result.settings?.brand.wordmark).toBeNull();
+  });
+
+  it("adds operator members to the owner workspace and includes access metadata", async () => {
+    const harness = createStudioSettingsHarness();
+
+    await harness.service.updateStudioSettings({
+      accentColor: "#8b5e34",
+      brandName: "Forge Editions",
+      brandSlug: "forge-editions",
+      featuredReleaseLabel: "Hero drop",
+      landingDescription: "Owner storefront copy.",
+      landingHeadline: "Curated collectible releases",
+      ownerUserId: "user_1",
+      themePreset: "editorial_warm",
+      workspaceName: "Forge Operations",
+      workspaceSlug: "forge-operations"
+    });
+
+    const addedMember = await harness.service.addWorkspaceMember({
+      ownerUserId: "user_1",
+      walletAddress: "0x2222222222222222222222222222222222222222"
+    });
+    const settings = await harness.service.getStudioSettings({
+      ownerUserId: "user_1",
+      role: "operator"
+    });
+
+    expect(addedMember.member.role).toBe("operator");
+    expect(settings.settings?.access.role).toBe("operator");
+    expect(settings.settings?.access.canManageWorkspace).toBe(false);
+    expect(settings.settings?.members).toHaveLength(2);
+  });
+
+  it("rejects adding wallets that already belong to another workspace", async () => {
+    const harness = createStudioSettingsHarness();
+
+    await harness.service.updateStudioSettings({
+      accentColor: "#8b5e34",
+      brandName: "Forge Editions",
+      brandSlug: "forge-editions",
+      featuredReleaseLabel: "Hero drop",
+      landingDescription: "Owner storefront copy.",
+      landingHeadline: "Curated collectible releases",
+      ownerUserId: "user_1",
+      themePreset: "editorial_warm",
+      workspaceName: "Forge Operations",
+      workspaceSlug: "forge-operations"
+    });
+    await harness.service.updateStudioSettings({
+      accentColor: "#244f3c",
+      brandName: "North Editions",
+      brandSlug: "north-editions",
+      featuredReleaseLabel: "North feature",
+      landingDescription: "North storefront copy.",
+      landingHeadline: "North releases",
+      ownerUserId: "user_2",
+      themePreset: "gallery_mono",
+      workspaceName: "North Operations",
+      workspaceSlug: "north-operations"
+    });
+
+    await expect(
+      harness.service.addWorkspaceMember({
+        ownerUserId: "user_1",
+        walletAddress: harness.users.get("user_2")!.walletAddress
+      })
+    ).rejects.toEqual(
+      new StudioSettingsServiceError(
+        "MEMBER_WORKSPACE_CONFLICT",
+        "That wallet already owns another workspace.",
+        409
+      )
+    );
+  });
+
+  it("removes workspace operators", async () => {
+    const harness = createStudioSettingsHarness();
+
+    await harness.service.updateStudioSettings({
+      accentColor: "#8b5e34",
+      brandName: "Forge Editions",
+      brandSlug: "forge-editions",
+      featuredReleaseLabel: "Hero drop",
+      landingDescription: "Owner storefront copy.",
+      landingHeadline: "Curated collectible releases",
+      ownerUserId: "user_1",
+      themePreset: "editorial_warm",
+      workspaceName: "Forge Operations",
+      workspaceSlug: "forge-operations"
+    });
+    const addedMember = await harness.service.addWorkspaceMember({
+      ownerUserId: "user_1",
+      walletAddress: "0x3333333333333333333333333333333333333333"
+    });
+
+    const result = await harness.service.removeWorkspaceMember({
+      membershipId: addedMember.member.membershipId!,
+      ownerUserId: "user_1"
+    });
+
+    expect(result.removed).toBe(true);
+    expect(harness.memberships.size).toBe(0);
   });
 });
