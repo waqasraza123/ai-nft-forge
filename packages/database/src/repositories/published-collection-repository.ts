@@ -251,6 +251,28 @@ export function createPublishedCollectionRepository(
       });
     },
 
+    listByWorkspaceIds(workspaceIds: string[]) {
+      if (workspaceIds.length === 0) {
+        return Promise.resolve([]);
+      }
+
+      return database.publishedCollection.findMany({
+        orderBy: [
+          {
+            updatedAt: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        where: {
+          workspaceId: {
+            in: workspaceIds
+          }
+        }
+      });
+    },
+
     findByBrandSlugAndCollectionSlug(input: {
       brandSlug: string;
       slug: string;

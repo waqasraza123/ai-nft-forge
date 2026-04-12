@@ -83,6 +83,17 @@ type StudioAccessRepositorySet = {
   };
 };
 
+export function findAccessibleWorkspaceById(input: {
+  access: Pick<StudioAccessContext, "availableWorkspaces">;
+  workspaceId: string;
+}) {
+  return (
+    input.access.availableWorkspaces.find(
+      (workspace) => workspace.id === input.workspaceId
+    ) ?? null
+  );
+}
+
 function createStudioAccessRepositories(database: DatabaseExecutor) {
   return {
     workspaceMembershipRepository:
@@ -98,9 +109,7 @@ export function createStudioAccessService(
     session: AuthenticatedSession;
   }): Promise<StudioWorkspaceScopeSummary[]> {
     const [ownedWorkspaces, memberships] = await Promise.all([
-      repositories.workspaceRepository.listByOwnerUserId(
-        input.session.user.id
-      ),
+      repositories.workspaceRepository.listByOwnerUserId(input.session.user.id),
       repositories.workspaceMembershipRepository.listByUserId(
         input.session.user.id
       )

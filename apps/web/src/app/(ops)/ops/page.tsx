@@ -50,6 +50,9 @@ export default async function OpsPage() {
           <Link className="action-link" href="/ops/audit">
             Audit activity
           </Link>
+          <Link className="action-link" href="/ops/fleet">
+            Fleet triage
+          </Link>
           <Link className="action-link" href="/ops/workspaces">
             Workspace directory
           </Link>

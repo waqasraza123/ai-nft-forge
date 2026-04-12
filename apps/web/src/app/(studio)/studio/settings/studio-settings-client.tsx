@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   startTransition,
   type FormEvent,
@@ -17,6 +18,7 @@ import {
   defaultStudioFeaturedReleaseLabel,
   studioBrandResponseSchema,
   studioSettingsResponseSchema,
+  studioWorkspaceCreateResponseSchema,
   studioWorkspaceInvitationDeleteResponseSchema,
   studioWorkspaceInvitationResponseSchema,
   studioWorkspaceMemberDeleteResponseSchema,
@@ -79,6 +81,15 @@ type NewBrandState = {
   brandName: string;
   brandSlug: string;
   themePreset: "editorial_warm" | "gallery_mono" | "midnight_launch";
+};
+
+type WorkspaceCreateState = {
+  accentColor: string;
+  brandName: string;
+  brandSlug: string;
+  themePreset: "editorial_warm" | "gallery_mono" | "midnight_launch";
+  workspaceName: string;
+  workspaceSlug: string;
 };
 
 type MemberState = {
@@ -198,6 +209,17 @@ function createInitialNewBrandState(): NewBrandState {
   };
 }
 
+function createInitialWorkspaceCreateState(): WorkspaceCreateState {
+  return {
+    accentColor: defaultStudioBrandAccentColor,
+    brandName: "",
+    brandSlug: "",
+    themePreset: defaultStudioBrandThemePreset,
+    workspaceName: "",
+    workspaceSlug: ""
+  };
+}
+
 function createInitialMemberState(): MemberState {
   return {
     walletAddress: ""
@@ -226,6 +248,7 @@ export function StudioSettingsClient({
   ownerWalletAddress,
   workspaceDirectoryEntries
 }: StudioSettingsClientProps) {
+  const router = useRouter();
   const [settings, setSettings] = useState(initialSettings);
   const [selectedBrandId, setSelectedBrandId] = useState<string | null>(
     initialSettings?.brands[0]?.id ?? initialSettings?.brand.id ?? null
@@ -236,6 +259,8 @@ export function StudioSettingsClient({
   const [newBrandState, setNewBrandState] = useState<NewBrandState>(() =>
     createInitialNewBrandState()
   );
+  const [workspaceCreateState, setWorkspaceCreateState] =
+    useState<WorkspaceCreateState>(() => createInitialWorkspaceCreateState());
   const [memberState, setMemberState] = useState<MemberState>(() =>
     createInitialMemberState()
   );
@@ -243,6 +268,7 @@ export function StudioSettingsClient({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isCreatingBrand, setIsCreatingBrand] = useState(false);
+  const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false);
   const [isCreatingInvitation, setIsCreatingInvitation] = useState(false);
   const [roleEscalationJustification, setRoleEscalationJustification] =
     useState("");
@@ -479,6 +505,57 @@ export function StudioSettingsClient({
       });
     } finally {
       setIsCreatingBrand(false);
+    }
+  }
+
+  async function handleCreateWorkspace(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!canManageWorkspace) {
+      setNotice({
+        message: "Only workspace owners can create workspaces.",
+        tone: "error"
+      });
+      return;
+    }
+
+    setIsCreatingWorkspace(true);
+    setNotice({
+      message: "Provisioning workspace…",
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch("/api/studio/workspaces", {
+        body: JSON.stringify(workspaceCreateState),
+        headers: {
+          "Content-Type": "application/json"
+        },
+        method: "POST"
+      });
+      const payload = await parseJsonResponse({
+        response,
+        schema: studioWorkspaceCreateResponseSchema
+      });
+
+      setWorkspaceCreateState(createInitialWorkspaceCreateState());
+      setNotice({
+        message: `Created ${payload.workspace.name} and switched scope.`,
+        tone: "success"
+      });
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Workspace provisioning could not be completed.",
+        tone: "error"
+      });
+    } finally {
+      setIsCreatingWorkspace(false);
     }
   }
 
@@ -949,6 +1026,132 @@ export function StudioSettingsClient({
           span={12}
           title="Accessible workspace estate"
         />
+        <SurfaceCard
+          body="Workspace provisioning now bootstraps a fresh workspace plus its first brand in one owner-only action, then hands the authenticated selection over to that new workspace immediately."
+          eyebrow="Provisioning"
+          span={4}
+          title="Create workspace"
+        >
+          {!canManageWorkspace ? (
+            <div className="status-banner status-banner--info">
+              <strong>Owner only</strong>
+              <span>
+                Operators can review the workspace estate, but only owners can
+                provision another workspace.
+              </span>
+            </div>
+          ) : null}
+          <form className="studio-form" onSubmit={handleCreateWorkspace}>
+            <fieldset disabled={!canManageWorkspace || isCreatingWorkspace}>
+              <label className="field-stack">
+                <span className="field-label">Workspace name</span>
+                <input
+                  className="input-field"
+                  maxLength={120}
+                  onChange={(event) => {
+                    setWorkspaceCreateState((current) => ({
+                      ...current,
+                      workspaceName: event.target.value
+                    }));
+                  }}
+                  placeholder="West Coast Forge"
+                  required
+                  value={workspaceCreateState.workspaceName}
+                />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">Workspace slug</span>
+                <input
+                  className="input-field"
+                  maxLength={80}
+                  onChange={(event) => {
+                    setWorkspaceCreateState((current) => ({
+                      ...current,
+                      workspaceSlug: event.target.value
+                    }));
+                  }}
+                  pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                  placeholder="west-coast-forge"
+                  required
+                  value={workspaceCreateState.workspaceSlug}
+                />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">Initial brand name</span>
+                <input
+                  className="input-field"
+                  maxLength={120}
+                  onChange={(event) => {
+                    setWorkspaceCreateState((current) => ({
+                      ...current,
+                      brandName: event.target.value
+                    }));
+                  }}
+                  placeholder="West Coast Editions"
+                  required
+                  value={workspaceCreateState.brandName}
+                />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">Initial brand slug</span>
+                <input
+                  className="input-field"
+                  maxLength={80}
+                  onChange={(event) => {
+                    setWorkspaceCreateState((current) => ({
+                      ...current,
+                      brandSlug: event.target.value
+                    }));
+                  }}
+                  pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                  placeholder="west-coast-editions"
+                  required
+                  value={workspaceCreateState.brandSlug}
+                />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">Accent color</span>
+                <input
+                  className="input-field"
+                  onChange={(event) => {
+                    setWorkspaceCreateState((current) => ({
+                      ...current,
+                      accentColor: event.target.value
+                    }));
+                  }}
+                  type="color"
+                  value={workspaceCreateState.accentColor}
+                />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">Theme preset</span>
+                <select
+                  className="input-field"
+                  onChange={(event) => {
+                    setWorkspaceCreateState((current) => ({
+                      ...current,
+                      themePreset: event.target
+                        .value as WorkspaceCreateState["themePreset"]
+                    }));
+                  }}
+                  value={workspaceCreateState.themePreset}
+                >
+                  <option value="editorial_warm">Editorial warm</option>
+                  <option value="gallery_mono">Gallery mono</option>
+                  <option value="midnight_launch">Midnight launch</option>
+                </select>
+              </label>
+              <div className="studio-action-row">
+                <button className="button-action" type="submit">
+                  {isCreatingWorkspace ? "Provisioning…" : "Create workspace"}
+                </button>
+                <Link className="inline-link" href="/studio/commerce/fleet">
+                  Open commerce fleet
+                </Link>
+              </div>
+            </fieldset>
+          </form>
+        </SurfaceCard>
         <SurfaceCard
           body="Configure the shared workspace slug plus the currently selected brand profile. Multi-brand administration keeps one owner workspace and lets publication target an explicit brand instead of assuming a single storefront."
           eyebrow="Profile"

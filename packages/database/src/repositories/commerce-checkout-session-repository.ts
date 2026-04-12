@@ -88,6 +88,31 @@ export function createCommerceCheckoutSessionRepository(
       });
     },
 
+    listDetailedByWorkspaceIds(workspaceIds: string[]) {
+      if (workspaceIds.length === 0) {
+        return Promise.resolve([]);
+      }
+
+      return database.commerceCheckoutSession.findMany({
+        include: commerceCheckoutSessionDetailInclude,
+        orderBy: [
+          {
+            createdAt: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        where: {
+          publishedCollection: {
+            workspaceId: {
+              in: workspaceIds
+            }
+          }
+        }
+      });
+    },
+
     expireOpenByPublishedCollectionId(input: {
       now: Date;
       publishedCollectionId: string;
@@ -228,7 +253,8 @@ export function createCommerceCheckoutSessionRepository(
       }
 
       if (input.fulfillmentAutomationQueuedAt !== undefined) {
-        data.fulfillmentAutomationQueuedAt = input.fulfillmentAutomationQueuedAt;
+        data.fulfillmentAutomationQueuedAt =
+          input.fulfillmentAutomationQueuedAt;
       }
 
       if (input.fulfillmentAutomationStatus !== undefined) {

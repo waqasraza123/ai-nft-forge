@@ -80,6 +80,32 @@ export function createOpsReconciliationIssueRepository(
       });
     },
 
+    listOpenByWorkspaceIds(workspaceIds: string[]) {
+      if (workspaceIds.length === 0) {
+        return Promise.resolve([]);
+      }
+
+      return database.opsReconciliationIssue.findMany({
+        orderBy: [
+          {
+            severity: "desc"
+          },
+          {
+            lastDetectedAt: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        where: {
+          status: "open",
+          workspaceId: {
+            in: workspaceIds
+          }
+        }
+      });
+    },
+
     listRecentByOwnerUserId(input: { limit: number; ownerUserId: string }) {
       return database.opsReconciliationIssue.findMany({
         orderBy: [

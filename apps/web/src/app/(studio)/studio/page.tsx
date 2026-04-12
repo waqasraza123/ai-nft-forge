@@ -24,6 +24,9 @@ export default async function StudioPage() {
           <Link className="action-link" href="/studio/commerce">
             Open commerce
           </Link>
+          <Link className="action-link" href="/studio/commerce/fleet">
+            Commerce fleet
+          </Link>
           <Link className="action-link" href="/studio/settings">
             Open settings
           </Link>

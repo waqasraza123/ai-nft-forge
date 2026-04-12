@@ -115,6 +115,29 @@ export function createOpsAlertStateRepository(
       });
     },
 
+    listActiveByWorkspaceIds(workspaceIds: string[]): Promise<OpsAlertState[]> {
+      if (workspaceIds.length === 0) {
+        return Promise.resolve([]);
+      }
+
+      return database.opsAlertState.findMany({
+        orderBy: [
+          {
+            lastObservedAt: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        where: {
+          status: "active",
+          workspaceId: {
+            in: workspaceIds
+          }
+        }
+      });
+    },
+
     listByOwnerUserIdAndCodes(input: {
       codes: string[];
       ownerUserId: string;

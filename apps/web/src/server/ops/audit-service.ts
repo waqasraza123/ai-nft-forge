@@ -39,6 +39,7 @@ type SerializedAuditEntry = NonNullable<
 >;
 
 const workspaceAccessAuditActions = [
+  "workspace_created",
   "workspace_invitation_accepted",
   "workspace_invitation_canceled",
   "workspace_invitation_created",

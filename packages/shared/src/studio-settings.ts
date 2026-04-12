@@ -174,6 +174,7 @@ export const studioWorkspaceRoleEscalationSummarySchema = z.object({
 });
 
 export const studioWorkspaceAuditActionSchema = z.enum([
+  "workspace_created",
   "workspace_invitation_accepted",
   "workspace_invitation_canceled",
   "workspace_invitation_created",
@@ -211,6 +212,20 @@ export const studioSettingsSummarySchema = z.object({
 
 export const studioSettingsResponseSchema = z.object({
   settings: studioSettingsSummarySchema.nullable()
+});
+
+export const studioWorkspaceCreateRequestSchema = z.object({
+  accentColor: studioBrandAccentColorSchema.nullish(),
+  brandName: collectionBrandNameSchema,
+  brandSlug: collectionBrandSlugSchema,
+  themePreset: studioBrandThemePresetSchema.nullish(),
+  workspaceName: studioWorkspaceNameSchema,
+  workspaceSlug: studioWorkspaceSlugSchema
+});
+
+export const studioWorkspaceCreateResponseSchema = z.object({
+  brand: studioBrandSummarySchema,
+  workspace: studioWorkspaceSummarySchema
 });
 
 export const studioWorkspaceSelectionRequestSchema = z.object({
@@ -410,6 +425,12 @@ export type StudioWorkspaceRoleEscalationSummary = z.infer<
 >;
 export type StudioWorkspaceAuditAction = z.infer<
   typeof studioWorkspaceAuditActionSchema
+>;
+export type StudioWorkspaceCreateRequest = z.infer<
+  typeof studioWorkspaceCreateRequestSchema
+>;
+export type StudioWorkspaceCreateResponse = z.infer<
+  typeof studioWorkspaceCreateResponseSchema
 >;
 export type StudioWorkspaceAuditEntry = z.infer<
   typeof studioWorkspaceAuditEntrySchema

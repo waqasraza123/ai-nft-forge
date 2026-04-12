@@ -185,6 +185,8 @@ export {
   studioBrandStoryHeadlineSchema,
   studioBrandThemeSchema,
   studioBrandThemePresetSchema,
+  studioWorkspaceCreateRequestSchema,
+  studioWorkspaceCreateResponseSchema,
   studioBrandUpdateRequestSchema,
   studioBrandWordmarkSchema,
   studioCustomDomainSchema,
@@ -230,6 +232,8 @@ export {
   type StudioWorkspaceAccess,
   type StudioWorkspaceAuditAction,
   type StudioWorkspaceAuditEntry,
+  type StudioWorkspaceCreateRequest,
+  type StudioWorkspaceCreateResponse,
   type StudioWorkspaceDirectoryEntry,
   type StudioWorkspaceDirectoryResponse,
   type StudioWorkspaceInvitationCreateRequest,
@@ -251,6 +255,22 @@ export {
   type StudioWorkspaceSelectionResponse,
   type StudioWorkspaceSummary
 } from "./studio-settings.js";
+export {
+  workspaceCommerceFleetReportResponseSchema,
+  workspaceCommerceFleetReportWorkspaceSchema,
+  workspaceFleetAlertSummarySchema,
+  workspaceFleetOverviewResponseSchema,
+  workspaceFleetScopedActionRequestSchema,
+  workspaceFleetSummarySchema,
+  workspaceFleetWorkspaceSummarySchema,
+  type WorkspaceCommerceFleetReportResponse,
+  type WorkspaceCommerceFleetReportWorkspace,
+  type WorkspaceFleetAlertSummary,
+  type WorkspaceFleetOverviewResponse,
+  type WorkspaceFleetScopedActionRequest,
+  type WorkspaceFleetSummary,
+  type WorkspaceFleetWorkspaceSummary
+} from "./fleet.js";
 export {
   authSessionCookieSameSite,
   authSessionResponseSchema,

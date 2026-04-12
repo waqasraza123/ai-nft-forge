@@ -997,6 +997,43 @@ describe("createStudioSettingsService", () => {
     expect(settings.settings?.brands[1]?.slug).toBe("north-editions");
   });
 
+  it("provisions a workspace with its initial brand and audit entry", async () => {
+    const harness = createStudioSettingsHarness();
+
+    harness.users.set("user_1", {
+      avatarUrl: null,
+      displayName: "Owner One",
+      id: "user_1",
+      walletAddress: "0x1111111111111111111111111111111111111111"
+    });
+
+    const result = await harness.service.createWorkspace({
+      accentColor: "#244f3c",
+      brandName: "West Editions",
+      brandSlug: "west-editions",
+      ownerUserId: "user_1",
+      themePreset: "gallery_mono",
+      workspaceName: "West Operations",
+      workspaceSlug: "west-operations"
+    });
+
+    expect(result.workspace).toMatchObject({
+      name: "West Operations",
+      slug: "west-operations",
+      status: "active"
+    });
+    expect(result.brand).toMatchObject({
+      accentColor: "#244f3c",
+      name: "West Editions",
+      slug: "west-editions",
+      themePreset: "gallery_mono"
+    });
+    expect(harness.auditLogs.at(-1)).toMatchObject({
+      action: "workspace_created",
+      entityType: "workspace"
+    });
+  });
+
   it("loads and updates the selected owned workspace instead of the owner's first workspace", async () => {
     const harness = createStudioSettingsHarness();
 

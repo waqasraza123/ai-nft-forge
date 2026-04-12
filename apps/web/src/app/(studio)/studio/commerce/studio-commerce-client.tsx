@@ -428,6 +428,9 @@ export function StudioCommerceClient({
           <Link className="action-link" href="/studio/collections">
             Open collections
           </Link>
+          <Link className="action-link" href="/studio/commerce/fleet">
+            Commerce fleet
+          </Link>
           <Link className="inline-link" href="/studio">
             Back to studio
           </Link>

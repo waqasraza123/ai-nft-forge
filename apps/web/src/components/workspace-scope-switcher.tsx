@@ -136,7 +136,7 @@ export function WorkspaceScopeSwitcher({
           ) : null}
           {workspaces.map((workspace) => (
             <option key={workspace.id} value={workspace.slug}>
-              {workspace.name} · {workspace.role}
+              {workspace.name} · {workspace.role} · {workspace.status}
             </option>
           ))}
         </select>
