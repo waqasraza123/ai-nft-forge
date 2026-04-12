@@ -1,8 +1,19 @@
-import { workspaceExportFormatSchema, workspaceRetentionBulkCancelResponseSchema, workspaceRetentionFleetReportResponseSchema, type StudioWorkspaceScopeSummary, type WorkspaceExportFormat, type WorkspaceOffboardingEntry, type WorkspaceRetentionBulkCancelResult } from "@ai-nft-forge/shared";
+import {
+  workspaceExportFormatSchema,
+  workspaceRetentionBulkCancelResponseSchema,
+  workspaceRetentionFleetReportResponseSchema,
+  type StudioWorkspaceScopeSummary,
+  type WorkspaceExportFormat,
+  type WorkspaceLifecycleAutomationHealth,
+  type WorkspaceLifecycleAutomationRunSummary,
+  type WorkspaceOffboardingEntry,
+  type WorkspaceRetentionBulkCancelResult
+} from "@ai-nft-forge/shared";
 
 import { OpsServiceError } from "../ops/error";
 import { StudioSettingsServiceError } from "../studio-settings/error";
 import { createRuntimeWorkspaceDecommissionService } from "./decommission-service";
+import { loadWorkspaceLifecycleAutomationSnapshot } from "./lifecycle-automation-runtime";
 import { createRuntimeWorkspaceOffboardingService } from "./offboarding-service";
 
 type WorkspaceRetentionServiceDependencies = {
@@ -13,6 +24,10 @@ type WorkspaceRetentionServiceDependencies = {
     }): Promise<unknown>;
   };
   now: () => Date;
+  lifecycleAutomationSnapshotLoader: () => Promise<{
+    lifecycleAutomationHealth: WorkspaceLifecycleAutomationHealth;
+    recentLifecycleAutomationRuns: WorkspaceLifecycleAutomationRunSummary[];
+  }>;
   offboardingService: {
     getAccessibleWorkspaceOffboardingOverview(input: {
       currentWorkspaceId?: string | null | undefined;
@@ -61,10 +76,16 @@ export function createWorkspaceRetentionService(
             workspaces: input.workspaces
           }
         );
+      const lifecycleAutomationSnapshot =
+        await dependencies.lifecycleAutomationSnapshotLoader();
 
       return workspaceRetentionFleetReportResponseSchema.parse({
         report: {
           generatedAt: overview.overview.generatedAt,
+          lifecycleAutomationHealth:
+            lifecycleAutomationSnapshot.lifecycleAutomationHealth,
+          recentLifecycleAutomationRuns:
+            lifecycleAutomationSnapshot.recentLifecycleAutomationRuns,
           scopeLabel: "Accessible workspace retention estate",
           summary: overview.overview.summary,
           workspaces: overview.overview.workspaces
@@ -88,6 +109,9 @@ export function createWorkspaceRetentionService(
           "workspace_role",
           "workspace_status",
           "current",
+          "lifecycle_automation_status",
+          "lifecycle_automation_last_run_at",
+          "lifecycle_automation_last_run_age_seconds",
           "readiness",
           "retention_default_days",
           "retention_minimum_days",
@@ -130,6 +154,9 @@ export function createWorkspaceRetentionService(
             workspace.workspace.role,
             workspace.workspace.status,
             workspace.current ? "yes" : "no",
+            input.reportData.report.lifecycleAutomationHealth.status,
+            input.reportData.report.lifecycleAutomationHealth.lastRunAt,
+            input.reportData.report.lifecycleAutomationHealth.lastRunAgeSeconds,
             workspace.summary.readiness,
             workspace.retentionPolicy.defaultDecommissionRetentionDays,
             workspace.retentionPolicy.minimumDecommissionRetentionDays,
@@ -267,6 +294,8 @@ export function createRuntimeWorkspaceRetentionService(
     decommissionService: createRuntimeWorkspaceDecommissionService(
       rawEnvironment
     ),
+    lifecycleAutomationSnapshotLoader: () =>
+      loadWorkspaceLifecycleAutomationSnapshot(rawEnvironment),
     now: () => new Date(),
     offboardingService: createRuntimeWorkspaceOffboardingService(rawEnvironment)
   });

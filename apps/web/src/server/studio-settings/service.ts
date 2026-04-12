@@ -30,6 +30,8 @@ import {
   studioWorkspaceRoleEscalationResponseSchema,
   workspaceLifecycleDeliveryPolicySchema,
   workspaceRetentionPolicySchema,
+  type WorkspaceLifecycleAutomationHealth,
+  type WorkspaceLifecycleAutomationRunSummary,
   type WorkspaceLifecycleDeliveryPolicy,
   type StudioWorkspaceRole,
   type StudioWorkspaceStatus
@@ -338,7 +340,7 @@ type StudioSettingsRepositorySet = {
         } | null;
         decommissionNotificationId: string | null;
         deliveredAt: Date | null;
-        deliveryChannel: "webhook";
+        deliveryChannel: "audit_log" | "webhook";
         deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
         eventKind: "invitation_reminder" | "decommission_notice";
         eventOccurredAt: Date;
@@ -433,6 +435,10 @@ type StudioSettingsRepositorySet = {
 };
 
 type StudioSettingsServiceDependencies = {
+  lifecycleAutomationSnapshotLoader?: () => Promise<{
+    lifecycleAutomationHealth: WorkspaceLifecycleAutomationHealth;
+    recentLifecycleAutomationRuns: WorkspaceLifecycleAutomationRunSummary[];
+  }>;
   lifecycleDeliveryService?: {
     recordInvitationReminderDelivery(input: {
       actor: WorkspaceLifecycleOwnerRecord;
@@ -446,7 +452,7 @@ type StudioSettingsServiceDependencies = {
       decommissionNotificationId: string | null;
       decommissionNotificationKind: "ready" | "scheduled" | "upcoming" | null;
       deliveredAt: string | null;
-      deliveryChannel: "webhook";
+      deliveryChannel: "audit_log" | "webhook";
       deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
       eventKind: "invitation_reminder" | "decommission_notice";
       eventOccurredAt: string;
@@ -756,6 +762,10 @@ function serializeWorkspaceAuditEntry(input: AuditLogRecord) {
 
 async function serializeStudioSettings(input: {
   brands: BrandRecord[];
+  lifecycleAutomationSnapshot?: {
+    lifecycleAutomationHealth: WorkspaceLifecycleAutomationHealth;
+    recentLifecycleAutomationRuns: WorkspaceLifecycleAutomationRunSummary[];
+  } | null;
   owner: UserRecord;
   repositories: Pick<
     StudioSettingsRepositorySet,
@@ -814,9 +824,25 @@ async function serializeStudioSettings(input: {
       invitations: invitations.map((invitation) =>
         serializeWorkspaceInvitation(invitation)
       ),
+      lifecycleAutomationHealth:
+        input.lifecycleAutomationSnapshot?.lifecycleAutomationHealth ?? {
+          enabled: false,
+          intervalSeconds: null,
+          jitterSeconds: null,
+          lastRunAgeSeconds: null,
+          lastRunAt: null,
+          latestRun: null,
+          lockTtlSeconds: null,
+          message:
+            "Lifecycle automation health is not available on this service instance.",
+          runOnStart: null,
+          status: "unreachable"
+        },
       lifecycleDeliveryPolicy: serializeWorkspaceLifecycleDeliveryPolicy(
         input.workspace
       ),
+      recentLifecycleAutomationRuns:
+        input.lifecycleAutomationSnapshot?.recentLifecycleAutomationRuns ?? [],
       recentLifecycleDeliveries: lifecycleDeliveries.map((delivery) =>
         serializeWorkspaceLifecycleNotificationDelivery(delivery)
       ),
@@ -846,6 +872,7 @@ async function serializeStudioSettings(input: {
 }
 
 async function loadOwnerStudioSettings(input: {
+  lifecycleAutomationSnapshotLoader?: StudioSettingsServiceDependencies["lifecycleAutomationSnapshotLoader"];
   ownerUserId: string;
   repositories: StudioSettingsRepositorySet;
   role: StudioWorkspaceRole;
@@ -872,8 +899,14 @@ async function loadOwnerStudioSettings(input: {
     });
   }
 
+  const lifecycleAutomationSnapshot =
+    input.lifecycleAutomationSnapshotLoader
+      ? await input.lifecycleAutomationSnapshotLoader()
+      : null;
+
   return serializeStudioSettings({
     brands,
+    lifecycleAutomationSnapshot,
     owner,
     repositories: input.repositories,
     role: input.role,
@@ -1154,6 +1187,8 @@ export function createStudioSettingsService(
       workspaceId?: string | null;
     }) {
       return loadOwnerStudioSettings({
+        lifecycleAutomationSnapshotLoader:
+          dependencies.lifecycleAutomationSnapshotLoader,
         ownerUserId: input.ownerUserId,
         repositories: dependencies.repositories,
         role: input.role ?? "owner",
@@ -1708,6 +1743,8 @@ export function createStudioSettingsService(
         }
 
         return loadOwnerStudioSettings({
+          lifecycleAutomationSnapshotLoader:
+            dependencies.lifecycleAutomationSnapshotLoader,
           ownerUserId: input.ownerUserId,
           repositories,
           role: "owner",

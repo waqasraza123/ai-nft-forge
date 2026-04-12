@@ -48,6 +48,7 @@ type WorkspaceAutomationDecommissionNotificationRecord = {
 };
 
 type WorkspaceAutomationDeliveryRecord = {
+  deliveryChannel: "audit_log" | "webhook";
   id: string;
 };
 
@@ -94,7 +95,9 @@ type WorkspaceAutomationServiceDependencies = {
     workspaceLifecycleNotificationDeliveryRepository: {
       create(input: {
         decommissionNotificationId?: string | null;
-        deliveryState: "queued";
+        deliveredAt?: Date | null;
+        deliveryChannel?: "audit_log" | "webhook";
+        deliveryState: "queued" | "delivered";
         eventKind: "invitation_reminder" | "decommission_notice";
         eventOccurredAt: Date;
         failureMessage?: string | null;
@@ -158,9 +161,11 @@ type WorkspaceAutomationTransactionalRepositories = {
 };
 
 export type WorkspaceLifecycleAutomationSummary = {
+  auditLogDeliveryCount: number;
   decommissionNoticeCount: number;
   failedWorkspaceCount: number;
   invitationReminderCount: number;
+  webhookQueuedCount: number;
   workspaceCount: number;
 };
 
@@ -242,6 +247,28 @@ function buildDecommissionNoticePayload(input: {
   };
 }
 
+async function createAuditLogLifecycleDelivery(input: {
+  createRecord: {
+    decommissionNotificationId?: string | null;
+    eventKind: "invitation_reminder" | "decommission_notice";
+    eventOccurredAt: Date;
+    invitationId?: string | null;
+    ownerUserId: string;
+    payloadJson: unknown;
+    workspaceId: string;
+  };
+  dependencies: WorkspaceAutomationServiceDependencies;
+}) {
+  await input.dependencies.repositories.workspaceLifecycleNotificationDeliveryRepository.create(
+    {
+      ...input.createRecord,
+      deliveredAt: input.createRecord.eventOccurredAt,
+      deliveryChannel: "audit_log",
+      deliveryState: "delivered"
+    }
+  );
+}
+
 async function createQueuedLifecycleDelivery(input: {
   createRecord: {
     decommissionNotificationId?: string | null;
@@ -259,6 +286,7 @@ async function createQueuedLifecycleDelivery(input: {
     await input.dependencies.repositories.workspaceLifecycleNotificationDeliveryRepository.create(
       {
         ...input.createRecord,
+        deliveryChannel: "webhook",
         deliveryState: "queued",
         queuedAt
       }
@@ -364,6 +392,8 @@ export function createWorkspaceLifecycleAutomationService(
       let invitationReminderCount = 0;
       let decommissionNoticeCount = 0;
       let failedWorkspaceCount = 0;
+      let auditLogDeliveryCount = 0;
+      let webhookQueuedCount = 0;
 
       for (const invitation of dueInvitations) {
         const workspace = workspacesById.get(invitation.workspaceId);
@@ -416,26 +446,36 @@ export function createWorkspaceLifecycleAutomationService(
             }
           );
 
-          await createQueuedLifecycleDelivery({
+          const createRecord = {
+            eventKind: "invitation_reminder" as const,
+            eventOccurredAt: now,
+            invitationId: invitation.id,
+            ownerUserId: workspace.owner.id,
+            payloadJson: buildInvitationReminderPayload({
+              invitation: {
+                ...invitation,
+                lastRemindedAt: updatedInvitation.lastRemindedAt,
+                reminderCount: updatedInvitation.reminderCount
+              },
+              occurredAt: now,
+              owner: workspace.owner,
+              workspace
+            }),
+            workspaceId: workspace.id
+          };
+
+          await createAuditLogLifecycleDelivery({
             createRecord: {
-              eventKind: "invitation_reminder",
-              eventOccurredAt: now,
-              invitationId: invitation.id,
-              ownerUserId: workspace.owner.id,
-              payloadJson: buildInvitationReminderPayload({
-                invitation: {
-                  ...invitation,
-                  lastRemindedAt: updatedInvitation.lastRemindedAt,
-                  reminderCount: updatedInvitation.reminderCount
-                },
-                occurredAt: now,
-                owner: workspace.owner,
-                workspace
-              }),
-              workspaceId: workspace.id
+              ...createRecord
             },
             dependencies
           });
+          await createQueuedLifecycleDelivery({
+            createRecord,
+            dependencies
+          });
+          auditLogDeliveryCount += 1;
+          webhookQueuedCount += 1;
           invitationReminderCount += 1;
         } catch (error) {
           failedWorkspaceCount += 1;
@@ -522,22 +562,32 @@ export function createWorkspaceLifecycleAutomationService(
             }
           );
 
-          await createQueuedLifecycleDelivery({
+          const createRecord = {
+            decommissionNotificationId: notification.id,
+            eventKind: "decommission_notice" as const,
+            eventOccurredAt: notification.sentAt,
+            ownerUserId: workspace.owner.id,
+            payloadJson: buildDecommissionNoticePayload({
+              notification,
+              owner: workspace.owner,
+              request,
+              workspace
+            }),
+            workspaceId: workspace.id
+          };
+
+          await createAuditLogLifecycleDelivery({
             createRecord: {
-              decommissionNotificationId: notification.id,
-              eventKind: "decommission_notice",
-              eventOccurredAt: notification.sentAt,
-              ownerUserId: workspace.owner.id,
-              payloadJson: buildDecommissionNoticePayload({
-                notification,
-                owner: workspace.owner,
-                request,
-                workspace
-              }),
-              workspaceId: workspace.id
+              ...createRecord
             },
             dependencies
           });
+          await createQueuedLifecycleDelivery({
+            createRecord,
+            dependencies
+          });
+          auditLogDeliveryCount += 1;
+          webhookQueuedCount += 1;
           decommissionNoticeCount += 1;
         } catch (error) {
           failedWorkspaceCount += 1;
@@ -556,9 +606,11 @@ export function createWorkspaceLifecycleAutomationService(
       }
 
       const summary = {
+        auditLogDeliveryCount,
         decommissionNoticeCount,
         failedWorkspaceCount,
         invitationReminderCount,
+        webhookQueuedCount,
         workspaceCount: eligibleWorkspaces.length
       };
 

@@ -11,6 +11,7 @@ type WorkspaceLifecycleNotificationProcessorDependencies = {
     workspaceLifecycleNotificationDeliveryRepository: {
       findById(id: string): Promise<{
         attemptCount: number;
+        deliveryChannel: "audit_log" | "webhook";
         deliveredAt: Date | null;
         deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
         id: string;
@@ -54,7 +55,7 @@ export function createWorkspaceLifecycleNotificationProcessor(
     const delivery =
       await dependencies.repositories.workspaceLifecycleNotificationDeliveryRepository.findById(
         payload.deliveryId
-      );
+    );
 
     if (!delivery) {
       throw new Error(
@@ -70,6 +71,25 @@ export function createWorkspaceLifecycleNotificationProcessor(
         deliveryId: payload.deliveryId,
         queueName: job.queueName,
         status: "skipped"
+      };
+    }
+
+    if (delivery.deliveryChannel === "audit_log") {
+      await dependencies.repositories.workspaceLifecycleNotificationDeliveryRepository.updateById(
+        {
+          deliveredAt: dependencies.now(),
+          deliveryState: "delivered",
+          failedAt: null,
+          failureMessage: null,
+          id: delivery.id,
+          queuedAt: null
+        }
+      );
+
+      return {
+        deliveryId: payload.deliveryId,
+        queueName: job.queueName,
+        status: "delivered"
       };
     }
 

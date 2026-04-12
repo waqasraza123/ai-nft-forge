@@ -159,9 +159,16 @@ export function WorkspaceOffboardingPanel({
                     {entry.lifecycleDeliveryPolicy.webhookEnabled
                       ? "enabled"
                       : "disabled"}
+                    {" "}· audit-log delivered{" "}
+                    {entry.lifecycleDelivery.auditLog.deliveredCount}
+                    {" "}· webhook failed{" "}
+                    {entry.lifecycleDelivery.webhook.failedCount}
                     {" "}· latest{" "}
                     {formatCode(
                       entry.lifecycleDelivery.latestDelivery.eventKind
+                    )}{" "}
+                    {formatCode(
+                      entry.lifecycleDelivery.latestDelivery.deliveryChannel
                     )}{" "}
                     {formatCode(
                       entry.lifecycleDelivery.latestDelivery.deliveryState

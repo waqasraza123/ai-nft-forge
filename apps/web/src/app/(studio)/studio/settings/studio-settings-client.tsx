@@ -324,6 +324,10 @@ function formatWorkspaceStatus(status: StudioWorkspaceStatus) {
   return status.replaceAll("_", " ");
 }
 
+function formatStatus(value: string) {
+  return value.replaceAll("_", " ");
+}
+
 function formatWorkspaceOffboardingCode(code: string) {
   return code.replaceAll("_", " ");
 }
@@ -350,6 +354,35 @@ function formatLifecycleEventKind(
   kind: WorkspaceLifecycleNotificationDeliverySummary["eventKind"]
 ) {
   return kind.replaceAll("_", " ");
+}
+
+function formatLifecycleDeliveryChannel(
+  channel: WorkspaceLifecycleNotificationDeliverySummary["deliveryChannel"]
+) {
+  return channel.replaceAll("_", " ");
+}
+
+function formatDurationSeconds(value: number | null) {
+  if (value === null) {
+    return "n/a";
+  }
+
+  if (value < 60) {
+    return `${value}s`;
+  }
+
+  const minutes = Math.floor(value / 60);
+
+  if (minutes < 60) {
+    return `${minutes}m`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  return remainingMinutes === 0
+    ? `${hours}h`
+    : `${hours}h ${remainingMinutes}m`;
 }
 
 function formatDecommissionDateTime(value: string) {
@@ -480,6 +513,31 @@ export function StudioSettingsClient({
   const retentionPolicy = resolveWorkspaceRetentionPolicy(settings);
   const lifecycleDeliveryPolicy =
     resolveWorkspaceLifecycleDeliveryPolicy(settings);
+  const lifecycleAutomationHealth = settings?.lifecycleAutomationHealth ?? null;
+  const recentLifecycleAutomationRuns =
+    settings?.recentLifecycleAutomationRuns ?? [];
+  const recentLifecycleDeliveries = settings?.recentLifecycleDeliveries ?? [];
+  const recentAuditLogDeliveryCount = recentLifecycleDeliveries.filter(
+    (delivery) =>
+      delivery.deliveryChannel === "audit_log" &&
+      delivery.deliveryState === "delivered"
+  ).length;
+  const recentWebhookDeliveredCount = recentLifecycleDeliveries.filter(
+    (delivery) =>
+      delivery.deliveryChannel === "webhook" &&
+      delivery.deliveryState === "delivered"
+  ).length;
+  const recentWebhookFailedCount = recentLifecycleDeliveries.filter(
+    (delivery) =>
+      delivery.deliveryChannel === "webhook" &&
+      delivery.deliveryState === "failed"
+  ).length;
+  const recentWebhookQueuedCount = recentLifecycleDeliveries.filter(
+    (delivery) =>
+      delivery.deliveryChannel === "webhook" &&
+      (delivery.deliveryState === "queued" ||
+        delivery.deliveryState === "processing")
+  ).length;
 
   const selectedBrand =
     settings?.brands.find((brand) => brand.id === selectedBrandId) ??
@@ -2164,7 +2222,106 @@ export function StudioSettingsClient({
           ) : null}
         </SurfaceCard>
         <SurfaceCard
-          body="Lifecycle delivery records cover owner-triggered invitation reminders and decommission notices. Delivery stays worker-owned and provider-agnostic; this surface only shows workspace policy and recent webhook attempts."
+          body={
+            lifecycleAutomationHealth
+              ? "Reminder and decommission-notice automation now persists durable run history so owners and operators can see whether the lease-protected worker schedule is actually healthy."
+              : "Lifecycle automation health is only available after workspace settings load."
+          }
+          eyebrow={lifecycleAutomationHealth?.status ?? "unreachable"}
+          span={4}
+          title="Lifecycle automation"
+        >
+          {lifecycleAutomationHealth ? (
+            <div className="stack-md">
+              <div
+                className={`status-banner status-banner--${
+                  lifecycleAutomationHealth.status === "healthy"
+                    ? "success"
+                    : lifecycleAutomationHealth.status === "warning" ||
+                        lifecycleAutomationHealth.status === "stale" ||
+                        lifecycleAutomationHealth.status === "unreachable"
+                      ? "error"
+                      : "info"
+                }`}
+              >
+                <strong>{lifecycleAutomationHealth.status}</strong>
+                <span>{lifecycleAutomationHealth.message}</span>
+              </div>
+              <div className="pill-row">
+                <Pill>
+                  {lifecycleAutomationHealth.enabled
+                    ? "Scheduler enabled"
+                    : "Manual only"}
+                </Pill>
+                <Pill>
+                  Interval{" "}
+                  {formatDurationSeconds(
+                    lifecycleAutomationHealth.intervalSeconds
+                  )}
+                </Pill>
+                <Pill>
+                  Jitter{" "}
+                  {formatDurationSeconds(
+                    lifecycleAutomationHealth.jitterSeconds
+                  )}
+                </Pill>
+                <Pill>
+                  Lock TTL{" "}
+                  {formatDurationSeconds(
+                    lifecycleAutomationHealth.lockTtlSeconds
+                  )}
+                </Pill>
+                <Pill>
+                  Last run{" "}
+                  {lifecycleAutomationHealth.lastRunAgeSeconds !== null
+                    ? `${formatDurationSeconds(
+                        lifecycleAutomationHealth.lastRunAgeSeconds
+                      )} ago`
+                    : "n/a"}
+                </Pill>
+              </div>
+              <div className="collection-item-list">
+                {recentLifecycleAutomationRuns.length ? (
+                  recentLifecycleAutomationRuns.map((run) => (
+                    <div className="collection-item-card" key={run.id}>
+                      <div className="collection-item-card__copy">
+                        <strong>
+                          {formatStatus(run.status)} · {run.triggerSource}
+                        </strong>
+                        <span>
+                          Started {formatTimestamp(run.startedAt) ?? "Not set"}
+                          {run.completedAt
+                            ? ` · completed ${formatTimestamp(run.completedAt) ?? "Not set"}`
+                            : ""}
+                        </span>
+                        <span>
+                          {run.workspaceCount} workspace
+                          {run.workspaceCount === 1 ? "" : "s"} ·{" "}
+                          {run.invitationReminderCount} invite reminder
+                          {run.invitationReminderCount === 1 ? "" : "s"} ·{" "}
+                          {run.decommissionNoticeCount} decommission notice
+                          {run.decommissionNoticeCount === 1 ? "" : "s"}
+                        </span>
+                        <span>
+                          Audit-log {run.auditLogDeliveryCount} · webhook queued{" "}
+                          {run.webhookQueuedCount} · failures{" "}
+                          {run.failedWorkspaceCount}
+                          {run.failureMessage ? ` · ${run.failureMessage}` : ""}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="collection-empty-state">
+                    No lifecycle automation runs have been recorded yet.
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
+        </SurfaceCard>
+        <SurfaceCard
+          body="Lifecycle delivery records now show both the mandatory audit-log leg and the optional webhook leg for invitation reminders and decommission notices. Delivery stays worker-owned and provider-agnostic."
           eyebrow="Lifecycle delivery"
           span={8}
           title="Lifecycle delivery health"
@@ -2179,6 +2336,10 @@ export function StudioSettingsClient({
           ) : (
             <div className="stack-md">
               <div className="pill-row">
+                <Pill>Audit-log delivered {recentAuditLogDeliveryCount}</Pill>
+                <Pill>Webhook delivered {recentWebhookDeliveredCount}</Pill>
+                <Pill>Webhook failed {recentWebhookFailedCount}</Pill>
+                <Pill>Webhook queued {recentWebhookQueuedCount}</Pill>
                 <Pill>
                   Webhook {lifecycleDeliveryPolicy.webhookEnabled ? "enabled" : "disabled"}
                 </Pill>
@@ -2196,12 +2357,13 @@ export function StudioSettingsClient({
                 </Pill>
               </div>
               <div className="collection-item-list">
-                {settings.recentLifecycleDeliveries.length ? (
-                  settings.recentLifecycleDeliveries.map((delivery) => (
+                {recentLifecycleDeliveries.length ? (
+                  recentLifecycleDeliveries.map((delivery) => (
                     <div className="collection-item-card" key={delivery.id}>
                       <div className="collection-item-card__copy">
                         <strong>{formatLifecycleEventKind(delivery.eventKind)}</strong>
                         <span>
+                          {formatLifecycleDeliveryChannel(delivery.deliveryChannel)} ·{" "}
                           {formatLifecycleDeliveryState(delivery.deliveryState)} ·{" "}
                           {formatTimestamp(delivery.eventOccurredAt) ?? "No event time"}
                         </span>
@@ -2228,6 +2390,7 @@ export function StudioSettingsClient({
                           className="button-action button-action--secondary"
                           disabled={
                             !canManageWorkspace ||
+                            delivery.deliveryChannel !== "webhook" ||
                             retryingLifecycleDeliveryId === delivery.id ||
                             (delivery.deliveryState !== "failed" &&
                               delivery.deliveryState !== "skipped")

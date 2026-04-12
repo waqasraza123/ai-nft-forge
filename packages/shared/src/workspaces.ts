@@ -19,6 +19,8 @@ import {
   studioWorkspaceSummarySchema
 } from "./studio-settings.js";
 import {
+  workspaceLifecycleAutomationHealthSchema,
+  workspaceLifecycleAutomationRunSummarySchema,
   workspaceLifecycleNotificationDeliveryOverviewSchema,
   workspaceLifecycleNotificationDeliverySummarySchema
 } from "./workspace-lifecycle.js";
@@ -160,6 +162,10 @@ export const workspaceDecommissionNotificationRecordResponseSchema = z.object({
 export const workspaceOffboardingOverviewResponseSchema = z.object({
   overview: z.object({
     generatedAt: z.string().datetime(),
+    lifecycleAutomationHealth: workspaceLifecycleAutomationHealthSchema,
+    recentLifecycleAutomationRuns: z.array(
+      workspaceLifecycleAutomationRunSummarySchema
+    ),
     summary: workspaceOffboardingOverviewSummarySchema,
     workspaces: z.array(workspaceOffboardingEntrySchema)
   })
@@ -168,6 +174,10 @@ export const workspaceOffboardingOverviewResponseSchema = z.object({
 export const workspaceRetentionFleetReportResponseSchema = z.object({
   report: z.object({
     generatedAt: z.string().datetime(),
+    lifecycleAutomationHealth: workspaceLifecycleAutomationHealthSchema,
+    recentLifecycleAutomationRuns: z.array(
+      workspaceLifecycleAutomationRunSummarySchema
+    ),
     scopeLabel: z.string().trim().min(1).max(160),
     summary: workspaceOffboardingOverviewSummarySchema,
     workspaces: z.array(workspaceOffboardingEntrySchema)

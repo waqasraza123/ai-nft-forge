@@ -35,6 +35,29 @@ function formatStatus(value: string) {
   return value.replaceAll("_", " ");
 }
 
+function formatDurationSeconds(value: number | null) {
+  if (value === null) {
+    return "n/a";
+  }
+
+  if (value < 60) {
+    return `${value}s`;
+  }
+
+  const minutes = Math.floor(value / 60);
+
+  if (minutes < 60) {
+    return `${minutes}m`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  return remainingMinutes === 0
+    ? `${hours}h`
+    : `${hours}h ${remainingMinutes}m`;
+}
+
 async function parseJsonResponse<T>(input: {
   response: Response;
   schema: {
@@ -233,6 +256,88 @@ export function OpsRetentionClient({
         ) : null}
       </SurfaceCard>
       <SurfaceCard
+        body="Lifecycle automation health now comes from durable worker run history plus the current leased scheduler configuration, so retention review no longer depends on one lucky reminder or notice event."
+        eyebrow={report.lifecycleAutomationHealth.status}
+        span={12}
+        title="Lifecycle automation"
+      >
+        <div
+          className={`status-banner ${
+            report.lifecycleAutomationHealth.status === "healthy"
+              ? "status-banner--success"
+              : report.lifecycleAutomationHealth.status === "disabled"
+                ? "status-banner--info"
+                : "status-banner--error"
+          }`}
+        >
+          <strong>{report.lifecycleAutomationHealth.status}</strong>
+          <span>{report.lifecycleAutomationHealth.message}</span>
+        </div>
+        <div className="pill-row">
+          <Pill>
+            {report.lifecycleAutomationHealth.enabled
+              ? "Scheduler enabled"
+              : "Manual only"}
+          </Pill>
+          <Pill>
+            Interval{" "}
+            {formatDurationSeconds(report.lifecycleAutomationHealth.intervalSeconds)}
+          </Pill>
+          <Pill>
+            Jitter{" "}
+            {formatDurationSeconds(report.lifecycleAutomationHealth.jitterSeconds)}
+          </Pill>
+          <Pill>
+            Lock TTL{" "}
+            {formatDurationSeconds(report.lifecycleAutomationHealth.lockTtlSeconds)}
+          </Pill>
+          <Pill>
+            Last run{" "}
+            {report.lifecycleAutomationHealth.lastRunAgeSeconds !== null
+              ? `${formatDurationSeconds(
+                  report.lifecycleAutomationHealth.lastRunAgeSeconds
+                )} ago`
+              : "n/a"}
+          </Pill>
+        </div>
+        <div className="collection-item-list">
+          {report.recentLifecycleAutomationRuns.length ? (
+            report.recentLifecycleAutomationRuns.map((run) => (
+              <div className="collection-item-card" key={run.id}>
+                <div className="collection-item-card__copy">
+                  <strong>
+                    {formatStatus(run.status)} · {run.triggerSource}
+                  </strong>
+                  <span>
+                    Started {formatTimestamp(run.startedAt)}
+                    {run.completedAt
+                      ? ` · completed ${formatTimestamp(run.completedAt)}`
+                      : ""}
+                  </span>
+                  <span>
+                    {run.workspaceCount} workspace
+                    {run.workspaceCount === 1 ? "" : "s"} ·{" "}
+                    {run.invitationReminderCount} invite reminder
+                    {run.invitationReminderCount === 1 ? "" : "s"} ·{" "}
+                    {run.decommissionNoticeCount} decommission notice
+                    {run.decommissionNoticeCount === 1 ? "" : "s"}
+                  </span>
+                  <span>
+                    Audit-log {run.auditLogDeliveryCount} · webhook queued{" "}
+                    {run.webhookQueuedCount} · failures {run.failedWorkspaceCount}
+                    {run.failureMessage ? ` · ${run.failureMessage}` : ""}
+                  </span>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="collection-empty-state">
+              No lifecycle automation runs have been recorded yet.
+            </div>
+          )}
+        </div>
+      </SurfaceCard>
+      <SurfaceCard
         body="Only already-scheduled decommissions can be canceled in bulk. Final execution remains workspace-local and owner-confirmed."
         eyebrow="Bulk action"
         span={12}
@@ -311,10 +416,14 @@ export function OpsRetentionClient({
                       {workspace.lifecycleDeliveryPolicy.webhookEnabled
                         ? "enabled"
                         : "disabled"}{" "}
-                      · delivered {workspace.lifecycleDelivery.deliveredCount} ·
-                      failed {workspace.lifecycleDelivery.failedCount} · queued{" "}
-                      {workspace.lifecycleDelivery.queuedCount} · skipped{" "}
-                      {workspace.lifecycleDelivery.skippedCount}
+                      · audit-log delivered{" "}
+                      {workspace.lifecycleDelivery.auditLog.deliveredCount} ·
+                      webhook delivered{" "}
+                      {workspace.lifecycleDelivery.webhook.deliveredCount} ·
+                      webhook failed{" "}
+                      {workspace.lifecycleDelivery.webhook.failedCount} ·
+                      webhook queued{" "}
+                      {workspace.lifecycleDelivery.webhook.queuedCount}
                     </span>
                     <span>
                       {workspace.decommission

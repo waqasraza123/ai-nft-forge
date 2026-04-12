@@ -117,6 +117,7 @@ type WorkerQueueRegistryOptions = {
     workspaceLifecycleNotificationDeliveryRepository: {
       findById(id: string): Promise<{
         attemptCount: number;
+        deliveryChannel: "audit_log" | "webhook";
         deliveredAt: Date | null;
         deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
         id: string;

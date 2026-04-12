@@ -139,7 +139,7 @@ type WorkspaceDecommissionRepositorySet = {
       } | null;
       decommissionNotificationId: string | null;
       deliveredAt: Date | null;
-      deliveryChannel: "webhook";
+      deliveryChannel: "audit_log" | "webhook";
       deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
       eventKind: "invitation_reminder" | "decommission_notice";
       eventOccurredAt: Date;
@@ -166,7 +166,7 @@ type WorkspaceDecommissionRepositorySet = {
       } | null;
       decommissionNotificationId: string | null;
       deliveredAt: Date | null;
-      deliveryChannel: "webhook";
+      deliveryChannel: "audit_log" | "webhook";
       deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
       eventKind: "invitation_reminder" | "decommission_notice";
       eventOccurredAt: Date;
@@ -202,7 +202,7 @@ type WorkspaceDecommissionRepositorySet = {
       } | null;
       decommissionNotificationId: string | null;
       deliveredAt: Date | null;
-      deliveryChannel: "webhook";
+      deliveryChannel: "audit_log" | "webhook";
       deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
       eventKind: "invitation_reminder" | "decommission_notice";
       eventOccurredAt: Date;
@@ -284,7 +284,7 @@ type WorkspaceDecommissionServiceDependencies = {
       decommissionNotificationId: string | null;
       decommissionNotificationKind: "ready" | "scheduled" | "upcoming" | null;
       deliveredAt: string | null;
-      deliveryChannel: "webhook";
+      deliveryChannel: "audit_log" | "webhook";
       deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
       eventKind: "invitation_reminder" | "decommission_notice";
       eventOccurredAt: string;

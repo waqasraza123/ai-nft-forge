@@ -57,7 +57,7 @@ type WorkspaceLifecycleDeliveryRecord = {
   } | null;
   decommissionNotificationId: string | null;
   deliveredAt: Date | null;
-  deliveryChannel: "webhook";
+  deliveryChannel: "audit_log" | "webhook";
   deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
   eventKind: "invitation_reminder" | "decommission_notice";
   eventOccurredAt: Date;
@@ -91,7 +91,9 @@ type WorkspaceLifecycleDeliveryServiceDependencies = {
     workspaceLifecycleNotificationDeliveryRepository: {
       create(input: {
         decommissionNotificationId?: string | null;
-        deliveryState: "queued" | "skipped";
+        deliveredAt?: Date | null;
+        deliveryChannel?: "audit_log" | "webhook";
+        deliveryState: "queued" | "skipped" | "delivered";
         eventKind: "invitation_reminder" | "decommission_notice";
         eventOccurredAt: Date;
         failureMessage?: string | null;
@@ -259,8 +261,52 @@ export function createWorkspaceLifecycleDeliveryOverview(input: {
 
     return right.id.localeCompare(left.id);
   });
+  const deliveriesByChannel = {
+    audit_log: input.deliveries.filter(
+      (delivery) => delivery.deliveryChannel === "audit_log"
+    ),
+    webhook: input.deliveries.filter(
+      (delivery) => delivery.deliveryChannel === "webhook"
+    )
+  } as const;
+
+  const createChannelOverview = (
+    deliveries: WorkspaceLifecycleDeliveryRecord[]
+  ) => {
+    const latestDelivery = [...deliveries].sort((left, right) => {
+      const createdAtDifference =
+        right.createdAt.getTime() - left.createdAt.getTime();
+
+      if (createdAtDifference !== 0) {
+        return createdAtDifference;
+      }
+
+      return right.id.localeCompare(left.id);
+    })[0];
+
+    return {
+      deliveredCount: deliveries.filter(
+        (delivery) => delivery.deliveryState === "delivered"
+      ).length,
+      failedCount: deliveries.filter(
+        (delivery) => delivery.deliveryState === "failed"
+      ).length,
+      latestDelivery: latestDelivery
+        ? serializeWorkspaceLifecycleNotificationDelivery(latestDelivery)
+        : null,
+      queuedCount: deliveries.filter(
+        (delivery) =>
+          delivery.deliveryState === "queued" ||
+          delivery.deliveryState === "processing"
+      ).length,
+      skippedCount: deliveries.filter(
+        (delivery) => delivery.deliveryState === "skipped"
+      ).length
+    };
+  };
 
   return workspaceLifecycleNotificationDeliveryOverviewSchema.parse({
+    auditLog: createChannelOverview(deliveriesByChannel.audit_log),
     deliveredCount: input.deliveries.filter(
       (delivery) => delivery.deliveryState === "delivered"
     ).length,
@@ -277,8 +323,31 @@ export function createWorkspaceLifecycleDeliveryOverview(input: {
     ).length,
     skippedCount: input.deliveries.filter(
       (delivery) => delivery.deliveryState === "skipped"
-    ).length
+    ).length,
+    webhook: createChannelOverview(deliveriesByChannel.webhook)
   });
+}
+
+async function recordWorkspaceLifecycleAuditDelivery(input: {
+  createRecord: {
+    decommissionNotificationId?: string | null;
+    eventKind: "invitation_reminder" | "decommission_notice";
+    eventOccurredAt: Date;
+    invitationId?: string | null;
+    ownerUserId: string;
+    payloadJson: unknown;
+    workspaceId: string;
+  };
+  dependencies: WorkspaceLifecycleDeliveryServiceDependencies;
+}) {
+  return input.dependencies.repositories.workspaceLifecycleNotificationDeliveryRepository.create(
+    {
+      ...input.createRecord,
+      deliveredAt: input.createRecord.eventOccurredAt,
+      deliveryChannel: "audit_log",
+      deliveryState: "delivered"
+    }
+  );
 }
 
 async function queueLifecycleDelivery(input: {
@@ -340,18 +409,27 @@ export function createWorkspaceLifecycleDeliveryService(
           input.workspace
         )
       });
+      const createRecord = {
+        decommissionNotificationId: input.notification.id,
+        eventKind: "decommission_notice" as const,
+        eventOccurredAt: input.notification.sentAt,
+        ownerUserId: input.owner.id,
+        payloadJson: buildDecommissionNoticePayload(input),
+        workspaceId: input.workspace.id
+      };
+
+      await recordWorkspaceLifecycleAuditDelivery({
+        createRecord,
+        dependencies
+      });
       const delivery =
         await dependencies.repositories.workspaceLifecycleNotificationDeliveryRepository.create(
           {
-            decommissionNotificationId: input.notification.id,
+            ...createRecord,
+            deliveryChannel: "webhook",
             deliveryState: decision.shouldQueue ? "queued" : "skipped",
-            eventKind: "decommission_notice",
-            eventOccurredAt: input.notification.sentAt,
             failureMessage: decision.failureMessage,
-            ownerUserId: input.owner.id,
-            payloadJson: buildDecommissionNoticePayload(input),
             queuedAt: decision.shouldQueue ? dependencies.now() : null,
-            workspaceId: input.workspace.id
           }
         );
       const queuedDelivery = decision.shouldQueue
@@ -381,18 +459,27 @@ export function createWorkspaceLifecycleDeliveryService(
           input.workspace
         )
       });
+      const createRecord = {
+        eventKind: "invitation_reminder" as const,
+        eventOccurredAt: input.occurredAt,
+        invitationId: input.invitation.id,
+        ownerUserId: input.owner.id,
+        payloadJson: buildInvitationReminderPayload(input),
+        workspaceId: input.workspace.id
+      };
+
+      await recordWorkspaceLifecycleAuditDelivery({
+        createRecord,
+        dependencies
+      });
       const delivery =
         await dependencies.repositories.workspaceLifecycleNotificationDeliveryRepository.create(
           {
+            ...createRecord,
+            deliveryChannel: "webhook",
             deliveryState: decision.shouldQueue ? "queued" : "skipped",
-            eventKind: "invitation_reminder",
-            eventOccurredAt: input.occurredAt,
             failureMessage: decision.failureMessage,
-            invitationId: input.invitation.id,
-            ownerUserId: input.owner.id,
-            payloadJson: buildInvitationReminderPayload(input),
             queuedAt: decision.shouldQueue ? dependencies.now() : null,
-            workspaceId: input.workspace.id
           }
         );
       const queuedDelivery = decision.shouldQueue
@@ -440,6 +527,14 @@ export function createWorkspaceLifecycleDeliveryService(
           "LIFECYCLE_DELIVERY_NOT_FOUND",
           "The requested lifecycle delivery record was not found.",
           404
+        );
+      }
+
+      if (delivery.deliveryChannel !== "webhook") {
+        throw new StudioSettingsServiceError(
+          "LIFECYCLE_DELIVERY_NOT_RETRYABLE",
+          "Audit-log lifecycle deliveries do not need a retry.",
+          409
         );
       }
 

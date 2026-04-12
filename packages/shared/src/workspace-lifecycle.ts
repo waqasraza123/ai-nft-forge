@@ -15,6 +15,7 @@ export const workspaceLifecycleNotificationEventKindSchema = z.enum([
 ]);
 
 export const workspaceLifecycleNotificationDeliveryChannelSchema = z.enum([
+  "audit_log",
   "webhook"
 ]);
 
@@ -53,18 +54,78 @@ export const workspaceLifecycleNotificationDeliverySummarySchema = z.object({
   updatedAt: z.string().datetime()
 });
 
+export const workspaceLifecycleNotificationDeliveryChannelOverviewSchema =
+  z.object({
+    deliveredCount: z.number().int().min(0),
+    failedCount: z.number().int().min(0),
+    latestDelivery: workspaceLifecycleNotificationDeliverySummarySchema.nullable(),
+    queuedCount: z.number().int().min(0),
+    skippedCount: z.number().int().min(0)
+  });
+
 export const workspaceLifecycleNotificationDeliveryOverviewSchema = z.object({
+  auditLog: workspaceLifecycleNotificationDeliveryChannelOverviewSchema,
   deliveredCount: z.number().int().min(0),
   failedCount: z.number().int().min(0),
   latestDelivery: workspaceLifecycleNotificationDeliverySummarySchema.nullable(),
   queuedCount: z.number().int().min(0),
-  skippedCount: z.number().int().min(0)
+  skippedCount: z.number().int().min(0),
+  webhook: workspaceLifecycleNotificationDeliveryChannelOverviewSchema
 });
 
 export const workspaceLifecycleNotificationDeliveryRetryResponseSchema =
   z.object({
     delivery: workspaceLifecycleNotificationDeliverySummarySchema
   });
+
+export const workspaceLifecycleAutomationRunStatusSchema = z.enum([
+  "running",
+  "succeeded",
+  "failed"
+]);
+
+export const workspaceLifecycleAutomationRunTriggerSourceSchema = z.enum([
+  "manual",
+  "scheduled"
+]);
+
+export const workspaceLifecycleAutomationRunSummarySchema = z.object({
+  auditLogDeliveryCount: z.number().int().min(0),
+  completedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime(),
+  decommissionNoticeCount: z.number().int().min(0),
+  failedWorkspaceCount: z.number().int().min(0),
+  failureMessage: z.string().min(1).nullable(),
+  id: z.string().min(1),
+  invitationReminderCount: z.number().int().min(0),
+  startedAt: z.string().datetime(),
+  status: workspaceLifecycleAutomationRunStatusSchema,
+  triggerSource: workspaceLifecycleAutomationRunTriggerSourceSchema,
+  updatedAt: z.string().datetime(),
+  webhookQueuedCount: z.number().int().min(0),
+  workspaceCount: z.number().int().min(0)
+});
+
+export const workspaceLifecycleAutomationHealthStatusSchema = z.enum([
+  "disabled",
+  "healthy",
+  "stale",
+  "warning",
+  "unreachable"
+]);
+
+export const workspaceLifecycleAutomationHealthSchema = z.object({
+  enabled: z.boolean(),
+  intervalSeconds: z.number().int().positive().nullable(),
+  jitterSeconds: z.number().int().min(0).nullable(),
+  lastRunAgeSeconds: z.number().int().min(0).nullable(),
+  lastRunAt: z.string().datetime().nullable(),
+  latestRun: workspaceLifecycleAutomationRunSummarySchema.nullable(),
+  lockTtlSeconds: z.number().int().positive().nullable(),
+  message: z.string().min(1),
+  runOnStart: z.boolean().nullable(),
+  status: workspaceLifecycleAutomationHealthStatusSchema
+});
 
 export const workspaceInvitationExpiringWindowMilliseconds =
   72 * 60 * 60 * 1000;
@@ -213,6 +274,9 @@ export type WorkspaceLifecycleNotificationDeliveryChannel = z.infer<
 export type WorkspaceLifecycleNotificationDeliveryState = z.infer<
   typeof workspaceLifecycleNotificationDeliveryStateSchema
 >;
+export type WorkspaceLifecycleNotificationDeliveryChannelOverview = z.infer<
+  typeof workspaceLifecycleNotificationDeliveryChannelOverviewSchema
+>;
 export type WorkspaceLifecycleDecommissionNotificationKind = z.infer<
   typeof workspaceLifecycleDecommissionNotificationKindSchema
 >;
@@ -224,4 +288,19 @@ export type WorkspaceLifecycleNotificationDeliveryOverview = z.infer<
 >;
 export type WorkspaceLifecycleNotificationDeliveryRetryResponse = z.infer<
   typeof workspaceLifecycleNotificationDeliveryRetryResponseSchema
+>;
+export type WorkspaceLifecycleAutomationRunStatus = z.infer<
+  typeof workspaceLifecycleAutomationRunStatusSchema
+>;
+export type WorkspaceLifecycleAutomationRunTriggerSource = z.infer<
+  typeof workspaceLifecycleAutomationRunTriggerSourceSchema
+>;
+export type WorkspaceLifecycleAutomationRunSummary = z.infer<
+  typeof workspaceLifecycleAutomationRunSummarySchema
+>;
+export type WorkspaceLifecycleAutomationHealthStatus = z.infer<
+  typeof workspaceLifecycleAutomationHealthStatusSchema
+>;
+export type WorkspaceLifecycleAutomationHealth = z.infer<
+  typeof workspaceLifecycleAutomationHealthSchema
 >;

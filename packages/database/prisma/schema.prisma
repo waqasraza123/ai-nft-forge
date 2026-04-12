@@ -42,6 +42,7 @@ enum WorkspaceLifecycleNotificationDeliveryKind {
 }
 
 enum WorkspaceLifecycleNotificationDeliveryChannel {
+  audit_log
   webhook
 }
 
@@ -51,6 +52,17 @@ enum WorkspaceLifecycleNotificationDeliveryState {
   delivered
   failed
   skipped
+}
+
+enum WorkspaceLifecycleAutomationRunStatus {
+  running
+  succeeded
+  failed
+}
+
+enum WorkspaceLifecycleAutomationRunTriggerSource {
+  manual
+  scheduled
 }
 
 enum SourceAssetStatus {
@@ -388,7 +400,7 @@ model WorkspaceLifecycleNotificationDelivery {
   workspaceId               String                                       @map("workspace_id")
   ownerUserId               String                                       @map("owner_user_id")
   invitationId              String?                                      @map("invitation_id")
-  decommissionNotificationId String?                                     @unique(map: "ws_lifecycle_deliveries_decommission_notification_id_key") @map("decommission_notification_id")
+  decommissionNotificationId String?                                     @map("decommission_notification_id")
   eventKind                 WorkspaceLifecycleNotificationDeliveryKind    @map("event_kind")
   deliveryChannel           WorkspaceLifecycleNotificationDeliveryChannel @default(webhook) @map("delivery_channel")
   deliveryState             WorkspaceLifecycleNotificationDeliveryState   @map("delivery_state")
@@ -407,11 +419,34 @@ model WorkspaceLifecycleNotificationDelivery {
   ownerUser                 User                                         @relation("WorkspaceLifecycleNotificationDeliveryOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
   workspace                 Workspace                                    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  @@unique([decommissionNotificationId, deliveryChannel], map: "ws_lifecycle_deliveries_notification_channel_key")
   @@index([workspaceId, createdAt], map: "ws_lifecycle_deliveries_workspace_created_at_idx")
+  @@index([workspaceId, deliveryChannel, createdAt], map: "ws_lifecycle_deliveries_workspace_channel_created_at_idx")
   @@index([workspaceId, deliveryState, createdAt], map: "ws_lifecycle_deliveries_workspace_state_created_at_idx")
   @@index([ownerUserId, createdAt], map: "ws_lifecycle_deliveries_owner_created_at_idx")
   @@index([eventKind, deliveryState, createdAt], map: "ws_lifecycle_deliveries_kind_state_created_at_idx")
   @@map("workspace_lifecycle_notification_deliveries")
+}
+
+model WorkspaceLifecycleAutomationRun {
+  id                      String                                    @id @default(cuid()) @map("id")
+  triggerSource           WorkspaceLifecycleAutomationRunTriggerSource @map("trigger_source")
+  status                  WorkspaceLifecycleAutomationRunStatus     @default(running) @map("status")
+  workspaceCount          Int                                       @default(0) @map("workspace_count")
+  invitationReminderCount Int                                       @default(0) @map("invitation_reminder_count")
+  decommissionNoticeCount Int                                       @default(0) @map("decommission_notice_count")
+  auditLogDeliveryCount   Int                                       @default(0) @map("audit_log_delivery_count")
+  webhookQueuedCount      Int                                       @default(0) @map("webhook_queued_count")
+  failedWorkspaceCount    Int                                       @default(0) @map("failed_workspace_count")
+  failureMessage          String?                                   @map("failure_message")
+  startedAt               DateTime                                  @map("started_at")
+  completedAt             DateTime?                                 @map("completed_at")
+  createdAt               DateTime                                  @default(now()) @map("created_at")
+  updatedAt               DateTime                                  @updatedAt @map("updated_at")
+
+  @@index([createdAt], map: "ws_lifecycle_automation_runs_created_at_idx")
+  @@index([status, createdAt], map: "ws_lifecycle_automation_runs_status_created_at_idx")
+  @@map("workspace_lifecycle_automation_runs")
 }
 
 model WorkspaceRoleEscalationRequest {

@@ -7,6 +7,8 @@ import {
 } from "./collections.js";
 import { walletAddressSchema } from "./auth.js";
 import {
+  workspaceLifecycleAutomationHealthSchema,
+  workspaceLifecycleAutomationRunSummarySchema,
   workspaceLifecycleDeliveryPolicySchema,
   workspaceLifecycleNotificationDeliverySummarySchema
 } from "./workspace-lifecycle.js";
@@ -236,6 +238,10 @@ export const studioSettingsSummarySchema = z.object({
   brand: studioBrandSummarySchema,
   brands: z.array(studioBrandSummarySchema),
   invitations: z.array(studioWorkspaceInvitationSummarySchema),
+  lifecycleAutomationHealth: workspaceLifecycleAutomationHealthSchema,
+  recentLifecycleAutomationRuns: z.array(
+    workspaceLifecycleAutomationRunSummarySchema
+  ),
   lifecycleDeliveryPolicy: workspaceLifecycleDeliveryPolicySchema,
   recentLifecycleDeliveries: z.array(
     workspaceLifecycleNotificationDeliverySummarySchema

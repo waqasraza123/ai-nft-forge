@@ -188,7 +188,8 @@ export async function bootstrapWorkerApplication(
           databaseClient,
           env,
           logger,
-          redisConnection
+          redisConnection,
+          triggerSource: "scheduled"
         })
     });
 

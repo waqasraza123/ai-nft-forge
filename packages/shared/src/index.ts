@@ -270,6 +270,11 @@ export {
   type StudioWorkspaceSummary
 } from "./studio-settings.js";
 export {
+  workspaceLifecycleAutomationHealthSchema,
+  workspaceLifecycleAutomationHealthStatusSchema,
+  workspaceLifecycleAutomationRunStatusSchema,
+  workspaceLifecycleAutomationRunSummarySchema,
+  workspaceLifecycleAutomationRunTriggerSourceSchema,
   canSendWorkspaceInvitationReminder,
   getNextWorkspaceDecommissionNotificationKind,
   getWorkspaceInvitationReminderReadyAt,
@@ -280,6 +285,7 @@ export {
   workspaceInvitationExpiringWindowMilliseconds,
   workspaceInvitationReminderCooldownMilliseconds,
   workspaceLifecycleNotificationDeliveryChannelSchema,
+  workspaceLifecycleNotificationDeliveryChannelOverviewSchema,
   workspaceLifecycleNotificationDeliveryOverviewSchema,
   workspaceLifecycleNotificationDeliveryRetryResponseSchema,
   workspaceLifecycleNotificationDeliveryStateSchema,
@@ -287,7 +293,13 @@ export {
   workspaceLifecycleNotificationEventKindSchema,
   workspaceLifecycleDecommissionNotificationKindSchema,
   type WorkspaceLifecycleDeliveryPolicy,
+  type WorkspaceLifecycleAutomationHealth,
+  type WorkspaceLifecycleAutomationHealthStatus,
+  type WorkspaceLifecycleAutomationRunStatus,
+  type WorkspaceLifecycleAutomationRunSummary,
+  type WorkspaceLifecycleAutomationRunTriggerSource,
   type WorkspaceLifecycleNotificationDeliveryChannel,
+  type WorkspaceLifecycleNotificationDeliveryChannelOverview,
   type WorkspaceLifecycleNotificationDeliveryOverview,
   type WorkspaceLifecycleNotificationDeliveryRetryResponse,
   type WorkspaceLifecycleNotificationDeliveryState,

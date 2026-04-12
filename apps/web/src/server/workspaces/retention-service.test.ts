@@ -23,12 +23,74 @@ function createWorkspaceRetentionHarness() {
         canceledWorkspaceIds.push(input.workspaceId);
       }
     },
+    lifecycleAutomationSnapshotLoader: async () => ({
+      lifecycleAutomationHealth: {
+        enabled: true,
+        intervalSeconds: 300,
+        jitterSeconds: 15,
+        lastRunAgeSeconds: 60,
+        lastRunAt: "2026-04-12T06:59:00.000Z",
+        latestRun: {
+          auditLogDeliveryCount: 2,
+          completedAt: "2026-04-12T06:59:00.000Z",
+          createdAt: "2026-04-12T06:58:00.000Z",
+          decommissionNoticeCount: 1,
+          failedWorkspaceCount: 0,
+          failureMessage: null,
+          id: "run_1",
+          invitationReminderCount: 1,
+          startedAt: "2026-04-12T06:58:00.000Z",
+          status: "succeeded" as const,
+          triggerSource: "scheduled" as const,
+          updatedAt: "2026-04-12T06:59:00.000Z",
+          webhookQueuedCount: 2,
+          workspaceCount: 3
+        },
+        lockTtlSeconds: 600,
+        message:
+          "Automatic lifecycle scheduling is active and recent runs are arriving on schedule.",
+        runOnStart: true,
+        status: "healthy" as const
+      },
+      recentLifecycleAutomationRuns: [
+        {
+          auditLogDeliveryCount: 2,
+          completedAt: "2026-04-12T06:59:00.000Z",
+          createdAt: "2026-04-12T06:58:00.000Z",
+          decommissionNoticeCount: 1,
+          failedWorkspaceCount: 0,
+          failureMessage: null,
+          id: "run_1",
+          invitationReminderCount: 1,
+          startedAt: "2026-04-12T06:58:00.000Z",
+          status: "succeeded" as const,
+          triggerSource: "scheduled" as const,
+          updatedAt: "2026-04-12T06:59:00.000Z",
+          webhookQueuedCount: 2,
+          workspaceCount: 3
+        }
+      ]
+    }),
     now: () => new Date("2026-04-12T07:00:00.000Z"),
     offboardingService: {
       async getAccessibleWorkspaceOffboardingOverview(input) {
         return {
           overview: {
             generatedAt: "2026-04-12T07:00:00.000Z",
+            lifecycleAutomationHealth: {
+              enabled: true,
+              intervalSeconds: 300,
+              jitterSeconds: 15,
+              lastRunAgeSeconds: 60,
+              lastRunAt: "2026-04-12T06:59:00.000Z",
+              latestRun: null,
+              lockTtlSeconds: 600,
+              message:
+                "Automatic lifecycle scheduling is active and recent runs are arriving on schedule.",
+              runOnStart: true,
+              status: "healthy" as const
+            },
+            recentLifecycleAutomationRuns: [],
             summary: {
               blockedWorkspaceCount: 1,
               decommissionNoticeDueWorkspaceCount: 1,
@@ -94,6 +156,13 @@ function createWorkspaceRetentionHarness() {
                 workspace
               },
               lifecycleDelivery: {
+                auditLog: {
+                  deliveredCount: workspace.id === "workspace_ready" ? 1 : 0,
+                  failedCount: 0,
+                  latestDelivery: null,
+                  queuedCount: 0,
+                  skippedCount: 0
+                },
                 deliveredCount: workspace.id === "workspace_ready" ? 1 : 0,
                 failedCount: workspace.id === "workspace_review" ? 1 : 0,
                 latestDelivery:
@@ -120,7 +189,36 @@ function createWorkspaceRetentionHarness() {
                       }
                     : null,
                 queuedCount: 0,
-                skippedCount: workspace.id === "workspace_blocked" ? 1 : 0
+                skippedCount: workspace.id === "workspace_blocked" ? 1 : 0,
+                webhook: {
+                  deliveredCount: 0,
+                  failedCount: workspace.id === "workspace_review" ? 1 : 0,
+                  latestDelivery:
+                    workspace.id === "workspace_review"
+                      ? {
+                          attemptCount: 1,
+                          createdAt: "2026-04-12T06:05:00.000Z",
+                          decommissionNotificationId: null,
+                          decommissionNotificationKind: null,
+                          deliveredAt: null,
+                          deliveryChannel: "webhook" as const,
+                          deliveryState: "failed" as const,
+                          eventKind: "invitation_reminder" as const,
+                          eventOccurredAt: "2026-04-12T06:00:00.000Z",
+                          failedAt: "2026-04-12T06:05:00.000Z",
+                          failureMessage: "Webhook rejected",
+                          id: "delivery_1",
+                          invitationId: "invitation_1",
+                          invitationWalletAddress:
+                            "0x2222222222222222222222222222222222222222",
+                          lastAttemptedAt: "2026-04-12T06:05:00.000Z",
+                          queuedAt: null,
+                          updatedAt: "2026-04-12T06:05:00.000Z"
+                        }
+                      : null,
+                  queuedCount: 0,
+                  skippedCount: workspace.id === "workspace_blocked" ? 1 : 0
+                }
               },
               lifecycleDeliveryPolicy: {
                 deliverDecommissionNotifications: true,

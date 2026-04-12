@@ -15,6 +15,7 @@ import {
 
 import { createStudioSettingsService } from "./service";
 import { createRuntimeWorkspaceLifecycleDeliveryService } from "../workspaces/lifecycle-delivery-runtime";
+import { loadWorkspaceLifecycleAutomationSnapshot } from "../workspaces/lifecycle-automation-runtime";
 
 function createStudioSettingsRepositories(database: DatabaseExecutor) {
   return {
@@ -41,6 +42,8 @@ export function createRuntimeStudioSettingsService(
   const databaseClient = getDatabaseClient(rawEnvironment);
 
   return createStudioSettingsService({
+    lifecycleAutomationSnapshotLoader: () =>
+      loadWorkspaceLifecycleAutomationSnapshot(rawEnvironment),
     lifecycleDeliveryService:
       createRuntimeWorkspaceLifecycleDeliveryService(rawEnvironment),
     repositories: createStudioSettingsRepositories(databaseClient),

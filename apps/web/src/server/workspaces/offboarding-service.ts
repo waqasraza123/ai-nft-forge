@@ -32,6 +32,8 @@ import {
   type StudioWorkspaceScopeSummary,
   type WorkspaceDecommissionSummary,
   type WorkspaceExportFormat,
+  type WorkspaceLifecycleAutomationHealth,
+  type WorkspaceLifecycleAutomationRunSummary,
   type WorkspaceOffboardingBlockerCode,
   type WorkspaceOffboardingCautionCode,
   type WorkspaceOffboardingSummary
@@ -43,6 +45,7 @@ import {
   isWorkspaceInvitationPending
 } from "../studio/invitation-lifecycle";
 import { createRuntimeWorkspaceDirectoryService } from "./directory-service";
+import { loadWorkspaceLifecycleAutomationSnapshot } from "./lifecycle-automation-runtime";
 import {
   createWorkspaceDecommissionWorkflowSummary,
   serializeWorkspaceDecommissionNotification
@@ -263,7 +266,7 @@ type WorkspaceOffboardingRepositorySet = {
         } | null;
         decommissionNotificationId: string | null;
         deliveredAt: Date | null;
-        deliveryChannel: "webhook";
+        deliveryChannel: "audit_log" | "webhook";
         deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
         eventKind: "invitation_reminder" | "decommission_notice";
         eventOccurredAt: Date;
@@ -438,6 +441,10 @@ type WorkspaceDirectoryServiceDependency = {
 
 type WorkspaceOffboardingServiceDependencies = {
   directoryService: WorkspaceDirectoryServiceDependency;
+  lifecycleAutomationSnapshotLoader?: () => Promise<{
+    lifecycleAutomationHealth: WorkspaceLifecycleAutomationHealth;
+    recentLifecycleAutomationRuns: WorkspaceLifecycleAutomationRunSummary[];
+  }>;
   now: () => Date;
   repositories: WorkspaceOffboardingRepositorySet;
 };
@@ -829,6 +836,26 @@ function countPendingWorkspaceInvitations(
 export function createWorkspaceOffboardingService(
   dependencies: WorkspaceOffboardingServiceDependencies
 ) {
+  const loadLifecycleAutomationSnapshot = async () =>
+    dependencies.lifecycleAutomationSnapshotLoader
+      ? dependencies.lifecycleAutomationSnapshotLoader()
+      : {
+          lifecycleAutomationHealth: {
+            enabled: false,
+            intervalSeconds: null,
+            jitterSeconds: null,
+            lastRunAgeSeconds: null,
+            lastRunAt: null,
+            latestRun: null,
+            lockTtlSeconds: null,
+            message:
+              "Lifecycle automation health is not available on this service instance.",
+            runOnStart: null,
+            status: "unreachable" as const
+          },
+          recentLifecycleAutomationRuns: []
+        };
+
   return {
     async getAccessibleWorkspaceOffboardingOverview(input: {
       currentWorkspaceId?: string | null | undefined;
@@ -844,9 +871,16 @@ export function createWorkspaceOffboardingService(
       const workspaceIds = input.workspaces.map((workspace) => workspace.id);
 
       if (workspaceIds.length === 0) {
+        const lifecycleAutomationSnapshot =
+          await loadLifecycleAutomationSnapshot();
+
         return workspaceOffboardingOverviewResponseSchema.parse({
           overview: {
             generatedAt,
+            lifecycleAutomationHealth:
+              lifecycleAutomationSnapshot.lifecycleAutomationHealth,
+            recentLifecycleAutomationRuns:
+              lifecycleAutomationSnapshot.recentLifecycleAutomationRuns,
             summary: {
               blockedWorkspaceCount: 0,
               decommissionNoticeDueWorkspaceCount: 0,
@@ -868,7 +902,8 @@ export function createWorkspaceOffboardingService(
         reconciliationIssues,
         decommissions,
         lifecycleDeliveries,
-        workspaceRecords
+        workspaceRecords,
+        lifecycleAutomationSnapshot
       ] = await Promise.all([
           dependencies.repositories.publishedCollectionRepository.listByWorkspaceIds(
             workspaceIds
@@ -888,7 +923,8 @@ export function createWorkspaceOffboardingService(
           dependencies.repositories.workspaceLifecycleNotificationDeliveryRepository.listByWorkspaceIds(
             workspaceIds
           ),
-          dependencies.repositories.workspaceRepository.listByIds(workspaceIds)
+          dependencies.repositories.workspaceRepository.listByIds(workspaceIds),
+          loadLifecycleAutomationSnapshot()
         ]);
       const decommissionNotifications =
         await dependencies.repositories.workspaceDecommissionNotificationRepository.listByRequestIds(
@@ -1065,6 +1101,10 @@ export function createWorkspaceOffboardingService(
       return workspaceOffboardingOverviewResponseSchema.parse({
         overview: {
           generatedAt,
+          lifecycleAutomationHealth:
+            lifecycleAutomationSnapshot.lifecycleAutomationHealth,
+          recentLifecycleAutomationRuns:
+            lifecycleAutomationSnapshot.recentLifecycleAutomationRuns,
           summary: {
             blockedWorkspaceCount: workspaces.filter(
               (workspace) => workspace.summary.readiness === "blocked"
@@ -1437,6 +1477,8 @@ export function createRuntimeWorkspaceOffboardingService(
 
   return createWorkspaceOffboardingService({
     directoryService: createRuntimeWorkspaceDirectoryService(rawEnvironment),
+    lifecycleAutomationSnapshotLoader: () =>
+      loadWorkspaceLifecycleAutomationSnapshot(rawEnvironment),
     now: () => new Date(),
     repositories: createWorkspaceOffboardingRepositories(database)
   });

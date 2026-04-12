@@ -46,6 +46,7 @@ export function createWorkspaceLifecycleNotificationDeliveryRepository(
   return {
     create(input: {
       decommissionNotificationId?: string | null;
+      deliveredAt?: Date | null;
       deliveryChannel?: WorkspaceLifecycleNotificationDeliveryChannel;
       deliveryState: WorkspaceLifecycleNotificationDeliveryState;
       eventKind: WorkspaceLifecycleNotificationDeliveryKind;
@@ -64,6 +65,7 @@ export function createWorkspaceLifecycleNotificationDeliveryRepository(
                 decommissionNotificationId: input.decommissionNotificationId
               }
             : {}),
+          deliveredAt: input.deliveredAt ?? null,
           deliveryChannel: input.deliveryChannel ?? "webhook",
           deliveryState: input.deliveryState,
           eventKind: input.eventKind,

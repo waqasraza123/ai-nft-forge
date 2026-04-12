@@ -7,6 +7,7 @@ import {
   createWorkspaceDecommissionNotificationRepository,
   createWorkspaceDecommissionRequestRepository,
   createWorkspaceInvitationRepository,
+  createWorkspaceLifecycleAutomationRunRepository,
   createWorkspaceLifecycleNotificationDeliveryRepository,
   createWorkspaceRepository,
   type DatabaseClient,
@@ -17,6 +18,7 @@ import {
   workspaceLifecycleJobNames,
   workspaceLifecycleQueueNames,
   type WorkerEnv,
+  type WorkspaceLifecycleAutomationRunTriggerSource,
   type WorkspaceLifecycleNotificationJobPayload
 } from "@ai-nft-forge/shared";
 
@@ -32,6 +34,7 @@ type RunWorkspaceLifecycleAutomationInput = {
   env: WorkerEnv;
   logger: Logger;
   redisConnection: Redis;
+  triggerSource: WorkspaceLifecycleAutomationRunTriggerSource;
 };
 
 function createTransactionalRepositories(database: DatabaseExecutor) {
@@ -50,7 +53,9 @@ function createTransactionalRepositories(database: DatabaseExecutor) {
       {
         create(input: {
           decommissionNotificationId?: string | null;
-          deliveryState: "queued";
+          deliveredAt?: Date | null;
+          deliveryChannel?: "audit_log" | "webhook";
+          deliveryState: "queued" | "delivered";
           eventKind: "invitation_reminder" | "decommission_notice";
           eventOccurredAt: Date;
           failureMessage?: string | null;
@@ -75,7 +80,8 @@ export async function runWorkspaceLifecycleAutomationWithDependencies({
   databaseClient,
   env,
   logger,
-  redisConnection
+  redisConnection,
+  triggerSource
 }: RunWorkspaceLifecycleAutomationInput): Promise<WorkspaceLifecycleAutomationSummary> {
   const queue = new Queue<
     WorkspaceLifecycleNotificationJobPayload,
@@ -85,6 +91,8 @@ export async function runWorkspaceLifecycleAutomationWithDependencies({
     connection: redisConnection
   });
   const repositories = createTransactionalRepositories(databaseClient);
+  const automationRunRepository =
+    createWorkspaceLifecycleAutomationRunRepository(databaseClient);
   const service = createWorkspaceLifecycleAutomationService({
     logger,
     now: () => new Date(),
@@ -115,9 +123,41 @@ export async function runWorkspaceLifecycleAutomationWithDependencies({
         Boolean(env.WORKSPACE_LIFECYCLE_WEBHOOK_URL)
     }
   });
+  const startedAt = new Date();
+  const automationRun = await automationRunRepository.create({
+    startedAt,
+    triggerSource,
+    status: "running"
+  });
 
   try {
-    return await service.run();
+    const summary = await service.run();
+
+    await automationRunRepository.updateById({
+      auditLogDeliveryCount: summary.auditLogDeliveryCount,
+      completedAt: new Date(),
+      decommissionNoticeCount: summary.decommissionNoticeCount,
+      failedWorkspaceCount: summary.failedWorkspaceCount,
+      id: automationRun.id,
+      invitationReminderCount: summary.invitationReminderCount,
+      status: "succeeded",
+      webhookQueuedCount: summary.webhookQueuedCount,
+      workspaceCount: summary.workspaceCount
+    });
+
+    return summary;
+  } catch (error) {
+    await automationRunRepository.updateById({
+      completedAt: new Date(),
+      failureMessage:
+        error instanceof Error && error.message.trim().length > 0
+          ? error.message.trim()
+          : "Workspace lifecycle automation failed.",
+      id: automationRun.id,
+      status: "failed"
+    });
+
+    throw error;
   } finally {
     await queue.close();
   }
@@ -139,7 +179,8 @@ export async function runWorkspaceLifecycleAutomation(
       databaseClient,
       env,
       logger,
-      redisConnection
+      redisConnection,
+      triggerSource: "manual"
     });
   } finally {
     await databaseClient.$disconnect();

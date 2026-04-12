@@ -25,8 +25,22 @@ describe("createWorkspaceLifecycleAutomationService", () => {
     const lifecycleDeliveryRepository = {
       create: vi
         .fn()
-        .mockResolvedValueOnce({ id: "delivery_1" })
-        .mockResolvedValueOnce({ id: "delivery_2" }),
+        .mockResolvedValueOnce({
+          deliveryChannel: "audit_log" as const,
+          id: "delivery_audit_invitation"
+        })
+        .mockResolvedValueOnce({
+          deliveryChannel: "webhook" as const,
+          id: "delivery_webhook_invitation"
+        })
+        .mockResolvedValueOnce({
+          deliveryChannel: "audit_log" as const,
+          id: "delivery_audit_decommission"
+        })
+        .mockResolvedValueOnce({
+          deliveryChannel: "webhook" as const,
+          id: "delivery_webhook_decommission"
+        }),
       updateById: vi.fn()
     };
     const txInvitationRepository = {
@@ -113,9 +127,11 @@ describe("createWorkspaceLifecycleAutomationService", () => {
     const summary = await service.run();
 
     expect(summary).toEqual({
+      auditLogDeliveryCount: 2,
       decommissionNoticeCount: 1,
       failedWorkspaceCount: 0,
       invitationReminderCount: 1,
+      webhookQueuedCount: 2,
       workspaceCount: 1
     });
     expect(txInvitationRepository.touchReminderById).toHaveBeenCalledWith({
@@ -159,6 +175,21 @@ describe("createWorkspaceLifecycleAutomationService", () => {
       })
     });
     expect(lifecycleDeliveryRepository.create).toHaveBeenNthCalledWith(1, {
+      deliveredAt: now,
+      deliveryChannel: "audit_log",
+      deliveryState: "delivered",
+      eventKind: "invitation_reminder",
+      eventOccurredAt: now,
+      invitationId: "invitation_1",
+      ownerUserId: "user_1",
+      payloadJson: expect.objectContaining({
+        event: "workspace.lifecycle_notification",
+        kind: "invitation_reminder"
+      }),
+      workspaceId: "workspace_1"
+    });
+    expect(lifecycleDeliveryRepository.create).toHaveBeenNthCalledWith(2, {
+      deliveryChannel: "webhook",
       deliveryState: "queued",
       eventKind: "invitation_reminder",
       eventOccurredAt: now,
@@ -171,8 +202,23 @@ describe("createWorkspaceLifecycleAutomationService", () => {
       queuedAt: now,
       workspaceId: "workspace_1"
     });
-    expect(lifecycleDeliveryRepository.create).toHaveBeenNthCalledWith(2, {
+    expect(lifecycleDeliveryRepository.create).toHaveBeenNthCalledWith(3, {
       decommissionNotificationId: "notification_1",
+      deliveredAt: now,
+      deliveryChannel: "audit_log",
+      deliveryState: "delivered",
+      eventKind: "decommission_notice",
+      eventOccurredAt: now,
+      ownerUserId: "user_1",
+      payloadJson: expect.objectContaining({
+        event: "workspace.lifecycle_notification",
+        kind: "decommission_notice"
+      }),
+      workspaceId: "workspace_1"
+    });
+    expect(lifecycleDeliveryRepository.create).toHaveBeenNthCalledWith(4, {
+      decommissionNotificationId: "notification_1",
+      deliveryChannel: "webhook",
       deliveryState: "queued",
       eventKind: "decommission_notice",
       eventOccurredAt: now,
@@ -185,11 +231,11 @@ describe("createWorkspaceLifecycleAutomationService", () => {
       workspaceId: "workspace_1"
     });
     expect(queue.enqueue).toHaveBeenNthCalledWith(1, {
-      deliveryId: "delivery_1",
+      deliveryId: "delivery_webhook_invitation",
       source: "automatic"
     });
     expect(queue.enqueue).toHaveBeenNthCalledWith(2, {
-      deliveryId: "delivery_2",
+      deliveryId: "delivery_webhook_decommission",
       source: "automatic"
     });
   });
@@ -279,9 +325,11 @@ describe("createWorkspaceLifecycleAutomationService", () => {
     const summary = await service.run();
 
     expect(summary).toEqual({
+      auditLogDeliveryCount: 0,
       decommissionNoticeCount: 0,
       failedWorkspaceCount: 0,
       invitationReminderCount: 0,
+      webhookQueuedCount: 0,
       workspaceCount: 1
     });
     expect(txInvitationRepository.touchReminderById).not.toHaveBeenCalled();

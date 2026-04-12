@@ -19,7 +19,9 @@ export function createWorkspaceLifecycleNotificationDeliveryBoundary(
   return {
     create(input: {
       decommissionNotificationId?: string | null;
-      deliveryState: "queued" | "skipped";
+      deliveredAt?: Date | null;
+      deliveryChannel?: "audit_log" | "webhook";
+      deliveryState: "queued" | "skipped" | "delivered";
       eventKind: "invitation_reminder" | "decommission_notice";
       eventOccurredAt: Date;
       failureMessage?: string | null;
