@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { walletAddressSchema } from "./auth.js";
 import {
   opsAlertSeveritySchema,
   opsReconciliationIssueKindSchema,
@@ -17,6 +18,21 @@ import {
 } from "./studio-settings.js";
 
 export const workspaceExportFormatSchema = z.enum(["json", "csv"]);
+export const workspaceDecommissionStatusSchema = z.enum([
+  "scheduled",
+  "canceled",
+  "executed"
+]);
+export const workspaceDecommissionRetentionDaysSchema = z
+  .number()
+  .int()
+  .min(7)
+  .max(365);
+export const workspaceDecommissionReasonSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(280);
 
 export const workspaceOffboardingBlockerCodeSchema = z.enum([
   "active_alerts",
@@ -50,11 +66,50 @@ export const workspaceOffboardingSummarySchema = z.object({
   unfulfilledCheckoutCount: z.number().int().min(0)
 });
 
+export const workspaceDecommissionSummarySchema = z.object({
+  canceledAt: z.string().datetime().nullable(),
+  canceledByUserId: z.string().min(1).nullable(),
+  canceledByWalletAddress: walletAddressSchema.nullable(),
+  createdAt: z.string().datetime(),
+  executeAfter: z.string().datetime(),
+  executedAt: z.string().datetime().nullable(),
+  executedByUserId: z.string().min(1).nullable(),
+  executedByWalletAddress: walletAddressSchema.nullable(),
+  exportConfirmedAt: z.string().datetime(),
+  id: z.string().min(1),
+  reason: workspaceDecommissionReasonSchema.nullable(),
+  requestedByUserId: z.string().min(1),
+  requestedByWalletAddress: walletAddressSchema,
+  retentionDays: workspaceDecommissionRetentionDaysSchema,
+  status: workspaceDecommissionStatusSchema
+});
+
 export const workspaceOffboardingEntrySchema = z.object({
   current: z.boolean(),
+  decommission: workspaceDecommissionSummarySchema.nullable(),
   directory: studioWorkspaceDirectoryEntrySchema,
   summary: workspaceOffboardingSummarySchema,
   workspace: studioWorkspaceScopeSummarySchema
+});
+
+export const workspaceDecommissionScheduleRequestSchema = z.object({
+  confirmWorkspaceSlug: studioWorkspaceSummarySchema.shape.slug,
+  exportConfirmed: z.literal(true),
+  reason: workspaceDecommissionReasonSchema.nullish(),
+  retentionDays: workspaceDecommissionRetentionDaysSchema
+});
+
+export const workspaceDecommissionExecuteRequestSchema = z.object({
+  confirmWorkspaceSlug: studioWorkspaceSummarySchema.shape.slug
+});
+
+export const workspaceDecommissionResponseSchema = z.object({
+  decommission: workspaceDecommissionSummarySchema
+});
+
+export const workspaceDecommissionExecutionResponseSchema = z.object({
+  executedAt: z.string().datetime(),
+  workspace: studioWorkspaceSummarySchema
 });
 
 export const workspaceOffboardingOverviewResponseSchema = z.object({
@@ -64,6 +119,7 @@ export const workspaceOffboardingOverviewResponseSchema = z.object({
       blockedWorkspaceCount: z.number().int().min(0),
       readyWorkspaceCount: z.number().int().min(0),
       reviewRequiredWorkspaceCount: z.number().int().min(0),
+      scheduledDecommissionCount: z.number().int().min(0),
       totalWorkspaceCount: z.number().int().min(0)
     }),
     workspaces: z.array(workspaceOffboardingEntrySchema)
@@ -130,6 +186,7 @@ export const workspaceExportResponseSchema = z.object({
     auditEntries: z.array(studioWorkspaceAuditEntrySchema),
     brands: z.array(studioBrandSummarySchema),
     checkouts: z.array(workspaceExportCheckoutSchema),
+    decommission: workspaceDecommissionSummarySchema.nullable(),
     generatedAt: z.string().datetime(),
     invitations: z.array(studioWorkspaceInvitationSummarySchema),
     members: z.array(studioWorkspaceMemberSummarySchema),
@@ -143,6 +200,15 @@ export const workspaceExportResponseSchema = z.object({
 });
 
 export type WorkspaceExportFormat = z.infer<typeof workspaceExportFormatSchema>;
+export type WorkspaceDecommissionStatus = z.infer<
+  typeof workspaceDecommissionStatusSchema
+>;
+export type WorkspaceDecommissionRetentionDays = z.infer<
+  typeof workspaceDecommissionRetentionDaysSchema
+>;
+export type WorkspaceDecommissionReason = z.infer<
+  typeof workspaceDecommissionReasonSchema
+>;
 export type WorkspaceOffboardingBlockerCode = z.infer<
   typeof workspaceOffboardingBlockerCodeSchema
 >;
@@ -155,8 +221,23 @@ export type WorkspaceOffboardingReadiness = z.infer<
 export type WorkspaceOffboardingSummary = z.infer<
   typeof workspaceOffboardingSummarySchema
 >;
+export type WorkspaceDecommissionSummary = z.infer<
+  typeof workspaceDecommissionSummarySchema
+>;
 export type WorkspaceOffboardingEntry = z.infer<
   typeof workspaceOffboardingEntrySchema
+>;
+export type WorkspaceDecommissionScheduleRequest = z.infer<
+  typeof workspaceDecommissionScheduleRequestSchema
+>;
+export type WorkspaceDecommissionExecuteRequest = z.infer<
+  typeof workspaceDecommissionExecuteRequestSchema
+>;
+export type WorkspaceDecommissionResponse = z.infer<
+  typeof workspaceDecommissionResponseSchema
+>;
+export type WorkspaceDecommissionExecutionResponse = z.infer<
+  typeof workspaceDecommissionExecutionResponseSchema
 >;
 export type WorkspaceOffboardingOverviewResponse = z.infer<
   typeof workspaceOffboardingOverviewResponseSchema

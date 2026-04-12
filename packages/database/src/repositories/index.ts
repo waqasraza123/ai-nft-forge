@@ -110,3 +110,7 @@ export {
   createWorkspaceInvitationRepository,
   type WorkspaceInvitationRepository
 } from "./workspace-invitation-repository.js";
+export {
+  createWorkspaceDecommissionRequestRepository,
+  type WorkspaceDecommissionRequestRepository
+} from "./workspace-decommission-request-repository.js";

@@ -74,6 +74,14 @@ export function WorkspaceOffboardingPanel({
                   {entry.summary.unfulfilledCheckoutCount} unfulfilled
                 </Pill>
                 <Pill>{entry.summary.livePublicationCount} live releases</Pill>
+                {entry.decommission ? (
+                  <Pill>
+                    decommission{" "}
+                    {new Intl.DateTimeFormat(undefined, {
+                      dateStyle: "medium"
+                    }).format(new Date(entry.decommission.executeAfter))}
+                  </Pill>
+                ) : null}
               </div>
               <p className="surface-card__body-copy">
                 Last activity: {formatDateTime(entry.directory.lastActivityAt)}
@@ -104,6 +112,15 @@ export function WorkspaceOffboardingPanel({
                   <span>
                     No active operational blockers are currently attached to
                     this workspace.
+                  </span>
+                </div>
+              ) : null}
+              {entry.decommission ? (
+                <div className="status-banner">
+                  <strong>Decommission scheduled</strong>
+                  <span>
+                    Retention window ends on{" "}
+                    {formatDateTime(entry.decommission.executeAfter)}.
                   </span>
                 </div>
               ) : null}

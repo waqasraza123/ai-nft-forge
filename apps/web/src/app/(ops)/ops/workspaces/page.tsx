@@ -35,6 +35,7 @@ export default async function OpsWorkspacesPage() {
             blockedWorkspaceCount: 0,
             readyWorkspaceCount: 0,
             reviewRequiredWorkspaceCount: 0,
+            scheduledDecommissionCount: 0,
             totalWorkspaceCount: 0
           },
           workspaces: []

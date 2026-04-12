@@ -25,6 +25,8 @@ import {
   studioWorkspaceRoleEscalationActionResponseSchema,
   studioWorkspaceRoleEscalationResponseSchema,
   studioWorkspaceStatusUpdateResponseSchema,
+  workspaceDecommissionExecutionResponseSchema,
+  workspaceDecommissionResponseSchema,
   workspaceOffboardingOverviewResponseSchema,
   type StudioBrandSummary,
   type StudioSettingsSummary,
@@ -34,6 +36,7 @@ import {
   type StudioWorkspaceMemberSummary,
   type StudioWorkspaceRoleEscalationSummary,
   type StudioWorkspaceStatus,
+  type WorkspaceDecommissionSummary,
   type WorkspaceOffboardingEntry
 } from "@ai-nft-forge/shared";
 import {
@@ -99,6 +102,13 @@ type WorkspaceCreateState = {
 
 type MemberState = {
   walletAddress: string;
+};
+
+type WorkspaceDecommissionFormState = {
+  confirmWorkspaceSlug: string;
+  executeConfirmWorkspaceSlug: string;
+  reason: string;
+  retentionDays: number;
 };
 
 function formatTimestamp(value: string | null) {
@@ -231,12 +241,30 @@ function createInitialMemberState(): MemberState {
   };
 }
 
+function createInitialWorkspaceDecommissionFormState(
+  workspaceSlug: string | null
+): WorkspaceDecommissionFormState {
+  return {
+    confirmWorkspaceSlug: workspaceSlug ?? "",
+    executeConfirmWorkspaceSlug: workspaceSlug ?? "",
+    reason: "",
+    retentionDays: 30
+  };
+}
+
 function formatWorkspaceStatus(status: StudioWorkspaceStatus) {
   return status.replaceAll("_", " ");
 }
 
 function formatWorkspaceOffboardingCode(code: string) {
   return code.replaceAll("_", " ");
+}
+
+function formatDecommissionDateTime(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(new Date(value));
 }
 
 function createInactiveWorkspaceMessage(status: StudioWorkspaceStatus) {
@@ -292,12 +320,22 @@ export function StudioSettingsClient({
   const [memberState, setMemberState] = useState<MemberState>(() =>
     createInitialMemberState()
   );
+  const [workspaceDecommissionFormState, setWorkspaceDecommissionFormState] =
+    useState<WorkspaceDecommissionFormState>(() =>
+      createInitialWorkspaceDecommissionFormState(
+        initialSettings?.workspace.slug ?? null
+      )
+    );
   const [notice, setNotice] = useState<NoticeState>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isCreatingBrand, setIsCreatingBrand] = useState(false);
   const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false);
   const [isCreatingInvitation, setIsCreatingInvitation] = useState(false);
+  const [isSchedulingDecommission, setIsSchedulingDecommission] =
+    useState(false);
+  const [isCancelingDecommission, setIsCancelingDecommission] = useState(false);
+  const [isExecutingDecommission, setIsExecutingDecommission] = useState(false);
   const [roleEscalationJustification, setRoleEscalationJustification] =
     useState("");
   const [isRequestingRoleEscalation, setIsRequestingRoleEscalation] =
@@ -359,8 +397,13 @@ export function StudioSettingsClient({
     ) ?? null;
   const offboardingSummary =
     currentWorkspaceOffboardingState?.summary ?? null;
+  const scheduledDecommission =
+    currentWorkspaceOffboardingState?.decommission ?? null;
   const exportWorkspaceId =
     currentWorkspaceOffboardingState?.workspace.id ?? settings?.workspace.id ?? null;
+  const scheduledDecommissionReadyForExecution = scheduledDecommission
+    ? new Date(scheduledDecommission.executeAfter).getTime() <= Date.now()
+    : false;
 
   useEffect(() => {
     const nextSelectedBrandId = resolveSelectedBrandId({
@@ -380,6 +423,25 @@ export function StudioSettingsClient({
       })
     );
   }, [selectedBrand, selectedBrandId, settings]);
+
+  useEffect(() => {
+    setWorkspaceDecommissionFormState((currentState) => {
+      const workspaceSlug = settings?.workspace.slug ?? "";
+
+      if (
+        currentState.confirmWorkspaceSlug === workspaceSlug &&
+        currentState.executeConfirmWorkspaceSlug === workspaceSlug
+      ) {
+        return currentState;
+      }
+
+      return {
+        ...currentState,
+        confirmWorkspaceSlug: workspaceSlug,
+        executeConfirmWorkspaceSlug: workspaceSlug
+      };
+    });
+  }, [settings?.workspace.slug]);
 
   const refreshSettings = useEffectEvent(
     async (input?: { silent?: boolean }) => {
@@ -686,6 +748,172 @@ export function StudioSettingsClient({
       });
     } finally {
       setActingWorkspaceStatus(null);
+    }
+  }
+
+  async function handleScheduleWorkspaceDecommission(
+    event: FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
+
+    if (!canManageWorkspace || !settings?.workspace.id) {
+      setNotice({
+        message: "Only workspace owners can schedule workspace decommission.",
+        tone: "error"
+      });
+      return;
+    }
+
+    setIsSchedulingDecommission(true);
+    setNotice({
+      message: "Scheduling workspace decommission…",
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch(
+        `/api/studio/workspaces/${settings.workspace.id}/decommission`,
+        {
+          body: JSON.stringify({
+            confirmWorkspaceSlug:
+              workspaceDecommissionFormState.confirmWorkspaceSlug,
+            exportConfirmed: true,
+            reason:
+              workspaceDecommissionFormState.reason.trim().length > 0
+                ? workspaceDecommissionFormState.reason.trim()
+                : null,
+            retentionDays: workspaceDecommissionFormState.retentionDays
+          }),
+          headers: {
+            "Content-Type": "application/json"
+          },
+          method: "POST"
+        }
+      );
+      const payload = await parseJsonResponse({
+        response,
+        schema: workspaceDecommissionResponseSchema
+      });
+
+      await refreshSettings({
+        silent: true
+      });
+      setWorkspaceDecommissionFormState((currentState) => ({
+        ...currentState,
+        reason: ""
+      }));
+      setNotice({
+        message: `Workspace decommission scheduled for ${formatDecommissionDateTime(payload.decommission.executeAfter)}.`,
+        tone: "success"
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Workspace decommission could not be scheduled.",
+        tone: "error"
+      });
+    } finally {
+      setIsSchedulingDecommission(false);
+    }
+  }
+
+  async function handleCancelWorkspaceDecommission() {
+    if (!canManageWorkspace || !settings?.workspace.id) {
+      setNotice({
+        message: "Only workspace owners can cancel workspace decommission.",
+        tone: "error"
+      });
+      return;
+    }
+
+    setIsCancelingDecommission(true);
+    setNotice({
+      message: "Canceling workspace decommission…",
+      tone: "info"
+    });
+
+    try {
+      await parseJsonResponse({
+        response: await fetch(
+          `/api/studio/workspaces/${settings.workspace.id}/decommission`,
+          {
+            method: "DELETE"
+          }
+        ),
+        schema: workspaceDecommissionResponseSchema
+      });
+      await refreshSettings({
+        silent: true
+      });
+      setNotice({
+        message: "Workspace decommission canceled.",
+        tone: "success"
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Workspace decommission could not be canceled.",
+        tone: "error"
+      });
+    } finally {
+      setIsCancelingDecommission(false);
+    }
+  }
+
+  async function handleExecuteWorkspaceDecommission() {
+    if (!canManageWorkspace || !settings?.workspace.id) {
+      setNotice({
+        message: "Only workspace owners can execute workspace decommission.",
+        tone: "error"
+      });
+      return;
+    }
+
+    setIsExecutingDecommission(true);
+    setNotice({
+      message: "Executing workspace decommission…",
+      tone: "info"
+    });
+
+    try {
+      const payload = await parseJsonResponse({
+        response: await fetch(
+          `/api/studio/workspaces/${settings.workspace.id}/decommission/execute`,
+          {
+            body: JSON.stringify({
+              confirmWorkspaceSlug:
+                workspaceDecommissionFormState.executeConfirmWorkspaceSlug
+            }),
+            headers: {
+              "Content-Type": "application/json"
+            },
+            method: "POST"
+          }
+        ),
+        schema: workspaceDecommissionExecutionResponseSchema
+      });
+
+      setNotice({
+        message: `Workspace ${payload.workspace.slug} was decommissioned.`,
+        tone: "success"
+      });
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Workspace decommission could not be executed.",
+        tone: "error"
+      });
+    } finally {
+      setIsExecutingDecommission(false);
     }
   }
 
@@ -1326,6 +1554,222 @@ export function StudioSettingsClient({
                 </div>
               )}
             </>
+          ) : null}
+        </SurfaceCard>
+        <SurfaceCard
+          body="Decommission permanently removes the workspace and its workspace-scoped data after a retention window. This is owner-only, requires an archived workspace, and only unlocks when offboarding review is fully clean."
+          eyebrow="Retention"
+          span={4}
+          title="Decommission workspace"
+        >
+          {!settings?.workspace ? (
+            <div className="status-banner status-banner--info">
+              <strong>No workspace selected</strong>
+              <span>
+                Choose a workspace before scheduling a decommission window.
+              </span>
+            </div>
+          ) : null}
+          {settings?.workspace ? (
+            <div className="stack-md">
+              {!canManageWorkspace ? (
+                <div className="status-banner status-banner--info">
+                  <strong>Owner only</strong>
+                  <span>
+                    Operators can review retention state, but only owners can
+                    schedule, cancel, or execute workspace decommission.
+                  </span>
+                </div>
+              ) : null}
+              {canManageWorkspace && scheduledDecommission ? (
+                <>
+                  <div className="pill-row">
+                    <Pill>{scheduledDecommission.status}</Pill>
+                    <Pill>
+                      {scheduledDecommission.retentionDays} day retention
+                    </Pill>
+                  </div>
+                  <div className="status-banner status-banner--info">
+                    <strong>Scheduled</strong>
+                    <span>
+                      Execution opens on{" "}
+                      {formatDecommissionDateTime(
+                        scheduledDecommission.executeAfter
+                      )}
+                      .
+                    </span>
+                  </div>
+                  {scheduledDecommission.reason ? (
+                    <p className="surface-card__body-copy">
+                      Reason: {scheduledDecommission.reason}
+                    </p>
+                  ) : null}
+                  <label className="field-label" htmlFor="decommission-execute-slug">
+                    Confirm workspace slug to execute
+                  </label>
+                  <input
+                    className="text-input"
+                    id="decommission-execute-slug"
+                    onChange={(event) => {
+                      const value = event.target.value;
+
+                      setWorkspaceDecommissionFormState((currentState) => ({
+                        ...currentState,
+                        executeConfirmWorkspaceSlug: value
+                      }));
+                    }}
+                    placeholder={settings.workspace.slug}
+                    type="text"
+                    value={workspaceDecommissionFormState.executeConfirmWorkspaceSlug}
+                  />
+                  {!scheduledDecommissionReadyForExecution ? (
+                    <div className="status-banner">
+                      <strong>Retention window active</strong>
+                      <span>
+                        Final execution stays locked until{" "}
+                        {formatDecommissionDateTime(
+                          scheduledDecommission.executeAfter
+                        )}
+                        .
+                      </span>
+                    </div>
+                  ) : null}
+                  <div className="studio-action-row">
+                    <button
+                      className="button-action button-action--secondary"
+                      disabled={
+                        isCancelingDecommission ||
+                        isExecutingDecommission ||
+                        isSchedulingDecommission
+                      }
+                      onClick={() => {
+                        void handleCancelWorkspaceDecommission();
+                      }}
+                      type="button"
+                    >
+                      {isCancelingDecommission
+                        ? "Canceling…"
+                        : "Cancel schedule"}
+                    </button>
+                    <button
+                      className="button-action"
+                      disabled={
+                        isCancelingDecommission ||
+                        isExecutingDecommission ||
+                        !scheduledDecommissionReadyForExecution
+                      }
+                      onClick={() => {
+                        void handleExecuteWorkspaceDecommission();
+                      }}
+                      type="button"
+                    >
+                      {isExecutingDecommission
+                        ? "Decommissioning…"
+                        : "Execute decommission"}
+                    </button>
+                  </div>
+                </>
+              ) : null}
+              {canManageWorkspace &&
+              !scheduledDecommission &&
+              settings.workspace.status !== "archived" ? (
+                <div className="status-banner">
+                  <strong>Archive required</strong>
+                  <span>
+                    Archive the workspace before you can schedule permanent
+                    decommission.
+                  </span>
+                </div>
+              ) : null}
+              {canManageWorkspace &&
+              !scheduledDecommission &&
+              settings.workspace.status === "archived" &&
+              offboardingSummary?.readiness !== "ready" ? (
+                <div className="status-banner status-banner--info">
+                  <strong>Resolve offboarding review first</strong>
+                  <span>
+                    Decommission unlocks only after this workspace reaches a
+                    ready offboarding state.
+                  </span>
+                </div>
+              ) : null}
+              {canManageWorkspace &&
+              !scheduledDecommission &&
+              settings.workspace.status === "archived" &&
+              offboardingSummary?.readiness === "ready" ? (
+                <form
+                  className="stack-sm"
+                  onSubmit={(event) => {
+                    void handleScheduleWorkspaceDecommission(event);
+                  }}
+                >
+                  <label className="field-label" htmlFor="decommission-retention">
+                    Retention window
+                  </label>
+                  <select
+                    className="text-input"
+                    id="decommission-retention"
+                    onChange={(event) => {
+                      const value = Number(event.target.value);
+
+                      setWorkspaceDecommissionFormState((currentState) => ({
+                        ...currentState,
+                        retentionDays: value
+                      }));
+                    }}
+                    value={workspaceDecommissionFormState.retentionDays}
+                  >
+                    <option value={7}>7 days</option>
+                    <option value={30}>30 days</option>
+                    <option value={90}>90 days</option>
+                  </select>
+                  <label className="field-label" htmlFor="decommission-slug">
+                    Confirm workspace slug
+                  </label>
+                  <input
+                    className="text-input"
+                    id="decommission-slug"
+                    onChange={(event) => {
+                      const value = event.target.value;
+
+                      setWorkspaceDecommissionFormState((currentState) => ({
+                        ...currentState,
+                        confirmWorkspaceSlug: value
+                      }));
+                    }}
+                    placeholder={settings.workspace.slug}
+                    type="text"
+                    value={workspaceDecommissionFormState.confirmWorkspaceSlug}
+                  />
+                  <label className="field-label" htmlFor="decommission-reason">
+                    Reason
+                  </label>
+                  <textarea
+                    className="text-input"
+                    id="decommission-reason"
+                    onChange={(event) => {
+                      const value = event.target.value;
+
+                      setWorkspaceDecommissionFormState((currentState) => ({
+                        ...currentState,
+                        reason: value
+                      }));
+                    }}
+                    rows={3}
+                    value={workspaceDecommissionFormState.reason}
+                  />
+                  <button
+                    className="button-action"
+                    disabled={isSchedulingDecommission}
+                    type="submit"
+                  >
+                    {isSchedulingDecommission
+                      ? "Scheduling…"
+                      : "Schedule decommission"}
+                  </button>
+                </form>
+              ) : null}
+            </div>
           ) : null}
         </SurfaceCard>
         <WorkspaceDirectoryPanel

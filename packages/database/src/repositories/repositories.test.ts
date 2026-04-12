@@ -23,6 +23,7 @@ import { createSourceAssetRepository } from "./source-asset-repository.js";
 import { createUserRepository } from "./user-repository.js";
 import { createWorkspaceMembershipRepository } from "./workspace-membership-repository.js";
 import { createWorkspaceInvitationRepository } from "./workspace-invitation-repository.js";
+import { createWorkspaceDecommissionRequestRepository } from "./workspace-decommission-request-repository.js";
 import { createWorkspaceRoleEscalationRequestRepository } from "./workspace-role-escalation-request-repository.js";
 import { createWorkspaceRepository } from "./workspace-repository.js";
 
@@ -197,6 +198,9 @@ describe("database repositories", () => {
           id: "workspace_1",
           slug: "forge-ops"
         }),
+        deleteMany: vi.fn().mockResolvedValue({
+          count: 1
+        }),
         updateMany: vi.fn().mockResolvedValue({
           count: 1
         })
@@ -221,6 +225,10 @@ describe("database repositories", () => {
       currentOwnerUserId: "user_1",
       id: "workspace_1",
       nextOwnerUserId: "user_2"
+    });
+    const deletedWorkspace = await repository.deleteByIdForOwner({
+      id: "workspace_1",
+      ownerUserId: "user_1"
     });
 
     expect(database.workspace.findFirst).toHaveBeenNthCalledWith(1, {
@@ -280,11 +288,204 @@ describe("database repositories", () => {
         ownerUserId: "user_1"
       }
     });
+    expect(database.workspace.deleteMany).toHaveBeenCalledWith({
+      where: {
+        id: "workspace_1",
+        ownerUserId: "user_1"
+      }
+    });
     expect(ownedWorkspace?.id).toBe("workspace_1");
     expect(workspace?.id).toBe("workspace_1");
     expect(workspaces).toHaveLength(2);
     expect(updatedWorkspace.slug).toBe("forge-ops");
     expect(transferredWorkspace.id).toBe("workspace_1");
+    expect(deletedWorkspace.count).toBe(1);
+  });
+
+  it("delegates workspace decommission request persistence through the repository", async () => {
+    const database = {
+      workspaceDecommissionRequest: {
+        create: vi.fn().mockResolvedValue({
+          id: "request_1"
+        }),
+        findFirst: vi.fn().mockResolvedValue({
+          id: "request_1",
+          requestedByUser: {
+            avatarUrl: null,
+            displayName: "Owner",
+            id: "user_1",
+            walletAddress: "0xowner"
+          }
+        }),
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "request_1",
+            requestedByUser: {
+              avatarUrl: null,
+              displayName: "Owner",
+              id: "user_1",
+              walletAddress: "0xowner"
+            }
+          }
+        ]),
+        update: vi.fn().mockResolvedValue({
+          id: "request_1"
+        })
+      }
+    };
+    const repository = createWorkspaceDecommissionRequestRepository(
+      database as never
+    );
+    const now = new Date("2026-04-12T00:00:00.000Z");
+
+    const createdRequest = await repository.create({
+      executeAfter: now,
+      exportConfirmedAt: now,
+      reason: "Workspace sunset",
+      requestedByUserId: "user_1",
+      retentionDays: 30,
+      workspaceId: "workspace_1"
+    });
+    const scheduledRequest = await repository.findScheduledByWorkspaceId({
+      workspaceId: "workspace_1"
+    });
+    const scheduledRequests = await repository.listScheduledByWorkspaceIds([
+      "workspace_1"
+    ]);
+    const canceledRequest = await repository.cancelById({
+      canceledAt: now,
+      canceledByUserId: "user_1",
+      id: "request_1"
+    });
+    const executedRequest = await repository.markExecutedById({
+      executedAt: now,
+      executedByUserId: "user_1",
+      id: "request_1"
+    });
+
+    expect(database.workspaceDecommissionRequest.create).toHaveBeenCalledWith({
+      data: {
+        executeAfter: now,
+        exportConfirmedAt: now,
+        reason: "Workspace sunset",
+        requestedByUserId: "user_1",
+        retentionDays: 30,
+        workspaceId: "workspace_1"
+      }
+    });
+    expect(database.workspaceDecommissionRequest.findFirst).toHaveBeenCalledWith({
+      include: {
+        canceledByUser: {
+          select: {
+            avatarUrl: true,
+            displayName: true,
+            id: true,
+            walletAddress: true
+          }
+        },
+        executedByUser: {
+          select: {
+            avatarUrl: true,
+            displayName: true,
+            id: true,
+            walletAddress: true
+          }
+        },
+        requestedByUser: {
+          select: {
+            avatarUrl: true,
+            displayName: true,
+            id: true,
+            walletAddress: true
+          }
+        }
+      },
+      orderBy: [
+        {
+          createdAt: "desc"
+        },
+        {
+          id: "desc"
+        }
+      ],
+      where: {
+        status: "scheduled",
+        workspaceId: "workspace_1"
+      }
+    });
+    expect(database.workspaceDecommissionRequest.findMany).toHaveBeenCalledWith({
+      include: {
+        canceledByUser: {
+          select: {
+            avatarUrl: true,
+            displayName: true,
+            id: true,
+            walletAddress: true
+          }
+        },
+        executedByUser: {
+          select: {
+            avatarUrl: true,
+            displayName: true,
+            id: true,
+            walletAddress: true
+          }
+        },
+        requestedByUser: {
+          select: {
+            avatarUrl: true,
+            displayName: true,
+            id: true,
+            walletAddress: true
+          }
+        }
+      },
+      orderBy: [
+        {
+          createdAt: "desc"
+        },
+        {
+          id: "desc"
+        }
+      ],
+      where: {
+        status: "scheduled",
+        workspaceId: {
+          in: ["workspace_1"]
+        }
+      }
+    });
+    expect(database.workspaceDecommissionRequest.update).toHaveBeenNthCalledWith(
+      1,
+      {
+        data: {
+          canceledAt: now,
+          canceledByUserId: "user_1",
+          status: "canceled"
+        },
+        where: {
+          id: "request_1"
+        }
+      }
+    );
+    expect(database.workspaceDecommissionRequest.update).toHaveBeenNthCalledWith(
+      2,
+      {
+        data: {
+          executedAt: now,
+          executedByUserId: "user_1",
+          status: "executed"
+        },
+        where: {
+          id: "request_1"
+        }
+      }
+    );
+    expect(createdRequest.id).toBe("request_1");
+    expect(scheduledRequest?.id).toBe("request_1");
+    expect(scheduledRequests).toHaveLength(1);
+    expect(canceledRequest.id).toBe("request_1");
+    expect(executedRequest.id).toBe("request_1");
   });
 
   it("delegates workspace role escalation persistence through the role escalation repository", async () => {

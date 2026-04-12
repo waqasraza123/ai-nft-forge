@@ -24,6 +24,12 @@ enum WorkspaceRoleEscalationRequestStatus {
   canceled
 }
 
+enum WorkspaceDecommissionRequestStatus {
+  scheduled
+  canceled
+  executed
+}
+
 enum SourceAssetStatus {
   pending_upload
   uploaded
@@ -192,6 +198,9 @@ model User {
   ownedSourceAssets                  SourceAsset[]                    @relation("SourceAssetOwner")
   ownedWorkspaces                    Workspace[]                      @relation("WorkspaceOwner")
   workspaceMemberships               WorkspaceMembership[]
+  workspaceDecommissionRequests      WorkspaceDecommissionRequest[] @relation("WorkspaceDecommissionRequestedBy")
+  workspaceDecommissionCancellations WorkspaceDecommissionRequest[] @relation("WorkspaceDecommissionCanceledBy")
+  workspaceDecommissionExecutions    WorkspaceDecommissionRequest[] @relation("WorkspaceDecommissionExecutedBy")
   workspaceInvitationsSent           WorkspaceInvitation[]            @relation("WorkspaceInvitationInvitedBy")
   workspaceRoleEscalationRequests    WorkspaceRoleEscalationRequest[] @relation("WorkspaceRoleEscalationRequestedBy")
   workspaceRoleEscalationTargets     WorkspaceRoleEscalationRequest[] @relation("WorkspaceRoleEscalationTarget")
@@ -237,6 +246,7 @@ model Workspace {
   updatedAt              DateTime                         @updatedAt @map("updated_at")
   brands                 Brand[]
   collectionDrafts       CollectionDraft[]
+  decommissionRequests   WorkspaceDecommissionRequest[]
   generatedAssets        GeneratedAsset[]
   generationRequests     GenerationRequest[]
   invitations            WorkspaceInvitation[]
@@ -258,6 +268,31 @@ model Workspace {
 
   @@index([ownerUserId], map: "workspaces_owner_user_id_idx")
   @@map("workspaces")
+}
+
+model WorkspaceDecommissionRequest {
+  id                String                            @id @default(cuid()) @map("id")
+  workspaceId       String                            @map("workspace_id")
+  requestedByUserId String                            @map("requested_by_user_id")
+  retentionDays     Int                               @map("retention_days")
+  exportConfirmedAt DateTime                          @map("export_confirmed_at")
+  executeAfter      DateTime                          @map("execute_after")
+  reason            String?                           @map("reason")
+  status            WorkspaceDecommissionRequestStatus @default(scheduled) @map("status")
+  canceledByUserId  String?                           @map("canceled_by_user_id")
+  canceledAt        DateTime?                         @map("canceled_at")
+  executedByUserId  String?                           @map("executed_by_user_id")
+  executedAt        DateTime?                         @map("executed_at")
+  createdAt         DateTime                          @default(now()) @map("created_at")
+  updatedAt         DateTime                          @updatedAt @map("updated_at")
+  canceledByUser    User?                             @relation("WorkspaceDecommissionCanceledBy", fields: [canceledByUserId], references: [id], onDelete: SetNull)
+  executedByUser    User?                             @relation("WorkspaceDecommissionExecutedBy", fields: [executedByUserId], references: [id], onDelete: SetNull)
+  requestedByUser   User                              @relation("WorkspaceDecommissionRequestedBy", fields: [requestedByUserId], references: [id], onDelete: Cascade)
+  workspace         Workspace                         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status, executeAfter], map: "workspace_decommission_requests_ws_status_execute_idx")
+  @@index([requestedByUserId, status], map: "workspace_decommission_requests_requested_status_idx")
+  @@map("workspace_decommission_requests")
 }
 
 model WorkspaceMembership {

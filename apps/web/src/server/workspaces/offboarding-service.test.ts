@@ -272,6 +272,58 @@ function createWorkspaceOffboardingHarness() {
             : [];
         }
       },
+      workspaceDecommissionRequestRepository: {
+        async findScheduledByWorkspaceId(input: { workspaceId: string }) {
+          return input.workspaceId === "workspace_ready"
+            ? {
+                canceledAt: null,
+                canceledByUser: null,
+                canceledByUserId: null,
+                createdAt: new Date("2026-04-12T01:00:00.000Z"),
+                executeAfter: new Date("2026-05-12T01:00:00.000Z"),
+                executedAt: null,
+                executedByUser: null,
+                executedByUserId: null,
+                exportConfirmedAt: new Date("2026-04-12T01:00:00.000Z"),
+                id: "decommission_ready",
+                reason: "Workspace sunset",
+                requestedByUser: {
+                  walletAddress: "0x1111111111111111111111111111111111111111"
+                },
+                requestedByUserId: "user_owner",
+                retentionDays: 30,
+                status: "scheduled" as const,
+                workspaceId: input.workspaceId
+              }
+            : null;
+        },
+        async listScheduledByWorkspaceIds(workspaceIds: string[]) {
+          return workspaceIds.includes("workspace_ready")
+            ? [
+                {
+                  canceledAt: null,
+                  canceledByUser: null,
+                  canceledByUserId: null,
+                  createdAt: new Date("2026-04-12T01:00:00.000Z"),
+                  executeAfter: new Date("2026-05-12T01:00:00.000Z"),
+                  executedAt: null,
+                  executedByUser: null,
+                  executedByUserId: null,
+                  exportConfirmedAt: new Date("2026-04-12T01:00:00.000Z"),
+                  id: "decommission_ready",
+                  reason: "Workspace sunset",
+                  requestedByUser: {
+                    walletAddress: "0x1111111111111111111111111111111111111111"
+                  },
+                  requestedByUserId: "user_owner",
+                  retentionDays: 30,
+                  status: "scheduled" as const,
+                  workspaceId: "workspace_ready"
+                }
+              ]
+            : [];
+        }
+      },
       workspaceMembershipRepository: {
         async listByWorkspaceId() {
           return [
@@ -383,6 +435,7 @@ describe("createWorkspaceOffboardingService", () => {
       blockedWorkspaceCount: 1,
       readyWorkspaceCount: 1,
       reviewRequiredWorkspaceCount: 1,
+      scheduledDecommissionCount: 1,
       totalWorkspaceCount: 3
     });
     expect(
@@ -403,8 +456,17 @@ describe("createWorkspaceOffboardingService", () => {
     expect(
       result.overview.workspaces.find(
         (workspace) => workspace.workspace.id === "workspace_ready"
-      )?.summary.readiness
-    ).toBe("ready");
+      )
+    ).toMatchObject({
+      decommission: {
+        id: "decommission_ready",
+        retentionDays: 30,
+        status: "scheduled"
+      },
+      summary: {
+        readiness: "ready"
+      }
+    });
   });
 
   it("exports an owned workspace and emits archive summary csv", async () => {
@@ -424,6 +486,7 @@ describe("createWorkspaceOffboardingService", () => {
     expect(result.export.members).toHaveLength(2);
     expect(result.export.publications).toHaveLength(1);
     expect(result.export.checkouts).toHaveLength(1);
+    expect(result.export.decommission).toBeNull();
     expect(csv).toContain("workspace_slug");
     expect(csv).toContain("slug-workspace-review");
   });

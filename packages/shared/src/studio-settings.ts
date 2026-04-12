@@ -181,6 +181,9 @@ export const studioWorkspaceRoleEscalationSummarySchema = z.object({
 export const studioWorkspaceAuditActionSchema = z.enum([
   "workspace_archived",
   "workspace_created",
+  "workspace_decommission_canceled",
+  "workspace_decommission_executed",
+  "workspace_decommission_scheduled",
   "workspace_invitation_accepted",
   "workspace_invitation_canceled",
   "workspace_invitation_created",

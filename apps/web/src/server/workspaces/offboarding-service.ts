@@ -7,6 +7,7 @@ import {
   createPublishedCollectionRepository,
   createUserRepository,
   createWorkspaceInvitationRepository,
+  createWorkspaceDecommissionRequestRepository,
   createWorkspaceMembershipRepository,
   createWorkspaceRepository,
   createWorkspaceRoleEscalationRequestRepository,
@@ -21,10 +22,12 @@ import {
   defaultStudioFeaturedReleaseLabel,
   studioBrandThemeSchema,
   studioWorkspaceAuditEntrySchema,
+  workspaceDecommissionSummarySchema,
   workspaceExportResponseSchema,
   workspaceOffboardingOverviewResponseSchema,
   workspaceOffboardingSummarySchema,
   type StudioWorkspaceScopeSummary,
+  type WorkspaceDecommissionSummary,
   type WorkspaceExportFormat,
   type WorkspaceOffboardingBlockerCode,
   type WorkspaceOffboardingCautionCode,
@@ -219,6 +222,62 @@ type WorkspaceOffboardingRepositorySet = {
       }>
     >;
   };
+  workspaceDecommissionRequestRepository: {
+    findScheduledByWorkspaceId(input: {
+      workspaceId: string;
+    }): Promise<{
+      canceledAt: Date | null;
+      canceledByUser: {
+        walletAddress: string;
+      } | null;
+      canceledByUserId: string | null;
+      createdAt: Date;
+      executeAfter: Date;
+      executedAt: Date | null;
+      executedByUser: {
+        walletAddress: string;
+      } | null;
+      executedByUserId: string | null;
+      exportConfirmedAt: Date;
+      id: string;
+      reason: string | null;
+      requestedByUser: {
+        walletAddress: string;
+      };
+      requestedByUserId: string;
+      retentionDays: number;
+      status: "canceled" | "executed" | "scheduled";
+      workspaceId: string;
+    } | null>;
+    listScheduledByWorkspaceIds(
+      workspaceIds: string[]
+    ): Promise<
+      Array<{
+        canceledAt: Date | null;
+        canceledByUser: {
+          walletAddress: string;
+        } | null;
+        canceledByUserId: string | null;
+        createdAt: Date;
+        executeAfter: Date;
+        executedAt: Date | null;
+        executedByUser: {
+          walletAddress: string;
+        } | null;
+        executedByUserId: string | null;
+        exportConfirmedAt: Date;
+        id: string;
+        reason: string | null;
+        requestedByUser: {
+          walletAddress: string;
+        };
+        requestedByUserId: string;
+        retentionDays: number;
+        status: "canceled" | "executed" | "scheduled";
+        workspaceId: string;
+      }>
+    >;
+  };
   workspaceRepository: {
     findByIdForOwner(input: {
       id: string;
@@ -295,6 +354,8 @@ function createWorkspaceOffboardingRepositories(database: DatabaseExecutor) {
       createOpsReconciliationIssueRepository(database),
     publishedCollectionRepository: createPublishedCollectionRepository(database),
     userRepository: createUserRepository(database),
+    workspaceDecommissionRequestRepository:
+      createWorkspaceDecommissionRequestRepository(database),
     workspaceInvitationRepository:
       createWorkspaceInvitationRepository(database),
     workspaceMembershipRepository:
@@ -515,6 +576,48 @@ function serializeAuditEntry(input: {
   return parsed.success ? parsed.data : null;
 }
 
+function serializeWorkspaceDecommission(input: {
+  canceledAt: Date | null;
+  canceledByUser: {
+    walletAddress: string;
+  } | null;
+  canceledByUserId: string | null;
+  createdAt: Date;
+  executeAfter: Date;
+  executedAt: Date | null;
+  executedByUser: {
+    walletAddress: string;
+  } | null;
+  executedByUserId: string | null;
+  exportConfirmedAt: Date;
+  id: string;
+  reason: string | null;
+  requestedByUser: {
+    walletAddress: string;
+  };
+  requestedByUserId: string;
+  retentionDays: number;
+  status: "canceled" | "executed" | "scheduled";
+}): WorkspaceDecommissionSummary {
+  return workspaceDecommissionSummarySchema.parse({
+    canceledAt: input.canceledAt?.toISOString() ?? null,
+    canceledByUserId: input.canceledByUserId,
+    canceledByWalletAddress: input.canceledByUser?.walletAddress ?? null,
+    createdAt: input.createdAt.toISOString(),
+    executeAfter: input.executeAfter.toISOString(),
+    executedAt: input.executedAt?.toISOString() ?? null,
+    executedByUserId: input.executedByUserId,
+    executedByWalletAddress: input.executedByUser?.walletAddress ?? null,
+    exportConfirmedAt: input.exportConfirmedAt.toISOString(),
+    id: input.id,
+    reason: input.reason,
+    requestedByUserId: input.requestedByUserId,
+    requestedByWalletAddress: input.requestedByUser.walletAddress,
+    retentionDays: input.retentionDays,
+    status: input.status
+  });
+}
+
 function createWorkspaceOffboardingSummary(input: {
   activeAlertCount: number;
   livePublicationCount: number;
@@ -608,6 +711,7 @@ export function createWorkspaceOffboardingService(
               blockedWorkspaceCount: 0,
               readyWorkspaceCount: 0,
               reviewRequiredWorkspaceCount: 0,
+              scheduledDecommissionCount: 0,
               totalWorkspaceCount: 0
             },
             workspaces: []
@@ -615,7 +719,7 @@ export function createWorkspaceOffboardingService(
         });
       }
 
-      const [publications, checkouts, alerts, reconciliationIssues] =
+      const [publications, checkouts, alerts, reconciliationIssues, decommissions] =
         await Promise.all([
           dependencies.repositories.publishedCollectionRepository.listByWorkspaceIds(
             workspaceIds
@@ -627,6 +731,9 @@ export function createWorkspaceOffboardingService(
             workspaceIds
           ),
           dependencies.repositories.opsReconciliationIssueRepository.listOpenByWorkspaceIds(
+            workspaceIds
+          ),
+          dependencies.repositories.workspaceDecommissionRequestRepository.listScheduledByWorkspaceIds(
             workspaceIds
           )
         ]);
@@ -678,6 +785,13 @@ export function createWorkspaceOffboardingService(
         );
       }
 
+      const scheduledDecommissionByWorkspaceId = new Map(
+        decommissions.map((decommission) => [
+          decommission.workspaceId,
+          serializeWorkspaceDecommission(decommission)
+        ])
+      );
+
       const workspaces = directory.workspaces.map((directoryEntry) => {
         const summary = createWorkspaceOffboardingSummary({
           activeAlertCount:
@@ -702,6 +816,10 @@ export function createWorkspaceOffboardingService(
 
         return {
           current: directoryEntry.current,
+          decommission:
+            scheduledDecommissionByWorkspaceId.get(
+              directoryEntry.workspace.id
+            ) ?? null,
           directory: directoryEntry,
           summary,
           workspace: directoryEntry.workspace
@@ -720,6 +838,9 @@ export function createWorkspaceOffboardingService(
             ).length,
             reviewRequiredWorkspaceCount: workspaces.filter(
               (workspace) => workspace.summary.readiness === "review_required"
+            ).length,
+            scheduledDecommissionCount: workspaces.filter(
+              (workspace) => workspace.decommission?.status === "scheduled"
             ).length,
             totalWorkspaceCount: workspaces.length
           },
@@ -763,6 +884,7 @@ export function createWorkspaceOffboardingService(
         brands,
         memberships,
         invitations,
+        decommission,
         roleEscalationRequests,
         auditLogs,
         publications,
@@ -777,6 +899,11 @@ export function createWorkspaceOffboardingService(
         dependencies.repositories.workspaceInvitationRepository.listActiveByWorkspaceId(
           {
             now,
+            workspaceId: workspace.id
+          }
+        ),
+        dependencies.repositories.workspaceDecommissionRequestRepository.findScheduledByWorkspaceId(
+          {
             workspaceId: workspace.id
           }
         ),
@@ -856,6 +983,9 @@ export function createWorkspaceOffboardingService(
             publishedCollectionTitle: checkout.publishedCollection.title,
             status: checkout.status
           })),
+          decommission: decommission
+            ? serializeWorkspaceDecommission(decommission)
+            : null,
           generatedAt: now.toISOString(),
           invitations: invitations.map((invitation) =>
             serializeWorkspaceInvitation(invitation)
@@ -941,6 +1071,9 @@ export function createWorkspaceOffboardingService(
         row.offboarding.unfulfilledCheckoutCount,
         row.offboarding.activeAlertCount,
         row.offboarding.openReconciliationIssueCount,
+        row.decommission?.status ?? "",
+        row.decommission?.retentionDays ?? "",
+        row.decommission?.executeAfter ?? "",
         row.generatedAt
       ];
 
@@ -965,6 +1098,9 @@ export function createWorkspaceOffboardingService(
           "unfulfilled_checkout_count",
           "active_alert_count",
           "open_reconciliation_issue_count",
+          "decommission_status",
+          "decommission_retention_days",
+          "decommission_execute_after",
           "generated_at"
         ].join(","),
         values.map((value) => escapeCsvValue(value)).join(",")

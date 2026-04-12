@@ -136,6 +136,18 @@ export function createWorkspaceRepository(
             }
           })
         );
+    },
+
+    deleteByIdForOwner(input: {
+      id: string;
+      ownerUserId: string;
+    }) {
+      return database.workspace.deleteMany({
+        where: {
+          id: input.id,
+          ownerUserId: input.ownerUserId
+        }
+      });
     }
   };
 }
