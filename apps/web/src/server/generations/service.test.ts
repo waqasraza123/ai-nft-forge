@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import { createGenerationService } from "./service";
 import { GenerationServiceError } from "./error";
 
+const defaultWorkspaceId = "workspace_1";
+
 describe("createGenerationService", () => {
   it("creates and queues a generation request for an uploaded asset", async () => {
     const service = createGenerationService({
@@ -46,12 +48,12 @@ describe("createGenerationService", () => {
             startedAt: null,
             status: "queued"
           }),
-          findByIdForOwner: vi.fn(),
-          findActiveForSourceAsset: vi.fn().mockResolvedValue(null),
+          findByIdForWorkspace: vi.fn(),
+          findActiveForWorkspaceSourceAsset: vi.fn().mockResolvedValue(null),
           markFailed: vi.fn()
         },
         sourceAssetRepository: {
-          findByIdForOwner: vi.fn().mockResolvedValue({
+          findByIdForWorkspace: vi.fn().mockResolvedValue({
             id: "asset_1",
             ownerUserId: "user_1",
             status: "uploaded"
@@ -62,7 +64,8 @@ describe("createGenerationService", () => {
 
     const result = await service.createGenerationRequest({
       ownerUserId: "user_1",
-      sourceAssetId: "asset_1"
+      sourceAssetId: "asset_1",
+      workspaceId: defaultWorkspaceId
     });
 
     expect(result.generation.generatedAssets).toEqual([]);
@@ -81,14 +84,14 @@ describe("createGenerationService", () => {
         generationRequestRepository: {
           attachQueueJob: vi.fn(),
           createQueued: vi.fn(),
-          findByIdForOwner: vi.fn(),
-          findActiveForSourceAsset: vi.fn().mockResolvedValue({
+          findByIdForWorkspace: vi.fn(),
+          findActiveForWorkspaceSourceAsset: vi.fn().mockResolvedValue({
             id: "generation_1"
           }),
           markFailed: vi.fn()
         },
         sourceAssetRepository: {
-          findByIdForOwner: vi.fn().mockResolvedValue({
+          findByIdForWorkspace: vi.fn().mockResolvedValue({
             id: "asset_1",
             ownerUserId: "user_1",
             status: "uploaded"
@@ -100,7 +103,8 @@ describe("createGenerationService", () => {
     await expect(
       service.createGenerationRequest({
         ownerUserId: "user_1",
-        sourceAssetId: "asset_1"
+        sourceAssetId: "asset_1",
+        workspaceId: defaultWorkspaceId
       })
     ).rejects.toEqual(
       new GenerationServiceError(
@@ -153,8 +157,8 @@ describe("createGenerationService", () => {
             startedAt: null,
             status: "queued"
           }),
-          findActiveForSourceAsset: vi.fn().mockResolvedValue(null),
-          findByIdForOwner: vi.fn().mockResolvedValue({
+          findActiveForWorkspaceSourceAsset: vi.fn().mockResolvedValue(null),
+          findByIdForWorkspace: vi.fn().mockResolvedValue({
             completedAt: null,
             createdAt: new Date("2026-04-06T00:00:00.000Z"),
             failedAt: new Date("2026-04-06T00:00:04.000Z"),
@@ -173,7 +177,7 @@ describe("createGenerationService", () => {
           markFailed: vi.fn()
         },
         sourceAssetRepository: {
-          findByIdForOwner: vi.fn().mockResolvedValue({
+          findByIdForWorkspace: vi.fn().mockResolvedValue({
             id: "asset_1",
             ownerUserId: "user_1",
             status: "uploaded"
@@ -184,7 +188,8 @@ describe("createGenerationService", () => {
 
     const result = await service.retryGenerationRequest({
       generationRequestId: "generation_1",
-      ownerUserId: "user_1"
+      ownerUserId: "user_1",
+      workspaceId: defaultWorkspaceId
     });
 
     expect(result.generation.id).toBe("generation_2");
@@ -203,8 +208,8 @@ describe("createGenerationService", () => {
         generationRequestRepository: {
           attachQueueJob: vi.fn(),
           createQueued: vi.fn(),
-          findActiveForSourceAsset: vi.fn(),
-          findByIdForOwner: vi.fn().mockResolvedValue({
+          findActiveForWorkspaceSourceAsset: vi.fn(),
+          findByIdForWorkspace: vi.fn().mockResolvedValue({
             completedAt: new Date("2026-04-06T00:00:04.000Z"),
             createdAt: new Date("2026-04-06T00:00:00.000Z"),
             failedAt: null,
@@ -227,7 +232,7 @@ describe("createGenerationService", () => {
           markFailed: vi.fn()
         },
         sourceAssetRepository: {
-          findByIdForOwner: vi.fn()
+          findByIdForWorkspace: vi.fn()
         }
       }
     });
@@ -235,7 +240,8 @@ describe("createGenerationService", () => {
     await expect(
       service.retryGenerationRequest({
         generationRequestId: "generation_1",
-        ownerUserId: "user_1"
+        ownerUserId: "user_1",
+        workspaceId: defaultWorkspaceId
       })
     ).rejects.toEqual(
       new GenerationServiceError(

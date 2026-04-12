@@ -31,7 +31,17 @@ export async function requireStudioApiSession() {
     );
   }
 
-  return session;
+  if (!session.workspace) {
+    throw new SourceAssetServiceError(
+      "SESSION_REQUIRED",
+      "An active workspace selection is required.",
+      401
+    );
+  }
+
+  return session as typeof session & {
+    workspace: NonNullable<typeof session.workspace>;
+  };
 }
 
 export function createSourceAssetErrorResponse(error: unknown): NextResponse {

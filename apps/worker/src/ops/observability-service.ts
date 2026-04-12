@@ -136,6 +136,7 @@ type OpsObservabilityCaptureServiceDependencies = {
       captureId: string;
       deliveredAt: string;
       ownerUserId: string;
+      workspaceId: string;
     }): Promise<void>;
     enabled: boolean;
   };
@@ -150,12 +151,21 @@ type OpsObservabilityCaptureServiceDependencies = {
     }): Promise<unknown>;
   };
   generationRequestRepository: {
-    findOldestForOwnerUserId(input: {
+    findOldestForWorkspaceId?(input: {
+      statuses: GenerationRequestStatus[];
+      workspaceId: string;
+    }): Promise<GenerationActivityRecord | null>;
+    findOldestForOwnerUserId?(input: {
       ownerUserId: string;
       statuses: GenerationRequestStatus[];
     }): Promise<GenerationActivityRecord | null>;
-    listDistinctOwnerUserIds(): Promise<string[]>;
-    listRecentForOwnerUserIdSince(input: {
+    listDistinctOwnerUserIds?(): Promise<string[]>;
+    listRecentForWorkspaceIdSince?(input: {
+      since: Date;
+      statuses?: GenerationRequestStatus[];
+      workspaceId: string;
+    }): Promise<GenerationActivityRecord[]>;
+    listRecentForOwnerUserIdSince?(input: {
       ownerUserId: string;
       since: Date;
       statuses?: GenerationRequestStatus[];
@@ -165,25 +175,42 @@ type OpsObservabilityCaptureServiceDependencies = {
   loadQueueSnapshot: () => Promise<QueueSnapshot>;
   logger: Logger;
   now: () => Date;
+  workspaceRepository?: {
+    listAll(): Promise<Array<{ id: string; ownerUserId: string }>>;
+  };
   opsAlertMuteRepository: {
-    listActiveByOwnerUserIdAndCodes(input: {
+    listActiveByWorkspaceIdAndCodes?(input: {
+      codes: string[];
+      observedAt: Date;
+      workspaceId: string;
+    }): Promise<AlertMuteRecord[]>;
+    listActiveByOwnerUserIdAndCodes?(input: {
       codes: string[];
       observedAt: Date;
       ownerUserId: string;
     }): Promise<AlertMuteRecord[]>;
   };
   opsAlertRoutingPolicyRepository: {
-    findByOwnerUserId(
+    findByWorkspaceId?(
+      workspaceId: string
+    ): Promise<AlertRoutingPolicyRecord | null>;
+    findByOwnerUserId?(
       ownerUserId: string
     ): Promise<AlertRoutingPolicyRecord | null>;
   };
   opsAlertEscalationPolicyRepository: {
-    findByOwnerUserId(
+    findByWorkspaceId?(
+      workspaceId: string
+    ): Promise<AlertEscalationPolicyRecord | null>;
+    findByOwnerUserId?(
       ownerUserId: string
     ): Promise<AlertEscalationPolicyRecord | null>;
   };
   opsAlertSchedulePolicyRepository: {
-    findByOwnerUserId(
+    findByWorkspaceId?(
+      workspaceId: string
+    ): Promise<AlertSchedulePolicyRecord | null>;
+    findByOwnerUserId?(
       ownerUserId: string
     ): Promise<AlertSchedulePolicyRecord | null>;
   };
@@ -200,6 +227,7 @@ type OpsObservabilityCaptureServiceDependencies = {
       ownerUserId: string;
       severity: "critical" | "warning";
       title: string;
+      workspaceId: string;
     }): Promise<unknown>;
   };
   opsAlertStateRepository: {
@@ -210,9 +238,15 @@ type OpsObservabilityCaptureServiceDependencies = {
       ownerUserId: string;
       severity: "critical" | "warning";
       title: string;
+      workspaceId: string;
     }): Promise<AlertStateRecord>;
-    listActiveByOwnerUserId(ownerUserId: string): Promise<AlertStateRecord[]>;
-    listByOwnerUserIdAndCodes(input: {
+    listActiveByWorkspaceId?(workspaceId: string): Promise<AlertStateRecord[]>;
+    listActiveByOwnerUserId?(ownerUserId: string): Promise<AlertStateRecord[]>;
+    listByWorkspaceIdAndCodes?(input: {
+      codes: string[];
+      workspaceId: string;
+    }): Promise<AlertStateRecord[]>;
+    listByOwnerUserIdAndCodes?(input: {
       codes: string[];
       ownerUserId: string;
     }): Promise<AlertStateRecord[]>;
@@ -262,6 +296,7 @@ type OpsObservabilityCaptureServiceDependencies = {
       queueStatus: "ok" | "unreachable";
       queueWaitingCount: number | null;
       warningAlertCount: number;
+      workspaceId: string;
       windows: Array<{
         averageCompletionSeconds: number | null;
         capturedAt: Date;
@@ -277,6 +312,7 @@ type OpsObservabilityCaptureServiceDependencies = {
         successRatePercent: number | null;
         totalCount: number;
         windowKey: string;
+        workspaceId: string;
       }>;
       workerAdapter: string | null;
     }): Promise<{
@@ -331,6 +367,162 @@ function createPercentage(numerator: number, denominator: number) {
   }
 
   return Number(((numerator / denominator) * 100).toFixed(1));
+}
+
+async function listCaptureTargets(
+  dependencies: OpsObservabilityCaptureServiceDependencies
+) {
+  if (dependencies.workspaceRepository) {
+    return dependencies.workspaceRepository.listAll();
+  }
+
+  const ownerUserIds =
+    (await dependencies.generationRequestRepository.listDistinctOwnerUserIds?.()) ??
+    [];
+
+  return ownerUserIds.map((ownerUserId) => ({
+    id: ownerUserId,
+    ownerUserId
+  }));
+}
+
+async function findOldestGenerationRecord(
+  dependencies: Pick<
+    OpsObservabilityCaptureServiceDependencies,
+    "generationRequestRepository"
+  >,
+  input: {
+    ownerUserId: string;
+    statuses: GenerationRequestStatus[];
+    workspaceId: string;
+  }
+) {
+  if (dependencies.generationRequestRepository.findOldestForWorkspaceId) {
+    return dependencies.generationRequestRepository.findOldestForWorkspaceId({
+      statuses: input.statuses,
+      workspaceId: input.workspaceId
+    });
+  }
+
+  return (
+    dependencies.generationRequestRepository.findOldestForOwnerUserId?.({
+      ownerUserId: input.ownerUserId,
+      statuses: input.statuses
+    }) ?? Promise.resolve(null)
+  );
+}
+
+async function listRecentGenerationRecordsSince(
+  dependencies: Pick<
+    OpsObservabilityCaptureServiceDependencies,
+    "generationRequestRepository"
+  >,
+  input: {
+    ownerUserId: string;
+    since: Date;
+    workspaceId: string;
+  }
+) {
+  if (dependencies.generationRequestRepository.listRecentForWorkspaceIdSince) {
+    return dependencies.generationRequestRepository.listRecentForWorkspaceIdSince(
+      {
+        since: input.since,
+        workspaceId: input.workspaceId
+      }
+    );
+  }
+
+  return (
+    dependencies.generationRequestRepository.listRecentForOwnerUserIdSince?.({
+      ownerUserId: input.ownerUserId,
+      since: input.since
+    }) ?? Promise.resolve([])
+  );
+}
+
+async function findWorkspacePolicy<T>(
+  repository: {
+    findByOwnerUserId?: (ownerUserId: string) => Promise<T | null>;
+    findByWorkspaceId?: (workspaceId: string) => Promise<T | null>;
+  },
+  input: {
+    ownerUserId: string;
+    workspaceId: string;
+  }
+) {
+  if (repository.findByWorkspaceId) {
+    return repository.findByWorkspaceId(input.workspaceId);
+  }
+
+  return (
+    repository.findByOwnerUserId?.(input.ownerUserId) ?? Promise.resolve(null)
+  );
+}
+
+async function listWorkspaceAlertStates(
+  repository: OpsObservabilityCaptureServiceDependencies["opsAlertStateRepository"],
+  input: {
+    ownerUserId: string;
+    workspaceId: string;
+  }
+) {
+  if (repository.listActiveByWorkspaceId) {
+    return repository.listActiveByWorkspaceId(input.workspaceId);
+  }
+
+  return (
+    repository.listActiveByOwnerUserId?.(input.ownerUserId) ??
+    Promise.resolve([])
+  );
+}
+
+async function listWorkspaceAlertStatesByCodes(
+  repository: OpsObservabilityCaptureServiceDependencies["opsAlertStateRepository"],
+  input: {
+    codes: string[];
+    ownerUserId: string;
+    workspaceId: string;
+  }
+) {
+  if (repository.listByWorkspaceIdAndCodes) {
+    return repository.listByWorkspaceIdAndCodes({
+      codes: input.codes,
+      workspaceId: input.workspaceId
+    });
+  }
+
+  return (
+    repository.listByOwnerUserIdAndCodes?.({
+      codes: input.codes,
+      ownerUserId: input.ownerUserId
+    }) ?? Promise.resolve([])
+  );
+}
+
+async function listWorkspaceAlertMutesByCodes(
+  repository: OpsObservabilityCaptureServiceDependencies["opsAlertMuteRepository"],
+  input: {
+    codes: string[];
+    observedAt: Date;
+    ownerUserId: string;
+    workspaceId: string;
+  }
+) {
+  if (repository.listActiveByWorkspaceIdAndCodes) {
+    return repository.listActiveByWorkspaceIdAndCodes({
+      codes: input.codes,
+      observedAt: input.observedAt,
+      workspaceId: input.workspaceId
+    });
+  }
+
+  return (
+    repository.listActiveByOwnerUserIdAndCodes?.({
+      codes: input.codes,
+      observedAt: input.observedAt,
+      ownerUserId: input.ownerUserId
+    }) ?? Promise.resolve([])
+  );
 }
 
 function createAverageDurationSeconds(values: number[]) {
@@ -433,26 +625,28 @@ async function loadOwnerGenerationMetrics(
     capturedAt: string;
     ownerUserId: string;
     referenceTime: Date;
+    workspaceId: string;
   }
 ): Promise<OwnerGenerationMetrics> {
   try {
     const [oldestQueuedGeneration, oldestRunningGeneration, ...windowResults] =
       await Promise.all([
-        dependencies.generationRequestRepository.findOldestForOwnerUserId({
+        findOldestGenerationRecord(dependencies, {
           ownerUserId: input.ownerUserId,
-          statuses: ["queued"]
+          statuses: ["queued"],
+          workspaceId: input.workspaceId
         }),
-        dependencies.generationRequestRepository.findOldestForOwnerUserId({
+        findOldestGenerationRecord(dependencies, {
           ownerUserId: input.ownerUserId,
-          statuses: ["running"]
+          statuses: ["running"],
+          workspaceId: input.workspaceId
         }),
         ...observabilityWindows.map((window) =>
-          dependencies.generationRequestRepository.listRecentForOwnerUserIdSince(
-            {
-              ownerUserId: input.ownerUserId,
-              since: new Date(input.referenceTime.getTime() - window.durationMs)
-            }
-          )
+          listRecentGenerationRecordsSince(dependencies, {
+            ownerUserId: input.ownerUserId,
+            since: new Date(input.referenceTime.getTime() - window.durationMs),
+            workspaceId: input.workspaceId
+          })
         )
       ]);
 
@@ -784,8 +978,7 @@ function shouldDeliverWebhookAlert(input: {
 
   return evaluateOpsAlertEscalationPolicy({
     acknowledgedAt: input.existingState.acknowledgedAt,
-    firstReminderDelayMinutes:
-      input.escalationPolicy.firstReminderDelayMinutes,
+    firstReminderDelayMinutes: input.escalationPolicy.firstReminderDelayMinutes,
     firstWebhookDeliveredAt: input.existingState.firstWebhookDeliveredAt,
     lastWebhookDeliveredAt: input.existingState.lastWebhookDeliveredAt,
     referenceTime: input.referenceTime,
@@ -801,8 +994,8 @@ export function createOpsObservabilityCaptureService(
     async captureAllOwnerObservability(): Promise<CaptureSummary> {
       const referenceTime = dependencies.now();
       const capturedAt = referenceTime.toISOString();
-      const [ownerUserIds, queueSnapshot, readiness] = await Promise.all([
-        dependencies.generationRequestRepository.listDistinctOwnerUserIds(),
+      const [workspaces, queueSnapshot, readiness] = await Promise.all([
+        listCaptureTargets(dependencies),
         dependencies.loadQueueSnapshot(),
         dependencies.loadBackendReadiness()
       ]);
@@ -810,27 +1003,41 @@ export function createOpsObservabilityCaptureService(
         captureCount: 0,
         deliveredAlertCount: 0,
         failedDeliveryCount: 0,
-        ownerCount: ownerUserIds.length,
+        ownerCount: new Set(
+          workspaces.map((workspace) => workspace.ownerUserId)
+        ).size,
         resolvedAlertCount: 0
       };
 
-      for (const ownerUserId of ownerUserIds) {
-        const routingPolicy =
-          await dependencies.opsAlertRoutingPolicyRepository.findByOwnerUserId(
-            ownerUserId
-          );
-        const escalationPolicy =
-          await dependencies.opsAlertEscalationPolicyRepository.findByOwnerUserId(
-            ownerUserId
-          );
-        const schedulePolicy =
-          await dependencies.opsAlertSchedulePolicyRepository.findByOwnerUserId(
-            ownerUserId
-          );
+      for (const workspace of workspaces) {
+        const ownerUserId = workspace.ownerUserId;
+        const workspaceId = workspace.id;
+        const routingPolicy = await findWorkspacePolicy(
+          dependencies.opsAlertRoutingPolicyRepository,
+          {
+            ownerUserId,
+            workspaceId
+          }
+        );
+        const escalationPolicy = await findWorkspacePolicy(
+          dependencies.opsAlertEscalationPolicyRepository,
+          {
+            ownerUserId,
+            workspaceId
+          }
+        );
+        const schedulePolicy = await findWorkspacePolicy(
+          dependencies.opsAlertSchedulePolicyRepository,
+          {
+            ownerUserId,
+            workspaceId
+          }
+        );
         const metrics = await loadOwnerGenerationMetrics(dependencies, {
           capturedAt,
           ownerUserId,
-          referenceTime
+          referenceTime,
+          workspaceId
         });
         const alerts = createOperatorAlertSummary({
           metrics,
@@ -861,6 +1068,7 @@ export function createOpsObservabilityCaptureService(
             queueStatus: queueSnapshot.status,
             queueWaitingCount: queueSnapshot.counts?.waiting ?? null,
             warningAlertCount: observability.warningAlertCount,
+            workspaceId,
             windows: metrics.windows.map((window) => ({
               averageCompletionSeconds: window.averageCompletionSeconds,
               capturedAt: referenceTime,
@@ -875,27 +1083,35 @@ export function createOpsObservabilityCaptureService(
               succeededCount: window.succeededCount,
               successRatePercent: window.successRatePercent,
               totalCount: window.totalCount,
-              windowKey: window.windowKey
+              windowKey: window.windowKey,
+              workspaceId
             })),
             workerAdapter: queueSnapshot.workerAdapter
           });
-        const activeStates =
-          await dependencies.opsAlertStateRepository.listActiveByOwnerUserId(
-            ownerUserId
-          );
-        const existingStates =
-          await dependencies.opsAlertStateRepository.listByOwnerUserIdAndCodes({
+        const activeStates = await listWorkspaceAlertStates(
+          dependencies.opsAlertStateRepository,
+          {
+            ownerUserId,
+            workspaceId
+          }
+        );
+        const existingStates = await listWorkspaceAlertStatesByCodes(
+          dependencies.opsAlertStateRepository,
+          {
             codes: alerts.map((alert) => alert.code),
-            ownerUserId
-          });
-        const activeMutes =
-          await dependencies.opsAlertMuteRepository.listActiveByOwnerUserIdAndCodes(
-            {
-              codes: alerts.map((alert) => alert.code),
-              observedAt: referenceTime,
-              ownerUserId
-            }
-          );
+            ownerUserId,
+            workspaceId
+          }
+        );
+        const activeMutes = await listWorkspaceAlertMutesByCodes(
+          dependencies.opsAlertMuteRepository,
+          {
+            codes: alerts.map((alert) => alert.code),
+            observedAt: referenceTime,
+            ownerUserId,
+            workspaceId
+          }
+        );
         const existingStateByCode = new Map(
           existingStates.map((state) => [state.code, state])
         );
@@ -958,7 +1174,8 @@ export function createOpsObservabilityCaptureService(
                 observedAt: referenceTime,
                 ownerUserId,
                 severity: alert.severity,
-                title: alert.title
+                title: alert.title,
+                workspaceId
               });
 
           if ((!deliverAuditLog && !deliverWebhook) || activeMute) {
@@ -983,7 +1200,8 @@ export function createOpsObservabilityCaptureService(
                 message: alert.message,
                 ownerUserId,
                 severity: alert.severity,
-                title: alert.title
+                title: alert.title,
+                workspaceId
               });
               summary.deliveredAlertCount += 1;
               await dependencies.opsAlertStateRepository.setLastDeliveredAt({
@@ -1016,7 +1234,8 @@ export function createOpsObservabilityCaptureService(
                 message: alert.message,
                 ownerUserId,
                 severity: alert.severity,
-                title: alert.title
+                title: alert.title,
+                workspaceId
               });
               summary.failedDeliveryCount += 1;
             }
@@ -1029,8 +1248,8 @@ export function createOpsObservabilityCaptureService(
                   action: "ops.alert.delivered",
                   actorId: "worker",
                   actorType: "system",
-                  entityId: ownerUserId,
-                  entityType: "user",
+                  entityId: workspaceId,
+                  entityType: "workspace",
                   metadataJson: {
                     alertCode: alert.code,
                     captureId: capture.id,
@@ -1052,7 +1271,8 @@ export function createOpsObservabilityCaptureService(
                   alert,
                   captureId: capture.id,
                   deliveredAt: capturedAt,
-                  ownerUserId
+                  ownerUserId,
+                  workspaceId
                 }),
               deliveryChannel: "webhook",
               failureLogMessage: "Ops webhook alert delivery failed"

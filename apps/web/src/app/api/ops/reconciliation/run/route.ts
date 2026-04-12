@@ -10,7 +10,8 @@ export async function POST() {
   try {
     const session = await requireOpsApiSession();
     const result = await createRuntimeOpsService().runReconciliation({
-      ownerUserId: session.ownerUserId
+      ownerUserId: session.ownerUserId,
+      workspaceId: session.workspace.id
     });
 
     return NextResponse.json(result, {

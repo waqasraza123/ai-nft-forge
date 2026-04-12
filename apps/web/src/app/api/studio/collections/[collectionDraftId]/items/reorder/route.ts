@@ -25,7 +25,8 @@ export async function POST(request: Request, context: RouteContext) {
       await createRuntimeCollectionDraftService().reorderCollectionDraftItems({
         collectionDraftId,
         itemIds: body.itemIds,
-        ownerUserId: session.ownerUserId
+        ownerUserId: session.ownerUserId,
+        workspaceId: session.workspace.id
       });
 
     return NextResponse.json(result);

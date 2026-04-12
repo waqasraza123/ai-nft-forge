@@ -19,12 +19,30 @@ export function createOpsAlertRoutingPolicyRepository(
       });
     },
 
+    deleteByWorkspaceId(input: { workspaceId: string }) {
+      return database.opsAlertRoutingPolicy.deleteMany({
+        where: {
+          workspaceId: input.workspaceId
+        }
+      });
+    },
+
     findByOwnerUserId(
       ownerUserId: string
     ): Promise<OpsAlertRoutingPolicy | null> {
-      return database.opsAlertRoutingPolicy.findUnique({
+      return database.opsAlertRoutingPolicy.findFirst({
         where: {
           ownerUserId
+        }
+      });
+    },
+
+    findByWorkspaceId(
+      workspaceId: string
+    ): Promise<OpsAlertRoutingPolicy | null> {
+      return database.opsAlertRoutingPolicy.findFirst({
+        where: {
+          workspaceId
         }
       });
     },
@@ -33,10 +51,12 @@ export function createOpsAlertRoutingPolicyRepository(
       ownerUserId: string;
       webhookEnabled: boolean;
       webhookMinimumSeverity: OpsAlertSeverity;
+      workspaceId: string;
     }): Promise<OpsAlertRoutingPolicy> {
       return database.opsAlertRoutingPolicy.upsert({
         create: {
           ownerUserId: input.ownerUserId,
+          workspaceId: input.workspaceId,
           webhookEnabled: input.webhookEnabled,
           webhookMinimumSeverity: input.webhookMinimumSeverity
         },
@@ -45,7 +65,7 @@ export function createOpsAlertRoutingPolicyRepository(
           webhookMinimumSeverity: input.webhookMinimumSeverity
         },
         where: {
-          ownerUserId: input.ownerUserId
+          workspaceId: input.workspaceId
         }
       });
     }

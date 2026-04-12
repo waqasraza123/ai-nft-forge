@@ -43,14 +43,15 @@ type GenerationRepositorySet = {
       pipelineKey: string;
       requestedVariantCount: number;
       sourceAssetId: string;
+      workspaceId: string;
     }): Promise<GenerationRequestRecord>;
-    findActiveForSourceAsset(input: {
-      ownerUserId: string;
+    findActiveForWorkspaceSourceAsset(input: {
       sourceAssetId: string;
+      workspaceId: string;
     }): Promise<GenerationRequestRecord | null>;
-    findByIdForOwner(input: {
+    findByIdForWorkspace(input: {
       id: string;
-      ownerUserId: string;
+      workspaceId: string;
     }): Promise<GenerationRequestRecord | null>;
     markFailed(input: {
       failureCode: string;
@@ -60,9 +61,9 @@ type GenerationRepositorySet = {
     }): Promise<GenerationRequestRecord>;
   };
   sourceAssetRepository: {
-    findByIdForOwner(input: {
+    findByIdForWorkspace(input: {
       id: string;
-      ownerUserId: string;
+      workspaceId: string;
     }): Promise<SourceAssetRecord | null>;
   };
 };
@@ -154,12 +155,13 @@ export function createGenerationService(
       pipelineKey?: string;
       sourceAssetId: string;
       variantCount?: number;
+      workspaceId: string;
     }) {
       const parsedInput = generationRequestCreateRequestSchema.parse(input);
       const sourceAsset =
-        await dependencies.repositories.sourceAssetRepository.findByIdForOwner({
+        await dependencies.repositories.sourceAssetRepository.findByIdForWorkspace({
           id: parsedInput.sourceAssetId,
-          ownerUserId: input.ownerUserId
+          workspaceId: input.workspaceId
         });
 
       if (!sourceAsset) {
@@ -179,10 +181,10 @@ export function createGenerationService(
       }
 
       const activeGeneration =
-        await dependencies.repositories.generationRequestRepository.findActiveForSourceAsset(
+        await dependencies.repositories.generationRequestRepository.findActiveForWorkspaceSourceAsset(
           {
-            ownerUserId: input.ownerUserId,
-            sourceAssetId: parsedInput.sourceAssetId
+            sourceAssetId: parsedInput.sourceAssetId,
+            workspaceId: input.workspaceId
           }
         );
 
@@ -200,7 +202,8 @@ export function createGenerationService(
             ownerUserId: input.ownerUserId,
             pipelineKey: parsedInput.pipelineKey,
             requestedVariantCount: parsedInput.variantCount,
-            sourceAssetId: parsedInput.sourceAssetId
+            sourceAssetId: parsedInput.sourceAssetId,
+            workspaceId: input.workspaceId
           }
         );
 
@@ -210,12 +213,13 @@ export function createGenerationService(
     async retryGenerationRequest(input: {
       generationRequestId: string;
       ownerUserId: string;
+      workspaceId: string;
     }) {
       const existingGeneration =
-        await dependencies.repositories.generationRequestRepository.findByIdForOwner(
+        await dependencies.repositories.generationRequestRepository.findByIdForWorkspace(
           {
             id: input.generationRequestId,
-            ownerUserId: input.ownerUserId
+            workspaceId: input.workspaceId
           }
         );
 
@@ -236,9 +240,9 @@ export function createGenerationService(
       }
 
       const sourceAsset =
-        await dependencies.repositories.sourceAssetRepository.findByIdForOwner({
+        await dependencies.repositories.sourceAssetRepository.findByIdForWorkspace({
           id: existingGeneration.sourceAssetId,
-          ownerUserId: input.ownerUserId
+          workspaceId: input.workspaceId
         });
 
       if (!sourceAsset) {
@@ -258,10 +262,10 @@ export function createGenerationService(
       }
 
       const activeGeneration =
-        await dependencies.repositories.generationRequestRepository.findActiveForSourceAsset(
+        await dependencies.repositories.generationRequestRepository.findActiveForWorkspaceSourceAsset(
           {
-            ownerUserId: input.ownerUserId,
-            sourceAssetId: existingGeneration.sourceAssetId
+            sourceAssetId: existingGeneration.sourceAssetId,
+            workspaceId: input.workspaceId
           }
         );
 
@@ -279,7 +283,8 @@ export function createGenerationService(
             ownerUserId: input.ownerUserId,
             pipelineKey: existingGeneration.pipelineKey,
             requestedVariantCount: existingGeneration.requestedVariantCount,
-            sourceAssetId: existingGeneration.sourceAssetId
+            sourceAssetId: existingGeneration.sourceAssetId,
+            workspaceId: input.workspaceId
           }
         );
 

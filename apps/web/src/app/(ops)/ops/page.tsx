@@ -2,8 +2,11 @@ import Link from "next/link";
 
 import { PageShell, Pill, SurfaceCard, SurfaceGrid } from "@ai-nft-forge/ui";
 
+import { WorkspaceDirectoryPanel } from "../../../components/workspace-directory-panel";
+import { WorkspaceScopeSwitcher } from "../../../components/workspace-scope-switcher";
 import { OpsOperatorPanel } from "./ops-operator-panel";
 import { loadOpsRuntime } from "../../../server/ops/runtime";
+import { createRuntimeWorkspaceDirectoryService } from "../../../server/workspaces/directory-service";
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat(undefined, {
@@ -14,6 +17,16 @@ function formatDateTime(value: string) {
 
 export default async function OpsPage() {
   const runtime = await loadOpsRuntime();
+  const workspaceDirectory = runtime.operator.access
+    ? await createRuntimeWorkspaceDirectoryService().listAccessibleWorkspaceDirectory(
+        {
+          currentWorkspaceId: runtime.operator.access.workspace?.id ?? null,
+          workspaces: runtime.operator.access.availableWorkspaces
+        }
+      )
+    : {
+        workspaces: []
+      };
   const generationBackendProvider =
     runtime.generationBackend.health.payload?.provider ??
     runtime.generationBackend.readiness.payload?.provider ??
@@ -36,6 +49,9 @@ export default async function OpsPage() {
         <>
           <Link className="action-link" href="/ops/audit">
             Audit activity
+          </Link>
+          <Link className="action-link" href="/ops/workspaces">
+            Workspace directory
           </Link>
           <Link className="action-link" href="/api/health">
             Web health
@@ -148,7 +164,14 @@ export default async function OpsPage() {
           eyebrow="Access boundary"
           span={4}
           title="Operator controls"
-        />
+        >
+          <WorkspaceScopeSwitcher
+            currentWorkspaceSlug={
+              runtime.operator.access?.workspace?.slug ?? null
+            }
+            workspaces={runtime.operator.access?.availableWorkspaces ?? []}
+          />
+        </SurfaceCard>
         <SurfaceCard
           body="Workspace activity audit now lives on a dedicated ops route with filters and CSV export, so invitation, membership, and ownership-transfer review no longer depends on the shorter settings history list."
           eyebrow="Audit"
@@ -163,6 +186,13 @@ export default async function OpsPage() {
             </Link>
           </div>
         </SurfaceCard>
+        <WorkspaceDirectoryPanel
+          body="Accessible workspace summaries now expose current member, brand, invite, escalation, and recent-activity counts from workspace-native tables, so operators can see the estate they can act in before switching scope."
+          entries={workspaceDirectory.workspaces}
+          eyebrow="Workspace directory"
+          span={12}
+          title="Accessible operator estate"
+        />
       </SurfaceGrid>
       <OpsOperatorPanel operator={runtime.operator} />
     </PageShell>

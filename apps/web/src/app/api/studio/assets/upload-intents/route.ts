@@ -17,7 +17,8 @@ export async function POST(request: Request) {
     const result = await createRuntimeSourceAssetService().createUploadIntent({
       contentType: body.contentType,
       fileName: body.fileName,
-      ownerUserId: session.ownerUserId
+      ownerUserId: session.ownerUserId,
+      workspaceId: session.workspace.id
     });
 
     return NextResponse.json(result, {

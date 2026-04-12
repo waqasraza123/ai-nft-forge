@@ -23,15 +23,15 @@ type GeneratedAssetRecord = {
 
 type GeneratedAssetRepositorySet = {
   generatedAssetRepository: {
-    findByIdForOwner(input: {
+    findByIdForWorkspace(input: {
       id: string;
-      ownerUserId: string;
+      workspaceId: string;
     }): Promise<GeneratedAssetRecord | null>;
-    updateModerationByIdForOwner(input: {
+    updateModerationByIdForWorkspace(input: {
       id: string;
       moderatedAt: Date | null;
       moderationStatus: GeneratedAssetModerationStatus;
-      ownerUserId: string;
+      workspaceId: string;
     }): Promise<GeneratedAssetRecord | null>;
   };
 };
@@ -76,13 +76,13 @@ export function createGeneratedAssetService(
   return {
     async createDownloadIntent(input: {
       generatedAssetId: string;
-      ownerUserId: string;
+      workspaceId: string;
     }) {
       const asset =
-        await dependencies.repositories.generatedAssetRepository.findByIdForOwner(
+        await dependencies.repositories.generatedAssetRepository.findByIdForWorkspace(
           {
             id: input.generatedAssetId,
-            ownerUserId: input.ownerUserId
+            workspaceId: input.workspaceId
           }
         );
 
@@ -125,13 +125,13 @@ export function createGeneratedAssetService(
     async updateModeration(input: {
       generatedAssetId: string;
       moderationStatus: GeneratedAssetModerationStatus;
-      ownerUserId: string;
+      workspaceId: string;
     }) {
       const parsedInput = generatedAssetModerationUpdateRequestSchema.parse({
         moderationStatus: input.moderationStatus
       });
       const updatedAsset =
-        await dependencies.repositories.generatedAssetRepository.updateModerationByIdForOwner(
+        await dependencies.repositories.generatedAssetRepository.updateModerationByIdForWorkspace(
           {
             id: input.generatedAssetId,
             moderatedAt:
@@ -139,7 +139,7 @@ export function createGeneratedAssetService(
                 ? null
                 : dependencies.now(),
             moderationStatus: parsedInput.moderationStatus,
-            ownerUserId: input.ownerUserId
+            workspaceId: input.workspaceId
           }
         );
 

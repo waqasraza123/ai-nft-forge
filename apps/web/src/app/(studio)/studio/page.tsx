@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { PageShell, Pill, SurfaceCard, SurfaceGrid } from "@ai-nft-forge/ui";
 
+import { WorkspaceScopeSwitcher } from "../../../components/workspace-scope-switcher";
 import { getCurrentStudioAccess } from "../../../server/studio/access";
 
 export default async function StudioPage() {
@@ -41,11 +42,23 @@ export default async function StudioPage() {
         >
           <div className="pill-row">
             <Pill>{access?.owner.walletAddress ?? "Session required"}</Pill>
-            <Pill>{access?.role === "owner" ? "Owner access" : "Operator access"}</Pill>
+            <Pill>
+              {access?.role === "owner" ? "Owner access" : "Operator access"}
+            </Pill>
             <Link className="inline-link" href="/studio/assets">
               /studio/assets
             </Link>
           </div>
+        </SurfaceCard>
+        <SurfaceCard
+          body="Workspace context is now explicit instead of being pinned to the first accessible workspace. Changing scope here updates the protected studio and ops surfaces through one authenticated server-side selection cookie."
+          eyebrow="Workspace"
+          title="Active workspace scope"
+        >
+          <WorkspaceScopeSwitcher
+            currentWorkspaceSlug={access?.workspace?.slug ?? null}
+            workspaces={access?.availableWorkspaces ?? []}
+          />
         </SurfaceCard>
         <SurfaceCard
           body="The collection draft surface now lets the owner create ordered curation sets from generated variants, mark them review-ready, and publish them to a live public route."

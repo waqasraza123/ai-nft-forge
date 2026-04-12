@@ -64,7 +64,8 @@ describe("createGenerationRequestProcessor", () => {
             requestedVariantCount: 2,
             resultJson: null,
             sourceAssetId: "asset_1",
-            status: "queued"
+            status: "queued",
+            workspaceId: "workspace_1"
           }),
           markFailed: vi.fn(),
           markQueuedForRetry: vi.fn(),

@@ -32,7 +32,8 @@ export async function POST(request: Request, context: MuteAlertRouteContext) {
     const result = await createRuntimeOpsService().muteAlert({
       alertStateId,
       durationHours: payload.durationHours,
-      ownerUserId: session.ownerUserId
+      ownerUserId: session.ownerUserId,
+      workspaceId: session.workspace.id
     });
 
     return NextResponse.json(result, {
@@ -52,7 +53,8 @@ export async function DELETE(
     const { alertStateId } = await context.params;
     const result = await createRuntimeOpsService().unmuteAlert({
       alertStateId,
-      ownerUserId: session.ownerUserId
+      ownerUserId: session.ownerUserId,
+      workspaceId: session.workspace.id
     });
 
     return NextResponse.json(result, {

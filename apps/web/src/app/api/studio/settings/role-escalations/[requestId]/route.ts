@@ -21,7 +21,8 @@ export async function DELETE(_request: Request, context: RouteContext) {
         actorUserId: session.session.user.id,
         ownerUserId: session.ownerUserId,
         requestId,
-        role: session.role
+        role: session.role,
+        workspaceId: session.workspace?.id ?? null
       });
 
     return NextResponse.json(result);

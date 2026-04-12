@@ -11,6 +11,17 @@ function createLogger() {
   };
 }
 
+function createWorkspaceRepository() {
+  return {
+    listAll: vi.fn().mockResolvedValue([
+      {
+        id: "workspace_1",
+        ownerUserId: "user_1"
+      }
+    ])
+  };
+}
+
 describe("createOpsObservabilityCaptureService", () => {
   it("captures observability history and delivers newly active alerts", async () => {
     const auditLogRepository = {
@@ -21,7 +32,7 @@ describe("createOpsObservabilityCaptureService", () => {
       enabled: true
     };
     const generationRequestRepository = {
-      findOldestForOwnerUserId: vi
+      findOldestForWorkspaceId: vi
         .fn()
         .mockResolvedValueOnce({
           _count: {
@@ -36,8 +47,7 @@ describe("createOpsObservabilityCaptureService", () => {
           status: "queued"
         })
         .mockResolvedValueOnce(null),
-      listDistinctOwnerUserIds: vi.fn().mockResolvedValue(["user_1"]),
-      listRecentForOwnerUserIdSince: vi
+      listRecentForWorkspaceIdSince: vi
         .fn()
         .mockResolvedValueOnce([
           {
@@ -72,10 +82,10 @@ describe("createOpsObservabilityCaptureService", () => {
       create: vi.fn().mockResolvedValue({})
     };
     const opsAlertMuteRepository = {
-      listActiveByOwnerUserIdAndCodes: vi.fn().mockResolvedValue([])
+      listActiveByWorkspaceIdAndCodes: vi.fn().mockResolvedValue([])
     };
     const opsAlertRoutingPolicyRepository = {
-      findByOwnerUserId: vi.fn().mockResolvedValue(null)
+      findByWorkspaceId: vi.fn().mockResolvedValue(null)
     };
     const opsAlertStateRepository = {
       createActive: vi.fn().mockResolvedValue({
@@ -92,8 +102,8 @@ describe("createOpsObservabilityCaptureService", () => {
         status: "active",
         title: "Queued owner-scoped generation work is older than expected."
       }),
-      listActiveByOwnerUserId: vi.fn().mockResolvedValue([]),
-      listByOwnerUserIdAndCodes: vi.fn().mockResolvedValue([]),
+      listActiveByWorkspaceId: vi.fn().mockResolvedValue([]),
+      listByWorkspaceIdAndCodes: vi.fn().mockResolvedValue([]),
       markResolved: vi.fn(),
       setLastDeliveredAt: vi.fn().mockResolvedValue({}),
       update: vi.fn()
@@ -129,16 +139,17 @@ describe("createOpsObservabilityCaptureService", () => {
       logger,
       now: () => new Date("2026-04-07T09:00:00.000Z"),
       opsAlertEscalationPolicyRepository: {
-        findByOwnerUserId: vi.fn().mockResolvedValue(null)
+        findByWorkspaceId: vi.fn().mockResolvedValue(null)
       },
       opsAlertMuteRepository,
       opsAlertRoutingPolicyRepository,
       opsAlertSchedulePolicyRepository: {
-        findByOwnerUserId: vi.fn().mockResolvedValue(null)
+        findByWorkspaceId: vi.fn().mockResolvedValue(null)
       },
       opsAlertDeliveryRepository,
       opsAlertStateRepository,
-      opsObservabilityCaptureRepository
+      opsObservabilityCaptureRepository,
+      workspaceRepository: createWorkspaceRepository()
     });
 
     const summary = await service.captureAllOwnerObservability();
@@ -176,7 +187,7 @@ describe("createOpsObservabilityCaptureService", () => {
     expect(auditLogRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
         action: "ops.alert.delivered",
-        entityId: "user_1"
+        entityId: "workspace_1"
       })
     );
     expect(alertWebhookDelivery.deliver).toHaveBeenCalledWith(
@@ -309,7 +320,8 @@ describe("createOpsObservabilityCaptureService", () => {
         create: vi.fn().mockResolvedValue({
           id: "capture_1"
         })
-      }
+      },
+      workspaceRepository: createWorkspaceRepository()
     });
 
     const summary = await service.captureAllOwnerObservability();
@@ -449,7 +461,8 @@ describe("createOpsObservabilityCaptureService", () => {
         create: vi.fn().mockResolvedValue({
           id: "capture_1"
         })
-      }
+      },
+      workspaceRepository: createWorkspaceRepository()
     });
 
     const summary = await service.captureAllOwnerObservability();
@@ -561,7 +574,8 @@ describe("createOpsObservabilityCaptureService", () => {
         create: vi.fn().mockResolvedValue({
           id: "capture_1"
         })
-      }
+      },
+      workspaceRepository: createWorkspaceRepository()
     });
 
     const summary = await service.captureAllOwnerObservability();
@@ -578,11 +592,13 @@ describe("createOpsObservabilityCaptureService", () => {
       deliveryChannel: "audit_log",
       id: "alert_state_1"
     });
-    expect(opsAlertStateRepository.setLastDeliveredAt).not.toHaveBeenCalledWith({
-      deliveredAt: new Date("2026-04-07T09:00:00.000Z"),
-      deliveryChannel: "webhook",
-      id: "alert_state_1"
-    });
+    expect(opsAlertStateRepository.setLastDeliveredAt).not.toHaveBeenCalledWith(
+      {
+        deliveredAt: new Date("2026-04-07T09:00:00.000Z"),
+        deliveryChannel: "webhook",
+        id: "alert_state_1"
+      }
+    );
     expect(summary).toEqual({
       captureCount: 1,
       deliveredAlertCount: 1,
@@ -682,7 +698,8 @@ describe("createOpsObservabilityCaptureService", () => {
         create: vi.fn().mockResolvedValue({
           id: "capture_1"
         })
-      }
+      },
+      workspaceRepository: createWorkspaceRepository()
     });
 
     const summary = await service.captureAllOwnerObservability();
@@ -789,7 +806,8 @@ describe("createOpsObservabilityCaptureService", () => {
         create: vi.fn().mockResolvedValue({
           id: "capture_1"
         })
-      }
+      },
+      workspaceRepository: createWorkspaceRepository()
     });
 
     const summary = await service.captureAllOwnerObservability();
@@ -910,7 +928,8 @@ describe("createOpsObservabilityCaptureService", () => {
         create: vi.fn().mockResolvedValue({
           id: "capture_1"
         })
-      }
+      },
+      workspaceRepository: createWorkspaceRepository()
     });
 
     const summary = await service.captureAllOwnerObservability();

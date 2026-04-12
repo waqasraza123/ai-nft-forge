@@ -20,6 +20,7 @@ export async function POST(request: Request) {
           actorUserId: session.session.user.id,
           ownerUserId: session.ownerUserId,
           role: session.role,
+          workspaceId: session.workspace?.id ?? null,
           ...(body.justification !== undefined
             ? {
                 justification: body.justification

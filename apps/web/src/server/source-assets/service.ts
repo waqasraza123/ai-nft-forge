@@ -76,12 +76,13 @@ type SourceAssetRepositorySet = {
       ownerUserId: string;
       storageBucket: string;
       storageObjectKey: string;
+      workspaceId: string;
     }): Promise<SourceAssetRecord>;
-    findByIdForOwner(input: {
+    findByIdForWorkspace(input: {
       id: string;
-      ownerUserId: string;
+      workspaceId: string;
     }): Promise<SourceAssetRecord | null>;
-    listByOwnerUserId(ownerUserId: string): Promise<SourceAssetRecord[]>;
+    listByWorkspaceId(workspaceId: string): Promise<SourceAssetRecord[]>;
     updateUploadState(input: {
       byteSize: number | null;
       id: string;
@@ -209,6 +210,7 @@ export function createSourceAssetService(
       contentType: string;
       fileName: string;
       ownerUserId: string;
+      workspaceId: string;
     }) {
       const parsedInput = sourceAssetUploadIntentRequestSchema.parse(input);
       const upload = await dependencies.storage.createUploadDescriptor({
@@ -225,7 +227,8 @@ export function createSourceAssetService(
             originalFilename: parsedInput.fileName,
             ownerUserId: input.ownerUserId,
             storageBucket: dependencies.storage.privateBucketName,
-            storageObjectKey: upload.objectKey
+            storageObjectKey: upload.objectKey,
+            workspaceId: input.workspaceId
           }
         );
 
@@ -235,11 +238,11 @@ export function createSourceAssetService(
       });
     },
 
-    async completeUpload(input: { assetId: string; ownerUserId: string }) {
+    async completeUpload(input: { assetId: string; workspaceId: string }) {
       const asset =
-        await dependencies.repositories.sourceAssetRepository.findByIdForOwner({
+        await dependencies.repositories.sourceAssetRepository.findByIdForWorkspace({
           id: input.assetId,
-          ownerUserId: input.ownerUserId
+          workspaceId: input.workspaceId
         });
 
       if (!asset) {
@@ -284,10 +287,10 @@ export function createSourceAssetService(
       });
     },
 
-    async listSourceAssets(input: { ownerUserId: string }) {
+    async listSourceAssets(input: { workspaceId: string }) {
       const assets =
-        await dependencies.repositories.sourceAssetRepository.listByOwnerUserId(
-          input.ownerUserId
+        await dependencies.repositories.sourceAssetRepository.listByWorkspaceId(
+          input.workspaceId
         );
       const generationRequests =
         await dependencies.repositories.generationRequestRepository.listBySourceAssetIds(

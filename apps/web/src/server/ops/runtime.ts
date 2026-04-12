@@ -38,7 +38,10 @@ import {
 
 import { getGenerationDispatchQueueCounts } from "../generations/queue";
 import { createHealthPayload, type HealthPayload } from "../health";
-import { getCurrentStudioAccess, type StudioAccessRole } from "../studio/access";
+import {
+  getCurrentStudioAccess,
+  type StudioAccessRole
+} from "../studio/access";
 
 type FetchLike = typeof fetch;
 
@@ -290,7 +293,9 @@ export type OpsReconciliationSummary = {
   lastRun: ReturnType<typeof opsReconciliationRunSummarySchema.parse> | null;
   message: string;
   openCriticalIssueCount: number;
-  openIssues: Array<ReturnType<typeof opsReconciliationIssueSummarySchema.parse>>;
+  openIssues: Array<
+    ReturnType<typeof opsReconciliationIssueSummarySchema.parse>
+  >;
   openWarningIssueCount: number;
   status: "healthy" | "stale" | "unreachable" | "warning";
 };
@@ -329,8 +334,10 @@ export type OpsRuntimeSnapshot = {
   operator: {
     activity: OwnerGenerationActivity | null;
     access: {
+      availableWorkspaces: NonNullable<CurrentStudioAccess>["availableWorkspaces"];
       canManageOpsPolicy: boolean;
       role: StudioAccessRole;
+      workspace: NonNullable<CurrentStudioAccess>["workspace"];
     } | null;
     alertEscalation: OpsAlertEscalation | null;
     alertRouting: OpsAlertRouting | null;
@@ -351,28 +358,34 @@ type LoadOpsRuntimeInput = {
   loadOperatorActivity?: (input: {
     ownerUserId: string;
     rawEnvironment: NodeJS.ProcessEnv;
+    workspaceId: string;
   }) => Promise<OwnerGenerationActivity>;
   loadOperatorAlertRouting?: (input: {
     ownerUserId: string;
     rawEnvironment: NodeJS.ProcessEnv;
+    workspaceId: string;
   }) => Promise<OpsAlertRouting>;
   loadOperatorAlertEscalation?: (input: {
     ownerUserId: string;
     rawEnvironment: NodeJS.ProcessEnv;
+    workspaceId: string;
   }) => Promise<OpsAlertEscalation>;
   loadOperatorAlertSchedule?: (input: {
     ownerUserId: string;
     rawEnvironment: NodeJS.ProcessEnv;
     referenceTime: Date;
+    workspaceId: string;
   }) => Promise<OpsAlertSchedule>;
   loadOperatorHistory?: (input: {
     ownerUserId: string;
     rawEnvironment: NodeJS.ProcessEnv;
+    workspaceId: string;
   }) => Promise<OwnerPersistedObservabilityHistory>;
   loadOperatorReconciliation?: (input: {
     ownerUserId: string;
     rawEnvironment: NodeJS.ProcessEnv;
     referenceTime: Date;
+    workspaceId: string;
   }) => Promise<OpsReconciliationSummary>;
   loadOperatorObservability?: (input: {
     checkedAt: string;
@@ -381,6 +394,7 @@ type LoadOpsRuntimeInput = {
     queueSnapshot: OpsQueueSnapshot | null;
     rawEnvironment: NodeJS.ProcessEnv;
     referenceTime: Date;
+    workspaceId: string;
   }) => Promise<OpsOperatorObservability>;
   loadQueueSnapshot?: (input: {
     checkedAt: string;
@@ -429,34 +443,34 @@ type PersistedReconciliationIssueRepository = ReturnType<
 >;
 
 type GenerationActivityRecord = Awaited<
-  ReturnType<GenerationActivityRepository["listRecentForOwnerUserId"]>
+  ReturnType<GenerationActivityRepository["listRecentForWorkspaceId"]>
 >[number];
 type PersistedCaptureRecord = Awaited<
-  ReturnType<PersistedCaptureRepository["listRecentForOwnerUserId"]>
+  ReturnType<PersistedCaptureRepository["listRecentForWorkspaceId"]>
 >[number];
 type PersistedAlertDeliveryRecord = Awaited<
-  ReturnType<PersistedAlertDeliveryRepository["listRecentForOwnerUserId"]>
+  ReturnType<PersistedAlertDeliveryRepository["listRecentForWorkspaceId"]>
 >[number];
 type PersistedAlertMuteRecord = Awaited<
-  ReturnType<PersistedAlertMuteRepository["listActiveByOwnerUserId"]>
+  ReturnType<PersistedAlertMuteRepository["listActiveByWorkspaceId"]>
 >[number];
 type PersistedAlertEscalationPolicyRecord = Awaited<
-  ReturnType<PersistedAlertEscalationPolicyRepository["findByOwnerUserId"]>
+  ReturnType<PersistedAlertEscalationPolicyRepository["findByWorkspaceId"]>
 >;
 type PersistedAlertRoutingPolicyRecord = Awaited<
-  ReturnType<PersistedAlertRoutingPolicyRepository["findByOwnerUserId"]>
+  ReturnType<PersistedAlertRoutingPolicyRepository["findByWorkspaceId"]>
 >;
 type PersistedAlertSchedulePolicyRecord = Awaited<
-  ReturnType<PersistedAlertSchedulePolicyRepository["findByOwnerUserId"]>
+  ReturnType<PersistedAlertSchedulePolicyRepository["findByWorkspaceId"]>
 >;
 type PersistedAlertStateRecord = Awaited<
-  ReturnType<PersistedAlertStateRepository["listActiveByOwnerUserId"]>
+  ReturnType<PersistedAlertStateRepository["listActiveByWorkspaceId"]>
 >[number];
 type PersistedReconciliationRunRecord = Awaited<
-  ReturnType<PersistedReconciliationRunRepository["findLatestByOwnerUserId"]>
+  ReturnType<PersistedReconciliationRunRepository["findLatestByWorkspaceId"]>
 >;
 type PersistedReconciliationIssueRecord = Awaited<
-  ReturnType<PersistedReconciliationIssueRepository["listOpenByOwnerUserId"]>
+  ReturnType<PersistedReconciliationIssueRepository["listOpenByWorkspaceId"]>
 >[number];
 
 type OwnerGenerationMetrics = {
@@ -724,7 +738,9 @@ function createPersistedAlertStateRepository(
 function createPersistedReconciliationRunRepository(
   rawEnvironment: NodeJS.ProcessEnv
 ) {
-  return createOpsReconciliationRunRepository(getDatabaseClient(rawEnvironment));
+  return createOpsReconciliationRunRepository(
+    getDatabaseClient(rawEnvironment)
+  );
 }
 
 function createPersistedReconciliationIssueRepository(
@@ -784,9 +800,8 @@ function createAgeSeconds(from: Date, referenceTime: Date) {
 }
 
 function parseReconciliationDetail(detailJson: unknown) {
-  const parsedDetail = opsReconciliationIssueSummarySchema.shape.detail.safeParse(
-    detailJson
-  );
+  const parsedDetail =
+    opsReconciliationIssueSummarySchema.shape.detail.safeParse(detailJson);
 
   return parsedDetail.success ? parsedDetail.data : {};
 }
@@ -806,7 +821,9 @@ function serializeReconciliationRun(
   });
 }
 
-function serializeReconciliationIssue(issue: PersistedReconciliationIssueRecord) {
+function serializeReconciliationIssue(
+  issue: PersistedReconciliationIssueRecord
+) {
   return opsReconciliationIssueSummarySchema.parse({
     detail: parseReconciliationDetail(issue.detailJson),
     fingerprint: issue.fingerprint,
@@ -1002,7 +1019,9 @@ function serializeAlertSchedulePolicy(
   policy: PersistedAlertSchedulePolicyRecord
 ): OpsAlertSchedulePolicySummary {
   return opsAlertSchedulePolicySummarySchema.parse({
-    activeDays: policy ? parseOpsAlertScheduleDayMask(policy.activeDaysMask) : [],
+    activeDays: policy
+      ? parseOpsAlertScheduleDayMask(policy.activeDaysMask)
+      : [],
     endMinuteOfDay: policy?.endMinuteOfDay ?? null,
     id: policy?.id ?? null,
     source: policy ? "owner_override" : "default",
@@ -1048,6 +1067,7 @@ function formatAlertEscalationMinutes(value: number) {
 async function loadOwnerAlertRouting(input: {
   ownerUserId: string;
   rawEnvironment: NodeJS.ProcessEnv;
+  workspaceId: string;
 }): Promise<OpsAlertRouting> {
   try {
     const workerEnv = parseWorkerEnv(input.rawEnvironment);
@@ -1055,7 +1075,7 @@ async function loadOwnerAlertRouting(input: {
       input.rawEnvironment
     );
     const policy = serializeAlertRoutingPolicy(
-      await policyRepository.findByOwnerUserId(input.ownerUserId)
+      await policyRepository.findByWorkspaceId(input.workspaceId)
     );
     const webhookConfigured =
       workerEnv.OPS_ALERT_WEBHOOK_ENABLED &&
@@ -1098,6 +1118,7 @@ async function loadOwnerAlertRouting(input: {
 async function loadOwnerAlertEscalation(input: {
   ownerUserId: string;
   rawEnvironment: NodeJS.ProcessEnv;
+  workspaceId: string;
 }): Promise<OpsAlertEscalation> {
   try {
     const workerEnv = parseWorkerEnv(input.rawEnvironment);
@@ -1105,7 +1126,7 @@ async function loadOwnerAlertEscalation(input: {
       input.rawEnvironment
     );
     const policy = serializeAlertEscalationPolicy(
-      await policyRepository.findByOwnerUserId(input.ownerUserId)
+      await policyRepository.findByWorkspaceId(input.workspaceId)
     );
     const webhookConfigured =
       workerEnv.OPS_ALERT_WEBHOOK_ENABLED &&
@@ -1162,6 +1183,7 @@ async function loadOwnerAlertSchedule(input: {
   ownerUserId: string;
   rawEnvironment: NodeJS.ProcessEnv;
   referenceTime: Date;
+  workspaceId: string;
 }): Promise<OpsAlertSchedule> {
   try {
     const workerEnv = parseWorkerEnv(input.rawEnvironment);
@@ -1169,7 +1191,7 @@ async function loadOwnerAlertSchedule(input: {
       input.rawEnvironment
     );
     const policy = serializeAlertSchedulePolicy(
-      await policyRepository.findByOwnerUserId(input.ownerUserId)
+      await policyRepository.findByWorkspaceId(input.workspaceId)
     );
     const webhookConfigured =
       workerEnv.OPS_ALERT_WEBHOOK_ENABLED &&
@@ -1249,19 +1271,20 @@ async function loadOwnerAlertSchedule(input: {
 async function loadOwnerGenerationActivity(input: {
   ownerUserId: string;
   rawEnvironment: NodeJS.ProcessEnv;
+  workspaceId: string;
 }): Promise<OwnerGenerationActivity> {
   try {
     const repository = createGenerationRepository(input.rawEnvironment);
     const [activeGenerations, retryableFailures] = await Promise.all([
-      repository.listRecentForOwnerUserId({
+      repository.listRecentForWorkspaceId({
         limit: activeGenerationLimit,
-        ownerUserId: input.ownerUserId,
+        workspaceId: input.workspaceId,
         statuses: ["queued", "running"]
       }),
-      repository.listRecentForOwnerUserId({
+      repository.listRecentForWorkspaceId({
         limit: retryableFailureLimit,
         orderBy: "failedAtDesc",
-        ownerUserId: input.ownerUserId,
+        workspaceId: input.workspaceId,
         statuses: ["failed"]
       })
     ]);
@@ -1290,23 +1313,24 @@ async function loadOwnerGenerationMetrics(input: {
   ownerUserId: string;
   rawEnvironment: NodeJS.ProcessEnv;
   referenceTime: Date;
+  workspaceId: string;
 }): Promise<OwnerGenerationMetrics> {
   try {
     const repository = createGenerationRepository(input.rawEnvironment);
     const [oldestQueuedGeneration, oldestRunningGeneration, ...windowResults] =
       await Promise.all([
-        repository.findOldestForOwnerUserId({
-          ownerUserId: input.ownerUserId,
+        repository.findOldestForWorkspaceId({
+          workspaceId: input.workspaceId,
           statuses: ["queued"]
         }),
-        repository.findOldestForOwnerUserId({
-          ownerUserId: input.ownerUserId,
+        repository.findOldestForWorkspaceId({
+          workspaceId: input.workspaceId,
           statuses: ["running"]
         }),
         ...observabilityWindows.map((window) =>
-          repository.listRecentForOwnerUserIdSince({
-            ownerUserId: input.ownerUserId,
-            since: new Date(input.referenceTime.getTime() - window.durationMs)
+          repository.listRecentForWorkspaceIdSince({
+            since: new Date(input.referenceTime.getTime() - window.durationMs),
+            workspaceId: input.workspaceId
           })
         )
       ]);
@@ -1519,12 +1543,14 @@ async function loadOwnerGenerationObservability(input: {
   queueSnapshot: OpsQueueSnapshot | null;
   rawEnvironment: NodeJS.ProcessEnv;
   referenceTime: Date;
+  workspaceId: string;
 }): Promise<OpsOperatorObservability> {
   const metrics = await loadOwnerGenerationMetrics({
     checkedAt: input.checkedAt,
     ownerUserId: input.ownerUserId,
     rawEnvironment: input.rawEnvironment,
-    referenceTime: input.referenceTime
+    referenceTime: input.referenceTime,
+    workspaceId: input.workspaceId
   });
   const alerts = createOperatorAlertSummary({
     metrics,
@@ -1566,6 +1592,7 @@ async function loadOwnerGenerationObservability(input: {
 async function loadOwnerPersistedObservabilityHistory(input: {
   ownerUserId: string;
   rawEnvironment: NodeJS.ProcessEnv;
+  workspaceId: string;
 }): Promise<OwnerPersistedObservabilityHistory> {
   try {
     const captureRepository = createPersistedCaptureRepository(
@@ -1583,18 +1610,18 @@ async function loadOwnerPersistedObservabilityHistory(input: {
     const referenceTime = new Date();
     const [activeAlerts, activeMutes, captures, deliveries] = await Promise.all(
       [
-        alertStateRepository.listActiveByOwnerUserId(input.ownerUserId),
-        alertMuteRepository.listActiveByOwnerUserId({
+        alertStateRepository.listActiveByWorkspaceId(input.workspaceId),
+        alertMuteRepository.listActiveByWorkspaceId({
           observedAt: referenceTime,
-          ownerUserId: input.ownerUserId
+          workspaceId: input.workspaceId
         }),
-        captureRepository.listRecentForOwnerUserId({
+        captureRepository.listRecentForWorkspaceId({
           limit: 7,
-          ownerUserId: input.ownerUserId
+          workspaceId: input.workspaceId
         }),
-        alertDeliveryRepository.listRecentForOwnerUserId({
+        alertDeliveryRepository.listRecentForWorkspaceId({
           limit: 12,
-          ownerUserId: input.ownerUserId
+          workspaceId: input.workspaceId
         })
       ]
     );
@@ -1743,15 +1770,16 @@ async function loadOwnerReconciliation(input: {
   ownerUserId: string;
   rawEnvironment: NodeJS.ProcessEnv;
   referenceTime: Date;
+  workspaceId: string;
 }): Promise<OpsReconciliationSummary> {
   try {
     const [lastRun, openIssues] = await Promise.all([
       createPersistedReconciliationRunRepository(
         input.rawEnvironment
-      ).findLatestByOwnerUserId(input.ownerUserId),
+      ).findLatestByWorkspaceId(input.workspaceId),
       createPersistedReconciliationIssueRepository(
         input.rawEnvironment
-      ).listOpenByOwnerUserId(input.ownerUserId)
+      ).listOpenByWorkspaceId(input.workspaceId)
     ]);
     const openCriticalIssueCount = openIssues.filter(
       (issue) => issue.severity === "critical"
@@ -1761,7 +1789,8 @@ async function loadOwnerReconciliation(input: {
     if (!lastRun) {
       return {
         lastRun: null,
-        message: "No reconciliation run has been recorded for this operator yet.",
+        message:
+          "No reconciliation run has been recorded for this operator yet.",
         openCriticalIssueCount,
         openIssues: openIssues.map(serializeReconciliationIssue),
         openWarningIssueCount,
@@ -1870,7 +1899,10 @@ function loadOpsReconciliationAutomation(input: {
     const staleThresholdSeconds =
       workerEnv.OPS_RECONCILIATION_INTERVAL_SECONDS +
       workerEnv.OPS_RECONCILIATION_JITTER_SECONDS +
-      Math.max(60, Math.round(workerEnv.OPS_RECONCILIATION_INTERVAL_SECONDS / 2));
+      Math.max(
+        60,
+        Math.round(workerEnv.OPS_RECONCILIATION_INTERVAL_SECONDS / 2)
+      );
 
     if (lastRunAgeSeconds > staleThresholdSeconds) {
       return {
@@ -2000,9 +2032,10 @@ export async function loadOpsRuntime(
   let operatorHistory: OwnerPersistedObservabilityHistory | null = null;
   let operatorObservability: OpsOperatorObservability | null = null;
   let operatorReconciliation: OpsReconciliationSummary | null = null;
-  let operatorReconciliationAutomation: OpsReconciliationAutomation | null = null;
+  let operatorReconciliationAutomation: OpsReconciliationAutomation | null =
+    null;
 
-  if (access?.session.user.id) {
+  if (access?.session.user.id && access.workspace) {
     const queueSnapshotLoader = input.loadQueueSnapshot ?? loadQueueSnapshot;
     const operatorActivityLoader =
       input.loadOperatorActivity ?? loadOwnerGenerationActivity;
@@ -2034,29 +2067,35 @@ export async function loadOpsRuntime(
       }),
       operatorActivityLoader({
         ownerUserId: access.ownerUserId,
-        rawEnvironment
+        rawEnvironment,
+        workspaceId: access.workspace.id
       }),
       operatorAlertEscalationLoader({
         ownerUserId: access.ownerUserId,
-        rawEnvironment
+        rawEnvironment,
+        workspaceId: access.workspace.id
       }),
       operatorAlertRoutingLoader({
         ownerUserId: access.ownerUserId,
-        rawEnvironment
+        rawEnvironment,
+        workspaceId: access.workspace.id
       }),
       operatorAlertScheduleLoader({
         ownerUserId: access.ownerUserId,
         rawEnvironment,
-        referenceTime
+        referenceTime,
+        workspaceId: access.workspace.id
       }),
       operatorHistoryLoader({
         ownerUserId: access.ownerUserId,
-        rawEnvironment
+        rawEnvironment,
+        workspaceId: access.workspace.id
       }),
       operatorReconciliationLoader({
         ownerUserId: access.ownerUserId,
         rawEnvironment,
-        referenceTime
+        referenceTime,
+        workspaceId: access.workspace.id
       })
     ]);
 
@@ -2066,7 +2105,8 @@ export async function loadOpsRuntime(
       ownerUserId: access.ownerUserId,
       queueSnapshot: operatorQueue,
       rawEnvironment,
-      referenceTime
+      referenceTime,
+      workspaceId: access.workspace.id
     });
     operatorCaptureAutomation = loadOpsCaptureAutomation({
       history: operatorHistory,
@@ -2094,8 +2134,10 @@ export async function loadOpsRuntime(
       activity: operatorActivity,
       access: access
         ? {
+            availableWorkspaces: access.availableWorkspaces,
             canManageOpsPolicy: access.role === "owner",
-            role: access.role
+            role: access.role,
+            workspace: access.workspace
           }
         : null,
       alertEscalation: operatorAlertEscalation,

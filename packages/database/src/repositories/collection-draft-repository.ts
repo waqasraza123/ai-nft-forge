@@ -49,13 +49,15 @@ export function createCollectionDraftRepository(
       ownerUserId: string;
       slug: string;
       title: string;
+      workspaceId: string;
     }): Promise<CollectionDraft> {
       return database.collectionDraft.create({
         data: {
           description: input.description,
           ownerUserId: input.ownerUserId,
           slug: input.slug,
-          title: input.title
+          title: input.title,
+          workspaceId: input.workspaceId
         }
       });
     },
@@ -72,6 +74,18 @@ export function createCollectionDraftRepository(
       });
     },
 
+    findByIdForWorkspace(input: {
+      id: string;
+      workspaceId: string;
+    }): Promise<CollectionDraft | null> {
+      return database.collectionDraft.findFirst({
+        where: {
+          id: input.id,
+          workspaceId: input.workspaceId
+        }
+      });
+    },
+
     findDetailedByIdForOwner(input: { id: string; ownerUserId: string }) {
       return database.collectionDraft.findFirst({
         include: collectionDraftDetailInclude,
@@ -82,16 +96,36 @@ export function createCollectionDraftRepository(
       });
     },
 
+    findDetailedByIdForWorkspace(input: { id: string; workspaceId: string }) {
+      return database.collectionDraft.findFirst({
+        include: collectionDraftDetailInclude,
+        where: {
+          id: input.id,
+          workspaceId: input.workspaceId
+        }
+      });
+    },
+
     findBySlugForOwner(input: {
       ownerUserId: string;
       slug: string;
     }): Promise<CollectionDraft | null> {
-      return database.collectionDraft.findUnique({
+      return database.collectionDraft.findFirst({
         where: {
-          ownerUserId_slug: {
-            ownerUserId: input.ownerUserId,
-            slug: input.slug
-          }
+          ownerUserId: input.ownerUserId,
+          slug: input.slug
+        }
+      });
+    },
+
+    findBySlugForWorkspace(input: {
+      slug: string;
+      workspaceId: string;
+    }): Promise<CollectionDraft | null> {
+      return database.collectionDraft.findFirst({
+        where: {
+          slug: input.slug,
+          workspaceId: input.workspaceId
         }
       });
     },
@@ -109,6 +143,23 @@ export function createCollectionDraftRepository(
         ],
         where: {
           ownerUserId
+        }
+      });
+    },
+
+    listByWorkspaceId(workspaceId: string) {
+      return database.collectionDraft.findMany({
+        include: collectionDraftDetailInclude,
+        orderBy: [
+          {
+            updatedAt: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        where: {
+          workspaceId
         }
       });
     },
@@ -147,6 +198,40 @@ export function createCollectionDraftRepository(
         });
     },
 
+    updateByIdForWorkspace(input: {
+      description: string | null;
+      id: string;
+      slug: string;
+      status: CollectionDraftStatus;
+      title: string;
+      workspaceId: string;
+    }): Promise<CollectionDraft> {
+      return database.collectionDraft
+        .findFirst({
+          where: {
+            id: input.id,
+            workspaceId: input.workspaceId
+          }
+        })
+        .then((draft) => {
+          if (!draft) {
+            throw new Error("Collection draft was not found.");
+          }
+
+          return database.collectionDraft.update({
+            data: {
+              description: input.description,
+              slug: input.slug,
+              status: input.status,
+              title: input.title
+            },
+            where: {
+              id: draft.id
+            }
+          });
+        });
+    },
+
     updateStatusByIdForOwner(input: {
       id: string;
       ownerUserId: string;
@@ -157,6 +242,34 @@ export function createCollectionDraftRepository(
           where: {
             id: input.id,
             ownerUserId: input.ownerUserId
+          }
+        })
+        .then((draft) => {
+          if (!draft) {
+            return null;
+          }
+
+          return database.collectionDraft.update({
+            data: {
+              status: input.status
+            },
+            where: {
+              id: draft.id
+            }
+          });
+        });
+    },
+
+    updateStatusByIdForWorkspace(input: {
+      id: string;
+      status: CollectionDraftStatus;
+      workspaceId: string;
+    }): Promise<CollectionDraft | null> {
+      return database.collectionDraft
+        .findFirst({
+          where: {
+            id: input.id,
+            workspaceId: input.workspaceId
           }
         })
         .then((draft) => {

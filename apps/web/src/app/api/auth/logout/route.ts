@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 
-import { createClearedSessionCookieDefinition } from "../../../../lib/session/cookie";
+import {
+  createClearedSessionCookieDefinition,
+  createClearedWorkspaceSelectionCookieDefinition
+} from "../../../../lib/session/cookie";
 import { createAuthErrorResponse } from "../../../../server/auth/http";
+import { ACTIVE_WORKSPACE_COOKIE_NAME } from "../../../../server/studio/access";
 import {
   createRuntimeAuthService,
   getWebAuthConfig
@@ -31,6 +35,12 @@ export async function POST(request: Request) {
     response.cookies.set(
       createClearedSessionCookieDefinition({
         name: cookieName,
+        nodeEnvironment: process.env.NODE_ENV
+      })
+    );
+    response.cookies.set(
+      createClearedWorkspaceSelectionCookieDefinition({
+        name: ACTIVE_WORKSPACE_COOKIE_NAME,
         nodeEnvironment: process.env.NODE_ENV
       })
     );

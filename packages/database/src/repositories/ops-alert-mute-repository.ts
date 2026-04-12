@@ -17,6 +17,15 @@ export function createOpsAlertMuteRepository(
       });
     },
 
+    deleteByWorkspaceIdAndCode(input: { code: string; workspaceId: string }) {
+      return database.opsAlertMute.deleteMany({
+        where: {
+          code: input.code,
+          workspaceId: input.workspaceId
+        }
+      });
+    },
+
     findActiveByOwnerUserIdAndCode(input: {
       code: string;
       observedAt: Date;
@@ -29,6 +38,22 @@ export function createOpsAlertMuteRepository(
             gt: input.observedAt
           },
           ownerUserId: input.ownerUserId
+        }
+      });
+    },
+
+    findActiveByWorkspaceIdAndCode(input: {
+      code: string;
+      observedAt: Date;
+      workspaceId: string;
+    }): Promise<OpsAlertMute | null> {
+      return database.opsAlertMute.findFirst({
+        where: {
+          code: input.code,
+          mutedUntil: {
+            gt: input.observedAt
+          },
+          workspaceId: input.workspaceId
         }
       });
     },
@@ -55,6 +80,28 @@ export function createOpsAlertMuteRepository(
       });
     },
 
+    listActiveByWorkspaceId(input: {
+      observedAt: Date;
+      workspaceId: string;
+    }): Promise<OpsAlertMute[]> {
+      return database.opsAlertMute.findMany({
+        orderBy: [
+          {
+            mutedUntil: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        where: {
+          mutedUntil: {
+            gt: input.observedAt
+          },
+          workspaceId: input.workspaceId
+        }
+      });
+    },
+
     listActiveByOwnerUserIdAndCodes(input: {
       codes: string[];
       observedAt: Date;
@@ -77,24 +124,48 @@ export function createOpsAlertMuteRepository(
       });
     },
 
+    listActiveByWorkspaceIdAndCodes(input: {
+      codes: string[];
+      observedAt: Date;
+      workspaceId: string;
+    }): Promise<OpsAlertMute[]> {
+      if (input.codes.length === 0) {
+        return Promise.resolve([]);
+      }
+
+      return database.opsAlertMute.findMany({
+        where: {
+          code: {
+            in: input.codes
+          },
+          mutedUntil: {
+            gt: input.observedAt
+          },
+          workspaceId: input.workspaceId
+        }
+      });
+    },
+
     upsert(input: {
       code: string;
       mutedUntil: Date;
       ownerUserId: string;
+      workspaceId: string;
     }): Promise<OpsAlertMute> {
       return database.opsAlertMute.upsert({
         create: {
           code: input.code,
           mutedUntil: input.mutedUntil,
-          ownerUserId: input.ownerUserId
+          ownerUserId: input.ownerUserId,
+          workspaceId: input.workspaceId
         },
         update: {
           mutedUntil: input.mutedUntil
         },
         where: {
-          ownerUserId_code: {
+          workspaceId_code: {
             code: input.code,
-            ownerUserId: input.ownerUserId
+            workspaceId: input.workspaceId
           }
         }
       });

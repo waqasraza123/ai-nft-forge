@@ -6,12 +6,12 @@ import { StudioAssetsClient } from "./studio-assets-client";
 export default async function StudioAssetsPage() {
   const access = await getCurrentStudioAccess();
 
-  if (!access) {
+  if (!access || !access.workspace) {
     return null;
   }
 
   const result = await createRuntimeSourceAssetService().listSourceAssets({
-    ownerUserId: access.ownerUserId
+    workspaceId: access.workspace.id
   });
 
   return (

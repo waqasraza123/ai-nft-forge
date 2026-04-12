@@ -29,7 +29,8 @@ export async function POST(request: Request, context: RouteContext) {
           deployTxHash: body.deployTxHash,
           origin: new URL(request.url).origin,
           ownerUserId: session.ownerUserId,
-          ownerWalletAddress: session.owner.walletAddress
+          ownerWalletAddress: session.owner.walletAddress,
+          workspaceId: session.workspace.id
         }
       );
 

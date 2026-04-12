@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  createClearedWorkspaceSelectionCookieDefinition,
   createClearedSessionCookieDefinition,
   createSessionCookieDefinition,
+  createWorkspaceSelectionCookieDefinition,
   shouldUseSecureSessionCookie
 } from "./cookie";
 
@@ -37,6 +39,38 @@ describe("session cookie helpers", () => {
   it("creates an expired cookie definition for logout", () => {
     const cookie = createClearedSessionCookieDefinition({
       name: "session",
+      nodeEnvironment: "development"
+    });
+
+    expect(cookie.value).toBe("");
+    expect(cookie.secure).toBe(false);
+    expect(cookie.expires.getTime()).toBe(0);
+  });
+
+  it("creates a durable workspace selection cookie definition", () => {
+    const expiresAt = new Date("2027-04-11T00:00:00.000Z");
+
+    expect(
+      createWorkspaceSelectionCookieDefinition({
+        expiresAt,
+        name: "workspace",
+        nodeEnvironment: "production",
+        value: "forge-ops"
+      })
+    ).toEqual({
+      expires: expiresAt,
+      httpOnly: true,
+      name: "workspace",
+      path: "/",
+      sameSite: "lax",
+      secure: true,
+      value: "forge-ops"
+    });
+  });
+
+  it("creates a cleared workspace selection cookie definition", () => {
+    const cookie = createClearedWorkspaceSelectionCookieDefinition({
+      name: "workspace",
       nodeEnvironment: "development"
     });
 

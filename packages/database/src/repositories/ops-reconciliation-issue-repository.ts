@@ -28,6 +28,18 @@ export function createOpsReconciliationIssueRepository(
       });
     },
 
+    findByIdForWorkspace(input: {
+      id: string;
+      workspaceId: string;
+    }): Promise<OpsReconciliationIssue | null> {
+      return database.opsReconciliationIssue.findFirst({
+        where: {
+          id: input.id,
+          workspaceId: input.workspaceId
+        }
+      });
+    },
+
     listOpenByOwnerUserId(ownerUserId: string) {
       return database.opsReconciliationIssue.findMany({
         orderBy: [
@@ -44,6 +56,26 @@ export function createOpsReconciliationIssueRepository(
         where: {
           ownerUserId,
           status: "open"
+        }
+      });
+    },
+
+    listOpenByWorkspaceId(workspaceId: string) {
+      return database.opsReconciliationIssue.findMany({
+        orderBy: [
+          {
+            severity: "desc"
+          },
+          {
+            lastDetectedAt: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        where: {
+          status: "open",
+          workspaceId
         }
       });
     },
@@ -65,6 +97,23 @@ export function createOpsReconciliationIssueRepository(
       });
     },
 
+    listRecentByWorkspaceId(input: { limit: number; workspaceId: string }) {
+      return database.opsReconciliationIssue.findMany({
+        orderBy: [
+          {
+            lastDetectedAt: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        take: input.limit,
+        where: {
+          workspaceId: input.workspaceId
+        }
+      });
+    },
+
     upsertObserved(input: {
       detailJson: Prisma.InputJsonValue;
       fingerprint: string;
@@ -75,13 +124,14 @@ export function createOpsReconciliationIssueRepository(
       ownerUserId: string;
       severity: OpsReconciliationIssueSeverity;
       title: string;
+      workspaceId: string;
     }): Promise<OpsReconciliationIssue> {
       return database.opsReconciliationIssue
         .findUnique({
           where: {
-            ownerUserId_fingerprint: {
+            workspaceId_fingerprint: {
               fingerprint: input.fingerprint,
-              ownerUserId: input.ownerUserId
+              workspaceId: input.workspaceId
             }
           }
         })
@@ -99,7 +149,8 @@ export function createOpsReconciliationIssueRepository(
                 ownerUserId: input.ownerUserId,
                 severity: input.severity,
                 status: "open",
-                title: input.title
+                title: input.title,
+                workspaceId: input.workspaceId
               }
             });
           }
@@ -155,6 +206,35 @@ export function createOpsReconciliationIssueRepository(
         });
     },
 
+    markIgnoredForWorkspace(input: {
+      id: string;
+      ignoredAt: Date;
+      workspaceId: string;
+    }): Promise<OpsReconciliationIssue | null> {
+      return database.opsReconciliationIssue
+        .findFirst({
+          where: {
+            id: input.id,
+            workspaceId: input.workspaceId
+          }
+        })
+        .then((issue) => {
+          if (!issue) {
+            return null;
+          }
+
+          return database.opsReconciliationIssue.update({
+            data: {
+              ignoredAt: input.ignoredAt,
+              status: "ignored"
+            },
+            where: {
+              id: issue.id
+            }
+          });
+        });
+    },
+
     markRepaired(input: {
       id: string;
       ownerUserId: string;
@@ -166,6 +246,37 @@ export function createOpsReconciliationIssueRepository(
           where: {
             id: input.id,
             ownerUserId: input.ownerUserId
+          }
+        })
+        .then((issue) => {
+          if (!issue) {
+            return null;
+          }
+
+          return database.opsReconciliationIssue.update({
+            data: {
+              repairMessage: input.repairMessage,
+              repairedAt: input.repairedAt,
+              status: "repaired"
+            },
+            where: {
+              id: issue.id
+            }
+          });
+        });
+    },
+
+    markRepairedForWorkspace(input: {
+      id: string;
+      repairedAt: Date;
+      repairMessage: string;
+      workspaceId: string;
+    }): Promise<OpsReconciliationIssue | null> {
+      return database.opsReconciliationIssue
+        .findFirst({
+          where: {
+            id: input.id,
+            workspaceId: input.workspaceId
           }
         })
         .then((issue) => {
@@ -225,6 +336,19 @@ export function createOpsReconciliationIssueRepository(
           ownerUserId: input.ownerUserId,
           ...(input.severity ? { severity: input.severity } : {}),
           status: "open"
+        }
+      });
+    },
+
+    countOpenByWorkspaceIdAndSeverity(input: {
+      severity?: OpsReconciliationIssueSeverity;
+      workspaceId: string;
+    }): Promise<number> {
+      return database.opsReconciliationIssue.count({
+        where: {
+          ...(input.severity ? { severity: input.severity } : {}),
+          status: "open",
+          workspaceId: input.workspaceId
         }
       });
     }

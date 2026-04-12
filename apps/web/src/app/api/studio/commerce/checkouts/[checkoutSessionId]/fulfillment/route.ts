@@ -22,7 +22,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         {
           body: await parseJsonBody(request),
           checkoutSessionId,
-          ownerUserId: session.ownerUserId
+          workspaceId: session.workspace.id
         }
       );
 

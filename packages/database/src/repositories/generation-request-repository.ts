@@ -16,6 +16,7 @@ type CreateQueuedGenerationRequestInput = {
   pipelineKey: string;
   requestedVariantCount: number;
   sourceAssetId: string;
+  workspaceId: string;
 };
 
 type RecentGenerationRequestOrder = "createdAtDesc" | "failedAtDesc";
@@ -125,12 +126,44 @@ export function createGenerationRequestRepository(
       });
     },
 
+    findActiveForWorkspaceSourceAsset(input: {
+      sourceAssetId: string;
+      workspaceId: string;
+    }): Promise<GenerationRequest | null> {
+      return database.generationRequest.findFirst({
+        orderBy: {
+          createdAt: "desc"
+        },
+        where: {
+          sourceAssetId: input.sourceAssetId,
+          status: {
+            in: ["queued", "running"]
+          },
+          workspaceId: input.workspaceId
+        }
+      });
+    },
+
     findById(id: string): Promise<GenerationRequest | null> {
       return database.generationRequest.findUnique({
         where: {
           id
         }
       });
+    },
+
+    async listDistinctWorkspaceIds(): Promise<string[]> {
+      const rows = await database.generationRequest.findMany({
+        distinct: ["workspaceId"],
+        orderBy: {
+          workspaceId: "asc"
+        },
+        select: {
+          workspaceId: true
+        }
+      });
+
+      return rows.map((row) => row.workspaceId);
     },
 
     async listDistinctOwnerUserIds(): Promise<string[]> {
@@ -155,6 +188,18 @@ export function createGenerationRequestRepository(
         where: {
           id: input.id,
           ownerUserId: input.ownerUserId
+        }
+      });
+    },
+
+    findByIdForWorkspace(input: {
+      id: string;
+      workspaceId: string;
+    }): Promise<GenerationRequest | null> {
+      return database.generationRequest.findFirst({
+        where: {
+          id: input.id,
+          workspaceId: input.workspaceId
         }
       });
     },
@@ -208,6 +253,31 @@ export function createGenerationRequestRepository(
       });
     },
 
+    listRecentForWorkspaceId(input: {
+      limit: number;
+      orderBy?: RecentGenerationRequestOrder;
+      statuses?: GenerationRequestStatus[];
+      workspaceId: string;
+    }): Promise<GenerationRequestWithSourceAssetAndCounts[]> {
+      return database.generationRequest.findMany({
+        include: generationRequestActivityInclude,
+        orderBy: resolveRecentGenerationOrderBy(
+          input.orderBy ?? "createdAtDesc"
+        ),
+        take: input.limit,
+        where: {
+          workspaceId: input.workspaceId,
+          ...(input.statuses && input.statuses.length > 0
+            ? {
+                status: {
+                  in: input.statuses
+                }
+              }
+            : {})
+        }
+      });
+    },
+
     listRecentForOwnerUserIdSince(input: {
       orderBy?: RecentGenerationRequestOrder;
       ownerUserId: string;
@@ -224,6 +294,33 @@ export function createGenerationRequestRepository(
             gte: input.since
           },
           ownerUserId: input.ownerUserId,
+          ...(input.statuses && input.statuses.length > 0
+            ? {
+                status: {
+                  in: input.statuses
+                }
+              }
+            : {})
+        }
+      });
+    },
+
+    listRecentForWorkspaceIdSince(input: {
+      orderBy?: RecentGenerationRequestOrder;
+      since: Date;
+      statuses?: GenerationRequestStatus[];
+      workspaceId: string;
+    }): Promise<GenerationRequestWithSourceAssetAndCounts[]> {
+      return database.generationRequest.findMany({
+        include: generationRequestActivityInclude,
+        orderBy: resolveRecentGenerationOrderBy(
+          input.orderBy ?? "createdAtDesc"
+        ),
+        where: {
+          createdAt: {
+            gte: input.since
+          },
+          workspaceId: input.workspaceId,
           ...(input.statuses && input.statuses.length > 0
             ? {
                 status: {
@@ -255,6 +352,33 @@ export function createGenerationRequestRepository(
         ],
         where: {
           ownerUserId: input.ownerUserId,
+          status: {
+            in: input.statuses
+          }
+        }
+      });
+    },
+
+    findOldestForWorkspaceId(input: {
+      statuses: GenerationRequestStatus[];
+      workspaceId: string;
+    }): Promise<GenerationRequestWithSourceAssetAndCounts | null> {
+      if (input.statuses.length === 0) {
+        return Promise.resolve(null);
+      }
+
+      return database.generationRequest.findFirst({
+        include: generationRequestActivityInclude,
+        orderBy: [
+          {
+            createdAt: "asc"
+          },
+          {
+            id: "asc"
+          }
+        ],
+        where: {
+          workspaceId: input.workspaceId,
           status: {
             in: input.statuses
           }

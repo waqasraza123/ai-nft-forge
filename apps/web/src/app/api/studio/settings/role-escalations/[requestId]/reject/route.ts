@@ -20,7 +20,8 @@ export async function POST(_request: Request, context: RouteContext) {
       await createRuntimeStudioSettingsService().rejectWorkspaceRoleEscalation({
         ownerUserId: session.ownerUserId,
         requestId,
-        role: session.role
+        role: session.role,
+        workspaceId: session.workspace?.id ?? null
       });
 
     return NextResponse.json(result);

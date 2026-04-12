@@ -21,7 +21,8 @@ export async function POST(_request: Request, context: RouteContext) {
         {
           ownerUserId: session.ownerUserId,
           requestId,
-          role: session.role
+          role: session.role,
+          workspaceId: session.workspace?.id ?? null
         }
       );
 

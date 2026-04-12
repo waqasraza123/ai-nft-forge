@@ -181,6 +181,14 @@ describe("database repositories", () => {
     const database = {
       workspace: {
         create: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "workspace_1"
+          },
+          {
+            id: "workspace_2"
+          }
+        ]),
         findFirst: vi.fn().mockResolvedValue({
           id: "workspace_1"
         }),
@@ -196,7 +204,12 @@ describe("database repositories", () => {
     };
     const repository = createWorkspaceRepository(database as never);
 
+    const ownedWorkspace = await repository.findByIdForOwner({
+      id: "workspace_1",
+      ownerUserId: "user_1"
+    });
     const workspace = await repository.findFirstByOwnerUserId("user_1");
+    const workspaces = await repository.listByOwnerUserId("user_1");
     const updatedWorkspace = await repository.updateByIdForOwner({
       id: "workspace_1",
       name: "Forge Ops",
@@ -210,7 +223,26 @@ describe("database repositories", () => {
       nextOwnerUserId: "user_2"
     });
 
-    expect(database.workspace.findFirst).toHaveBeenCalledWith({
+    expect(database.workspace.findFirst).toHaveBeenNthCalledWith(1, {
+      where: {
+        id: "workspace_1",
+        ownerUserId: "user_1"
+      }
+    });
+    expect(database.workspace.findFirst).toHaveBeenNthCalledWith(2, {
+      orderBy: [
+        {
+          createdAt: "asc"
+        },
+        {
+          id: "asc"
+        }
+      ],
+      where: {
+        ownerUserId: "user_1"
+      }
+    });
+    expect(database.workspace.findMany).toHaveBeenCalledWith({
       orderBy: [
         {
           createdAt: "asc"
@@ -248,7 +280,9 @@ describe("database repositories", () => {
         ownerUserId: "user_1"
       }
     });
+    expect(ownedWorkspace?.id).toBe("workspace_1");
     expect(workspace?.id).toBe("workspace_1");
+    expect(workspaces).toHaveLength(2);
     expect(updatedWorkspace.slug).toBe("forge-ops");
     expect(transferredWorkspace.id).toBe("workspace_1");
   });
@@ -257,6 +291,7 @@ describe("database repositories", () => {
     const now = new Date("2026-04-11T00:00:00.000Z");
     const database = {
       workspaceRoleEscalationRequest: {
+        count: vi.fn().mockResolvedValue(1),
         create: vi.fn().mockResolvedValue({
           id: "request_1"
         }),
@@ -354,6 +389,8 @@ describe("database repositories", () => {
     const requests = await repository.listByWorkspaceId({
       workspaceId: "workspace_1"
     });
+    const pendingCount =
+      await repository.countPendingByWorkspaceId("workspace_1");
     const resolvedRequest = await repository.resolveById({
       id: "request_1",
       resolvedAt: now,
@@ -508,6 +545,12 @@ describe("database repositories", () => {
         workspaceId: "workspace_1"
       }
     });
+    expect(database.workspaceRoleEscalationRequest.count).toHaveBeenCalledWith({
+      where: {
+        status: "pending",
+        workspaceId: "workspace_1"
+      }
+    });
     expect(database.workspaceRoleEscalationRequest.update).toHaveBeenCalledWith(
       {
         data: {
@@ -523,6 +566,7 @@ describe("database repositories", () => {
     expect(createdRequest.id).toBe("request_1");
     expect(request?.workspace.ownerUserId).toBe("user_1");
     expect(pendingRequest?.id).toBe("request_1");
+    expect(pendingCount).toBe(1);
     expect(requests[0]?.id).toBe("request_1");
     expect(resolvedRequest.status).toBe("approved");
   });
@@ -531,6 +575,11 @@ describe("database repositories", () => {
     const database = {
       brand: {
         create: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "brand_1"
+          }
+        ]),
         findFirst: vi
           .fn()
           .mockResolvedValueOnce({
@@ -553,6 +602,7 @@ describe("database repositories", () => {
 
     const ownerBrand = await repository.findFirstByOwnerUserId("user_1");
     const slugBrand = await repository.findFirstBySlug("forge-editions");
+    const workspaceBrands = await repository.listByWorkspaceId("workspace_1");
     const updatedBrand = await repository.updateByIdForOwner({
       customDomain: "collections.example.com",
       id: "brand_1",
@@ -615,8 +665,22 @@ describe("database repositories", () => {
         id: "brand_1"
       }
     });
+    expect(database.brand.findMany).toHaveBeenCalledWith({
+      orderBy: [
+        {
+          createdAt: "asc"
+        },
+        {
+          id: "asc"
+        }
+      ],
+      where: {
+        workspaceId: "workspace_1"
+      }
+    });
     expect(ownerBrand?.id).toBe("brand_1");
     expect(slugBrand?.id).toBe("brand_2");
+    expect(workspaceBrands).toHaveLength(1);
     expect(updatedBrand.slug).toBe("forge-editions");
   });
 
@@ -645,17 +709,34 @@ describe("database repositories", () => {
             status: "active"
           }
         }),
-        findMany: vi.fn().mockResolvedValue([
-          {
-            id: "membership_1",
-            user: {
-              avatarUrl: null,
-              displayName: "Operator",
-              id: "user_2",
-              walletAddress: "0xoperator"
+        findMany: vi
+          .fn()
+          .mockResolvedValueOnce([
+            {
+              id: "membership_1",
+              workspace: {
+                id: "workspace_1",
+                name: "Forge Ops",
+                ownerUser: {
+                  walletAddress: "0xowner"
+                },
+                ownerUserId: "user_1",
+                slug: "forge-ops",
+                status: "active"
+              }
             }
-          }
-        ]),
+          ])
+          .mockResolvedValueOnce([
+            {
+              id: "membership_1",
+              user: {
+                avatarUrl: null,
+                displayName: "Operator",
+                id: "user_2",
+                walletAddress: "0xoperator"
+              }
+            }
+          ]),
         findUnique: vi
           .fn()
           .mockResolvedValueOnce({
@@ -687,6 +768,7 @@ describe("database repositories", () => {
       workspaceId: "workspace_1"
     });
     const memberWorkspace = await repository.findFirstByUserId("user_2");
+    const memberWorkspaces = await repository.listByUserId("user_2");
     const workspaceMembers = await repository.listByWorkspaceId("workspace_1");
     const removableMembership = await repository.findByIdWithUserAndWorkspace({
       id: "membership_1"
@@ -744,7 +826,36 @@ describe("database repositories", () => {
         userId: "user_2"
       }
     });
-    expect(database.workspaceMembership.findMany).toHaveBeenCalledWith({
+    expect(database.workspaceMembership.findMany).toHaveBeenNthCalledWith(1, {
+      include: {
+        workspace: {
+          select: {
+            id: true,
+            name: true,
+            ownerUser: {
+              select: {
+                walletAddress: true
+              }
+            },
+            ownerUserId: true,
+            slug: true,
+            status: true
+          }
+        }
+      },
+      orderBy: [
+        {
+          createdAt: "asc"
+        },
+        {
+          id: "asc"
+        }
+      ],
+      where: {
+        userId: "user_2"
+      }
+    });
+    expect(database.workspaceMembership.findMany).toHaveBeenNthCalledWith(2, {
       include: {
         user: {
           select: {
@@ -803,6 +914,7 @@ describe("database repositories", () => {
     expect(createdMembership.id).toBe("membership_1");
     expect(existingMembership?.id).toBe("membership_1");
     expect(memberWorkspace?.id).toBe("membership_1");
+    expect(memberWorkspaces[0]?.workspace.slug).toBe("forge-ops");
     expect(workspaceMembers[0]?.id).toBe("membership_1");
     expect(removableMembership?.workspace.ownerUserId).toBe("user_1");
   });
@@ -2155,40 +2267,42 @@ describe("database repositories", () => {
     const mute = await repository.upsert({
       code: "QUEUE_STALLED",
       mutedUntil,
-      ownerUserId: "user_1"
+      ownerUserId: "user_1",
+      workspaceId: "workspace_1"
     });
-    const activeMute = await repository.findActiveByOwnerUserIdAndCode({
+    const activeMute = await repository.findActiveByWorkspaceIdAndCode({
       code: "QUEUE_STALLED",
       observedAt,
-      ownerUserId: "user_1"
+      workspaceId: "workspace_1"
     });
-    const activeMutes = await repository.listActiveByOwnerUserId({
+    const activeMutes = await repository.listActiveByWorkspaceId({
       observedAt,
-      ownerUserId: "user_1"
+      workspaceId: "workspace_1"
     });
-    const activeMutesByCode = await repository.listActiveByOwnerUserIdAndCodes({
+    const activeMutesByCode = await repository.listActiveByWorkspaceIdAndCodes({
       codes: ["QUEUE_STALLED"],
       observedAt,
-      ownerUserId: "user_1"
+      workspaceId: "workspace_1"
     });
-    const deleted = await repository.deleteByOwnerUserIdAndCode({
+    const deleted = await repository.deleteByWorkspaceIdAndCode({
       code: "QUEUE_STALLED",
-      ownerUserId: "user_1"
+      workspaceId: "workspace_1"
     });
 
     expect(database.opsAlertMute.upsert).toHaveBeenCalledWith({
       create: {
         code: "QUEUE_STALLED",
         mutedUntil,
-        ownerUserId: "user_1"
+        ownerUserId: "user_1",
+        workspaceId: "workspace_1"
       },
       update: {
         mutedUntil
       },
       where: {
-        ownerUserId_code: {
+        workspaceId_code: {
           code: "QUEUE_STALLED",
-          ownerUserId: "user_1"
+          workspaceId: "workspace_1"
         }
       }
     });
@@ -2198,7 +2312,7 @@ describe("database repositories", () => {
         mutedUntil: {
           gt: observedAt
         },
-        ownerUserId: "user_1"
+        workspaceId: "workspace_1"
       }
     });
     expect(database.opsAlertMute.findMany).toHaveBeenNthCalledWith(1, {
@@ -2214,7 +2328,7 @@ describe("database repositories", () => {
         mutedUntil: {
           gt: observedAt
         },
-        ownerUserId: "user_1"
+        workspaceId: "workspace_1"
       }
     });
     expect(database.opsAlertMute.findMany).toHaveBeenNthCalledWith(2, {
@@ -2225,13 +2339,13 @@ describe("database repositories", () => {
         mutedUntil: {
           gt: observedAt
         },
-        ownerUserId: "user_1"
+        workspaceId: "workspace_1"
       }
     });
     expect(database.opsAlertMute.deleteMany).toHaveBeenCalledWith({
       where: {
         code: "QUEUE_STALLED",
-        ownerUserId: "user_1"
+        workspaceId: "workspace_1"
       }
     });
     expect(mute.id).toBe("mute_1");
@@ -2247,7 +2361,7 @@ describe("database repositories", () => {
         deleteMany: vi.fn().mockResolvedValue({
           count: 1
         }),
-        findUnique: vi.fn().mockResolvedValue({
+        findFirst: vi.fn().mockResolvedValue({
           id: "routing_1"
         }),
         upsert: vi.fn().mockResolvedValue({
@@ -2263,35 +2377,37 @@ describe("database repositories", () => {
     const policy = await repository.upsert({
       ownerUserId: "user_1",
       webhookEnabled: false,
-      webhookMinimumSeverity: "critical"
+      webhookMinimumSeverity: "critical",
+      workspaceId: "workspace_1"
     });
-    const found = await repository.findByOwnerUserId("user_1");
-    const deleted = await repository.deleteByOwnerUserId({
-      ownerUserId: "user_1"
+    const found = await repository.findByWorkspaceId("workspace_1");
+    const deleted = await repository.deleteByWorkspaceId({
+      workspaceId: "workspace_1"
     });
 
     expect(database.opsAlertRoutingPolicy.upsert).toHaveBeenCalledWith({
       create: {
         ownerUserId: "user_1",
         webhookEnabled: false,
-        webhookMinimumSeverity: "critical"
+        webhookMinimumSeverity: "critical",
+        workspaceId: "workspace_1"
       },
       update: {
         webhookEnabled: false,
         webhookMinimumSeverity: "critical"
       },
       where: {
-        ownerUserId: "user_1"
+        workspaceId: "workspace_1"
       }
     });
-    expect(database.opsAlertRoutingPolicy.findUnique).toHaveBeenCalledWith({
+    expect(database.opsAlertRoutingPolicy.findFirst).toHaveBeenCalledWith({
       where: {
-        ownerUserId: "user_1"
+        workspaceId: "workspace_1"
       }
     });
     expect(database.opsAlertRoutingPolicy.deleteMany).toHaveBeenCalledWith({
       where: {
-        ownerUserId: "user_1"
+        workspaceId: "workspace_1"
       }
     });
     expect(policy.id).toBe("routing_1");
@@ -2305,7 +2421,7 @@ describe("database repositories", () => {
         deleteMany: vi.fn().mockResolvedValue({
           count: 1
         }),
-        findUnique: vi.fn().mockResolvedValue({
+        findFirst: vi.fn().mockResolvedValue({
           id: "escalation_1"
         }),
         upsert: vi.fn().mockResolvedValue({
@@ -2323,35 +2439,37 @@ describe("database repositories", () => {
     const policy = await repository.upsert({
       firstReminderDelayMinutes: 60,
       ownerUserId: "user_1",
-      repeatReminderIntervalMinutes: 180
+      repeatReminderIntervalMinutes: 180,
+      workspaceId: "workspace_1"
     });
-    const found = await repository.findByOwnerUserId("user_1");
-    const deleted = await repository.deleteByOwnerUserId({
-      ownerUserId: "user_1"
+    const found = await repository.findByWorkspaceId("workspace_1");
+    const deleted = await repository.deleteByWorkspaceId({
+      workspaceId: "workspace_1"
     });
 
     expect(database.opsAlertEscalationPolicy.upsert).toHaveBeenCalledWith({
       create: {
         firstReminderDelayMinutes: 60,
         ownerUserId: "user_1",
-        repeatReminderIntervalMinutes: 180
+        repeatReminderIntervalMinutes: 180,
+        workspaceId: "workspace_1"
       },
       update: {
         firstReminderDelayMinutes: 60,
         repeatReminderIntervalMinutes: 180
       },
       where: {
-        ownerUserId: "user_1"
+        workspaceId: "workspace_1"
       }
     });
-    expect(database.opsAlertEscalationPolicy.findUnique).toHaveBeenCalledWith({
+    expect(database.opsAlertEscalationPolicy.findFirst).toHaveBeenCalledWith({
       where: {
-        ownerUserId: "user_1"
+        workspaceId: "workspace_1"
       }
     });
     expect(database.opsAlertEscalationPolicy.deleteMany).toHaveBeenCalledWith({
       where: {
-        ownerUserId: "user_1"
+        workspaceId: "workspace_1"
       }
     });
     expect(policy.id).toBe("escalation_1");
@@ -2365,7 +2483,7 @@ describe("database repositories", () => {
         deleteMany: vi.fn().mockResolvedValue({
           count: 1
         }),
-        findUnique: vi.fn().mockResolvedValue({
+        findFirst: vi.fn().mockResolvedValue({
           id: "schedule_1"
         }),
         upsert: vi.fn().mockResolvedValue({
@@ -2387,11 +2505,12 @@ describe("database repositories", () => {
       endMinuteOfDay: 1020,
       ownerUserId: "user_1",
       startMinuteOfDay: 540,
-      timezone: "America/New_York"
+      timezone: "America/New_York",
+      workspaceId: "workspace_1"
     });
-    const found = await repository.findByOwnerUserId("user_1");
-    const deleted = await repository.deleteByOwnerUserId({
-      ownerUserId: "user_1"
+    const found = await repository.findByWorkspaceId("workspace_1");
+    const deleted = await repository.deleteByWorkspaceId({
+      workspaceId: "workspace_1"
     });
 
     expect(database.opsAlertSchedulePolicy.upsert).toHaveBeenCalledWith({
@@ -2400,7 +2519,8 @@ describe("database repositories", () => {
         endMinuteOfDay: 1020,
         ownerUserId: "user_1",
         startMinuteOfDay: 540,
-        timezone: "America/New_York"
+        timezone: "America/New_York",
+        workspaceId: "workspace_1"
       },
       update: {
         activeDaysMask: 62,
@@ -2409,17 +2529,17 @@ describe("database repositories", () => {
         timezone: "America/New_York"
       },
       where: {
-        ownerUserId: "user_1"
+        workspaceId: "workspace_1"
       }
     });
-    expect(database.opsAlertSchedulePolicy.findUnique).toHaveBeenCalledWith({
+    expect(database.opsAlertSchedulePolicy.findFirst).toHaveBeenCalledWith({
       where: {
-        ownerUserId: "user_1"
+        workspaceId: "workspace_1"
       }
     });
     expect(database.opsAlertSchedulePolicy.deleteMany).toHaveBeenCalledWith({
       where: {
-        ownerUserId: "user_1"
+        workspaceId: "workspace_1"
       }
     });
     expect(policy.id).toBe("schedule_1");

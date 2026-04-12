@@ -69,6 +69,25 @@ export function createCommerceCheckoutSessionRepository(
       });
     },
 
+    listDetailedByWorkspaceId(workspaceId: string) {
+      return database.commerceCheckoutSession.findMany({
+        include: commerceCheckoutSessionDetailInclude,
+        orderBy: [
+          {
+            createdAt: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        where: {
+          publishedCollection: {
+            workspaceId
+          }
+        }
+      });
+    },
+
     expireOpenByPublishedCollectionId(input: {
       now: Date;
       publishedCollectionId: string;

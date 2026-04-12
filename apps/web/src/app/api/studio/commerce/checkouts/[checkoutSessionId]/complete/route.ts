@@ -20,7 +20,7 @@ export async function POST(_: Request, context: RouteContext) {
       await createRuntimeCollectionCommerceService().completeOwnerManualCheckout(
         {
           checkoutSessionId,
-          ownerUserId: session.ownerUserId
+          workspaceId: session.workspace.id
         }
       );
 

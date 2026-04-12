@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import { createSourceAssetService } from "./service";
 import { SourceAssetServiceError } from "./error";
 
+const defaultWorkspaceId = "workspace_1";
+
 function createSourceAssetHarness() {
   const assets = new Map<
     string,
@@ -17,6 +19,7 @@ function createSourceAssetHarness() {
       storageBucket: string;
       storageObjectKey: string;
       uploadedAt: Date | null;
+      workspaceId: string;
     }
   >();
   let assetIndex = 0;
@@ -28,7 +31,7 @@ function createSourceAssetHarness() {
     }
   >();
 
-  const service = createSourceAssetService({
+  const baseService = createSourceAssetService({
     now: () => new Date("2026-04-05T00:00:00.000Z"),
     repositories: {
       generatedAssetRepository: {
@@ -54,7 +57,8 @@ function createSourceAssetHarness() {
             status: "pending_upload" as const,
             storageBucket: input.storageBucket,
             storageObjectKey: input.storageObjectKey,
-            uploadedAt: null
+            uploadedAt: null,
+            workspaceId: input.workspaceId
           };
 
           assets.set(asset.id, asset);
@@ -62,19 +66,19 @@ function createSourceAssetHarness() {
           return asset;
         },
 
-        async findByIdForOwner(input) {
+        async findByIdForWorkspace(input) {
           const asset = assets.get(input.id);
 
-          if (!asset || asset.ownerUserId !== input.ownerUserId) {
+          if (!asset || asset.workspaceId !== input.workspaceId) {
             return null;
           }
 
           return asset;
         },
 
-        async listByOwnerUserId(ownerUserId) {
+        async listByWorkspaceId(workspaceId) {
           return [...assets.values()].filter(
-            (asset) => asset.ownerUserId === ownerUserId
+            (asset) => asset.workspaceId === workspaceId
           );
         },
 
@@ -120,7 +124,26 @@ function createSourceAssetHarness() {
   return {
     assets,
     objectHeads,
-    service
+    service: {
+      async createUploadIntent(input: {
+        contentType: string;
+        fileName: string;
+        ownerUserId: string;
+      }) {
+        return baseService.createUploadIntent({
+          ...input,
+          workspaceId: defaultWorkspaceId
+        });
+      },
+      async completeUpload(input: { assetId: string; ownerUserId: string }) {
+        void input.ownerUserId;
+
+        return baseService.completeUpload({
+          assetId: input.assetId,
+          workspaceId: defaultWorkspaceId
+        });
+      }
+    }
   };
 }
 
@@ -266,7 +289,8 @@ describe("createSourceAssetService", () => {
         status: "uploaded" as const,
         storageBucket: "ai-nft-forge-private",
         storageObjectKey: "source-assets/user_1/portrait.png",
-        uploadedAt: new Date("2026-04-05T00:05:00.000Z")
+        uploadedAt: new Date("2026-04-05T00:05:00.000Z"),
+        workspaceId: defaultWorkspaceId
       }
     ];
     const service = createSourceAssetService({
@@ -286,10 +310,10 @@ describe("createSourceAssetService", () => {
           async createPendingUpload() {
             throw new Error("Not used in list test.");
           },
-          async findByIdForOwner() {
+          async findByIdForWorkspace() {
             throw new Error("Not used in list test.");
           },
-          async listByOwnerUserId() {
+          async listByWorkspaceId() {
             return listedAssets;
           },
           async updateUploadState() {
@@ -309,7 +333,7 @@ describe("createSourceAssetService", () => {
     });
 
     const result = await service.listSourceAssets({
-      ownerUserId: "user_1"
+      workspaceId: defaultWorkspaceId
     });
 
     expect(result.assets).toHaveLength(1);

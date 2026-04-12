@@ -14,7 +14,7 @@ export default async function StudioCommercePage(
 ) {
   const access = await getCurrentStudioAccess();
 
-  if (!access) {
+  if (!access || !access.workspace) {
     return null;
   }
 
@@ -28,7 +28,7 @@ export default async function StudioCommercePage(
             brandSlug: searchParams.brandSlug
           }
         : {}),
-      ownerUserId: access.ownerUserId
+      workspaceId: access.workspace.id
     });
 
   return (

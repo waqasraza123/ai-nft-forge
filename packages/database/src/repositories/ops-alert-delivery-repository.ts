@@ -28,6 +28,7 @@ export function createOpsAlertDeliveryRepository(
       ownerUserId: string;
       severity: OpsAlertSeverity;
       title: string;
+      workspaceId: string;
     }): Promise<OpsAlertDelivery> {
       return database.opsAlertDelivery.create({
         data: {
@@ -41,7 +42,8 @@ export function createOpsAlertDeliveryRepository(
           message: input.message,
           ownerUserId: input.ownerUserId,
           severity: input.severity,
-          title: input.title
+          title: input.title,
+          workspaceId: input.workspaceId
         }
       });
     },
@@ -59,6 +61,23 @@ export function createOpsAlertDeliveryRepository(
         take: input.limit,
         where: {
           ownerUserId: input.ownerUserId
+        }
+      });
+    },
+
+    listRecentForWorkspaceId(input: { limit: number; workspaceId: string }) {
+      return database.opsAlertDelivery.findMany({
+        orderBy: [
+          {
+            createdAt: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        take: input.limit,
+        where: {
+          workspaceId: input.workspaceId
         }
       });
     }

@@ -196,6 +196,8 @@ export {
   studioWorkspaceAccessSchema,
   studioWorkspaceAuditActionSchema,
   studioWorkspaceAuditEntrySchema,
+  studioWorkspaceDirectoryEntrySchema,
+  studioWorkspaceDirectoryResponseSchema,
   studioWorkspaceInvitationCreateRequestSchema,
   studioWorkspaceInvitationDeleteResponseSchema,
   studioWorkspaceInvitationResponseSchema,
@@ -211,6 +213,9 @@ export {
   studioWorkspaceMemberSummarySchema,
   studioWorkspaceNameSchema,
   studioWorkspaceRoleSchema,
+  studioWorkspaceScopeSummarySchema,
+  studioWorkspaceSelectionRequestSchema,
+  studioWorkspaceSelectionResponseSchema,
   studioWorkspaceSlugSchema,
   studioWorkspaceSummarySchema,
   type StudioBrandCreateRequest,
@@ -225,6 +230,8 @@ export {
   type StudioWorkspaceAccess,
   type StudioWorkspaceAuditAction,
   type StudioWorkspaceAuditEntry,
+  type StudioWorkspaceDirectoryEntry,
+  type StudioWorkspaceDirectoryResponse,
   type StudioWorkspaceInvitationCreateRequest,
   type StudioWorkspaceInvitationDeleteResponse,
   type StudioWorkspaceInvitationResponse,
@@ -239,6 +246,9 @@ export {
   type StudioWorkspaceMemberResponse,
   type StudioWorkspaceMemberSummary,
   type StudioWorkspaceRole,
+  type StudioWorkspaceScopeSummary,
+  type StudioWorkspaceSelectionRequest,
+  type StudioWorkspaceSelectionResponse,
   type StudioWorkspaceSummary
 } from "./studio-settings.js";
 export {

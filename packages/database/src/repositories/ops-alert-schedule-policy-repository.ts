@@ -19,12 +19,30 @@ export function createOpsAlertSchedulePolicyRepository(
       });
     },
 
+    deleteByWorkspaceId(input: { workspaceId: string }) {
+      return database.opsAlertSchedulePolicy.deleteMany({
+        where: {
+          workspaceId: input.workspaceId
+        }
+      });
+    },
+
     findByOwnerUserId(
       ownerUserId: string
     ): Promise<OpsAlertSchedulePolicy | null> {
-      return database.opsAlertSchedulePolicy.findUnique({
+      return database.opsAlertSchedulePolicy.findFirst({
         where: {
           ownerUserId
+        }
+      });
+    },
+
+    findByWorkspaceId(
+      workspaceId: string
+    ): Promise<OpsAlertSchedulePolicy | null> {
+      return database.opsAlertSchedulePolicy.findFirst({
+        where: {
+          workspaceId
         }
       });
     },
@@ -35,6 +53,7 @@ export function createOpsAlertSchedulePolicyRepository(
       ownerUserId: string;
       startMinuteOfDay: number;
       timezone: string;
+      workspaceId: string;
     }): Promise<OpsAlertSchedulePolicy> {
       return database.opsAlertSchedulePolicy.upsert({
         create: {
@@ -42,7 +61,8 @@ export function createOpsAlertSchedulePolicyRepository(
           endMinuteOfDay: input.endMinuteOfDay,
           ownerUserId: input.ownerUserId,
           startMinuteOfDay: input.startMinuteOfDay,
-          timezone: input.timezone
+          timezone: input.timezone,
+          workspaceId: input.workspaceId
         },
         update: {
           activeDaysMask: input.activeDaysMask,
@@ -51,7 +71,7 @@ export function createOpsAlertSchedulePolicyRepository(
           timezone: input.timezone
         },
         where: {
-          ownerUserId: input.ownerUserId
+          workspaceId: input.workspaceId
         }
       });
     }

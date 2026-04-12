@@ -28,7 +28,8 @@ export async function PATCH(request: Request, context: RouteContext) {
         ownerUserId: session.ownerUserId,
         slug: body.slug,
         status: body.status,
-        title: body.title
+        title: body.title,
+        workspaceId: session.workspace.id
       });
 
     return NextResponse.json(result);

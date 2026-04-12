@@ -18,6 +18,7 @@ export async function POST(request: Request) {
       {
         ownerUserId: session.ownerUserId,
         role: session.role,
+        workspaceId: session.workspace?.id ?? null,
         walletAddress: body.walletAddress
       }
     );

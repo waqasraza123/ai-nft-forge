@@ -19,7 +19,8 @@ export async function POST(request: Request) {
         ownerUserId: session.ownerUserId,
         pipelineKey: body.pipelineKey,
         sourceAssetId: body.sourceAssetId,
-        variantCount: body.variantCount
+        variantCount: body.variantCount,
+        workspaceId: session.workspace.id
       });
 
     return NextResponse.json(result, {

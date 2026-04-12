@@ -12,6 +12,7 @@ import {
   createOpsAlertSchedulePolicyRepository,
   createOpsAlertStateRepository,
   createOpsObservabilityCaptureRepository,
+  createWorkspaceRepository,
   type DatabaseClient
 } from "@ai-nft-forge/database";
 import {
@@ -169,7 +170,8 @@ export async function captureRuntimeOpsObservabilityWithDependencies({
         createOpsAlertDeliveryRepository(databaseClient),
       opsAlertStateRepository: createOpsAlertStateRepository(databaseClient),
       opsObservabilityCaptureRepository:
-        createOpsObservabilityCaptureRepository(databaseClient)
+        createOpsObservabilityCaptureRepository(databaseClient),
+      workspaceRepository: createWorkspaceRepository(databaseClient)
     });
 
   try {

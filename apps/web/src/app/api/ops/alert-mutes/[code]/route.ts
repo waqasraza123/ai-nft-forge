@@ -21,7 +21,8 @@ export async function DELETE(
     const { code } = await context.params;
     const result = await createRuntimeOpsService().unmuteAlertByCode({
       code,
-      ownerUserId: session.ownerUserId
+      ownerUserId: session.ownerUserId,
+      workspaceId: session.workspace.id
     });
 
     return NextResponse.json(result, {

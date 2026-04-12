@@ -82,6 +82,20 @@ function resolveTotalAttempts(job: GenerationRequestJob) {
     : 1;
 }
 
+function requireWorkspaceId(
+  record: { id: string } & Record<string, unknown>,
+  label: string
+) {
+  const workspaceId =
+    typeof record.workspaceId === "string" ? record.workspaceId : null;
+
+  if (!workspaceId) {
+    throw new Error(`${label} ${record.id} is missing a workspace scope.`);
+  }
+
+  return workspaceId;
+}
+
 export function createGenerationRequestProcessor(
   dependencies: GenerationRequestProcessorDependencies
 ) {
@@ -101,6 +115,11 @@ export function createGenerationRequestProcessor(
         `Generation request ${payload.generationRequestId} was not found.`
       );
     }
+
+    const workspaceId = requireWorkspaceId(
+      generationRequest as GenerationRequestRecord & Record<string, unknown>,
+      "Generation request"
+    );
 
     if (
       generationRequest.status === "succeeded" &&
@@ -178,7 +197,8 @@ export function createGenerationRequestProcessor(
               sourceAssetId: generationRequest.sourceAssetId,
               storageBucket: output.storageBucket,
               storageObjectKey: output.storageObjectKey,
-              variantIndex: output.variantIndex
+              variantIndex: output.variantIndex,
+              workspaceId
             }))
           );
           await createGenerationRequestRepository(transaction).markSucceeded({

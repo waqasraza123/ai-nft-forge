@@ -13,7 +13,7 @@ export async function GET() {
     const session = await requireStudioApiSession();
     const result =
       await createRuntimeCollectionDraftService().listCollectionDrafts({
-        ownerUserId: session.ownerUserId
+        workspaceId: session.workspace.id
       });
 
     return NextResponse.json(result, {
@@ -36,7 +36,8 @@ export async function POST(request: Request) {
       await createRuntimeCollectionDraftService().createCollectionDraft({
         description: body.description ?? null,
         ownerUserId: session.ownerUserId,
-        title: body.title
+        title: body.title,
+        workspaceId: session.workspace.id
       });
 
     return NextResponse.json(result, {

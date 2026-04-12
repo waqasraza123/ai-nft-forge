@@ -19,12 +19,30 @@ export function createOpsAlertEscalationPolicyRepository(
       });
     },
 
+    deleteByWorkspaceId(input: { workspaceId: string }) {
+      return database.opsAlertEscalationPolicy.deleteMany({
+        where: {
+          workspaceId: input.workspaceId
+        }
+      });
+    },
+
     findByOwnerUserId(
       ownerUserId: string
     ): Promise<OpsAlertEscalationPolicy | null> {
-      return database.opsAlertEscalationPolicy.findUnique({
+      return database.opsAlertEscalationPolicy.findFirst({
         where: {
           ownerUserId
+        }
+      });
+    },
+
+    findByWorkspaceId(
+      workspaceId: string
+    ): Promise<OpsAlertEscalationPolicy | null> {
+      return database.opsAlertEscalationPolicy.findFirst({
+        where: {
+          workspaceId
         }
       });
     },
@@ -33,19 +51,21 @@ export function createOpsAlertEscalationPolicyRepository(
       firstReminderDelayMinutes: number;
       ownerUserId: string;
       repeatReminderIntervalMinutes: number;
+      workspaceId: string;
     }): Promise<OpsAlertEscalationPolicy> {
       return database.opsAlertEscalationPolicy.upsert({
         create: {
           firstReminderDelayMinutes: input.firstReminderDelayMinutes,
           ownerUserId: input.ownerUserId,
-          repeatReminderIntervalMinutes: input.repeatReminderIntervalMinutes
+          repeatReminderIntervalMinutes: input.repeatReminderIntervalMinutes,
+          workspaceId: input.workspaceId
         },
         update: {
           firstReminderDelayMinutes: input.firstReminderDelayMinutes,
           repeatReminderIntervalMinutes: input.repeatReminderIntervalMinutes
         },
         where: {
-          ownerUserId: input.ownerUserId
+          workspaceId: input.workspaceId
         }
       });
     }

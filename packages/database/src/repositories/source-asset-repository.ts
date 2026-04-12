@@ -10,6 +10,7 @@ type CreatePendingSourceAssetInput = {
   ownerUserId: string;
   storageBucket: string;
   storageObjectKey: string;
+  workspaceId: string;
 };
 
 export function createSourceAssetRepository(
@@ -47,6 +48,18 @@ export function createSourceAssetRepository(
       });
     },
 
+    findByIdForWorkspace(input: {
+      id: string;
+      workspaceId: string;
+    }): Promise<SourceAsset | null> {
+      return database.sourceAsset.findFirst({
+        where: {
+          id: input.id,
+          workspaceId: input.workspaceId
+        }
+      });
+    },
+
     listByOwnerUserId(ownerUserId: string): Promise<SourceAsset[]> {
       return database.sourceAsset.findMany({
         orderBy: {
@@ -54,6 +67,17 @@ export function createSourceAssetRepository(
         },
         where: {
           ownerUserId
+        }
+      });
+    },
+
+    listByWorkspaceId(workspaceId: string): Promise<SourceAsset[]> {
+      return database.sourceAsset.findMany({
+        orderBy: {
+          createdAt: "desc"
+        },
+        where: {
+          workspaceId
         }
       });
     },

@@ -29,7 +29,8 @@ export async function POST(request: Request, context: RouteContext) {
           ownerWalletAddress: session.owner.walletAddress,
           recipientWalletAddress: body.recipientWalletAddress,
           tokenId: body.tokenId,
-          txHash: body.txHash
+          txHash: body.txHash,
+          workspaceId: session.workspace.id
         }
       );
 

@@ -25,7 +25,8 @@ export async function POST(request: Request) {
     const result = await createRuntimeOpsService().updateAlertEscalationPolicy({
       firstReminderDelayMinutes: payload.firstReminderDelayMinutes,
       ownerUserId: session.ownerUserId,
-      repeatReminderIntervalMinutes: payload.repeatReminderIntervalMinutes
+      repeatReminderIntervalMinutes: payload.repeatReminderIntervalMinutes,
+      workspaceId: session.workspace.id
     });
 
     return NextResponse.json(result, {
@@ -40,7 +41,8 @@ export async function DELETE() {
   try {
     const session = await requireOpsOwnerApiSession();
     const result = await createRuntimeOpsService().resetAlertEscalationPolicy({
-      ownerUserId: session.ownerUserId
+      ownerUserId: session.ownerUserId,
+      workspaceId: session.workspace.id
     });
 
     return NextResponse.json(result, {

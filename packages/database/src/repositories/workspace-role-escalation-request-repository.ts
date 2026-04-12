@@ -173,6 +173,15 @@ export function createWorkspaceRoleEscalationRequestRepository(
       });
     },
 
+    countPendingByWorkspaceId(workspaceId: string): Promise<number> {
+      return database.workspaceRoleEscalationRequest.count({
+        where: {
+          status: "pending",
+          workspaceId
+        }
+      });
+    },
+
     resolveById(input: {
       id: string;
       resolvedAt: Date;

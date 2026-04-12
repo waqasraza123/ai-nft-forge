@@ -42,7 +42,8 @@ export async function POST(request: Request, context: RouteContext) {
       await createRuntimeCollectionDraftService().publishCollectionDraft({
         brandId: body.brandId ?? null,
         collectionDraftId,
-        ownerUserId: session.ownerUserId
+        ownerUserId: session.ownerUserId,
+        workspaceId: session.workspace.id
       });
 
     return NextResponse.json(result);
@@ -58,7 +59,8 @@ export async function DELETE(_: Request, context: RouteContext) {
     const result =
       await createRuntimeCollectionDraftService().unpublishCollectionDraft({
         collectionDraftId,
-        ownerUserId: session.ownerUserId
+        ownerUserId: session.ownerUserId,
+        workspaceId: session.workspace.id
       });
 
     return NextResponse.json(result);
@@ -83,7 +85,6 @@ export async function PATCH(request: Request, context: RouteContext) {
           heroGeneratedAssetId: body.heroGeneratedAssetId ?? null,
           isFeatured: body.isFeatured,
           launchAt: body.launchAt ?? null,
-          ownerUserId: session.ownerUserId,
           priceAmountMinor: body.priceAmountMinor ?? null,
           priceCurrency: body.priceCurrency ?? null,
           priceLabel: body.priceLabel ?? null,
@@ -95,7 +96,8 @@ export async function PATCH(request: Request, context: RouteContext) {
           storefrontBody: body.storefrontBody ?? null,
           storefrontHeadline: body.storefrontHeadline ?? null,
           storefrontStatus: body.storefrontStatus,
-          totalSupply: body.totalSupply ?? null
+          totalSupply: body.totalSupply ?? null,
+          workspaceId: session.workspace.id
         }
       );
 

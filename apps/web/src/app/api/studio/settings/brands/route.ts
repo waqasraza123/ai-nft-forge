@@ -22,6 +22,7 @@ export async function POST(request: Request) {
       ownerUserId: session.ownerUserId,
       role: session.role,
       themePreset: body.themePreset,
+      workspaceId: session.workspace?.id ?? null,
       ...(body.customDomain !== undefined
         ? {
             customDomain: body.customDomain

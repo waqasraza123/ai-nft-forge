@@ -254,6 +254,12 @@ function createStudioSettingsHarness() {
         );
       },
 
+      async listByWorkspaceId(workspaceId: string) {
+        return [...brands.values()].filter(
+          (brand) => brand.workspaceId === workspaceId
+        );
+      },
+
       async updateByIdForOwner(input: {
         customDomain?: string | null;
         id: string;
@@ -820,11 +826,27 @@ function createStudioSettingsHarness() {
         );
       },
 
+      async findByIdForOwner(input: { id: string; ownerUserId: string }) {
+        const workspace = workspaces.get(input.id);
+
+        if (!workspace || workspace.ownerUserId !== input.ownerUserId) {
+          return null;
+        }
+
+        return workspace;
+      },
+
       async findFirstByOwnerUserId(ownerUserId: string) {
         return (
           [...workspaces.values()].find(
             (workspace) => workspace.ownerUserId === ownerUserId
           ) ?? null
+        );
+      },
+
+      async listByOwnerUserId(ownerUserId: string) {
+        return [...workspaces.values()].filter(
+          (workspace) => workspace.ownerUserId === ownerUserId
         );
       },
 
@@ -973,6 +995,152 @@ describe("createStudioSettingsService", () => {
     expect(result.brand.slug).toBe("north-editions");
     expect(settings.settings?.brands).toHaveLength(2);
     expect(settings.settings?.brands[1]?.slug).toBe("north-editions");
+  });
+
+  it("loads and updates the selected owned workspace instead of the owner's first workspace", async () => {
+    const harness = createStudioSettingsHarness();
+
+    harness.users.set("user_1", {
+      avatarUrl: null,
+      displayName: "Owner One",
+      id: "user_1",
+      walletAddress: "0x1111111111111111111111111111111111111111"
+    });
+    harness.workspaces.set("workspace_alpha", {
+      id: "workspace_alpha",
+      name: "Alpha Operations",
+      ownerUserId: "user_1",
+      slug: "alpha-operations",
+      status: "active"
+    });
+    harness.workspaces.set("workspace_beta", {
+      id: "workspace_beta",
+      name: "Beta Operations",
+      ownerUserId: "user_1",
+      slug: "beta-operations",
+      status: "active"
+    });
+    harness.brands.set("brand_alpha", {
+      customDomain: null,
+      id: "brand_alpha",
+      name: "Alpha Editions",
+      slug: "alpha-editions",
+      themeJson: {
+        accentColor: "#8b5e34"
+      },
+      workspaceId: "workspace_alpha"
+    });
+    harness.brands.set("brand_beta", {
+      customDomain: null,
+      id: "brand_beta",
+      name: "Beta Editions",
+      slug: "beta-editions",
+      themeJson: {
+        accentColor: "#244f3c"
+      },
+      workspaceId: "workspace_beta"
+    });
+
+    const selectedSettings = await harness.service.getStudioSettings({
+      ownerUserId: "user_1",
+      workspaceId: "workspace_beta"
+    });
+
+    expect(selectedSettings.settings?.workspace.id).toBe("workspace_beta");
+    expect(selectedSettings.settings?.brand.slug).toBe("beta-editions");
+
+    const result = await harness.service.updateStudioSettings({
+      accentColor: "#21465c",
+      brandId: "brand_beta",
+      brandName: "Beta Atelier",
+      brandSlug: "beta-atelier",
+      featuredReleaseLabel: "Beta feature",
+      landingDescription: "Beta storefront copy.",
+      landingHeadline: "Beta releases",
+      ownerUserId: "user_1",
+      themePreset: "midnight_launch",
+      workspaceId: "workspace_beta",
+      workspaceName: "Beta Atelier Operations",
+      workspaceSlug: "beta-atelier-operations"
+    });
+
+    expect(result.settings?.workspace.id).toBe("workspace_beta");
+    expect(result.settings?.workspace.slug).toBe("beta-atelier-operations");
+    expect(result.settings?.brand.slug).toBe("beta-atelier");
+    expect(harness.workspaces.get("workspace_alpha")?.slug).toBe(
+      "alpha-operations"
+    );
+    expect(harness.brands.get("brand_alpha")?.slug).toBe("alpha-editions");
+  });
+
+  it("creates additional brands under the selected owned workspace", async () => {
+    const harness = createStudioSettingsHarness();
+
+    harness.users.set("user_1", {
+      avatarUrl: null,
+      displayName: "Owner One",
+      id: "user_1",
+      walletAddress: "0x1111111111111111111111111111111111111111"
+    });
+    harness.workspaces.set("workspace_alpha", {
+      id: "workspace_alpha",
+      name: "Alpha Operations",
+      ownerUserId: "user_1",
+      slug: "alpha-operations",
+      status: "active"
+    });
+    harness.workspaces.set("workspace_beta", {
+      id: "workspace_beta",
+      name: "Beta Operations",
+      ownerUserId: "user_1",
+      slug: "beta-operations",
+      status: "active"
+    });
+    harness.brands.set("brand_alpha", {
+      customDomain: null,
+      id: "brand_alpha",
+      name: "Alpha Editions",
+      slug: "alpha-editions",
+      themeJson: {
+        accentColor: "#8b5e34"
+      },
+      workspaceId: "workspace_alpha"
+    });
+    harness.brands.set("brand_beta", {
+      customDomain: null,
+      id: "brand_beta",
+      name: "Beta Editions",
+      slug: "beta-editions",
+      themeJson: {
+        accentColor: "#244f3c"
+      },
+      workspaceId: "workspace_beta"
+    });
+
+    const result = await harness.service.createStudioBrand({
+      accentColor: "#835a2a",
+      brandName: "Beta Late Night",
+      brandSlug: "beta-late-night",
+      featuredReleaseLabel: "After hours",
+      landingDescription: "Beta night storefront copy.",
+      landingHeadline: "Night releases",
+      ownerUserId: "user_1",
+      themePreset: "midnight_launch",
+      workspaceId: "workspace_beta"
+    });
+    const alphaSettings = await harness.service.getStudioSettings({
+      ownerUserId: "user_1",
+      workspaceId: "workspace_alpha"
+    });
+    const betaSettings = await harness.service.getStudioSettings({
+      ownerUserId: "user_1",
+      workspaceId: "workspace_beta"
+    });
+
+    expect(result.brand.slug).toBe("beta-late-night");
+    expect(alphaSettings.settings?.brands).toHaveLength(1);
+    expect(betaSettings.settings?.brands).toHaveLength(2);
+    expect(betaSettings.settings?.brands[1]?.slug).toBe("beta-late-night");
   });
 
   it("propagates brand identity updates across the owner's published collections", async () => {
@@ -1271,6 +1439,88 @@ describe("createStudioSettingsService", () => {
       action: "workspace_invitation_created",
       targetWalletAddress: "0x4444444444444444444444444444444444444444"
     });
+  });
+
+  it("scopes member, invitation, and role-escalation flows to the selected owned workspace", async () => {
+    const harness = createStudioSettingsHarness();
+
+    harness.users.set("user_1", {
+      avatarUrl: null,
+      displayName: "Owner One",
+      id: "user_1",
+      walletAddress: "0x1111111111111111111111111111111111111111"
+    });
+    harness.workspaces.set("workspace_alpha", {
+      id: "workspace_alpha",
+      name: "Alpha Operations",
+      ownerUserId: "user_1",
+      slug: "alpha-operations",
+      status: "active"
+    });
+    harness.workspaces.set("workspace_beta", {
+      id: "workspace_beta",
+      name: "Beta Operations",
+      ownerUserId: "user_1",
+      slug: "beta-operations",
+      status: "active"
+    });
+    harness.brands.set("brand_alpha", {
+      customDomain: null,
+      id: "brand_alpha",
+      name: "Alpha Editions",
+      slug: "alpha-editions",
+      themeJson: {
+        accentColor: "#8b5e34"
+      },
+      workspaceId: "workspace_alpha"
+    });
+    harness.brands.set("brand_beta", {
+      customDomain: null,
+      id: "brand_beta",
+      name: "Beta Editions",
+      slug: "beta-editions",
+      themeJson: {
+        accentColor: "#244f3c"
+      },
+      workspaceId: "workspace_beta"
+    });
+
+    const addedMember = await harness.service.addWorkspaceMember({
+      ownerUserId: "user_1",
+      walletAddress: "0x5555555555555555555555555555555555555555",
+      workspaceId: "workspace_beta"
+    });
+    const invitation = await harness.service.createWorkspaceInvitation({
+      ownerUserId: "user_1",
+      walletAddress: "0x6666666666666666666666666666666666666666",
+      workspaceId: "workspace_beta"
+    });
+    const request = await harness.service.requestWorkspaceRoleEscalation({
+      actorUserId: addedMember.member.userId,
+      justification: "Beta operator should own the beta workspace.",
+      ownerUserId: "user_1",
+      role: "operator",
+      workspaceId: "workspace_beta"
+    });
+    const alphaSettings = await harness.service.getStudioSettings({
+      ownerUserId: "user_1",
+      workspaceId: "workspace_alpha"
+    });
+    const betaSettings = await harness.service.getStudioSettings({
+      ownerUserId: "user_1",
+      workspaceId: "workspace_beta"
+    });
+
+    expect(alphaSettings.settings?.members).toHaveLength(1);
+    expect(alphaSettings.settings?.invitations).toHaveLength(0);
+    expect(alphaSettings.settings?.roleEscalationRequests).toHaveLength(0);
+    expect(betaSettings.settings?.members).toHaveLength(2);
+    expect(betaSettings.settings?.invitations[0]?.id).toBe(
+      invitation.invitation.id
+    );
+    expect(betaSettings.settings?.roleEscalationRequests[0]?.id).toBe(
+      request.roleEscalationRequest.id
+    );
   });
 
   it("cancels workspace invitations and records the lifecycle in audit history", async () => {

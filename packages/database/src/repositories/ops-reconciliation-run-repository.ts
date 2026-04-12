@@ -23,6 +23,7 @@ export function createOpsReconciliationRunRepository(
       startedAt: Date;
       status: OpsReconciliationRunStatus;
       warningIssueCount: number;
+      workspaceId: string;
     }): Promise<OpsReconciliationRun> {
       return database.opsReconciliationRun.create({
         data: input
@@ -45,6 +46,22 @@ export function createOpsReconciliationRunRepository(
       });
     },
 
+    findLatestByWorkspaceId(workspaceId: string): Promise<OpsReconciliationRun | null> {
+      return database.opsReconciliationRun.findFirst({
+        orderBy: [
+          {
+            completedAt: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        where: {
+          workspaceId
+        }
+      });
+    },
+
     listRecentByOwnerUserId(input: { limit: number; ownerUserId: string }) {
       return database.opsReconciliationRun.findMany({
         orderBy: [
@@ -58,6 +75,23 @@ export function createOpsReconciliationRunRepository(
         take: input.limit,
         where: {
           ownerUserId: input.ownerUserId
+        }
+      });
+    },
+
+    listRecentByWorkspaceId(input: { limit: number; workspaceId: string }) {
+      return database.opsReconciliationRun.findMany({
+        orderBy: [
+          {
+            completedAt: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        take: input.limit,
+        where: {
+          workspaceId: input.workspaceId
         }
       });
     }

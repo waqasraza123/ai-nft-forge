@@ -27,7 +27,8 @@ export async function POST(request: Request) {
       endMinuteOfDay: payload.endMinuteOfDay,
       ownerUserId: session.ownerUserId,
       startMinuteOfDay: payload.startMinuteOfDay,
-      timezone: payload.timezone
+      timezone: payload.timezone,
+      workspaceId: session.workspace.id
     });
 
     return NextResponse.json(result, {
@@ -42,7 +43,8 @@ export async function DELETE() {
   try {
     const session = await requireOpsOwnerApiSession();
     const result = await createRuntimeOpsService().resetAlertSchedulePolicy({
-      ownerUserId: session.ownerUserId
+      ownerUserId: session.ownerUserId,
+      workspaceId: session.workspace.id
     });
 
     return NextResponse.json(result, {

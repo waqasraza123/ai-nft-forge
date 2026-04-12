@@ -20,7 +20,8 @@ export async function DELETE(_request: Request, context: RouteContext) {
       await createRuntimeStudioSettingsService().cancelWorkspaceInvitation({
         invitationId,
         ownerUserId: session.ownerUserId,
-        role: session.role
+        role: session.role,
+        workspaceId: session.workspace?.id ?? null
       });
 
     return NextResponse.json(result);

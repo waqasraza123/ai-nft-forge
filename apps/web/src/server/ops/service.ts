@@ -99,44 +99,47 @@ type OpsServiceDependencies = {
   };
   repositories: {
     opsAlertMuteRepository: {
-      deleteByOwnerUserIdAndCode(input: {
+      deleteByWorkspaceIdAndCode(input: {
         code: string;
-        ownerUserId: string;
+        workspaceId: string;
       }): Promise<{ count: number }>;
-      findActiveByOwnerUserIdAndCode(input: {
+      findActiveByWorkspaceIdAndCode(input: {
         code: string;
         observedAt: Date;
-        ownerUserId: string;
+        workspaceId: string;
       }): Promise<AlertMuteRecord | null>;
       upsert(input: {
         code: string;
         mutedUntil: Date;
         ownerUserId: string;
+        workspaceId: string;
       }): Promise<AlertMuteRecord>;
     };
     opsAlertRoutingPolicyRepository: {
-      deleteByOwnerUserId(input: {
-        ownerUserId: string;
+      deleteByWorkspaceId(input: {
+        workspaceId: string;
       }): Promise<{ count: number }>;
       upsert(input: {
         ownerUserId: string;
         webhookEnabled: boolean;
         webhookMinimumSeverity: "critical" | "warning";
+        workspaceId: string;
       }): Promise<AlertRoutingPolicyRecord>;
     };
     opsAlertEscalationPolicyRepository: {
-      deleteByOwnerUserId(input: {
-        ownerUserId: string;
+      deleteByWorkspaceId(input: {
+        workspaceId: string;
       }): Promise<{ count: number }>;
       upsert(input: {
         firstReminderDelayMinutes: number;
         ownerUserId: string;
         repeatReminderIntervalMinutes: number;
+        workspaceId: string;
       }): Promise<AlertEscalationPolicyRecord>;
     };
     opsAlertSchedulePolicyRepository: {
-      deleteByOwnerUserId(input: {
-        ownerUserId: string;
+      deleteByWorkspaceId(input: {
+        workspaceId: string;
       }): Promise<{ count: number }>;
       upsert(input: {
         activeDaysMask: number;
@@ -144,6 +147,7 @@ type OpsServiceDependencies = {
         ownerUserId: string;
         startMinuteOfDay: number;
         timezone: string;
+        workspaceId: string;
       }): Promise<AlertSchedulePolicyRecord>;
     };
     opsAlertStateRepository: {
@@ -152,13 +156,13 @@ type OpsServiceDependencies = {
         acknowledgedByUserId: string;
         id: string;
       }): Promise<AlertStateRecord>;
-      findByIdForOwner(input: {
+      findByIdForWorkspace(input: {
         id: string;
-        ownerUserId: string;
+        workspaceId: string;
       }): Promise<AlertStateRecord | null>;
     };
     collectionDraftRepository?: {
-      listByOwnerUserId(ownerUserId: string): Promise<
+      listByWorkspaceId(workspaceId: string): Promise<
         Array<{
           id: string;
           items: Array<{
@@ -172,16 +176,16 @@ type OpsServiceDependencies = {
           title: string;
         }>
       >;
-      updateStatusByIdForOwner(input: {
+      updateStatusByIdForWorkspace(input: {
         id: string;
-        ownerUserId: string;
         status: "draft" | "review_ready";
+        workspaceId: string;
       }): Promise<{ id: string } | null>;
     };
     generatedAssetRepository?: {
-      findByIdForOwner(input: {
+      findByIdForWorkspace(input: {
         id: string;
-        ownerUserId: string;
+        workspaceId: string;
       }): Promise<{
         contentType: string;
         id: string;
@@ -190,7 +194,7 @@ type OpsServiceDependencies = {
         storageBucket: string;
         storageObjectKey: string;
       } | null>;
-      listByOwnerUserId(ownerUserId: string): Promise<
+      listByWorkspaceId(workspaceId: string): Promise<
         Array<{
           contentType: string;
           id: string;
@@ -202,9 +206,9 @@ type OpsServiceDependencies = {
       >;
     };
     opsReconciliationIssueRepository?: {
-      findByIdForOwner(input: {
+      findByIdForWorkspace(input: {
         id: string;
-        ownerUserId: string;
+        workspaceId: string;
       }): Promise<{
         detailJson: unknown;
         fingerprint: string;
@@ -221,10 +225,10 @@ type OpsServiceDependencies = {
         status: "ignored" | "open" | "repaired";
         title: string;
       } | null>;
-      markIgnored(input: {
+      markIgnoredForWorkspace(input: {
         id: string;
         ignoredAt: Date;
-        ownerUserId: string;
+        workspaceId: string;
       }): Promise<{
         detailJson: unknown;
         fingerprint: string;
@@ -241,11 +245,11 @@ type OpsServiceDependencies = {
         status: "ignored" | "open" | "repaired";
         title: string;
       } | null>;
-      markRepaired(input: {
+      markRepairedForWorkspace(input: {
         id: string;
-        ownerUserId: string;
         repairedAt: Date;
         repairMessage: string;
+        workspaceId: string;
       }): Promise<{
         detailJson: unknown;
         fingerprint: string;
@@ -272,6 +276,7 @@ type OpsServiceDependencies = {
         ownerUserId: string;
         severity: "critical" | "warning";
         title: string;
+        workspaceId: string;
       }): Promise<{
         detailJson: unknown;
         fingerprint: string;
@@ -299,6 +304,7 @@ type OpsServiceDependencies = {
         startedAt: Date;
         status: "failed" | "succeeded";
         warningIssueCount: number;
+        workspaceId: string;
       }): Promise<{
         completedAt: Date;
         criticalIssueCount: number;
@@ -328,9 +334,9 @@ type OpsServiceDependencies = {
       }): Promise<{ id: string }>;
     };
     publishedCollectionRepository?: {
-      findByIdForOwner(input: {
+      findByIdForWorkspace(input: {
         id: string;
-        ownerUserId: string;
+        workspaceId: string;
       }): Promise<{
         brandName: string;
         brandSlug: string;
@@ -350,7 +356,7 @@ type OpsServiceDependencies = {
         sourceCollectionDraftId: string;
         title: string;
       } | null>;
-      listDetailedByOwnerUserId(ownerUserId: string): Promise<
+      listDetailedByWorkspaceId(workspaceId: string): Promise<
         Array<{
           brandName: string;
           brandSlug: string;
@@ -386,7 +392,7 @@ type OpsServiceDependencies = {
         storageBucket: string;
         storageObjectKey: string;
       } | null>;
-      listByOwnerUserId(ownerUserId: string): Promise<
+      listByWorkspaceId(workspaceId: string): Promise<
         Array<{
           id: string;
           originalFilename: string;
@@ -561,13 +567,14 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
     async acknowledgeAlert(input: {
       alertStateId: string;
       ownerUserId: string;
+      workspaceId: string;
     }) {
       const referenceTime = dependencies.now();
       const alertState =
-        await dependencies.repositories.opsAlertStateRepository.findByIdForOwner(
+        await dependencies.repositories.opsAlertStateRepository.findByIdForWorkspace(
           {
             id: input.alertStateId,
-            ownerUserId: input.ownerUserId
+            workspaceId: input.workspaceId
           }
         );
 
@@ -588,11 +595,11 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
       }
 
       const activeMute =
-        await dependencies.repositories.opsAlertMuteRepository.findActiveByOwnerUserIdAndCode(
+        await dependencies.repositories.opsAlertMuteRepository.findActiveByWorkspaceIdAndCode(
           {
             code: alertState.code,
             observedAt: referenceTime,
-            ownerUserId: input.ownerUserId
+            workspaceId: input.workspaceId
           }
         );
 
@@ -615,13 +622,14 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
       alertStateId: string;
       durationHours: number;
       ownerUserId: string;
+      workspaceId: string;
     }) {
       const referenceTime = dependencies.now();
       const alertState =
-        await dependencies.repositories.opsAlertStateRepository.findByIdForOwner(
+        await dependencies.repositories.opsAlertStateRepository.findByIdForWorkspace(
           {
             id: input.alertStateId,
-            ownerUserId: input.ownerUserId
+            workspaceId: input.workspaceId
           }
         );
 
@@ -648,7 +656,8 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
         await dependencies.repositories.opsAlertMuteRepository.upsert({
           code: alertState.code,
           mutedUntil,
-          ownerUserId: input.ownerUserId
+          ownerUserId: input.ownerUserId,
+          workspaceId: input.workspaceId
         });
 
       return opsAlertMuteResponseSchema.parse({
@@ -661,12 +670,16 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
       });
     },
 
-    async unmuteAlert(input: { alertStateId: string; ownerUserId: string }) {
+    async unmuteAlert(input: {
+      alertStateId: string;
+      ownerUserId: string;
+      workspaceId: string;
+    }) {
       const alertState =
-        await dependencies.repositories.opsAlertStateRepository.findByIdForOwner(
+        await dependencies.repositories.opsAlertStateRepository.findByIdForWorkspace(
           {
             id: input.alertStateId,
-            ownerUserId: input.ownerUserId
+            workspaceId: input.workspaceId
           }
         );
 
@@ -679,10 +692,10 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
       }
 
       const result =
-        await dependencies.repositories.opsAlertMuteRepository.deleteByOwnerUserIdAndCode(
+        await dependencies.repositories.opsAlertMuteRepository.deleteByWorkspaceIdAndCode(
           {
             code: alertState.code,
-            ownerUserId: input.ownerUserId
+            workspaceId: input.workspaceId
           }
         );
 
@@ -692,12 +705,16 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
       });
     },
 
-    async unmuteAlertByCode(input: { code: string; ownerUserId: string }) {
+    async unmuteAlertByCode(input: {
+      code: string;
+      ownerUserId: string;
+      workspaceId: string;
+    }) {
       const result =
-        await dependencies.repositories.opsAlertMuteRepository.deleteByOwnerUserIdAndCode(
+        await dependencies.repositories.opsAlertMuteRepository.deleteByWorkspaceIdAndCode(
           {
             code: input.code,
-            ownerUserId: input.ownerUserId
+            workspaceId: input.workspaceId
           }
         );
 
@@ -710,10 +727,12 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
     async updateAlertRoutingPolicy(input: {
       ownerUserId: string;
       webhookMode: "all" | "critical_only" | "disabled";
+      workspaceId: string;
     }) {
       const policy =
         await dependencies.repositories.opsAlertRoutingPolicyRepository.upsert({
           ownerUserId: input.ownerUserId,
+          workspaceId: input.workspaceId,
           ...parseAlertRoutingWebhookMode(input.webhookMode)
         });
 
@@ -722,10 +741,13 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
       });
     },
 
-    async resetAlertRoutingPolicy(input: { ownerUserId: string }) {
-      await dependencies.repositories.opsAlertRoutingPolicyRepository.deleteByOwnerUserId(
+    async resetAlertRoutingPolicy(input: {
+      ownerUserId: string;
+      workspaceId: string;
+    }) {
+      await dependencies.repositories.opsAlertRoutingPolicyRepository.deleteByWorkspaceId(
         {
-          ownerUserId: input.ownerUserId
+          workspaceId: input.workspaceId
         }
       );
 
@@ -738,6 +760,7 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
       firstReminderDelayMinutes: number;
       ownerUserId: string;
       repeatReminderIntervalMinutes: number;
+      workspaceId: string;
     }) {
       const policy =
         await dependencies.repositories.opsAlertEscalationPolicyRepository.upsert(
@@ -745,7 +768,8 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
             firstReminderDelayMinutes: input.firstReminderDelayMinutes,
             ownerUserId: input.ownerUserId,
             repeatReminderIntervalMinutes:
-              input.repeatReminderIntervalMinutes
+              input.repeatReminderIntervalMinutes,
+            workspaceId: input.workspaceId
           }
         );
 
@@ -754,10 +778,13 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
       });
     },
 
-    async resetAlertEscalationPolicy(input: { ownerUserId: string }) {
-      await dependencies.repositories.opsAlertEscalationPolicyRepository.deleteByOwnerUserId(
+    async resetAlertEscalationPolicy(input: {
+      ownerUserId: string;
+      workspaceId: string;
+    }) {
+      await dependencies.repositories.opsAlertEscalationPolicyRepository.deleteByWorkspaceId(
         {
-          ownerUserId: input.ownerUserId
+          workspaceId: input.workspaceId
         }
       );
 
@@ -772,6 +799,7 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
       ownerUserId: string;
       startMinuteOfDay: number;
       timezone: string;
+      workspaceId: string;
     }) {
       const policy =
         await dependencies.repositories.opsAlertSchedulePolicyRepository.upsert({
@@ -779,7 +807,8 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
           endMinuteOfDay: input.endMinuteOfDay,
           ownerUserId: input.ownerUserId,
           startMinuteOfDay: input.startMinuteOfDay,
-          timezone: input.timezone
+          timezone: input.timezone,
+          workspaceId: input.workspaceId
         });
 
       return opsAlertSchedulePolicyResponseSchema.parse({
@@ -787,10 +816,13 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
       });
     },
 
-    async resetAlertSchedulePolicy(input: { ownerUserId: string }) {
-      await dependencies.repositories.opsAlertSchedulePolicyRepository.deleteByOwnerUserId(
+    async resetAlertSchedulePolicy(input: {
+      ownerUserId: string;
+      workspaceId: string;
+    }) {
+      await dependencies.repositories.opsAlertSchedulePolicyRepository.deleteByWorkspaceId(
         {
-          ownerUserId: input.ownerUserId
+          workspaceId: input.workspaceId
         }
       );
 
@@ -799,20 +831,23 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
       });
     },
 
-    async runReconciliation(input: { ownerUserId: string }) {
+    async runReconciliation(input: { ownerUserId: string; workspaceId: string }) {
       return getReconciliationService().run({
-        ownerUserId: input.ownerUserId
+        ownerUserId: input.ownerUserId,
+        workspaceId: input.workspaceId
       });
     },
 
     async repairReconciliationIssue(input: {
       issueId: string;
       ownerUserId: string;
+      workspaceId: string;
     }) {
       try {
         return await getReconciliationService().repairIssue({
           issueId: input.issueId,
-          ownerUserId: input.ownerUserId
+          ownerUserId: input.ownerUserId,
+          workspaceId: input.workspaceId
         });
       } catch (error) {
         const message =
@@ -833,11 +868,13 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
     async ignoreReconciliationIssue(input: {
       issueId: string;
       ownerUserId: string;
+      workspaceId: string;
     }) {
       try {
         return await getReconciliationService().ignoreIssue({
           issueId: input.issueId,
-          ownerUserId: input.ownerUserId
+          ownerUserId: input.ownerUserId,
+          workspaceId: input.workspaceId
         });
       } catch (error) {
         const message =

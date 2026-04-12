@@ -19,6 +19,7 @@ type CreateGeneratedAssetInput = {
   storageBucket: string;
   storageObjectKey: string;
   variantIndex: number;
+  workspaceId: string;
 };
 
 export function createGeneratedAssetRepository(
@@ -87,6 +88,34 @@ export function createGeneratedAssetRepository(
       });
     },
 
+    findByIdForWorkspace(input: {
+      id: string;
+      workspaceId: string;
+    }): Promise<GeneratedAsset | null> {
+      return database.generatedAsset.findFirst({
+        where: {
+          id: input.id,
+          workspaceId: input.workspaceId
+        }
+      });
+    },
+
+    listByWorkspaceId(workspaceId: string): Promise<GeneratedAsset[]> {
+      return database.generatedAsset.findMany({
+        orderBy: [
+          {
+            createdAt: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        where: {
+          workspaceId
+        }
+      });
+    },
+
     updateModerationByIdForOwner(input: {
       id: string;
       moderatedAt: Date | null;
@@ -146,6 +175,67 @@ export function createGeneratedAssetRepository(
           ownerUserId: input.ownerUserId
         }
       });
+    },
+
+    listRecentForWorkspaceId(input: { limit: number; workspaceId: string }) {
+      return database.generatedAsset.findMany({
+        include: {
+          generationRequest: {
+            select: {
+              id: true,
+              pipelineKey: true,
+              sourceAsset: {
+                select: {
+                  id: true,
+                  originalFilename: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: [
+          {
+            createdAt: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        take: input.limit,
+        where: {
+          workspaceId: input.workspaceId
+        }
+      });
+    },
+
+    updateModerationByIdForWorkspace(input: {
+      id: string;
+      moderatedAt: Date | null;
+      moderationStatus: GeneratedAssetModerationStatus;
+      workspaceId: string;
+    }): Promise<GeneratedAsset | null> {
+      return database.generatedAsset
+        .findFirst({
+          where: {
+            id: input.id,
+            workspaceId: input.workspaceId
+          }
+        })
+        .then((asset) => {
+          if (!asset) {
+            return null;
+          }
+
+          return database.generatedAsset.update({
+            data: {
+              moderatedAt: input.moderatedAt,
+              moderationStatus: input.moderationStatus
+            },
+            where: {
+              id: asset.id
+            }
+          });
+        });
     }
   };
 }

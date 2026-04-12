@@ -29,6 +29,18 @@ export function createWorkspaceRepository(
       });
     },
 
+    findByIdForOwner(input: {
+      id: string;
+      ownerUserId: string;
+    }): Promise<Workspace | null> {
+      return database.workspace.findFirst({
+        where: {
+          id: input.id,
+          ownerUserId: input.ownerUserId
+        }
+      });
+    },
+
     findFirstByOwnerUserId(ownerUserId: string): Promise<Workspace | null> {
       return database.workspace.findFirst({
         orderBy: [
@@ -42,6 +54,35 @@ export function createWorkspaceRepository(
         where: {
           ownerUserId
         }
+      });
+    },
+
+    listByOwnerUserId(ownerUserId: string): Promise<Workspace[]> {
+      return database.workspace.findMany({
+        orderBy: [
+          {
+            createdAt: "asc"
+          },
+          {
+            id: "asc"
+          }
+        ],
+        where: {
+          ownerUserId
+        }
+      });
+    },
+
+    listAll() {
+      return database.workspace.findMany({
+        orderBy: [
+          {
+            createdAt: "asc"
+          },
+          {
+            id: "asc"
+          }
+        ]
       });
     },
 

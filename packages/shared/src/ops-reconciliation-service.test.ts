@@ -75,17 +75,17 @@ describe("ops reconciliation service", () => {
       },
       repositories: {
         collectionDraftRepository: {
-          listByOwnerUserId: vi.fn().mockResolvedValue([]),
-          updateStatusByIdForOwner: vi.fn()
+          listByWorkspaceId: vi.fn().mockResolvedValue([]),
+          updateStatusByIdForWorkspace: vi.fn()
         },
         generatedAssetRepository: {
-          findByIdForOwner: vi.fn(),
-          listByOwnerUserId: vi.fn().mockResolvedValue([])
+          findByIdForWorkspace: vi.fn(),
+          listByWorkspaceId: vi.fn().mockResolvedValue([])
         },
         opsReconciliationIssueRepository: {
-          findByIdForOwner: vi.fn(),
-          markIgnored: vi.fn(),
-          markRepaired: vi.fn(),
+          findByIdForWorkspace: vi.fn(),
+          markIgnoredForWorkspace: vi.fn(),
+          markRepairedForWorkspace: vi.fn(),
           upsertObserved
         },
         opsReconciliationRunRepository: {
@@ -96,8 +96,8 @@ describe("ops reconciliation service", () => {
           updatePublicStorageById: vi.fn()
         },
         publishedCollectionRepository: {
-          findByIdForOwner: vi.fn(),
-          listDetailedByOwnerUserId: vi.fn().mockResolvedValue([
+          findByIdForWorkspace: vi.fn(),
+          listDetailedByWorkspaceId: vi.fn().mockResolvedValue([
             {
               brandName: "Demo Studio",
               brandSlug: "demo-studio",
@@ -119,7 +119,7 @@ describe("ops reconciliation service", () => {
         },
         sourceAssetRepository: {
           findById: vi.fn(),
-          listByOwnerUserId: vi.fn().mockResolvedValue([])
+          listByWorkspaceId: vi.fn().mockResolvedValue([])
         },
         userRepository: {
           findById: vi.fn().mockResolvedValue({
@@ -136,7 +136,8 @@ describe("ops reconciliation service", () => {
     });
 
     const result = await service.run({
-      ownerUserId: "user_1"
+      ownerUserId: "user_1",
+      workspaceId: "workspace_1"
     });
 
     expect(result.run.issueCount).toBe(1);

@@ -15,7 +15,8 @@ export async function GET() {
     const result = await createRuntimeStudioSettingsService().getStudioSettings(
       {
         ownerUserId: session.ownerUserId,
-        role: session.role
+        role: session.role,
+        workspaceId: session.workspace?.id ?? null
       }
     );
 
@@ -47,6 +48,7 @@ export async function PUT(request: Request) {
         ownerUserId: session.ownerUserId,
         role: session.role,
         themePreset: body.themePreset,
+        workspaceId: session.workspace?.id ?? null,
         workspaceName: body.workspaceName,
         workspaceSlug: body.workspaceSlug,
         ...(body.customDomain !== undefined

@@ -96,6 +96,23 @@ export const studioBrandSummarySchema = z.object({
 
 export const studioWorkspaceRoleSchema = z.enum(["owner", "operator"]);
 
+export const studioWorkspaceScopeSummarySchema =
+  studioWorkspaceSummarySchema.extend({
+    ownerUserId: z.string().min(1),
+    ownerWalletAddress: walletAddressSchema,
+    role: studioWorkspaceRoleSchema
+  });
+
+export const studioWorkspaceDirectoryEntrySchema = z.object({
+  brandCount: z.number().int().min(0),
+  current: z.boolean(),
+  lastActivityAt: z.string().datetime().nullable(),
+  memberCount: z.number().int().min(0),
+  pendingInvitationCount: z.number().int().min(0),
+  pendingRoleEscalationCount: z.number().int().min(0),
+  workspace: studioWorkspaceScopeSummarySchema
+});
+
 export const studioWorkspaceAccessSchema = z.object({
   canManageMembers: z.boolean(),
   canManageOnchain: z.boolean(),
@@ -194,6 +211,18 @@ export const studioSettingsSummarySchema = z.object({
 
 export const studioSettingsResponseSchema = z.object({
   settings: studioSettingsSummarySchema.nullable()
+});
+
+export const studioWorkspaceSelectionRequestSchema = z.object({
+  workspaceSlug: studioWorkspaceSlugSchema.nullish()
+});
+
+export const studioWorkspaceSelectionResponseSchema = z.object({
+  workspace: studioWorkspaceScopeSummarySchema.nullable()
+});
+
+export const studioWorkspaceDirectoryResponseSchema = z.object({
+  workspaces: z.array(studioWorkspaceDirectoryEntrySchema)
 });
 
 export const studioSettingsUpdateRequestSchema = z.object({
@@ -298,6 +327,7 @@ export const studioSettingsErrorResponseSchema = z.object({
       "ROLE_ESCALATION_NOT_PENDING",
       "SESSION_REQUIRED",
       "WORKSPACE_REQUIRED",
+      "WORKSPACE_NOT_FOUND",
       "WORKSPACE_SLUG_CONFLICT"
     ]),
     message: z.string().min(1)
@@ -318,6 +348,21 @@ export type StudioSettingsErrorResponse = z.infer<
 >;
 export type StudioSettingsResponse = z.infer<
   typeof studioSettingsResponseSchema
+>;
+export type StudioWorkspaceScopeSummary = z.infer<
+  typeof studioWorkspaceScopeSummarySchema
+>;
+export type StudioWorkspaceSelectionRequest = z.infer<
+  typeof studioWorkspaceSelectionRequestSchema
+>;
+export type StudioWorkspaceSelectionResponse = z.infer<
+  typeof studioWorkspaceSelectionResponseSchema
+>;
+export type StudioWorkspaceDirectoryEntry = z.infer<
+  typeof studioWorkspaceDirectoryEntrySchema
+>;
+export type StudioWorkspaceDirectoryResponse = z.infer<
+  typeof studioWorkspaceDirectoryResponseSchema
 >;
 export type StudioSettingsSummary = z.infer<typeof studioSettingsSummarySchema>;
 export type StudioSettingsUpdateRequest = z.infer<

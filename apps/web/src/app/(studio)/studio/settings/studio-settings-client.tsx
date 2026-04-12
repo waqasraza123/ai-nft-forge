@@ -24,6 +24,8 @@ import {
   studioWorkspaceRoleEscalationResponseSchema,
   type StudioBrandSummary,
   type StudioSettingsSummary,
+  type StudioWorkspaceDirectoryEntry,
+  type StudioWorkspaceScopeSummary,
   type StudioWorkspaceInvitationSummary,
   type StudioWorkspaceMemberSummary,
   type StudioWorkspaceRoleEscalationSummary
@@ -36,10 +38,16 @@ import {
   SurfaceGrid
 } from "@ai-nft-forge/ui";
 
+import { WorkspaceDirectoryPanel } from "../../../../components/workspace-directory-panel";
+import { WorkspaceScopeSwitcher } from "../../../../components/workspace-scope-switcher";
+
 type StudioSettingsClientProps = {
+  availableWorkspaces: StudioWorkspaceScopeSummary[];
   currentWalletAddress: string;
+  currentWorkspaceSlug: string | null;
   initialSettings: StudioSettingsSummary | null;
   ownerWalletAddress: string;
+  workspaceDirectoryEntries: StudioWorkspaceDirectoryEntry[];
 };
 
 type NoticeState = {
@@ -211,9 +219,12 @@ function resolveSelectedBrandId(input: {
 }
 
 export function StudioSettingsClient({
+  availableWorkspaces,
   currentWalletAddress,
+  currentWorkspaceSlug,
   initialSettings,
-  ownerWalletAddress
+  ownerWalletAddress,
+  workspaceDirectoryEntries
 }: StudioSettingsClientProps) {
   const [settings, setSettings] = useState(initialSettings);
   const [selectedBrandId, setSelectedBrandId] = useState<string | null>(
@@ -871,7 +882,7 @@ export function StudioSettingsClient({
         <SurfaceCard
           body="Workspace and brand identity are now persisted behind the session boundary and reused by collection publication. This keeps public routes stable and removes ad hoc brand entry during publish."
           eyebrow="Phase 3"
-          span={12}
+          span={8}
           title="Owner-scoped studio profile"
         >
           <div className="metric-list">
@@ -920,6 +931,24 @@ export function StudioSettingsClient({
             </Pill>
           </div>
         </SurfaceCard>
+        <SurfaceCard
+          body="Selection now targets one accessible workspace at a time, so owners and operators can move between workspace contexts without rewriting the rest of the studio URLs."
+          eyebrow="Workspace"
+          span={4}
+          title="Active workspace scope"
+        >
+          <WorkspaceScopeSwitcher
+            currentWorkspaceSlug={currentWorkspaceSlug}
+            workspaces={availableWorkspaces}
+          />
+        </SurfaceCard>
+        <WorkspaceDirectoryPanel
+          body="This directory is built from workspace-native brands, members, invitations, role-escalation requests, and audit history so the current accessible estate is visible without depending on owner-anchored collection or commerce data."
+          entries={workspaceDirectoryEntries}
+          eyebrow="Workspace directory"
+          span={12}
+          title="Accessible workspace estate"
+        />
         <SurfaceCard
           body="Configure the shared workspace slug plus the currently selected brand profile. Multi-brand administration keeps one owner workspace and lets publication target an explicit brand instead of assuming a single storefront."
           eyebrow="Profile"

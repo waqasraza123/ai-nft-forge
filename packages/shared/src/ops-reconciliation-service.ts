@@ -122,35 +122,35 @@ type CreateOpsReconciliationServiceDependencies = {
   };
   repositories: {
     collectionDraftRepository: {
-      listByOwnerUserId(ownerUserId: string): Promise<CollectionDraftRecord[]>;
-      updateStatusByIdForOwner(input: {
+      listByWorkspaceId(workspaceId: string): Promise<CollectionDraftRecord[]>;
+      updateStatusByIdForWorkspace(input: {
         id: string;
-        ownerUserId: string;
         status: CollectionDraftStatus;
+        workspaceId: string;
       }): Promise<{ id: string } | null>;
     };
     generatedAssetRepository: {
-      findByIdForOwner(input: {
+      findByIdForWorkspace(input: {
         id: string;
-        ownerUserId: string;
+        workspaceId: string;
       }): Promise<GeneratedAssetRecord | null>;
-      listByOwnerUserId(ownerUserId: string): Promise<GeneratedAssetRecord[]>;
+      listByWorkspaceId(workspaceId: string): Promise<GeneratedAssetRecord[]>;
     };
     opsReconciliationIssueRepository: {
-      findByIdForOwner(input: {
+      findByIdForWorkspace(input: {
         id: string;
-        ownerUserId: string;
+        workspaceId: string;
       }): Promise<PersistedIssueRecord | null>;
-      markIgnored(input: {
+      markIgnoredForWorkspace(input: {
         id: string;
         ignoredAt: Date;
-        ownerUserId: string;
+        workspaceId: string;
       }): Promise<PersistedIssueRecord | null>;
-      markRepaired(input: {
+      markRepairedForWorkspace(input: {
         id: string;
-        ownerUserId: string;
         repairedAt: Date;
         repairMessage: string;
+        workspaceId: string;
       }): Promise<PersistedIssueRecord | null>;
       upsertObserved(input: {
         detailJson: OpsReconciliationIssueDetail;
@@ -162,6 +162,7 @@ type CreateOpsReconciliationServiceDependencies = {
         ownerUserId: string;
         severity: OpsReconciliationIssueSeverity;
         title: string;
+        workspaceId: string;
       }): Promise<PersistedIssueRecord>;
     };
     opsReconciliationRunRepository: {
@@ -174,6 +175,7 @@ type CreateOpsReconciliationServiceDependencies = {
         startedAt: Date;
         status: "failed" | "succeeded";
         warningIssueCount: number;
+        workspaceId: string;
       }): Promise<PersistedRunRecord>;
     };
     publishedCollectionItemRepository: {
@@ -194,21 +196,21 @@ type CreateOpsReconciliationServiceDependencies = {
       }): Promise<{ id: string }>;
     };
     publishedCollectionRepository: {
-      findByIdForOwner(input: {
+      findByIdForWorkspace(input: {
         id: string;
-        ownerUserId: string;
+        workspaceId: string;
       }): Promise<{
         id: string;
         slug: string;
         sourceCollectionDraftId: string;
       } | null>;
-      listDetailedByOwnerUserId(
-        ownerUserId: string
+      listDetailedByWorkspaceId(
+        workspaceId: string
       ): Promise<PublishedCollectionRecord[]>;
     };
     sourceAssetRepository: {
       findById(id: string): Promise<SourceAssetRecord | null>;
-      listByOwnerUserId(ownerUserId: string): Promise<SourceAssetRecord[]>;
+      listByWorkspaceId(workspaceId: string): Promise<SourceAssetRecord[]>;
     };
     userRepository?: {
       findById(
@@ -338,23 +340,23 @@ export function createOpsReconciliationService(
   dependencies: CreateOpsReconciliationServiceDependencies
 ) {
   return {
-    async run(input: { ownerUserId: string }) {
+    async run(input: { ownerUserId: string; workspaceId: string }) {
       const startedAt = dependencies.now();
 
       try {
         const [sourceAssets, generatedAssets, drafts, publications] =
           await Promise.all([
-            dependencies.repositories.sourceAssetRepository.listByOwnerUserId(
-              input.ownerUserId
+            dependencies.repositories.sourceAssetRepository.listByWorkspaceId(
+              input.workspaceId
             ),
-            dependencies.repositories.generatedAssetRepository.listByOwnerUserId(
-              input.ownerUserId
+            dependencies.repositories.generatedAssetRepository.listByWorkspaceId(
+              input.workspaceId
             ),
-            dependencies.repositories.collectionDraftRepository.listByOwnerUserId(
-              input.ownerUserId
+            dependencies.repositories.collectionDraftRepository.listByWorkspaceId(
+              input.workspaceId
             ),
-            dependencies.repositories.publishedCollectionRepository.listDetailedByOwnerUserId(
-              input.ownerUserId
+            dependencies.repositories.publishedCollectionRepository.listDetailedByWorkspaceId(
+              input.workspaceId
             )
           ]);
         const ownerUser =
@@ -549,7 +551,8 @@ export function createOpsReconciliationService(
             ownerUserId: input.ownerUserId,
             startedAt,
             status: "succeeded",
-            warningIssueCount
+            warningIssueCount,
+            workspaceId: input.workspaceId
           });
 
         await Promise.all(
@@ -564,7 +567,8 @@ export function createOpsReconciliationService(
                 message: issue.message,
                 ownerUserId: input.ownerUserId,
                 severity: issue.severity,
-                title: issue.title
+                title: issue.title,
+                workspaceId: input.workspaceId
               }
             )
           )
@@ -588,7 +592,8 @@ export function createOpsReconciliationService(
             ownerUserId: input.ownerUserId,
             startedAt,
             status: "failed",
-            warningIssueCount: 0
+            warningIssueCount: 0,
+            workspaceId: input.workspaceId
           });
 
         return opsReconciliationRunResponseSchema.parse({
@@ -597,12 +602,16 @@ export function createOpsReconciliationService(
       }
     },
 
-    async repairIssue(input: { issueId: string; ownerUserId: string }) {
+    async repairIssue(input: {
+      issueId: string;
+      ownerUserId: string;
+      workspaceId: string;
+    }) {
       const issue =
-        await dependencies.repositories.opsReconciliationIssueRepository.findByIdForOwner(
+        await dependencies.repositories.opsReconciliationIssueRepository.findByIdForWorkspace(
           {
             id: input.issueId,
-            ownerUserId: input.ownerUserId
+            workspaceId: input.workspaceId
           }
         );
 
@@ -626,15 +635,15 @@ export function createOpsReconciliationService(
         }
 
         const [publication, generatedAsset] = await Promise.all([
-          dependencies.repositories.publishedCollectionRepository.findByIdForOwner(
+          dependencies.repositories.publishedCollectionRepository.findByIdForWorkspace(
             {
               id: publishedCollectionId,
-              ownerUserId: input.ownerUserId
+              workspaceId: input.workspaceId
             }
           ),
-          dependencies.repositories.generatedAssetRepository.findByIdForOwner({
+          dependencies.repositories.generatedAssetRepository.findByIdForWorkspace({
             id: generatedAssetId,
-            ownerUserId: input.ownerUserId
+            workspaceId: input.workspaceId
           })
         ]);
 
@@ -705,11 +714,11 @@ export function createOpsReconciliationService(
         }
 
         const repairedDraft =
-          await dependencies.repositories.collectionDraftRepository.updateStatusByIdForOwner(
+          await dependencies.repositories.collectionDraftRepository.updateStatusByIdForWorkspace(
             {
               id: collectionDraftId,
-              ownerUserId: input.ownerUserId,
-              status: "draft"
+              status: "draft",
+              workspaceId: input.workspaceId
             }
           );
 
@@ -719,15 +728,15 @@ export function createOpsReconciliationService(
       }
 
       const repairedIssue =
-        await dependencies.repositories.opsReconciliationIssueRepository.markRepaired(
+        await dependencies.repositories.opsReconciliationIssueRepository.markRepairedForWorkspace(
           {
             id: issue.id,
-            ownerUserId: input.ownerUserId,
             repairedAt,
             repairMessage:
               issue.kind === "published_public_asset_missing"
                 ? "The public storefront asset was recopied from private storage."
-                : "The draft was downgraded back to draft."
+                : "The draft was downgraded back to draft.",
+            workspaceId: input.workspaceId
           }
         );
 
@@ -740,13 +749,17 @@ export function createOpsReconciliationService(
       });
     },
 
-    async ignoreIssue(input: { issueId: string; ownerUserId: string }) {
+    async ignoreIssue(input: {
+      issueId: string;
+      ownerUserId: string;
+      workspaceId: string;
+    }) {
       const ignoredIssue =
-        await dependencies.repositories.opsReconciliationIssueRepository.markIgnored(
+        await dependencies.repositories.opsReconciliationIssueRepository.markIgnoredForWorkspace(
           {
             id: input.issueId,
             ignoredAt: dependencies.now(),
-            ownerUserId: input.ownerUserId
+            workspaceId: input.workspaceId
           }
         );
 

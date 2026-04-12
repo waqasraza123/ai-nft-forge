@@ -22,7 +22,8 @@ export async function POST(
     const result =
       await createRuntimeGenerationService().retryGenerationRequest({
         generationRequestId,
-        ownerUserId: session.ownerUserId
+        ownerUserId: session.ownerUserId,
+        workspaceId: session.workspace.id
       });
 
     return NextResponse.json(result, {

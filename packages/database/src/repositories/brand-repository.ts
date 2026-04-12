@@ -52,6 +52,22 @@ export function createBrandRepository(database: BrandRepositoryDatabase) {
       });
     },
 
+    findFirstByWorkspaceId(workspaceId: string): Promise<Brand | null> {
+      return database.brand.findFirst({
+        orderBy: [
+          {
+            createdAt: "asc"
+          },
+          {
+            id: "asc"
+          }
+        ],
+        where: {
+          workspaceId
+        }
+      });
+    },
+
     findByIdForOwner(input: {
       id: string;
       ownerUserId: string;
@@ -62,6 +78,18 @@ export function createBrandRepository(database: BrandRepositoryDatabase) {
           workspace: {
             ownerUserId: input.ownerUserId
           }
+        }
+      });
+    },
+
+    findByIdForWorkspace(input: {
+      id: string;
+      workspaceId: string;
+    }): Promise<Brand | null> {
+      return database.brand.findFirst({
+        where: {
+          id: input.id,
+          workspaceId: input.workspaceId
         }
       });
     },
@@ -96,6 +124,22 @@ export function createBrandRepository(database: BrandRepositoryDatabase) {
           workspace: {
             ownerUserId
           }
+        }
+      });
+    },
+
+    listByWorkspaceId(workspaceId: string): Promise<Brand[]> {
+      return database.brand.findMany({
+        orderBy: [
+          {
+            createdAt: "asc"
+          },
+          {
+            id: "asc"
+          }
+        ],
+        where: {
+          workspaceId
         }
       });
     },

@@ -236,9 +236,24 @@ model Workspace {
   createdAt              DateTime                         @default(now()) @map("created_at")
   updatedAt              DateTime                         @updatedAt @map("updated_at")
   brands                 Brand[]
+  collectionDrafts       CollectionDraft[]
+  generatedAssets        GeneratedAsset[]
+  generationRequests     GenerationRequest[]
   invitations            WorkspaceInvitation[]
   memberships            WorkspaceMembership[]
+  opsAlertDeliveries     OpsAlertDelivery[]
+  opsAlertEscalationPolicies OpsAlertEscalationPolicy[]
+  opsAlertMutes          OpsAlertMute[]
+  opsAlertRoutingPolicies OpsAlertRoutingPolicy[]
+  opsAlertSchedulePolicies OpsAlertSchedulePolicy[]
+  opsAlertStates         OpsAlertState[]
+  opsGenerationWindowSnapshots OpsGenerationWindowSnapshot[]
+  opsObservabilityCaptures OpsObservabilityCapture[]
+  opsReconciliationIssues OpsReconciliationIssue[]
+  opsReconciliationRuns  OpsReconciliationRun[]
+  publishedCollections   PublishedCollection[]
   roleEscalationRequests WorkspaceRoleEscalationRequest[]
+  sourceAssets           SourceAsset[]
   ownerUser              User                             @relation("WorkspaceOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
 
   @@index([ownerUserId], map: "workspaces_owner_user_id_idx")
@@ -338,6 +353,7 @@ model AuditLog {
 
 model SourceAsset {
   id                 String              @id @default(cuid()) @map("id")
+  workspaceId        String              @map("workspace_id")
   ownerUserId        String              @map("owner_user_id")
   originalFilename   String              @map("original_filename")
   contentType        String              @map("content_type")
@@ -351,7 +367,9 @@ model SourceAsset {
   generatedAssets    GeneratedAsset[]
   generationRequests GenerationRequest[]
   ownerUser          User                @relation("SourceAssetOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  workspace          Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  @@index([workspaceId, status], map: "source_assets_workspace_id_status_idx")
   @@index([ownerUserId, status], map: "source_assets_owner_user_id_status_idx")
   @@map("source_assets")
 }
@@ -359,6 +377,7 @@ model SourceAsset {
 model GenerationRequest {
   id                    String                  @id @default(cuid()) @map("id")
   sourceAssetId         String                  @map("source_asset_id")
+  workspaceId           String                  @map("workspace_id")
   ownerUserId           String                  @map("owner_user_id")
   pipelineKey           String                  @map("pipeline_key")
   requestedVariantCount Int                     @map("requested_variant_count")
@@ -375,7 +394,9 @@ model GenerationRequest {
   generatedAssets       GeneratedAsset[]
   ownerUser             User                    @relation("GenerationRequestOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
   sourceAsset           SourceAsset             @relation(fields: [sourceAssetId], references: [id], onDelete: Cascade)
+  workspace             Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  @@index([workspaceId, status], map: "generation_requests_workspace_id_status_idx")
   @@index([ownerUserId, status], map: "generation_requests_owner_user_id_status_idx")
   @@index([sourceAssetId, createdAt], map: "generation_requests_source_asset_id_created_at_idx")
   @@index([queueJobId], map: "generation_requests_queue_job_id_idx")
@@ -386,6 +407,7 @@ model GeneratedAsset {
   id                                 String                         @id @default(cuid()) @map("id")
   generationRequestId                String                         @map("generation_request_id")
   sourceAssetId                      String                         @map("source_asset_id")
+  workspaceId                        String                         @map("workspace_id")
   ownerUserId                        String                         @map("owner_user_id")
   variantIndex                       Int                            @map("variant_index")
   contentType                        String                         @map("content_type")
@@ -402,8 +424,11 @@ model GeneratedAsset {
   generationRequest                  GenerationRequest              @relation(fields: [generationRequestId], references: [id], onDelete: Cascade)
   ownerUser                          User                           @relation("GeneratedAssetOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
   sourceAsset                        SourceAsset                    @relation(fields: [sourceAssetId], references: [id], onDelete: Cascade)
+  workspace                          Workspace                      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([generationRequestId, variantIndex], map: "generated_assets_generation_request_id_variant_index_key")
+  @@index([workspaceId, createdAt], map: "generated_assets_workspace_id_created_at_idx")
+  @@index([workspaceId, moderationStatus, createdAt], map: "generated_assets_workspace_id_moderation_status_created_at_idx")
   @@index([ownerUserId, createdAt], map: "generated_assets_owner_user_id_created_at_idx")
   @@index([ownerUserId, moderationStatus, createdAt], map: "generated_assets_owner_user_id_moderation_status_created_at_idx")
   @@index([sourceAssetId, createdAt], map: "generated_assets_source_asset_id_created_at_idx")
@@ -413,6 +438,7 @@ model GeneratedAsset {
 
 model CollectionDraft {
   id                  String                @id @default(cuid()) @map("id")
+  workspaceId         String                @map("workspace_id")
   ownerUserId         String                @map("owner_user_id")
   title               String                @map("title")
   slug                String                @map("slug")
@@ -423,8 +449,10 @@ model CollectionDraft {
   items               CollectionDraftItem[]
   publishedCollection PublishedCollection?
   ownerUser           User                  @relation("CollectionDraftOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  workspace           Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  @@unique([ownerUserId, slug], map: "collection_drafts_owner_user_id_slug_key")
+  @@unique([workspaceId, slug], map: "collection_drafts_workspace_id_slug_key")
+  @@index([workspaceId, updatedAt], map: "collection_drafts_workspace_id_updated_at_idx")
   @@index([ownerUserId, updatedAt], map: "collection_drafts_owner_user_id_updated_at_idx")
   @@map("collection_drafts")
 }
@@ -447,6 +475,7 @@ model CollectionDraftItem {
 
 model PublishedCollection {
   id                      String                              @id @default(cuid()) @map("id")
+  workspaceId             String                              @map("workspace_id")
   ownerUserId             String                              @map("owner_user_id")
   sourceCollectionDraftId String                              @unique @map("source_collection_draft_id")
   brandName               String                              @map("brand_name")
@@ -486,10 +515,12 @@ model PublishedCollection {
   ownerUser               User                                @relation("PublishedCollectionOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
   sourceCollectionDraft   CollectionDraft                     @relation(fields: [sourceCollectionDraftId], references: [id], onDelete: Cascade)
   heroGeneratedAsset      GeneratedAsset?                     @relation("PublishedCollectionHeroGeneratedAsset", fields: [heroGeneratedAssetId], references: [id], onDelete: SetNull)
+  workspace               Workspace                           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([brandSlug, slug], map: "published_collections_brand_slug_slug_key")
   @@unique([contractAddress], map: "published_collections_contract_address_key")
   @@unique([contractDeployTxHash], map: "published_collections_contract_deploy_tx_hash_key")
+  @@index([workspaceId, updatedAt], map: "published_collections_workspace_id_updated_at_idx")
   @@index([ownerUserId, updatedAt], map: "published_collections_owner_user_id_updated_at_idx")
   @@index([brandSlug, isFeatured, displayOrder, updatedAt], map: "published_collections_brand_featured_order_updated_at_idx")
   @@index([brandSlug, storefrontStatus, displayOrder, updatedAt], map: "published_collections_brand_status_order_updated_at_idx")
@@ -605,6 +636,7 @@ model CommerceCheckoutSession {
 
 model OpsObservabilityCapture {
   id                      String                        @id @default(cuid()) @map("id")
+  workspaceId             String                        @map("workspace_id")
   ownerUserId             String                        @map("owner_user_id")
   capturedAt              DateTime                      @map("captured_at")
   queueStatus             OpsQueueStatus                @map("queue_status")
@@ -627,14 +659,17 @@ model OpsObservabilityCapture {
   createdAt               DateTime                      @default(now()) @map("created_at")
   alertDeliveries         OpsAlertDelivery[]
   ownerUser               User                          @relation("OpsObservabilityCaptureOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  workspace               Workspace                     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   windowSnapshots         OpsGenerationWindowSnapshot[]
 
+  @@index([workspaceId, capturedAt], map: "ops_observability_captures_workspace_id_captured_at_idx")
   @@index([ownerUserId, capturedAt], map: "ops_observability_captures_owner_user_id_captured_at_idx")
   @@map("ops_observability_captures")
 }
 
 model OpsReconciliationRun {
   id                 String                     @id @default(cuid()) @map("id")
+  workspaceId        String                     @map("workspace_id")
   ownerUserId        String                     @map("owner_user_id")
   startedAt          DateTime                   @map("started_at")
   completedAt        DateTime                   @map("completed_at")
@@ -647,13 +682,16 @@ model OpsReconciliationRun {
   updatedAt          DateTime                   @updatedAt @map("updated_at")
   ownerUser          User                       @relation("OpsReconciliationRunOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
   issues             OpsReconciliationIssue[]   @relation("OpsReconciliationIssueLatestRun")
+  workspace          Workspace                  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  @@index([workspaceId, completedAt], map: "ops_reconciliation_runs_workspace_id_completed_at_idx")
   @@index([ownerUserId, completedAt], map: "ops_reconciliation_runs_owner_user_id_completed_at_idx")
   @@map("ops_reconciliation_runs")
 }
 
 model OpsReconciliationIssue {
   id              String                         @id @default(cuid()) @map("id")
+  workspaceId     String                         @map("workspace_id")
   ownerUserId     String                         @map("owner_user_id")
   latestRunId     String                         @map("latest_run_id")
   fingerprint     String                         @map("fingerprint")
@@ -672,8 +710,11 @@ model OpsReconciliationIssue {
   updatedAt       DateTime                       @updatedAt @map("updated_at")
   latestRun       OpsReconciliationRun           @relation("OpsReconciliationIssueLatestRun", fields: [latestRunId], references: [id], onDelete: Cascade)
   ownerUser       User                           @relation("OpsReconciliationIssueOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  workspace       Workspace                      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  @@unique([ownerUserId, fingerprint], map: "ops_reconciliation_issues_owner_user_id_fingerprint_key")
+  @@unique([workspaceId, fingerprint], map: "ops_reconciliation_issues_workspace_id_fingerprint_key")
+  @@index([workspaceId, status, severity, lastDetectedAt], map: "ops_recon_issues_ws_status_severity_detected_idx")
+  @@index([workspaceId, latestRunId], map: "ops_reconciliation_issues_workspace_latest_run_id_idx")
   @@index([ownerUserId, status, severity, lastDetectedAt], map: "ops_reconciliation_issues_owner_status_severity_detected_idx")
   @@index([ownerUserId, latestRunId], map: "ops_reconciliation_issues_owner_latest_run_id_idx")
   @@map("ops_reconciliation_issues")
@@ -682,6 +723,7 @@ model OpsReconciliationIssue {
 model OpsGenerationWindowSnapshot {
   id                       String                  @id @default(cuid()) @map("id")
   captureId                String                  @map("capture_id")
+  workspaceId              String                  @map("workspace_id")
   ownerUserId              String                  @map("owner_user_id")
   capturedAt               DateTime                @map("captured_at")
   windowKey                String                  @map("window_key")
@@ -699,14 +741,17 @@ model OpsGenerationWindowSnapshot {
   createdAt                DateTime                @default(now()) @map("created_at")
   capture                  OpsObservabilityCapture @relation(fields: [captureId], references: [id], onDelete: Cascade)
   ownerUser                User                    @relation("OpsGenerationWindowSnapshotOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  workspace                Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([captureId, windowKey], map: "ops_generation_window_snapshots_capture_id_window_key_key")
+  @@index([workspaceId, capturedAt], map: "ops_generation_window_snapshots_workspace_id_captured_at_idx")
   @@index([ownerUserId, capturedAt], map: "ops_generation_window_snapshots_owner_user_id_captured_at_idx")
   @@map("ops_generation_window_snapshots")
 }
 
 model OpsAlertState {
   id                      String              @id @default(cuid()) @map("id")
+  workspaceId             String              @map("workspace_id")
   ownerUserId             String              @map("owner_user_id")
   acknowledgedByUserId    String?             @map("acknowledged_by_user_id")
   code                    String              @map("code")
@@ -727,42 +772,50 @@ model OpsAlertState {
   deliveries              OpsAlertDelivery[]
   acknowledgedByUser      User?               @relation("OpsAlertStateAcknowledgedBy", fields: [acknowledgedByUserId], references: [id], onDelete: SetNull)
   ownerUser               User                @relation("OpsAlertStateOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  workspace               Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  @@unique([ownerUserId, code], map: "ops_alert_states_owner_user_id_code_key")
+  @@unique([workspaceId, code], map: "ops_alert_states_workspace_id_code_key")
   @@index([acknowledgedByUserId], map: "ops_alert_states_acknowledged_by_user_id_idx")
+  @@index([workspaceId, status], map: "ops_alert_states_workspace_id_status_idx")
   @@index([ownerUserId, status], map: "ops_alert_states_owner_user_id_status_idx")
   @@map("ops_alert_states")
 }
 
 model OpsAlertMute {
   id          String   @id @default(cuid()) @map("id")
+  workspaceId String   @map("workspace_id")
   ownerUserId String   @map("owner_user_id")
   code        String   @map("code")
   mutedUntil  DateTime @map("muted_until")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   ownerUser   User     @relation("OpsAlertMuteOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  @@unique([ownerUserId, code], map: "ops_alert_mutes_owner_user_id_code_key")
+  @@unique([workspaceId, code], map: "ops_alert_mutes_workspace_id_code_key")
+  @@index([workspaceId, mutedUntil], map: "ops_alert_mutes_workspace_id_muted_until_idx")
   @@index([ownerUserId, mutedUntil], map: "ops_alert_mutes_owner_user_id_muted_until_idx")
   @@map("ops_alert_mutes")
 }
 
 model OpsAlertRoutingPolicy {
   id                     String           @id @default(cuid()) @map("id")
+  workspaceId            String           @map("workspace_id")
   ownerUserId            String           @map("owner_user_id")
   webhookEnabled         Boolean          @default(true) @map("webhook_enabled")
   webhookMinimumSeverity OpsAlertSeverity @default(warning) @map("webhook_minimum_severity")
   createdAt              DateTime         @default(now()) @map("created_at")
   updatedAt              DateTime         @updatedAt @map("updated_at")
   ownerUser              User             @relation("OpsAlertRoutingPolicyOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  workspace              Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  @@unique([ownerUserId], map: "ops_alert_routing_policies_owner_user_id_key")
+  @@unique([workspaceId], map: "ops_alert_routing_policies_workspace_id_key")
   @@map("ops_alert_routing_policies")
 }
 
 model OpsAlertSchedulePolicy {
   id               String   @id @default(cuid()) @map("id")
+  workspaceId      String   @map("workspace_id")
   ownerUserId      String   @map("owner_user_id")
   timezone         String   @map("timezone")
   activeDaysMask   Int      @map("active_days_mask")
@@ -771,21 +824,24 @@ model OpsAlertSchedulePolicy {
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
   ownerUser        User     @relation("OpsAlertSchedulePolicyOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  @@unique([ownerUserId], map: "ops_alert_schedule_policies_owner_user_id_key")
+  @@unique([workspaceId], map: "ops_alert_schedule_policies_workspace_id_key")
   @@map("ops_alert_schedule_policies")
 }
 
 model OpsAlertEscalationPolicy {
   id                            String   @id @default(cuid()) @map("id")
+  workspaceId                   String   @map("workspace_id")
   ownerUserId                   String   @map("owner_user_id")
   firstReminderDelayMinutes     Int      @map("first_reminder_delay_minutes")
   repeatReminderIntervalMinutes Int      @map("repeat_reminder_interval_minutes")
   createdAt                     DateTime @default(now()) @map("created_at")
   updatedAt                     DateTime @updatedAt @map("updated_at")
   ownerUser                     User     @relation("OpsAlertEscalationPolicyOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  workspace                     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  @@unique([ownerUserId], map: "ops_alert_escalation_policies_owner_user_id_key")
+  @@unique([workspaceId], map: "ops_alert_escalation_policies_workspace_id_key")
   @@map("ops_alert_escalation_policies")
 }
 
@@ -793,6 +849,7 @@ model OpsAlertDelivery {
   id              String                  @id @default(cuid()) @map("id")
   captureId       String                  @map("capture_id")
   alertStateId    String                  @map("alert_state_id")
+  workspaceId     String                  @map("workspace_id")
   ownerUserId     String                  @map("owner_user_id")
   code            String                  @map("code")
   severity        OpsAlertSeverity        @map("severity")
@@ -806,7 +863,9 @@ model OpsAlertDelivery {
   alertState      OpsAlertState           @relation(fields: [alertStateId], references: [id], onDelete: Cascade)
   capture         OpsObservabilityCapture @relation(fields: [captureId], references: [id], onDelete: Cascade)
   ownerUser       User                    @relation("OpsAlertDeliveryOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  workspace       Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  @@index([workspaceId, createdAt], map: "ops_alert_deliveries_workspace_id_created_at_idx")
   @@index([ownerUserId, createdAt], map: "ops_alert_deliveries_owner_user_id_created_at_idx")
   @@index([alertStateId, createdAt], map: "ops_alert_deliveries_alert_state_id_created_at_idx")
   @@map("ops_alert_deliveries")

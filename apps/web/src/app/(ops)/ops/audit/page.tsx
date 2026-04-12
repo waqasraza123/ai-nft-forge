@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { PageShell, Pill, SurfaceCard, SurfaceGrid } from "@ai-nft-forge/ui";
 
+import { WorkspaceScopeSwitcher } from "../../../../components/workspace-scope-switcher";
 import { OpsAuditClient } from "./ops-audit-client";
 import { createRuntimeOpsAuditService } from "../../../../server/ops/audit-runtime";
 import { getCurrentStudioAccess } from "../../../../server/studio/access";
@@ -39,7 +40,7 @@ export default async function OpsAuditPage() {
         <SurfaceCard
           body="Audit review now lives on a dedicated ops route with server-side filtering and CSV export for workspace membership, invitation, and ownership-transfer activity."
           eyebrow="Audit"
-          span={12}
+          span={8}
           title="Workspace audit trail"
         >
           <div className="pill-row">
@@ -49,6 +50,17 @@ export default async function OpsAuditPage() {
               {initialAudit?.audit.entries.length ?? 0} current entries
             </Pill>
           </div>
+        </SurfaceCard>
+        <SurfaceCard
+          body="Use the same authenticated workspace selection here to move between accessible audit streams without changing query semantics or mixing rows across workspaces."
+          eyebrow="Workspace"
+          span={4}
+          title="Audit workspace scope"
+        >
+          <WorkspaceScopeSwitcher
+            currentWorkspaceSlug={access?.workspace?.slug ?? null}
+            workspaces={access?.availableWorkspaces ?? []}
+          />
         </SurfaceCard>
       </SurfaceGrid>
       <OpsAuditClient

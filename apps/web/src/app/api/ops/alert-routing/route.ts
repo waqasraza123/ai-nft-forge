@@ -24,7 +24,8 @@ export async function POST(request: Request) {
     const payload = await parseAlertRoutingPolicyRequest(request);
     const result = await createRuntimeOpsService().updateAlertRoutingPolicy({
       ownerUserId: session.ownerUserId,
-      webhookMode: payload.webhookMode
+      webhookMode: payload.webhookMode,
+      workspaceId: session.workspace.id
     });
 
     return NextResponse.json(result, {
@@ -39,7 +40,8 @@ export async function DELETE() {
   try {
     const session = await requireOpsOwnerApiSession();
     const result = await createRuntimeOpsService().resetAlertRoutingPolicy({
-      ownerUserId: session.ownerUserId
+      ownerUserId: session.ownerUserId,
+      workspaceId: session.workspace.id
     });
 
     return NextResponse.json(result, {

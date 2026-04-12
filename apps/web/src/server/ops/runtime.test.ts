@@ -93,6 +93,17 @@ describe("loadOpsRuntime", () => {
         )
       );
     const resolveSession = vi.fn().mockResolvedValue({
+      availableWorkspaces: [
+        {
+          id: "workspace_1",
+          name: "Forge Operations",
+          ownerUserId: "user_1",
+          ownerWalletAddress: "0x1111111111111111111111111111111111111111",
+          role: "owner",
+          slug: "forge-operations",
+          status: "active"
+        }
+      ],
       owner: {
         userId: "user_1",
         walletAddress: "0x1111111111111111111111111111111111111111"
@@ -328,24 +339,29 @@ describe("loadOpsRuntime", () => {
     });
     expect(loadOperatorActivity).toHaveBeenCalledWith({
       ownerUserId: "user_1",
-      rawEnvironment
+      rawEnvironment,
+      workspaceId: "workspace_1"
     });
     expect(loadOperatorAlertEscalation).toHaveBeenCalledWith({
       ownerUserId: "user_1",
-      rawEnvironment
+      rawEnvironment,
+      workspaceId: "workspace_1"
     });
     expect(loadOperatorAlertRouting).toHaveBeenCalledWith({
       ownerUserId: "user_1",
-      rawEnvironment
+      rawEnvironment,
+      workspaceId: "workspace_1"
     });
     expect(loadOperatorAlertSchedule).toHaveBeenCalledWith({
       ownerUserId: "user_1",
       rawEnvironment,
-      referenceTime: new Date("2026-04-06T12:00:00.000Z")
+      referenceTime: new Date("2026-04-06T12:00:00.000Z"),
+      workspaceId: "workspace_1"
     });
     expect(loadOperatorHistory).toHaveBeenCalledWith({
       ownerUserId: "user_1",
-      rawEnvironment
+      rawEnvironment,
+      workspaceId: "workspace_1"
     });
     expect(loadOperatorObservability).toHaveBeenCalledWith({
       checkedAt: "2026-04-06T12:00:00.000Z",
@@ -357,12 +373,30 @@ describe("loadOpsRuntime", () => {
         status: "ok"
       }),
       rawEnvironment,
-      referenceTime: new Date("2026-04-06T12:00:00.000Z")
+      referenceTime: new Date("2026-04-06T12:00:00.000Z"),
+      workspaceId: "workspace_1"
     });
     expect(runtime.operator.session?.user.id).toBe("user_1");
     expect(runtime.operator.access).toEqual({
+      availableWorkspaces: [
+        {
+          id: "workspace_1",
+          name: "Forge Operations",
+          ownerUserId: "user_1",
+          ownerWalletAddress: "0x1111111111111111111111111111111111111111",
+          role: "owner",
+          slug: "forge-operations",
+          status: "active"
+        }
+      ],
       canManageOpsPolicy: true,
-      role: "owner"
+      role: "owner",
+      workspace: {
+        id: "workspace_1",
+        name: "Forge Operations",
+        slug: "forge-operations",
+        status: "active"
+      }
     });
     expect(runtime.operator.queue).toMatchObject({
       status: "ok"

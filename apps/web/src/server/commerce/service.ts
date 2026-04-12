@@ -42,6 +42,7 @@ type PublishedCollectionCommerceRecord = {
   storefrontStatus: CollectionStorefrontStatus;
   title: string;
   totalSupply: number | null;
+  workspaceId: string;
 };
 
 type CheckoutSessionRecord = {
@@ -80,6 +81,7 @@ type CheckoutSessionRecord = {
     storefrontStatus: CollectionStorefrontStatus;
     title: string;
     totalSupply: number | null;
+    workspaceId: string;
   };
   reservation: {
     buyerDisplayName: string | null;
@@ -105,7 +107,7 @@ type BrandRecord = {
 
 type CommerceRepositorySet = {
   brandRepository: {
-    listByOwnerUserId(ownerUserId: string): Promise<BrandRecord[]>;
+    listByWorkspaceId(workspaceId: string): Promise<BrandRecord[]>;
   };
   commerceCheckoutSessionRepository: {
     create(input: {
@@ -133,8 +135,8 @@ type CommerceRepositorySet = {
       publishedCollectionId: string;
     }): Promise<{ count: number }>;
     findByPublicId(publicId: string): Promise<CheckoutSessionRecord | null>;
-    listDetailedByOwnerUserId(
-      ownerUserId: string
+    listDetailedByWorkspaceId(
+      workspaceId: string
     ): Promise<CheckoutSessionRecord[]>;
     updateFulfillmentById(input: {
       fulfillmentNotes?: string | null;
@@ -591,11 +593,11 @@ function assertProviderKind(
   }
 }
 
-function assertSessionOwner(
+function assertSessionWorkspace(
   session: CheckoutSessionRecord,
-  ownerUserId: string
+  workspaceId: string
 ) {
-  if (session.publishedCollection.ownerUserId !== ownerUserId) {
+  if (session.publishedCollection.workspaceId !== workspaceId) {
     throw new CommerceServiceError(
       "CHECKOUT_SESSION_NOT_FOUND",
       "Checkout session was not found.",
@@ -1009,14 +1011,14 @@ export function createCollectionCommerceService(
 
   async function loadOwnerCommerceSnapshot(input: {
     brandSlug?: string | null;
-    ownerUserId: string;
+    workspaceId: string;
   }) {
     const parsedQuery = studioCommerceDashboardQuerySchema.parse({
       brandSlug: input.brandSlug ?? undefined
     });
     const brands =
-      await dependencies.repositories.brandRepository.listByOwnerUserId(
-        input.ownerUserId
+      await dependencies.repositories.brandRepository.listByWorkspaceId(
+        input.workspaceId
       );
     const activeBrandSlug = parsedQuery.brandSlug ?? null;
 
@@ -1032,8 +1034,8 @@ export function createCollectionCommerceService(
     }
 
     const sessions =
-      await dependencies.repositories.commerceCheckoutSessionRepository.listDetailedByOwnerUserId(
-        input.ownerUserId
+      await dependencies.repositories.commerceCheckoutSessionRepository.listDetailedByWorkspaceId(
+        input.workspaceId
       );
     const refreshedSessions = await Promise.all(
       sessions.map(async (session) => {
@@ -1627,7 +1629,7 @@ export function createCollectionCommerceService(
 
     async getOwnerCommerceDashboard(input: {
       brandSlug?: string | null;
-      ownerUserId: string;
+      workspaceId: string;
     }) {
       const snapshot = await loadOwnerCommerceSnapshot(input);
 
@@ -1644,7 +1646,7 @@ export function createCollectionCommerceService(
 
     async getOwnerCommerceReport(input: {
       brandSlug?: string | null;
-      ownerUserId: string;
+      workspaceId: string;
     }) {
       const parsedQuery = studioCommerceReportQuerySchema.parse({
         brandSlug: input.brandSlug ?? undefined
@@ -1655,7 +1657,7 @@ export function createCollectionCommerceService(
               brandSlug: parsedQuery.brandSlug
             }
           : {}),
-        ownerUserId: input.ownerUserId
+        workspaceId: input.workspaceId
       });
 
       return studioCommerceReportResponseSchema.parse({
@@ -1676,7 +1678,7 @@ export function createCollectionCommerceService(
 
     async exportOwnerCommerceReportCsv(input: {
       brandSlug?: string | null;
-      ownerUserId: string;
+      workspaceId: string;
     }) {
       const parsedQuery = studioCommerceReportQuerySchema.parse({
         brandSlug: input.brandSlug ?? undefined
@@ -1687,7 +1689,7 @@ export function createCollectionCommerceService(
               brandSlug: parsedQuery.brandSlug
             }
           : {}),
-        ownerUserId: input.ownerUserId
+        workspaceId: input.workspaceId
       });
 
       return {
@@ -1700,7 +1702,7 @@ export function createCollectionCommerceService(
 
     async completeOwnerManualCheckout(input: {
       checkoutSessionId: string;
-      ownerUserId: string;
+      workspaceId: string;
     }) {
       const now = dependencies.now();
 
@@ -1718,7 +1720,7 @@ export function createCollectionCommerceService(
           );
         }
 
-        assertSessionOwner(session, input.ownerUserId);
+        assertSessionWorkspace(session, input.workspaceId);
         assertProviderKind(session, "manual");
 
         if (session.status === "completed") {
@@ -1781,7 +1783,7 @@ export function createCollectionCommerceService(
 
     async cancelOwnerCheckoutSession(input: {
       checkoutSessionId: string;
-      ownerUserId: string;
+      workspaceId: string;
     }) {
       const session =
         await dependencies.repositories.commerceCheckoutSessionRepository.findByPublicId(
@@ -1796,7 +1798,7 @@ export function createCollectionCommerceService(
         );
       }
 
-      assertSessionOwner(session, input.ownerUserId);
+      assertSessionWorkspace(session, input.workspaceId);
 
       if (session.status === "completed") {
         throw new CommerceServiceError(
@@ -1849,7 +1851,7 @@ export function createCollectionCommerceService(
           );
         }
 
-        assertSessionOwner(current, input.ownerUserId);
+        assertSessionWorkspace(current, input.workspaceId);
 
         if (current.status === "canceled") {
           return serializeStudioCheckoutAction({ session: current });
@@ -1896,7 +1898,7 @@ export function createCollectionCommerceService(
     async updateOwnerCheckoutFulfillment(input: {
       body: unknown;
       checkoutSessionId: string;
-      ownerUserId: string;
+      workspaceId: string;
     }) {
       const parsedInput =
         studioCommerceFulfillmentUpdateRequestSchema.safeParse(input.body);
@@ -1925,7 +1927,7 @@ export function createCollectionCommerceService(
           );
         }
 
-        assertSessionOwner(session, input.ownerUserId);
+        assertSessionWorkspace(session, input.workspaceId);
 
         if (session.status !== "completed") {
           throw new CommerceServiceError(
@@ -1982,7 +1984,7 @@ export function createCollectionCommerceService(
     async retryOwnerCheckoutFulfillment(input: {
       body: unknown;
       checkoutSessionId: string;
-      ownerUserId: string;
+      workspaceId: string;
     }) {
       const parsedInput = studioCommerceFulfillmentRetryRequestSchema.safeParse(
         input.body
@@ -2017,7 +2019,7 @@ export function createCollectionCommerceService(
         );
       }
 
-      assertSessionOwner(session, input.ownerUserId);
+      assertSessionWorkspace(session, input.workspaceId);
 
       const refreshed = await scheduleFulfillmentAutomationIfNeeded(
         dependencies,

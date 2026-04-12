@@ -21,7 +21,8 @@ export async function DELETE(_: Request, context: RouteContext) {
       await createRuntimeCollectionDraftService().removeCollectionDraftItem({
         collectionDraftId,
         itemId,
-        ownerUserId: session.ownerUserId
+        ownerUserId: session.ownerUserId,
+        workspaceId: session.workspace.id
       });
 
     return NextResponse.json(result);

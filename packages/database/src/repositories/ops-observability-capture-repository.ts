@@ -28,6 +28,7 @@ type CreateOpsWindowSnapshotInput = {
   successRatePercent: number | null;
   totalCount: number;
   windowKey: string;
+  workspaceId: string;
 };
 
 type CreateOpsObservabilityCaptureInput = {
@@ -49,6 +50,7 @@ type CreateOpsObservabilityCaptureInput = {
   queueStatus: OpsQueueStatus;
   queueWaitingCount: number | null;
   warningAlertCount: number;
+  workspaceId: string;
   windows: CreateOpsWindowSnapshotInput[];
   workerAdapter: string | null;
 };
@@ -84,6 +86,7 @@ export function createOpsObservabilityCaptureRepository(
           oldestQueuedAgeSeconds: input.oldestQueuedAgeSeconds,
           oldestRunningAgeSeconds: input.oldestRunningAgeSeconds,
           ownerUserId: input.ownerUserId,
+          workspaceId: input.workspaceId,
           queueActiveCount: input.queueActiveCount,
           queueCompletedCount: input.queueCompletedCount,
           queueConcurrency: input.queueConcurrency,
@@ -108,7 +111,8 @@ export function createOpsObservabilityCaptureRepository(
               succeededCount: window.succeededCount,
               successRatePercent: window.successRatePercent,
               totalCount: window.totalCount,
-              windowKey: window.windowKey
+              windowKey: window.windowKey,
+              workspaceId: window.workspaceId
             }))
           },
           workerAdapter: input.workerAdapter
@@ -130,6 +134,24 @@ export function createOpsObservabilityCaptureRepository(
         take: input.limit,
         where: {
           ownerUserId: input.ownerUserId
+        }
+      });
+    },
+
+    listRecentForWorkspaceId(input: { limit: number; workspaceId: string }) {
+      return database.opsObservabilityCapture.findMany({
+        include: opsObservabilityCaptureInclude,
+        orderBy: [
+          {
+            capturedAt: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        take: input.limit,
+        where: {
+          workspaceId: input.workspaceId
         }
       });
     }

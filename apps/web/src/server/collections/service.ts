@@ -135,14 +135,14 @@ type CollectionDraftRepositorySet = {
     updatePosition(input: { id: string; position: number }): Promise<unknown>;
   };
   brandRepository: {
-    findByIdForOwner(input: {
+    findByIdForWorkspace(input: {
       id: string;
-      ownerUserId: string;
+      workspaceId: string;
     }): Promise<PublicationTargetRecord | null>;
-    findFirstByOwnerUserId(
-      ownerUserId: string
+    findFirstByWorkspaceId(
+      workspaceId: string
     ): Promise<PublicationTargetRecord | null>;
-    listByOwnerUserId(ownerUserId: string): Promise<PublicationTargetRecord[]>;
+    listByWorkspaceId(workspaceId: string): Promise<PublicationTargetRecord[]>;
   };
   collectionDraftRepository: {
     create(input: {
@@ -150,43 +150,46 @@ type CollectionDraftRepositorySet = {
       ownerUserId: string;
       slug: string;
       title: string;
+      workspaceId: string;
     }): Promise<{ id: string }>;
-    findByIdForOwner(input: { id: string; ownerUserId: string }): Promise<{
+    findByIdForWorkspace(input: { id: string; workspaceId: string }): Promise<{
       description: string | null;
       id: string;
       slug: string;
       status: CollectionDraftStatus;
       title: string;
     } | null>;
-    findDetailedByIdForOwner(input: {
+    findDetailedByIdForWorkspace(input: {
       id: string;
-      ownerUserId: string;
+      workspaceId: string;
     }): Promise<CollectionDraftRecord | null>;
-    findBySlugForOwner(input: {
-      ownerUserId: string;
+    findBySlugForWorkspace(input: {
       slug: string;
+      workspaceId: string;
     }): Promise<{ id: string } | null>;
-    listByOwnerUserId(ownerUserId: string): Promise<CollectionDraftRecord[]>;
-    updateByIdForOwner(input: {
+    listByWorkspaceId(workspaceId: string): Promise<CollectionDraftRecord[]>;
+    updateByIdForWorkspace(input: {
       description: string | null;
       id: string;
-      ownerUserId: string;
       slug: string;
       status: CollectionDraftStatus;
       title: string;
+      workspaceId: string;
     }): Promise<{ id: string }>;
+    updateStatusByIdForWorkspace(input: {
+      id: string;
+      status: CollectionDraftStatus;
+      workspaceId: string;
+    }): Promise<{ id: string } | null>;
   };
   generatedAssetRepository: {
-    findByIdForOwner(input: {
-      id: string;
-      ownerUserId: string;
-    }): Promise<{
+    findByIdForWorkspace(input: { id: string; workspaceId: string }): Promise<{
       id: string;
       moderationStatus: GeneratedAssetModerationStatus;
     } | null>;
-    listRecentForOwnerUserId(input: {
+    listRecentForWorkspaceId(input: {
       limit: number;
-      ownerUserId: string;
+      workspaceId: string;
     }): Promise<GeneratedAssetCandidateRecord[]>;
   };
   publishedCollectionItemRepository: {
@@ -247,23 +250,28 @@ type CollectionDraftRepositorySet = {
       storefrontStatus?: CollectionStorefrontStatus;
       totalSupply?: number | null;
       title: string;
+      workspaceId: string;
     }): Promise<{ id: string }>;
-    deleteByDraftIdForOwner(input: {
-      ownerUserId: string;
+    deleteByDraftIdForWorkspace(input: {
       sourceCollectionDraftId: string;
+      workspaceId: string;
     }): Promise<PublishedCollectionRecord | null>;
     findByBrandSlugAndCollectionSlug(input: {
       brandSlug: string;
       slug: string;
     }): Promise<PublishedCollectionRecord | null>;
-    findByDraftIdForOwner(input: {
-      ownerUserId: string;
+    findByDraftIdForWorkspace(input: {
       sourceCollectionDraftId: string;
+      workspaceId: string;
     }): Promise<PublishedCollectionRecord | null>;
-    listByOwnerUserId(
-      ownerUserId: string
+    findByIdForWorkspace(input: {
+      id: string;
+      workspaceId: string;
+    }): Promise<PublishedCollectionRecord | null>;
+    listByWorkspaceId(
+      workspaceId: string
     ): Promise<PublishedCollectionRecord[]>;
-    updateByIdForOwner(input: {
+    updateByIdForWorkspace(input: {
       brandName: string;
       brandSlug: string;
       displayOrder?: number;
@@ -278,7 +286,6 @@ type CollectionDraftRepositorySet = {
       contractDeployedAt?: Date | null;
       contractDeployTxHash?: string | null;
       contractTokenUriBaseUrl?: string | null;
-      ownerUserId: string;
       priceAmountMinor?: number | null;
       priceCurrency?: string | null;
       priceLabel?: string | null;
@@ -293,6 +300,7 @@ type CollectionDraftRepositorySet = {
       storefrontStatus?: CollectionStorefrontStatus;
       totalSupply?: number | null;
       title: string;
+      workspaceId: string;
     }): Promise<{ id: string }>;
   };
   publishedCollectionMintRepository: {
@@ -311,7 +319,7 @@ type CollectionDraftRepositorySet = {
     }): Promise<{ id: string } | null>;
   };
   opsReconciliationIssueRepository?: {
-    listOpenByOwnerUserId(ownerUserId: string): Promise<
+    listOpenByWorkspaceId(workspaceId: string): Promise<
       Array<{
         detailJson: unknown;
         kind: OpsReconciliationIssueKind;
@@ -433,11 +441,13 @@ function buildCollectionContractDeploymentContext(input: {
     origin: input.origin
   });
   const artifact = getAiNftForgeCollectionContractArtifact();
-  const deploymentData = (encodeDeployData as unknown as (input: {
-    abi: unknown[];
-    args: unknown[];
-    bytecode: `0x${string}`;
-  }) => `0x${string}`)({
+  const deploymentData = (
+    encodeDeployData as unknown as (input: {
+      abi: unknown[];
+      args: unknown[];
+      bytecode: `0x${string}`;
+    }) => `0x${string}`
+  )({
     abi: artifact.abi,
     args: [
       contractName,
@@ -462,11 +472,13 @@ function buildCollectionContractMintData(input: {
 }) {
   const artifact = getAiNftForgeCollectionContractArtifact();
 
-  return (encodeFunctionData as unknown as (input: {
-    abi: unknown[];
-    args: unknown[];
-    functionName: string;
-  }) => `0x${string}`)({
+  return (
+    encodeFunctionData as unknown as (input: {
+      abi: unknown[];
+      args: unknown[];
+      functionName: string;
+    }) => `0x${string}`
+  )({
     abi: artifact.abi,
     args: [input.recipientWalletAddress, BigInt(input.tokenId)],
     functionName: "ownerMint"
@@ -554,9 +566,9 @@ function serializePublicationTarget(target: PublicationTargetRecord) {
 }
 
 async function createAvailableCollectionDraftSlug(input: {
-  ownerUserId: string;
   repositories: Pick<CollectionDraftRepositorySet, "collectionDraftRepository">;
   title: string;
+  workspaceId: string;
 }) {
   const baseSlug =
     sanitizeCollectionDraftSlugPart(input.title) || "collection-draft";
@@ -565,10 +577,12 @@ async function createAvailableCollectionDraftSlug(input: {
     const candidateSlug =
       suffix === 0 ? baseSlug : `${baseSlug}-${(suffix + 1).toString()}`;
     const existingDraft =
-      await input.repositories.collectionDraftRepository.findBySlugForOwner({
-        ownerUserId: input.ownerUserId,
-        slug: candidateSlug
-      });
+      await input.repositories.collectionDraftRepository.findBySlugForWorkspace(
+        {
+          slug: candidateSlug,
+          workspaceId: input.workspaceId
+        }
+      );
 
     if (!existingDraft) {
       return candidateSlug;
@@ -723,17 +737,17 @@ function serializeCollectionDraft(input: {
 
 async function loadSerializedCollectionDraftList(
   repositories: CollectionDraftRepositorySet,
-  ownerUserId: string
+  workspaceId: string
 ) {
   const [drafts, generatedAssetCandidates, publications, publicationTargets] =
     await Promise.all([
-      repositories.collectionDraftRepository.listByOwnerUserId(ownerUserId),
-      repositories.generatedAssetRepository.listRecentForOwnerUserId({
+      repositories.collectionDraftRepository.listByWorkspaceId(workspaceId),
+      repositories.generatedAssetRepository.listRecentForWorkspaceId({
         limit: generatedAssetCandidateLimit,
-        ownerUserId
+        workspaceId
       }),
-      repositories.publishedCollectionRepository.listByOwnerUserId(ownerUserId),
-      repositories.brandRepository.listByOwnerUserId(ownerUserId)
+      repositories.publishedCollectionRepository.listByWorkspaceId(workspaceId),
+      repositories.brandRepository.listByWorkspaceId(workspaceId)
     ]);
   const publicationByDraftId = new Map(
     publications.map((publication) => [
@@ -763,14 +777,14 @@ async function loadSerializedCollectionDraftList(
 
 async function loadCollectionDraftRecordById(input: {
   collectionDraftId: string;
-  ownerUserId: string;
   repositories: Pick<CollectionDraftRepositorySet, "collectionDraftRepository">;
+  workspaceId: string;
 }) {
   const draft =
-    await input.repositories.collectionDraftRepository.findDetailedByIdForOwner(
+    await input.repositories.collectionDraftRepository.findDetailedByIdForWorkspace(
       {
         id: input.collectionDraftId,
-        ownerUserId: input.ownerUserId
+        workspaceId: input.workspaceId
       }
     );
 
@@ -787,21 +801,21 @@ async function loadCollectionDraftRecordById(input: {
 
 async function loadSerializedCollectionDraftById(input: {
   collectionDraftId: string;
-  ownerUserId: string;
   repositories: Pick<
     CollectionDraftRepositorySet,
     "collectionDraftRepository" | "publishedCollectionRepository"
   >;
+  workspaceId: string;
 }) {
   const [draft, publication] = await Promise.all([
     loadCollectionDraftRecordById({
       collectionDraftId: input.collectionDraftId,
-      ownerUserId: input.ownerUserId,
-      repositories: input.repositories
+      repositories: input.repositories,
+      workspaceId: input.workspaceId
     }),
-    input.repositories.publishedCollectionRepository.findByDraftIdForOwner({
-      ownerUserId: input.ownerUserId,
-      sourceCollectionDraftId: input.collectionDraftId
+    input.repositories.publishedCollectionRepository.findByDraftIdForWorkspace({
+      sourceCollectionDraftId: input.collectionDraftId,
+      workspaceId: input.workspaceId
     })
   ]);
 
@@ -859,11 +873,17 @@ function sortPublicationsForMerchandising(
 }
 
 function publicationHasOnchainActivity(publication: PublishedCollectionRecord) {
-  return Boolean(publication.contractAddress) || countMintedTokens(publication) > 0;
+  return (
+    Boolean(publication.contractAddress) || countMintedTokens(publication) > 0
+  );
 }
 
 function parseReconciliationDetail(detailJson: unknown) {
-  if (!detailJson || typeof detailJson !== "object" || Array.isArray(detailJson)) {
+  if (
+    !detailJson ||
+    typeof detailJson !== "object" ||
+    Array.isArray(detailJson)
+  ) {
     return {};
   }
 
@@ -871,9 +891,12 @@ function parseReconciliationDetail(detailJson: unknown) {
 }
 
 async function assertPublicationOnchainReconciled(input: {
-  ownerUserId: string;
   publication: PublishedCollectionRecord;
-  repositories: Pick<CollectionDraftRepositorySet, "opsReconciliationIssueRepository">;
+  repositories: Pick<
+    CollectionDraftRepositorySet,
+    "opsReconciliationIssueRepository"
+  >;
+  workspaceId: string;
 }) {
   const issueRepository = input.repositories.opsReconciliationIssueRepository;
 
@@ -881,7 +904,9 @@ async function assertPublicationOnchainReconciled(input: {
     return;
   }
 
-  const openIssues = await issueRepository.listOpenByOwnerUserId(input.ownerUserId);
+  const openIssues = await issueRepository.listOpenByWorkspaceId(
+    input.workspaceId
+  );
   const hasOpenOnchainIssue = openIssues.some((issue) => {
     if (!isOnchainReconciliationIssueKind(issue.kind)) {
       return false;
@@ -922,14 +947,16 @@ export function createCollectionDraftService(
     async addCollectionDraftItem(input: {
       collectionDraftId: string;
       generatedAssetId: string;
-      ownerUserId: string;
+      workspaceId: string;
     }) {
       return dependencies.runTransaction(async (repositories) => {
         const draft =
-          await repositories.collectionDraftRepository.findByIdForOwner({
-            id: input.collectionDraftId,
-            ownerUserId: input.ownerUserId
-          });
+          await repositories.collectionDraftRepository.findDetailedByIdForWorkspace(
+            {
+              id: input.collectionDraftId,
+              workspaceId: input.workspaceId
+            }
+          );
 
         if (!draft) {
           throw new CollectionDraftServiceError(
@@ -940,9 +967,9 @@ export function createCollectionDraftService(
         }
 
         const generatedAsset =
-          await repositories.generatedAssetRepository.findByIdForOwner({
+          await repositories.generatedAssetRepository.findByIdForWorkspace({
             id: input.generatedAssetId,
-            ownerUserId: input.ownerUserId
+            workspaceId: input.workspaceId
           });
 
         if (!generatedAsset) {
@@ -977,13 +1004,7 @@ export function createCollectionDraftService(
           );
         }
 
-        const existingItems =
-          await repositories.collectionDraftItemRepository.listByCollectionDraftIdForOwner(
-            {
-              collectionDraftId: input.collectionDraftId,
-              ownerUserId: input.ownerUserId
-            }
-          );
+        const existingItems = draft.items;
 
         await repositories.collectionDraftItemRepository.create({
           collectionDraftId: input.collectionDraftId,
@@ -993,8 +1014,8 @@ export function createCollectionDraftService(
 
         return loadSerializedCollectionDraftById({
           collectionDraftId: input.collectionDraftId,
-          ownerUserId: input.ownerUserId,
-          repositories
+          repositories,
+          workspaceId: input.workspaceId
         });
       });
     },
@@ -1003,32 +1024,34 @@ export function createCollectionDraftService(
       description?: string | null;
       ownerUserId: string;
       title: string;
+      workspaceId: string;
     }) {
       const parsedInput = collectionDraftCreateRequestSchema.parse(input);
       const slug = await createAvailableCollectionDraftSlug({
-        ownerUserId: input.ownerUserId,
         repositories: dependencies.repositories,
-        title: parsedInput.title
+        title: parsedInput.title,
+        workspaceId: input.workspaceId
       });
       const createdDraft =
         await dependencies.repositories.collectionDraftRepository.create({
           description: normalizeOptionalDescription(parsedInput.description),
           ownerUserId: input.ownerUserId,
           slug,
-          title: parsedInput.title
+          title: parsedInput.title,
+          workspaceId: input.workspaceId
         });
 
       return loadSerializedCollectionDraftById({
         collectionDraftId: createdDraft.id,
-        ownerUserId: input.ownerUserId,
-        repositories: dependencies.repositories
+        repositories: dependencies.repositories,
+        workspaceId: input.workspaceId
       });
     },
 
-    async listCollectionDrafts(input: { ownerUserId: string }) {
+    async listCollectionDrafts(input: { workspaceId: string }) {
       return loadSerializedCollectionDraftList(
         dependencies.repositories,
-        input.ownerUserId
+        input.workspaceId
       );
     },
 
@@ -1036,24 +1059,24 @@ export function createCollectionDraftService(
       brandId?: string | null;
       collectionDraftId: string;
       ownerUserId: string;
+      workspaceId: string;
     }) {
       const parsedInput = collectionDraftPublishRequestSchema.parse({
         brandId: input.brandId
       });
       const draft = await loadCollectionDraftRecordById({
         collectionDraftId: input.collectionDraftId,
-        ownerUserId: input.ownerUserId,
-        repositories: dependencies.repositories
+        repositories: dependencies.repositories,
+        workspaceId: input.workspaceId
       });
-      const publicationTarget =
-        parsedInput.brandId
-          ? await dependencies.repositories.brandRepository.findByIdForOwner({
-              id: parsedInput.brandId,
-              ownerUserId: input.ownerUserId
-            })
-          : await dependencies.repositories.brandRepository.findFirstByOwnerUserId(
-              input.ownerUserId
-            );
+      const publicationTarget = parsedInput.brandId
+        ? await dependencies.repositories.brandRepository.findByIdForWorkspace({
+            id: parsedInput.brandId,
+            workspaceId: input.workspaceId
+          })
+        : await dependencies.repositories.brandRepository.findFirstByWorkspaceId(
+            input.workspaceId
+          );
 
       if (!publicationTarget) {
         throw new CollectionDraftServiceError(
@@ -1077,15 +1100,15 @@ export function createCollectionDraftService(
           }
         );
       const existingPublication =
-        await dependencies.repositories.publishedCollectionRepository.findByDraftIdForOwner(
+        await dependencies.repositories.publishedCollectionRepository.findByDraftIdForWorkspace(
           {
-            ownerUserId: input.ownerUserId,
-            sourceCollectionDraftId: input.collectionDraftId
+            sourceCollectionDraftId: input.collectionDraftId,
+            workspaceId: input.workspaceId
           }
         );
       const ownerPublications =
-        await dependencies.repositories.publishedCollectionRepository.listByOwnerUserId(
-          input.ownerUserId
+        await dependencies.repositories.publishedCollectionRepository.listByWorkspaceId(
+          input.workspaceId
         );
       const existingPublicAssets = existingPublication
         ? (
@@ -1169,20 +1192,21 @@ export function createCollectionDraftService(
                 storefrontStatus: "ended",
                 totalSupply: null,
                 contractTokenUriBaseUrl: null,
-                title: draft.title
+                title: draft.title,
+                workspaceId: input.workspaceId
               }));
 
             if (existingPublication) {
-              await repositories.publishedCollectionRepository.updateByIdForOwner(
+              await repositories.publishedCollectionRepository.updateByIdForWorkspace(
                 {
                   brandName: publicationTarget.name,
                   brandSlug: publicationTarget.slug,
                   description: draft.description,
                   heroGeneratedAssetId: nextHeroGeneratedAssetId,
                   id: existingPublication.id,
-                  ownerUserId: input.ownerUserId,
                   slug: draft.slug,
-                  title: draft.title
+                  title: draft.title,
+                  workspaceId: input.workspaceId
                 }
               );
               await repositories.publishedCollectionItemRepository.deleteByPublishedCollectionId(
@@ -1202,8 +1226,8 @@ export function createCollectionDraftService(
 
             return loadSerializedCollectionDraftById({
               collectionDraftId: input.collectionDraftId,
-              ownerUserId: input.ownerUserId,
-              repositories
+              repositories,
+              workspaceId: input.workspaceId
             });
           }
         );
@@ -1235,7 +1259,6 @@ export function createCollectionDraftService(
       heroGeneratedAssetId: string | null;
       isFeatured: boolean;
       launchAt: string | null;
-      ownerUserId: string;
       priceAmountMinor: number | null;
       priceCurrency: string | null;
       priceLabel: string | null;
@@ -1248,6 +1271,7 @@ export function createCollectionDraftService(
       storefrontHeadline: string | null;
       storefrontStatus: CollectionStorefrontStatus;
       totalSupply: number | null;
+      workspaceId: string;
     }) {
       const parsedInput = collectionPublicationMerchandisingRequestSchema.parse(
         {
@@ -1273,9 +1297,9 @@ export function createCollectionDraftService(
 
       return dependencies.runTransaction(async (repositories) => {
         const draft =
-          await repositories.collectionDraftRepository.findByIdForOwner({
+          await repositories.collectionDraftRepository.findByIdForWorkspace({
             id: input.collectionDraftId,
-            ownerUserId: input.ownerUserId
+            workspaceId: input.workspaceId
           });
 
         if (!draft) {
@@ -1287,10 +1311,10 @@ export function createCollectionDraftService(
         }
 
         const publication =
-          await repositories.publishedCollectionRepository.findByDraftIdForOwner(
+          await repositories.publishedCollectionRepository.findByDraftIdForWorkspace(
             {
-              ownerUserId: input.ownerUserId,
-              sourceCollectionDraftId: input.collectionDraftId
+              sourceCollectionDraftId: input.collectionDraftId,
+              workspaceId: input.workspaceId
             }
           );
 
@@ -1324,8 +1348,8 @@ export function createCollectionDraftService(
 
         if (parsedInput.isFeatured) {
           const ownerPublications =
-            await repositories.publishedCollectionRepository.listByOwnerUserId(
-              input.ownerUserId
+            await repositories.publishedCollectionRepository.listByWorkspaceId(
+              input.workspaceId
             );
           const siblingFeaturedPublications = ownerPublications.filter(
             (candidate) =>
@@ -1336,60 +1360,66 @@ export function createCollectionDraftService(
 
           await Promise.all(
             siblingFeaturedPublications.map((candidate) =>
-              repositories.publishedCollectionRepository.updateByIdForOwner({
-                brandName: candidate.brandName,
-                brandSlug: candidate.brandSlug,
-                description: candidate.description,
-                displayOrder: candidate.displayOrder,
-                id: candidate.id,
-                isFeatured: false,
-                ownerUserId: input.ownerUserId,
-                slug: candidate.slug,
-                title: candidate.title
-              })
+              repositories.publishedCollectionRepository.updateByIdForWorkspace(
+                {
+                  brandName: candidate.brandName,
+                  brandSlug: candidate.brandSlug,
+                  description: candidate.description,
+                  displayOrder: candidate.displayOrder,
+                  id: candidate.id,
+                  isFeatured: false,
+                  slug: candidate.slug,
+                  title: candidate.title,
+                  workspaceId: input.workspaceId
+                }
+              )
             )
           );
         }
 
-        await repositories.publishedCollectionRepository.updateByIdForOwner({
-          brandName: publication.brandName,
-          brandSlug: publication.brandSlug,
-          description: draft.description,
-          displayOrder: parsedInput.displayOrder,
-          endAt: parsedInput.endAt ? new Date(parsedInput.endAt) : null,
-          heroGeneratedAssetId: parsedInput.heroGeneratedAssetId ?? null,
-          id: publication.id,
-          isFeatured: parsedInput.isFeatured,
-          launchAt: parsedInput.launchAt
-            ? new Date(parsedInput.launchAt)
-            : null,
-          ownerUserId: input.ownerUserId,
-          priceAmountMinor: parsedInput.priceAmountMinor ?? null,
-          priceCurrency:
-            normalizeOptionalText(parsedInput.priceCurrency)?.toLowerCase() ??
-            null,
-          priceLabel: normalizeOptionalText(parsedInput.priceLabel),
-          primaryCtaHref: normalizeOptionalText(parsedInput.primaryCtaHref),
-          primaryCtaLabel: normalizeOptionalText(parsedInput.primaryCtaLabel),
-          secondaryCtaHref: normalizeOptionalText(parsedInput.secondaryCtaHref),
-          secondaryCtaLabel: normalizeOptionalText(
-            parsedInput.secondaryCtaLabel
-          ),
-          soldCount: parsedInput.soldCount,
-          slug: publication.slug,
-          storefrontBody: normalizeOptionalText(parsedInput.storefrontBody),
-          storefrontHeadline: normalizeOptionalText(
-            parsedInput.storefrontHeadline
-          ),
-          storefrontStatus: parsedInput.storefrontStatus,
-          totalSupply: parsedInput.totalSupply ?? null,
-          title: draft.title
-        });
+        await repositories.publishedCollectionRepository.updateByIdForWorkspace(
+          {
+            brandName: publication.brandName,
+            brandSlug: publication.brandSlug,
+            description: draft.description,
+            displayOrder: parsedInput.displayOrder,
+            endAt: parsedInput.endAt ? new Date(parsedInput.endAt) : null,
+            heroGeneratedAssetId: parsedInput.heroGeneratedAssetId ?? null,
+            id: publication.id,
+            isFeatured: parsedInput.isFeatured,
+            launchAt: parsedInput.launchAt
+              ? new Date(parsedInput.launchAt)
+              : null,
+            priceAmountMinor: parsedInput.priceAmountMinor ?? null,
+            priceCurrency:
+              normalizeOptionalText(parsedInput.priceCurrency)?.toLowerCase() ??
+              null,
+            priceLabel: normalizeOptionalText(parsedInput.priceLabel),
+            primaryCtaHref: normalizeOptionalText(parsedInput.primaryCtaHref),
+            primaryCtaLabel: normalizeOptionalText(parsedInput.primaryCtaLabel),
+            secondaryCtaHref: normalizeOptionalText(
+              parsedInput.secondaryCtaHref
+            ),
+            secondaryCtaLabel: normalizeOptionalText(
+              parsedInput.secondaryCtaLabel
+            ),
+            soldCount: parsedInput.soldCount,
+            slug: publication.slug,
+            storefrontBody: normalizeOptionalText(parsedInput.storefrontBody),
+            storefrontHeadline: normalizeOptionalText(
+              parsedInput.storefrontHeadline
+            ),
+            storefrontStatus: parsedInput.storefrontStatus,
+            totalSupply: parsedInput.totalSupply ?? null,
+            title: draft.title,
+            workspaceId: input.workspaceId
+          }
+        );
 
         return loadSerializedCollectionDraftById({
           collectionDraftId: input.collectionDraftId,
-          ownerUserId: input.ownerUserId,
-          repositories
+          repositories,
+          workspaceId: input.workspaceId
         });
       });
     },
@@ -1400,15 +1430,18 @@ export function createCollectionDraftService(
       origin: string;
       ownerUserId: string;
       ownerWalletAddress: string;
+      workspaceId: string;
     }) {
-      const parsedInput = collectionContractDeploymentIntentRequestSchema.parse({
-        chainKey: input.chainKey
-      });
+      const parsedInput = collectionContractDeploymentIntentRequestSchema.parse(
+        {
+          chainKey: input.chainKey
+        }
+      );
       const publication =
-        await dependencies.repositories.publishedCollectionRepository.findByDraftIdForOwner(
+        await dependencies.repositories.publishedCollectionRepository.findByDraftIdForWorkspace(
           {
-            ownerUserId: input.ownerUserId,
-            sourceCollectionDraftId: input.collectionDraftId
+            sourceCollectionDraftId: input.collectionDraftId,
+            workspaceId: input.workspaceId
           }
         );
 
@@ -1472,6 +1505,7 @@ export function createCollectionDraftService(
       origin: string;
       ownerUserId: string;
       ownerWalletAddress: string;
+      workspaceId: string;
     }) {
       const chain = getSupportedCollectionContractChainByKey(input.chainKey);
 
@@ -1484,10 +1518,10 @@ export function createCollectionDraftService(
       }
 
       const publication =
-        await dependencies.repositories.publishedCollectionRepository.findByDraftIdForOwner(
+        await dependencies.repositories.publishedCollectionRepository.findByDraftIdForWorkspace(
           {
-            ownerUserId: input.ownerUserId,
-            sourceCollectionDraftId: input.collectionDraftId
+            sourceCollectionDraftId: input.collectionDraftId,
+            workspaceId: input.workspaceId
           }
         );
 
@@ -1526,7 +1560,7 @@ export function createCollectionDraftService(
           expectedTokenUriBaseUrl: deploymentContext.tokenUriBaseUrl
         });
 
-      await dependencies.repositories.publishedCollectionRepository.updateByIdForOwner(
+      await dependencies.repositories.publishedCollectionRepository.updateByIdForWorkspace(
         {
           brandName: publication.brandName,
           brandSlug: publication.brandSlug,
@@ -1542,7 +1576,6 @@ export function createCollectionDraftService(
           id: publication.id,
           isFeatured: publication.isFeatured,
           launchAt: publication.launchAt,
-          ownerUserId: input.ownerUserId,
           priceLabel: publication.priceLabel,
           primaryCtaHref: publication.primaryCtaHref,
           primaryCtaLabel: publication.primaryCtaLabel,
@@ -1554,14 +1587,15 @@ export function createCollectionDraftService(
           storefrontHeadline: publication.storefrontHeadline,
           storefrontStatus: publication.storefrontStatus,
           title: publication.title,
-          totalSupply: publication.totalSupply
+          totalSupply: publication.totalSupply,
+          workspaceId: input.workspaceId
         }
       );
 
       return loadSerializedCollectionDraftById({
         collectionDraftId: input.collectionDraftId,
-        ownerUserId: input.ownerUserId,
-        repositories: dependencies.repositories
+        repositories: dependencies.repositories,
+        workspaceId: input.workspaceId
       });
     },
 
@@ -1570,16 +1604,17 @@ export function createCollectionDraftService(
       ownerUserId: string;
       recipientWalletAddress: string;
       tokenId: number;
+      workspaceId: string;
     }) {
       const parsedInput = collectionContractMintIntentRequestSchema.parse({
         recipientWalletAddress: input.recipientWalletAddress,
         tokenId: input.tokenId
       });
       const publication =
-        await dependencies.repositories.publishedCollectionRepository.findByDraftIdForOwner(
+        await dependencies.repositories.publishedCollectionRepository.findByDraftIdForWorkspace(
           {
-            ownerUserId: input.ownerUserId,
-            sourceCollectionDraftId: input.collectionDraftId
+            sourceCollectionDraftId: input.collectionDraftId,
+            workspaceId: input.workspaceId
           }
         );
 
@@ -1602,9 +1637,9 @@ export function createCollectionDraftService(
       }
 
       await assertPublicationOnchainReconciled({
-        ownerUserId: input.ownerUserId,
         publication,
-        repositories: dependencies.repositories
+        repositories: dependencies.repositories,
+        workspaceId: input.workspaceId
       });
 
       const publicationItem =
@@ -1666,16 +1701,17 @@ export function createCollectionDraftService(
       recipientWalletAddress: string;
       tokenId: number;
       txHash: string;
+      workspaceId: string;
     }) {
       const parsedInput = collectionContractMintIntentRequestSchema.parse({
         recipientWalletAddress: input.recipientWalletAddress,
         tokenId: input.tokenId
       });
       const publication =
-        await dependencies.repositories.publishedCollectionRepository.findByDraftIdForOwner(
+        await dependencies.repositories.publishedCollectionRepository.findByDraftIdForWorkspace(
           {
-            ownerUserId: input.ownerUserId,
-            sourceCollectionDraftId: input.collectionDraftId
+            sourceCollectionDraftId: input.collectionDraftId,
+            workspaceId: input.workspaceId
           }
         );
 
@@ -1698,9 +1734,9 @@ export function createCollectionDraftService(
       }
 
       await assertPublicationOnchainReconciled({
-        ownerUserId: input.ownerUserId,
         publication,
-        repositories: dependencies.repositories
+        repositories: dependencies.repositories,
+        workspaceId: input.workspaceId
       });
 
       const publicationItem =
@@ -1761,8 +1797,8 @@ export function createCollectionDraftService(
 
       return loadSerializedCollectionDraftById({
         collectionDraftId: input.collectionDraftId,
-        ownerUserId: input.ownerUserId,
-        repositories: dependencies.repositories
+        repositories: dependencies.repositories,
+        workspaceId: input.workspaceId
       });
     },
 
@@ -1770,13 +1806,14 @@ export function createCollectionDraftService(
       collectionDraftId: string;
       itemId: string;
       ownerUserId: string;
+      workspaceId: string;
     }) {
       const deletedPublicAssets: PublicPublicationAssetRecord[] = [];
       const result = await dependencies.runTransaction(async (repositories) => {
         const draft =
-          await repositories.collectionDraftRepository.findByIdForOwner({
+          await repositories.collectionDraftRepository.findByIdForWorkspace({
             id: input.collectionDraftId,
-            ownerUserId: input.ownerUserId
+            workspaceId: input.workspaceId
           });
 
         if (!draft) {
@@ -1825,10 +1862,10 @@ export function createCollectionDraftService(
 
         if (draft.status === "review_ready" && remainingItems.length === 0) {
           const existingPublication =
-            await repositories.publishedCollectionRepository.findByDraftIdForOwner(
+            await repositories.publishedCollectionRepository.findByDraftIdForWorkspace(
               {
-                ownerUserId: input.ownerUserId,
-                sourceCollectionDraftId: input.collectionDraftId
+                sourceCollectionDraftId: input.collectionDraftId,
+                workspaceId: input.workspaceId
               }
             );
 
@@ -1844,26 +1881,26 @@ export function createCollectionDraftService(
             );
           }
 
-          await repositories.collectionDraftRepository.updateByIdForOwner({
+          await repositories.collectionDraftRepository.updateByIdForWorkspace({
             description: draft.description,
             id: input.collectionDraftId,
-            ownerUserId: input.ownerUserId,
             slug: draft.slug,
             status: "draft",
-            title: draft.title
+            title: draft.title,
+            workspaceId: input.workspaceId
           });
-          await repositories.publishedCollectionRepository.deleteByDraftIdForOwner(
+          await repositories.publishedCollectionRepository.deleteByDraftIdForWorkspace(
             {
-              ownerUserId: input.ownerUserId,
-              sourceCollectionDraftId: input.collectionDraftId
+              sourceCollectionDraftId: input.collectionDraftId,
+              workspaceId: input.workspaceId
             }
           );
         }
 
         return loadSerializedCollectionDraftById({
           collectionDraftId: input.collectionDraftId,
-          ownerUserId: input.ownerUserId,
-          repositories
+          repositories,
+          workspaceId: input.workspaceId
         });
       });
 
@@ -1879,6 +1916,7 @@ export function createCollectionDraftService(
       collectionDraftId: string;
       itemIds: string[];
       ownerUserId: string;
+      workspaceId: string;
     }) {
       const parsedInput = collectionDraftItemReorderRequestSchema.parse({
         itemIds: input.itemIds
@@ -1886,9 +1924,9 @@ export function createCollectionDraftService(
 
       return dependencies.runTransaction(async (repositories) => {
         const draft =
-          await repositories.collectionDraftRepository.findByIdForOwner({
+          await repositories.collectionDraftRepository.findByIdForWorkspace({
             id: input.collectionDraftId,
-            ownerUserId: input.ownerUserId
+            workspaceId: input.workspaceId
           });
 
         if (!draft) {
@@ -1941,8 +1979,8 @@ export function createCollectionDraftService(
 
         return loadSerializedCollectionDraftById({
           collectionDraftId: input.collectionDraftId,
-          ownerUserId: input.ownerUserId,
-          repositories
+          repositories,
+          workspaceId: input.workspaceId
         });
       });
     },
@@ -1950,13 +1988,14 @@ export function createCollectionDraftService(
     async unpublishCollectionDraft(input: {
       collectionDraftId: string;
       ownerUserId: string;
+      workspaceId: string;
     }) {
       const deletedPublicAssets: PublicPublicationAssetRecord[] = [];
       const result = await dependencies.runTransaction(async (repositories) => {
         const draft =
-          await repositories.collectionDraftRepository.findByIdForOwner({
+          await repositories.collectionDraftRepository.findByIdForWorkspace({
             id: input.collectionDraftId,
-            ownerUserId: input.ownerUserId
+            workspaceId: input.workspaceId
           });
 
         if (!draft) {
@@ -1968,10 +2007,10 @@ export function createCollectionDraftService(
         }
 
         const existingPublication =
-          await repositories.publishedCollectionRepository.findByDraftIdForOwner(
+          await repositories.publishedCollectionRepository.findByDraftIdForWorkspace(
             {
-              ownerUserId: input.ownerUserId,
-              sourceCollectionDraftId: input.collectionDraftId
+              sourceCollectionDraftId: input.collectionDraftId,
+              workspaceId: input.workspaceId
             }
           );
 
@@ -1989,10 +2028,10 @@ export function createCollectionDraftService(
         }
 
         const deletedPublication =
-          await repositories.publishedCollectionRepository.deleteByDraftIdForOwner(
+          await repositories.publishedCollectionRepository.deleteByDraftIdForWorkspace(
             {
-              ownerUserId: input.ownerUserId,
-              sourceCollectionDraftId: input.collectionDraftId
+              sourceCollectionDraftId: input.collectionDraftId,
+              workspaceId: input.workspaceId
             }
           );
 
@@ -2007,8 +2046,8 @@ export function createCollectionDraftService(
         if (deletedPublication.isFeatured) {
           const nextFeaturedPublication = sortPublicationsForMerchandising(
             (
-              await repositories.publishedCollectionRepository.listByOwnerUserId(
-                input.ownerUserId
+              await repositories.publishedCollectionRepository.listByWorkspaceId(
+                input.workspaceId
               )
             ).filter(
               (publication) =>
@@ -2017,7 +2056,7 @@ export function createCollectionDraftService(
           )[0];
 
           if (nextFeaturedPublication) {
-            await repositories.publishedCollectionRepository.updateByIdForOwner(
+            await repositories.publishedCollectionRepository.updateByIdForWorkspace(
               {
                 brandName: nextFeaturedPublication.brandName,
                 brandSlug: nextFeaturedPublication.brandSlug,
@@ -2025,9 +2064,9 @@ export function createCollectionDraftService(
                 displayOrder: nextFeaturedPublication.displayOrder,
                 id: nextFeaturedPublication.id,
                 isFeatured: true,
-                ownerUserId: input.ownerUserId,
                 slug: nextFeaturedPublication.slug,
-                title: nextFeaturedPublication.title
+                title: nextFeaturedPublication.title,
+                workspaceId: input.workspaceId
               }
             );
           }
@@ -2035,8 +2074,8 @@ export function createCollectionDraftService(
 
         return loadSerializedCollectionDraftById({
           collectionDraftId: input.collectionDraftId,
-          ownerUserId: input.ownerUserId,
-          repositories
+          repositories,
+          workspaceId: input.workspaceId
         });
       });
 
@@ -2055,6 +2094,7 @@ export function createCollectionDraftService(
       slug: string;
       status: CollectionDraftStatus;
       title: string;
+      workspaceId: string;
     }) {
       const parsedInput = collectionDraftUpdateRequestSchema.parse({
         description: input.description,
@@ -2063,10 +2103,10 @@ export function createCollectionDraftService(
         title: input.title
       });
       const existingDraft =
-        await dependencies.repositories.collectionDraftRepository.findByIdForOwner(
+        await dependencies.repositories.collectionDraftRepository.findByIdForWorkspace(
           {
             id: input.collectionDraftId,
-            ownerUserId: input.ownerUserId
+            workspaceId: input.workspaceId
           }
         );
 
@@ -2079,10 +2119,10 @@ export function createCollectionDraftService(
       }
 
       const conflictingDraft =
-        await dependencies.repositories.collectionDraftRepository.findBySlugForOwner(
+        await dependencies.repositories.collectionDraftRepository.findBySlugForWorkspace(
           {
-            ownerUserId: input.ownerUserId,
-            slug: parsedInput.slug
+            slug: parsedInput.slug,
+            workspaceId: input.workspaceId
           }
         );
 
@@ -2096,10 +2136,10 @@ export function createCollectionDraftService(
 
       if (parsedInput.status === "review_ready") {
         const detailedDraft =
-          await dependencies.repositories.collectionDraftRepository.findDetailedByIdForOwner(
+          await dependencies.repositories.collectionDraftRepository.findDetailedByIdForWorkspace(
             {
               id: input.collectionDraftId,
-              ownerUserId: input.ownerUserId
+              workspaceId: input.workspaceId
             }
           );
 
@@ -2125,10 +2165,10 @@ export function createCollectionDraftService(
       }
 
       const publication =
-        await dependencies.repositories.publishedCollectionRepository.findByDraftIdForOwner(
+        await dependencies.repositories.publishedCollectionRepository.findByDraftIdForWorkspace(
           {
-            ownerUserId: input.ownerUserId,
-            sourceCollectionDraftId: input.collectionDraftId
+            sourceCollectionDraftId: input.collectionDraftId,
+            workspaceId: input.workspaceId
           }
         );
 
@@ -2151,19 +2191,19 @@ export function createCollectionDraftService(
         }
       }
 
-      await dependencies.repositories.collectionDraftRepository.updateByIdForOwner(
+      await dependencies.repositories.collectionDraftRepository.updateByIdForWorkspace(
         {
           description: normalizeOptionalDescription(parsedInput.description),
           id: input.collectionDraftId,
-          ownerUserId: input.ownerUserId,
           slug: parsedInput.slug,
           status: parsedInput.status,
-          title: parsedInput.title
+          title: parsedInput.title,
+          workspaceId: input.workspaceId
         }
       );
 
       if (publication) {
-        await dependencies.repositories.publishedCollectionRepository.updateByIdForOwner(
+        await dependencies.repositories.publishedCollectionRepository.updateByIdForWorkspace(
           {
             brandName: publication.brandName,
             brandSlug: publication.brandSlug,
@@ -2171,17 +2211,17 @@ export function createCollectionDraftService(
             displayOrder: publication.displayOrder,
             id: publication.id,
             isFeatured: publication.isFeatured,
-            ownerUserId: input.ownerUserId,
             slug: parsedInput.slug,
-            title: parsedInput.title
+            title: parsedInput.title,
+            workspaceId: input.workspaceId
           }
         );
       }
 
       return loadSerializedCollectionDraftById({
         collectionDraftId: input.collectionDraftId,
-        ownerUserId: input.ownerUserId,
-        repositories: dependencies.repositories
+        repositories: dependencies.repositories,
+        workspaceId: input.workspaceId
       });
     }
   };

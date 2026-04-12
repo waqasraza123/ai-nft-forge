@@ -169,6 +169,27 @@ export function createWorkspaceMembershipRepository(
       });
     },
 
+    listByUserId(userId: string): Promise<WorkspaceMembershipWithWorkspace[]> {
+      return database.workspaceMembership.findMany({
+        include: {
+          workspace: {
+            select: workspaceSelect
+          }
+        },
+        orderBy: [
+          {
+            createdAt: "asc"
+          },
+          {
+            id: "asc"
+          }
+        ],
+        where: {
+          userId
+        }
+      });
+    },
+
     listByWorkspaceId(
       workspaceId: string
     ): Promise<WorkspaceMembershipWithUser[]> {

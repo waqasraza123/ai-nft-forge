@@ -174,6 +174,7 @@ type StudioSettingsRepositorySet = {
     findFirstByOwnerUserId(ownerUserId: string): Promise<BrandRecord | null>;
     findFirstBySlug(slug: string): Promise<BrandRecord | null>;
     listByOwnerUserId(ownerUserId: string): Promise<BrandRecord[]>;
+    listByWorkspaceId(workspaceId: string): Promise<BrandRecord[]>;
     updateByIdForOwner(input: {
       customDomain?: string | null;
       id: string;
@@ -327,10 +328,15 @@ type StudioSettingsRepositorySet = {
       slug: string;
       status?: "active" | "archived" | "suspended";
     }): Promise<WorkspaceRecord>;
+    findByIdForOwner(input: {
+      id: string;
+      ownerUserId: string;
+    }): Promise<WorkspaceRecord | null>;
     findBySlug(slug: string): Promise<WorkspaceRecord | null>;
     findFirstByOwnerUserId(
       ownerUserId: string
     ): Promise<WorkspaceRecord | null>;
+    listByOwnerUserId(ownerUserId: string): Promise<WorkspaceRecord[]>;
     updateByIdForOwner(input: {
       id: string;
       name: string;
@@ -659,14 +665,22 @@ async function loadOwnerStudioSettings(input: {
   ownerUserId: string;
   repositories: StudioSettingsRepositorySet;
   role: StudioWorkspaceRole;
+  workspaceId?: string | null | undefined;
 }) {
-  const [owner, workspace, brands] = await Promise.all([
-    input.repositories.userRepository.findById(input.ownerUserId),
-    input.repositories.workspaceRepository.findFirstByOwnerUserId(
-      input.ownerUserId
-    ),
-    input.repositories.brandRepository.listByOwnerUserId(input.ownerUserId)
-  ]);
+  const owner = await input.repositories.userRepository.findById(
+    input.ownerUserId
+  );
+  const workspace = input.workspaceId
+    ? await input.repositories.workspaceRepository.findByIdForOwner({
+        id: input.workspaceId,
+        ownerUserId: input.ownerUserId
+      })
+    : await input.repositories.workspaceRepository.findFirstByOwnerUserId(
+        input.ownerUserId
+      );
+  const brands = workspace
+    ? await input.repositories.brandRepository.listByWorkspaceId(workspace.id)
+    : [];
 
   if (!workspace || brands.length === 0 || !owner) {
     return studioSettingsResponseSchema.parse({
@@ -833,13 +847,19 @@ async function requireOwnerWorkspace(input: {
     StudioSettingsRepositorySet,
     "userRepository" | "workspaceRepository"
   >;
+  workspaceId?: string | null | undefined;
 }) {
-  const [owner, workspace] = await Promise.all([
-    input.repositories.userRepository.findById(input.ownerUserId),
-    input.repositories.workspaceRepository.findFirstByOwnerUserId(
-      input.ownerUserId
-    )
-  ]);
+  const owner = await input.repositories.userRepository.findById(
+    input.ownerUserId
+  );
+  const workspace = input.workspaceId
+    ? await input.repositories.workspaceRepository.findByIdForOwner({
+        id: input.workspaceId,
+        ownerUserId: input.ownerUserId
+      })
+    : await input.repositories.workspaceRepository.findFirstByOwnerUserId(
+        input.ownerUserId
+      );
 
   if (!owner || !workspace) {
     throw new StudioSettingsServiceError(
@@ -918,11 +938,13 @@ export function createStudioSettingsService(
     async getStudioSettings(input: {
       ownerUserId: string;
       role?: StudioWorkspaceRole;
+      workspaceId?: string | null;
     }) {
       return loadOwnerStudioSettings({
         ownerUserId: input.ownerUserId,
         repositories: dependencies.repositories,
-        role: input.role ?? "owner"
+        role: input.role ?? "owner",
+        workspaceId: input.workspaceId
       });
     },
 
@@ -942,6 +964,7 @@ export function createStudioSettingsService(
       storyBody?: string | null;
       storyHeadline?: string | null;
       themePreset: "editorial_warm" | "gallery_mono" | "midnight_launch";
+      workspaceId?: string | null;
       wordmark?: string | null;
     }) {
       assertOwnerRole(input.role ?? "owner");
@@ -965,9 +988,14 @@ export function createStudioSettingsService(
 
       return dependencies.runTransaction(async (repositories) => {
         const workspace =
-          await repositories.workspaceRepository.findFirstByOwnerUserId(
-            input.ownerUserId
-          );
+          input.workspaceId
+            ? await repositories.workspaceRepository.findByIdForOwner({
+                id: input.workspaceId,
+                ownerUserId: input.ownerUserId
+              })
+            : await repositories.workspaceRepository.findFirstByOwnerUserId(
+                input.ownerUserId
+              );
 
         if (!workspace) {
           throw new StudioSettingsServiceError(
@@ -1026,6 +1054,7 @@ export function createStudioSettingsService(
       storyBody?: string | null;
       storyHeadline?: string | null;
       themePreset: "editorial_warm" | "gallery_mono" | "midnight_launch";
+      workspaceId?: string | null;
       wordmark?: string | null;
       workspaceName: string;
       workspaceSlug: string;
@@ -1055,10 +1084,17 @@ export function createStudioSettingsService(
       return dependencies.runTransaction(async (repositories) => {
         const [existingWorkspace, existingBrands, ownedPublications] =
           await Promise.all([
-            repositories.workspaceRepository.findFirstByOwnerUserId(
-              input.ownerUserId
-            ),
-            repositories.brandRepository.listByOwnerUserId(input.ownerUserId),
+            input.workspaceId
+              ? repositories.workspaceRepository.findByIdForOwner({
+                  id: input.workspaceId,
+                  ownerUserId: input.ownerUserId
+                })
+              : repositories.workspaceRepository.findFirstByOwnerUserId(
+                  input.ownerUserId
+                ),
+            input.workspaceId
+              ? repositories.brandRepository.listByWorkspaceId(input.workspaceId)
+              : repositories.brandRepository.listByOwnerUserId(input.ownerUserId),
             repositories.publishedCollectionRepository.listByOwnerUserId(
               input.ownerUserId
             )
@@ -1189,7 +1225,8 @@ export function createStudioSettingsService(
         return loadOwnerStudioSettings({
           ownerUserId: input.ownerUserId,
           repositories,
-          role: "owner"
+          role: "owner",
+          workspaceId: workspace.id
         });
       });
     },
@@ -1198,6 +1235,7 @@ export function createStudioSettingsService(
       ownerUserId: string;
       role?: StudioWorkspaceRole;
       walletAddress: string;
+      workspaceId?: string | null;
     }) {
       assertOwnerRole(input.role ?? "owner");
 
@@ -1209,7 +1247,8 @@ export function createStudioSettingsService(
         const now = new Date();
         const { owner, workspace } = await requireOwnerWorkspace({
           ownerUserId: input.ownerUserId,
-          repositories
+          repositories,
+          workspaceId: input.workspaceId
         });
 
         if (
@@ -1331,6 +1370,7 @@ export function createStudioSettingsService(
       ownerUserId: string;
       role?: StudioWorkspaceRole;
       walletAddress: string;
+      workspaceId?: string | null;
     }) {
       assertOwnerRole(input.role ?? "owner");
 
@@ -1342,7 +1382,8 @@ export function createStudioSettingsService(
         const now = new Date();
         const { owner, workspace } = await requireOwnerWorkspace({
           ownerUserId: input.ownerUserId,
-          repositories
+          repositories,
+          workspaceId: input.workspaceId
         });
 
         if (
@@ -1474,13 +1515,15 @@ export function createStudioSettingsService(
       invitationId: string;
       ownerUserId: string;
       role?: StudioWorkspaceRole;
+      workspaceId?: string | null;
     }) {
       assertOwnerRole(input.role ?? "owner");
 
       return dependencies.runTransaction(async (repositories) => {
         const { owner, workspace } = await requireOwnerWorkspace({
           ownerUserId: input.ownerUserId,
-          repositories
+          repositories,
+          workspaceId: input.workspaceId
         });
         const invitation =
           await repositories.workspaceInvitationRepository.findByIdWithWorkspace(
@@ -1538,6 +1581,7 @@ export function createStudioSettingsService(
       justification?: string | null;
       ownerUserId: string;
       role?: StudioWorkspaceRole;
+      workspaceId?: string | null;
     }) {
       assertOperatorRole(input.role ?? "owner");
 
@@ -1548,9 +1592,14 @@ export function createStudioSettingsService(
 
       return dependencies.runTransaction(async (repositories) => {
         const workspace =
-          await repositories.workspaceRepository.findFirstByOwnerUserId(
-            input.ownerUserId
-          );
+          input.workspaceId
+            ? await repositories.workspaceRepository.findByIdForOwner({
+                id: input.workspaceId,
+                ownerUserId: input.ownerUserId
+              })
+            : await repositories.workspaceRepository.findFirstByOwnerUserId(
+                input.ownerUserId
+              );
 
         if (!workspace) {
           throw new StudioSettingsServiceError(
@@ -1638,6 +1687,7 @@ export function createStudioSettingsService(
       ownerUserId: string;
       requestId: string;
       role?: StudioWorkspaceRole;
+      workspaceId?: string | null;
     }) {
       assertOwnerRole(input.role ?? "owner");
 
@@ -1645,7 +1695,8 @@ export function createStudioSettingsService(
         const now = new Date();
         const { owner, workspace } = await requireOwnerWorkspace({
           ownerUserId: input.ownerUserId,
-          repositories
+          repositories,
+          workspaceId: input.workspaceId
         });
         const request = await requireRoleEscalationRequest({
           repositories,
@@ -1745,6 +1796,7 @@ export function createStudioSettingsService(
       ownerUserId: string;
       requestId: string;
       role?: StudioWorkspaceRole;
+      workspaceId?: string | null;
     }) {
       assertOwnerRole(input.role ?? "owner");
 
@@ -1752,7 +1804,8 @@ export function createStudioSettingsService(
         const now = new Date();
         const { owner, workspace } = await requireOwnerWorkspace({
           ownerUserId: input.ownerUserId,
-          repositories
+          repositories,
+          workspaceId: input.workspaceId
         });
         const request = await requireRoleEscalationRequest({
           repositories,
@@ -1800,14 +1853,20 @@ export function createStudioSettingsService(
       ownerUserId: string;
       requestId: string;
       role?: StudioWorkspaceRole;
+      workspaceId?: string | null;
     }) {
       assertOperatorRole(input.role ?? "owner");
 
       return dependencies.runTransaction(async (repositories) => {
         const workspace =
-          await repositories.workspaceRepository.findFirstByOwnerUserId(
-            input.ownerUserId
-          );
+          input.workspaceId
+            ? await repositories.workspaceRepository.findByIdForOwner({
+                id: input.workspaceId,
+                ownerUserId: input.ownerUserId
+              })
+            : await repositories.workspaceRepository.findFirstByOwnerUserId(
+                input.ownerUserId
+              );
 
         if (!workspace) {
           throw new StudioSettingsServiceError(
@@ -1875,13 +1934,15 @@ export function createStudioSettingsService(
       membershipId: string;
       ownerUserId: string;
       role?: StudioWorkspaceRole;
+      workspaceId?: string | null;
     }) {
       assertOwnerRole(input.role ?? "owner");
 
       return dependencies.runTransaction(async (repositories) => {
         const { owner, workspace } = await requireOwnerWorkspace({
           ownerUserId: input.ownerUserId,
-          repositories
+          repositories,
+          workspaceId: input.workspaceId
         });
         const membership =
           await repositories.workspaceMembershipRepository.findByIdWithUserAndWorkspace(

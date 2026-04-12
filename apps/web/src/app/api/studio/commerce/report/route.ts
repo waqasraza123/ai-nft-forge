@@ -29,7 +29,7 @@ export async function GET(request: Request) {
               brandSlug: query.brandSlug
             }
           : {}),
-        ownerUserId: session.ownerUserId
+        workspaceId: session.workspace.id
       });
 
       return new NextResponse(result.csv, {
@@ -47,7 +47,7 @@ export async function GET(request: Request) {
             brandSlug: query.brandSlug
           }
         : {}),
-      ownerUserId: session.ownerUserId
+      workspaceId: session.workspace.id
     });
 
     return NextResponse.json(result);

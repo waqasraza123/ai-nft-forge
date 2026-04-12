@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createOpsService } from "./service";
 
+const defaultWorkspaceId = "workspace_1";
+
 describe("createOpsService", () => {
   it("acknowledges an active owner-scoped alert", async () => {
     const acknowledge = vi.fn().mockResolvedValue({
@@ -21,25 +23,25 @@ describe("createOpsService", () => {
       now: () => new Date("2026-04-07T10:00:00.000Z"),
       repositories: {
         opsAlertMuteRepository: {
-          deleteByOwnerUserIdAndCode: vi.fn(),
-          findActiveByOwnerUserIdAndCode: vi.fn().mockResolvedValue(null),
+          deleteByWorkspaceIdAndCode: vi.fn(),
+          findActiveByWorkspaceIdAndCode: vi.fn().mockResolvedValue(null),
           upsert: vi.fn()
         },
         opsAlertRoutingPolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertEscalationPolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertSchedulePolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertStateRepository: {
           acknowledge,
-          findByIdForOwner: vi.fn().mockResolvedValue({
+          findByIdForWorkspace: vi.fn().mockResolvedValue({
             acknowledgedAt: null,
             acknowledgedByUserId: null,
             code: "QUEUE_STALLED",
@@ -58,7 +60,8 @@ describe("createOpsService", () => {
 
     const result = await service.acknowledgeAlert({
       alertStateId: "alert_state_1",
-      ownerUserId: "user_1"
+      ownerUserId: "user_1",
+      workspaceId: defaultWorkspaceId
     });
 
     expect(acknowledge).toHaveBeenCalledWith({
@@ -74,25 +77,25 @@ describe("createOpsService", () => {
       now: () => new Date("2026-04-07T10:00:00.000Z"),
       repositories: {
         opsAlertMuteRepository: {
-          deleteByOwnerUserIdAndCode: vi.fn(),
-          findActiveByOwnerUserIdAndCode: vi.fn().mockResolvedValue(null),
+          deleteByWorkspaceIdAndCode: vi.fn(),
+          findActiveByWorkspaceIdAndCode: vi.fn().mockResolvedValue(null),
           upsert: vi.fn()
         },
         opsAlertRoutingPolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertEscalationPolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertSchedulePolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertStateRepository: {
           acknowledge: vi.fn(),
-          findByIdForOwner: vi.fn().mockResolvedValue({
+          findByIdForWorkspace: vi.fn().mockResolvedValue({
             acknowledgedAt: null,
             acknowledgedByUserId: null,
             code: "QUEUE_STALLED",
@@ -112,7 +115,8 @@ describe("createOpsService", () => {
     await expect(
       service.acknowledgeAlert({
         alertStateId: "alert_state_1",
-        ownerUserId: "user_1"
+        ownerUserId: "user_1",
+        workspaceId: defaultWorkspaceId
       })
     ).rejects.toMatchObject({
       code: "ALERT_NOT_ACTIVE",
@@ -130,25 +134,25 @@ describe("createOpsService", () => {
       now: () => new Date("2026-04-07T10:00:00.000Z"),
       repositories: {
         opsAlertMuteRepository: {
-          deleteByOwnerUserIdAndCode: vi.fn(),
-          findActiveByOwnerUserIdAndCode: vi.fn().mockResolvedValue(null),
+          deleteByWorkspaceIdAndCode: vi.fn(),
+          findActiveByWorkspaceIdAndCode: vi.fn().mockResolvedValue(null),
           upsert
         },
         opsAlertRoutingPolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertEscalationPolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertSchedulePolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertStateRepository: {
           acknowledge: vi.fn(),
-          findByIdForOwner: vi.fn().mockResolvedValue({
+          findByIdForWorkspace: vi.fn().mockResolvedValue({
             acknowledgedAt: null,
             acknowledgedByUserId: null,
             code: "QUEUE_STALLED",
@@ -168,45 +172,47 @@ describe("createOpsService", () => {
     const result = await service.muteAlert({
       alertStateId: "alert_state_1",
       durationHours: 24,
-      ownerUserId: "user_1"
+      ownerUserId: "user_1",
+      workspaceId: defaultWorkspaceId
     });
 
     expect(upsert).toHaveBeenCalledWith({
       code: "QUEUE_STALLED",
       mutedUntil: new Date("2026-04-08T10:00:00.000Z"),
-      ownerUserId: "user_1"
+      ownerUserId: "user_1",
+      workspaceId: defaultWorkspaceId
     });
     expect(result.mute.id).toBe("mute_1");
     expect(result.alert.mutedUntil).toBe("2026-04-08T10:00:00.000Z");
   });
 
   it("removes an existing owner-scoped alert mute", async () => {
-    const deleteByOwnerUserIdAndCode = vi.fn().mockResolvedValue({
+    const deleteByWorkspaceIdAndCode = vi.fn().mockResolvedValue({
       count: 1
     });
     const service = createOpsService({
       now: () => new Date("2026-04-07T10:00:00.000Z"),
       repositories: {
         opsAlertMuteRepository: {
-          deleteByOwnerUserIdAndCode,
-          findActiveByOwnerUserIdAndCode: vi.fn().mockResolvedValue(null),
+          deleteByWorkspaceIdAndCode,
+          findActiveByWorkspaceIdAndCode: vi.fn().mockResolvedValue(null),
           upsert: vi.fn()
         },
         opsAlertRoutingPolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertEscalationPolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertSchedulePolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertStateRepository: {
           acknowledge: vi.fn(),
-          findByIdForOwner: vi.fn().mockResolvedValue({
+          findByIdForWorkspace: vi.fn().mockResolvedValue({
             acknowledgedAt: null,
             acknowledgedByUserId: null,
             code: "QUEUE_STALLED",
@@ -225,56 +231,58 @@ describe("createOpsService", () => {
 
     const result = await service.unmuteAlert({
       alertStateId: "alert_state_1",
-      ownerUserId: "user_1"
+      ownerUserId: "user_1",
+      workspaceId: defaultWorkspaceId
     });
 
-    expect(deleteByOwnerUserIdAndCode).toHaveBeenCalledWith({
+    expect(deleteByWorkspaceIdAndCode).toHaveBeenCalledWith({
       code: "QUEUE_STALLED",
-      ownerUserId: "user_1"
+      workspaceId: defaultWorkspaceId
     });
     expect(result.code).toBe("QUEUE_STALLED");
     expect(result.removed).toBe(true);
   });
 
   it("removes an owner-scoped alert mute by code", async () => {
-    const deleteByOwnerUserIdAndCode = vi.fn().mockResolvedValue({
+    const deleteByWorkspaceIdAndCode = vi.fn().mockResolvedValue({
       count: 1
     });
     const service = createOpsService({
       now: () => new Date("2026-04-07T10:00:00.000Z"),
       repositories: {
         opsAlertMuteRepository: {
-          deleteByOwnerUserIdAndCode,
-          findActiveByOwnerUserIdAndCode: vi.fn().mockResolvedValue(null),
+          deleteByWorkspaceIdAndCode,
+          findActiveByWorkspaceIdAndCode: vi.fn().mockResolvedValue(null),
           upsert: vi.fn()
         },
         opsAlertRoutingPolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertEscalationPolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertSchedulePolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertStateRepository: {
           acknowledge: vi.fn(),
-          findByIdForOwner: vi.fn()
+          findByIdForWorkspace: vi.fn()
         }
       }
     });
 
     const result = await service.unmuteAlertByCode({
       code: "QUEUE_STALLED",
-      ownerUserId: "user_1"
+      ownerUserId: "user_1",
+      workspaceId: defaultWorkspaceId
     });
 
-    expect(deleteByOwnerUserIdAndCode).toHaveBeenCalledWith({
+    expect(deleteByWorkspaceIdAndCode).toHaveBeenCalledWith({
       code: "QUEUE_STALLED",
-      ownerUserId: "user_1"
+      workspaceId: defaultWorkspaceId
     });
     expect(result).toEqual({
       code: "QUEUE_STALLED",
@@ -293,38 +301,40 @@ describe("createOpsService", () => {
       now: () => new Date("2026-04-07T10:00:00.000Z"),
       repositories: {
         opsAlertMuteRepository: {
-          deleteByOwnerUserIdAndCode: vi.fn(),
-          findActiveByOwnerUserIdAndCode: vi.fn().mockResolvedValue(null),
+          deleteByWorkspaceIdAndCode: vi.fn(),
+          findActiveByWorkspaceIdAndCode: vi.fn().mockResolvedValue(null),
           upsert: vi.fn()
         },
         opsAlertRoutingPolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert
         },
         opsAlertEscalationPolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertSchedulePolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertStateRepository: {
           acknowledge: vi.fn(),
-          findByIdForOwner: vi.fn()
+          findByIdForWorkspace: vi.fn()
         }
       }
     });
 
     const result = await service.updateAlertRoutingPolicy({
       ownerUserId: "user_1",
-      webhookMode: "critical_only"
+      webhookMode: "critical_only",
+      workspaceId: defaultWorkspaceId
     });
 
     expect(upsert).toHaveBeenCalledWith({
       ownerUserId: "user_1",
       webhookEnabled: true,
-      webhookMinimumSeverity: "critical"
+      webhookMinimumSeverity: "critical",
+      workspaceId: defaultWorkspaceId
     });
     expect(result.policy).toEqual({
       id: "routing_1",
@@ -335,42 +345,43 @@ describe("createOpsService", () => {
   });
 
   it("resets the owner-scoped alert routing policy back to default", async () => {
-    const deleteByOwnerUserId = vi.fn().mockResolvedValue({
+    const deleteByWorkspaceId = vi.fn().mockResolvedValue({
       count: 1
     });
     const service = createOpsService({
       now: () => new Date("2026-04-07T10:00:00.000Z"),
       repositories: {
         opsAlertMuteRepository: {
-          deleteByOwnerUserIdAndCode: vi.fn(),
-          findActiveByOwnerUserIdAndCode: vi.fn().mockResolvedValue(null),
+          deleteByWorkspaceIdAndCode: vi.fn(),
+          findActiveByWorkspaceIdAndCode: vi.fn().mockResolvedValue(null),
           upsert: vi.fn()
         },
         opsAlertRoutingPolicyRepository: {
-          deleteByOwnerUserId,
+          deleteByWorkspaceId,
           upsert: vi.fn()
         },
         opsAlertEscalationPolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertSchedulePolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertStateRepository: {
           acknowledge: vi.fn(),
-          findByIdForOwner: vi.fn()
+          findByIdForWorkspace: vi.fn()
         }
       }
     });
 
     const result = await service.resetAlertRoutingPolicy({
-      ownerUserId: "user_1"
+      ownerUserId: "user_1",
+      workspaceId: defaultWorkspaceId
     });
 
-    expect(deleteByOwnerUserId).toHaveBeenCalledWith({
-      ownerUserId: "user_1"
+    expect(deleteByWorkspaceId).toHaveBeenCalledWith({
+      workspaceId: defaultWorkspaceId
     });
     expect(result.policy).toEqual({
       id: null,
@@ -391,25 +402,25 @@ describe("createOpsService", () => {
       now: () => new Date("2026-04-07T10:00:00.000Z"),
       repositories: {
         opsAlertMuteRepository: {
-          deleteByOwnerUserIdAndCode: vi.fn(),
-          findActiveByOwnerUserIdAndCode: vi.fn().mockResolvedValue(null),
+          deleteByWorkspaceIdAndCode: vi.fn(),
+          findActiveByWorkspaceIdAndCode: vi.fn().mockResolvedValue(null),
           upsert: vi.fn()
         },
         opsAlertRoutingPolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertEscalationPolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert
         },
         opsAlertSchedulePolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertStateRepository: {
           acknowledge: vi.fn(),
-          findByIdForOwner: vi.fn()
+          findByIdForWorkspace: vi.fn()
         }
       }
     });
@@ -417,13 +428,15 @@ describe("createOpsService", () => {
     const result = await service.updateAlertEscalationPolicy({
       firstReminderDelayMinutes: 60,
       ownerUserId: "user_1",
-      repeatReminderIntervalMinutes: 180
+      repeatReminderIntervalMinutes: 180,
+      workspaceId: defaultWorkspaceId
     });
 
     expect(upsert).toHaveBeenCalledWith({
       firstReminderDelayMinutes: 60,
       ownerUserId: "user_1",
-      repeatReminderIntervalMinutes: 180
+      repeatReminderIntervalMinutes: 180,
+      workspaceId: defaultWorkspaceId
     });
     expect(result.policy).toEqual({
       firstReminderDelayMinutes: 60,
@@ -435,42 +448,43 @@ describe("createOpsService", () => {
   });
 
   it("resets the owner-scoped alert escalation policy back to default", async () => {
-    const deleteByOwnerUserId = vi.fn().mockResolvedValue({
+    const deleteByWorkspaceId = vi.fn().mockResolvedValue({
       count: 1
     });
     const service = createOpsService({
       now: () => new Date("2026-04-07T10:00:00.000Z"),
       repositories: {
         opsAlertMuteRepository: {
-          deleteByOwnerUserIdAndCode: vi.fn(),
-          findActiveByOwnerUserIdAndCode: vi.fn().mockResolvedValue(null),
+          deleteByWorkspaceIdAndCode: vi.fn(),
+          findActiveByWorkspaceIdAndCode: vi.fn().mockResolvedValue(null),
           upsert: vi.fn()
         },
         opsAlertRoutingPolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertEscalationPolicyRepository: {
-          deleteByOwnerUserId,
+          deleteByWorkspaceId,
           upsert: vi.fn()
         },
         opsAlertSchedulePolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertStateRepository: {
           acknowledge: vi.fn(),
-          findByIdForOwner: vi.fn()
+          findByIdForWorkspace: vi.fn()
         }
       }
     });
 
     const result = await service.resetAlertEscalationPolicy({
-      ownerUserId: "user_1"
+      ownerUserId: "user_1",
+      workspaceId: defaultWorkspaceId
     });
 
-    expect(deleteByOwnerUserId).toHaveBeenCalledWith({
-      ownerUserId: "user_1"
+    expect(deleteByWorkspaceId).toHaveBeenCalledWith({
+      workspaceId: defaultWorkspaceId
     });
     expect(result.policy).toEqual({
       firstReminderDelayMinutes: null,
@@ -494,25 +508,25 @@ describe("createOpsService", () => {
       now: () => new Date("2026-04-07T10:00:00.000Z"),
       repositories: {
         opsAlertMuteRepository: {
-          deleteByOwnerUserIdAndCode: vi.fn(),
-          findActiveByOwnerUserIdAndCode: vi.fn().mockResolvedValue(null),
+          deleteByWorkspaceIdAndCode: vi.fn(),
+          findActiveByWorkspaceIdAndCode: vi.fn().mockResolvedValue(null),
           upsert: vi.fn()
         },
         opsAlertRoutingPolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertEscalationPolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertSchedulePolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert
         },
         opsAlertStateRepository: {
           acknowledge: vi.fn(),
-          findByIdForOwner: vi.fn()
+          findByIdForWorkspace: vi.fn()
         }
       }
     });
@@ -522,7 +536,8 @@ describe("createOpsService", () => {
       endMinuteOfDay: 1020,
       ownerUserId: "user_1",
       startMinuteOfDay: 540,
-      timezone: "America/New_York"
+      timezone: "America/New_York",
+      workspaceId: defaultWorkspaceId
     });
 
     expect(upsert).toHaveBeenCalledWith({
@@ -530,7 +545,8 @@ describe("createOpsService", () => {
       endMinuteOfDay: 1020,
       ownerUserId: "user_1",
       startMinuteOfDay: 540,
-      timezone: "America/New_York"
+      timezone: "America/New_York",
+      workspaceId: defaultWorkspaceId
     });
     expect(result.policy).toEqual({
       activeDays: ["mon", "tue", "wed", "thu", "fri"],
@@ -544,42 +560,43 @@ describe("createOpsService", () => {
   });
 
   it("resets the owner-scoped alert delivery schedule back to default", async () => {
-    const deleteByOwnerUserId = vi.fn().mockResolvedValue({
+    const deleteByWorkspaceId = vi.fn().mockResolvedValue({
       count: 1
     });
     const service = createOpsService({
       now: () => new Date("2026-04-07T10:00:00.000Z"),
       repositories: {
         opsAlertMuteRepository: {
-          deleteByOwnerUserIdAndCode: vi.fn(),
-          findActiveByOwnerUserIdAndCode: vi.fn().mockResolvedValue(null),
+          deleteByWorkspaceIdAndCode: vi.fn(),
+          findActiveByWorkspaceIdAndCode: vi.fn().mockResolvedValue(null),
           upsert: vi.fn()
         },
         opsAlertRoutingPolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertEscalationPolicyRepository: {
-          deleteByOwnerUserId: vi.fn(),
+          deleteByWorkspaceId: vi.fn(),
           upsert: vi.fn()
         },
         opsAlertSchedulePolicyRepository: {
-          deleteByOwnerUserId,
+          deleteByWorkspaceId,
           upsert: vi.fn()
         },
         opsAlertStateRepository: {
           acknowledge: vi.fn(),
-          findByIdForOwner: vi.fn()
+          findByIdForWorkspace: vi.fn()
         }
       }
     });
 
     const result = await service.resetAlertSchedulePolicy({
-      ownerUserId: "user_1"
+      ownerUserId: "user_1",
+      workspaceId: defaultWorkspaceId
     });
 
-    expect(deleteByOwnerUserId).toHaveBeenCalledWith({
-      ownerUserId: "user_1"
+    expect(deleteByWorkspaceId).toHaveBeenCalledWith({
+      workspaceId: defaultWorkspaceId
     });
     expect(result.policy).toEqual({
       activeDays: [],

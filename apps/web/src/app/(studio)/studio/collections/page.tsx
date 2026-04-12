@@ -6,13 +6,13 @@ import { StudioCollectionsClient } from "./studio-collections-client";
 export default async function StudioCollectionsPage() {
   const access = await getCurrentStudioAccess();
 
-  if (!access) {
+  if (!access || !access.workspace) {
     return null;
   }
 
   const result =
     await createRuntimeCollectionDraftService().listCollectionDrafts({
-      ownerUserId: access.ownerUserId
+      workspaceId: access.workspace.id
     });
 
   return (

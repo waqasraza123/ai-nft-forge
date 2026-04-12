@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import { GeneratedAssetServiceError } from "./error";
 import { createGeneratedAssetService } from "./service";
 
+const defaultWorkspaceId = "workspace_1";
+
 function createGeneratedAssetHarness() {
   const assets = new Map<
     string,
@@ -54,23 +56,23 @@ function createGeneratedAssetHarness() {
       }
     ]
   ]);
-  const service = createGeneratedAssetService({
+  const baseService = createGeneratedAssetService({
     now: () => new Date("2026-04-06T00:10:00.000Z"),
     repositories: {
       generatedAssetRepository: {
-        async findByIdForOwner(input) {
+        async findByIdForWorkspace(input) {
           const asset = assets.get(input.id);
 
-          if (!asset || asset.ownerUserId !== input.ownerUserId) {
+          if (!asset || input.workspaceId !== defaultWorkspaceId) {
             return null;
           }
 
           return asset;
         },
-        async updateModerationByIdForOwner(input) {
+        async updateModerationByIdForWorkspace(input) {
           const asset = assets.get(input.id);
 
-          if (!asset || asset.ownerUserId !== input.ownerUserId) {
+          if (!asset || input.workspaceId !== defaultWorkspaceId) {
             return null;
           }
 
@@ -102,7 +104,32 @@ function createGeneratedAssetHarness() {
 
   return {
     objectHeads,
-    service
+    service: {
+      async createDownloadIntent(input: {
+        generatedAssetId: string;
+        ownerUserId: string;
+      }) {
+        void input.ownerUserId;
+
+        return baseService.createDownloadIntent({
+          generatedAssetId: input.generatedAssetId,
+          workspaceId: defaultWorkspaceId
+        });
+      },
+      async updateModeration(input: {
+        generatedAssetId: string;
+        moderationStatus: "approved" | "pending_review" | "rejected";
+        ownerUserId: string;
+      }) {
+        void input.ownerUserId;
+
+        return baseService.updateModeration({
+          generatedAssetId: input.generatedAssetId,
+          moderationStatus: input.moderationStatus,
+          workspaceId: defaultWorkspaceId
+        });
+      }
+    }
   };
 }
 

@@ -8,6 +8,7 @@ import {
   createPublishedCollectionRepository,
   createSourceAssetRepository,
   createUserRepository,
+  createWorkspaceRepository,
   type DatabaseClient
 } from "@ai-nft-forge/database";
 import {
@@ -43,14 +44,15 @@ export async function reconcileRuntimeOpsWithDependencies({
   const objectStorageClient = createObjectStorageClient(rawEnvironment);
   const storageConfig = getStorageConfig(rawEnvironment);
   const userRepository = createUserRepository(databaseClient);
-  const ownerUserIds = await userRepository.listIds();
+  const workspaces = await createWorkspaceRepository(databaseClient).listAll();
   const onchainInspector =
     createPublishedCollectionOnchainInspector(rawEnvironment);
   const service = createOpsReconciliationService({
     now: () => new Date(),
     onchain: onchainInspector,
     repositories: {
-      collectionDraftRepository: createCollectionDraftRepository(databaseClient),
+      collectionDraftRepository:
+        createCollectionDraftRepository(databaseClient),
       generatedAssetRepository: createGeneratedAssetRepository(databaseClient),
       opsReconciliationIssueRepository:
         createOpsReconciliationIssueRepository(databaseClient),
@@ -98,9 +100,10 @@ export async function reconcileRuntimeOpsWithDependencies({
   let runCount = 0;
 
   try {
-    for (const ownerUserId of ownerUserIds) {
+    for (const workspace of workspaces) {
       const result = await service.run({
-        ownerUserId
+        ownerUserId: workspace.ownerUserId,
+        workspaceId: workspace.id
       });
 
       runCount += 1;
@@ -114,14 +117,16 @@ export async function reconcileRuntimeOpsWithDependencies({
     logger.info("Ops reconciliation completed", {
       failedRunCount,
       issueCount,
-      ownerCount: ownerUserIds.length,
+      ownerCount: new Set(workspaces.map((workspace) => workspace.ownerUserId))
+        .size,
       runCount
     });
 
     return {
       failedRunCount,
       issueCount,
-      ownerCount: ownerUserIds.length,
+      ownerCount: new Set(workspaces.map((workspace) => workspace.ownerUserId))
+        .size,
       runCount
     };
   } finally {

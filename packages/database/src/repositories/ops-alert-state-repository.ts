@@ -35,6 +35,7 @@ export function createOpsAlertStateRepository(
       ownerUserId: string;
       severity: OpsAlertSeverity;
       title: string;
+      workspaceId: string;
     }): Promise<OpsAlertState> {
       return database.opsAlertState.create({
         data: {
@@ -50,7 +51,8 @@ export function createOpsAlertStateRepository(
           ownerUserId: input.ownerUserId,
           severity: input.severity,
           status: "active",
-          title: input.title
+          title: input.title,
+          workspaceId: input.workspaceId
         }
       });
     },
@@ -63,6 +65,18 @@ export function createOpsAlertStateRepository(
         where: {
           id: input.id,
           ownerUserId: input.ownerUserId
+        }
+      });
+    },
+
+    findByIdForWorkspace(input: {
+      id: string;
+      workspaceId: string;
+    }): Promise<OpsAlertState | null> {
+      return database.opsAlertState.findFirst({
+        where: {
+          id: input.id,
+          workspaceId: input.workspaceId
         }
       });
     },
@@ -84,6 +98,23 @@ export function createOpsAlertStateRepository(
       });
     },
 
+    listActiveByWorkspaceId(workspaceId: string): Promise<OpsAlertState[]> {
+      return database.opsAlertState.findMany({
+        orderBy: [
+          {
+            lastObservedAt: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        where: {
+          status: "active",
+          workspaceId
+        }
+      });
+    },
+
     listByOwnerUserIdAndCodes(input: {
       codes: string[];
       ownerUserId: string;
@@ -98,6 +129,24 @@ export function createOpsAlertStateRepository(
             in: input.codes
           },
           ownerUserId: input.ownerUserId
+        }
+      });
+    },
+
+    listByWorkspaceIdAndCodes(input: {
+      codes: string[];
+      workspaceId: string;
+    }): Promise<OpsAlertState[]> {
+      if (input.codes.length === 0) {
+        return Promise.resolve([]);
+      }
+
+      return database.opsAlertState.findMany({
+        where: {
+          code: {
+            in: input.codes
+          },
+          workspaceId: input.workspaceId
         }
       });
     },

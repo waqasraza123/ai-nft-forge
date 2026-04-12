@@ -24,6 +24,10 @@ function createDefaultPublicationStorefrontState() {
 }
 
 function createCollectionDraftHarness() {
+  const workspaceIdByOwnerUserId = new Map([
+    ["user_1", "workspace_user_1"],
+    ["user_2", "workspace_user_2"]
+  ]);
   const nowValues = [
     "2026-04-08T00:00:00.000Z",
     "2026-04-08T00:05:00.000Z",
@@ -133,7 +137,7 @@ function createCollectionDraftHarness() {
       destinationKey: string;
       sourceBucket: string;
       sourceKey: string;
-      }
+    }
   >();
   const verifiedDeploymentTransactions: Array<{
     chainKey: "base" | "base-sepolia";
@@ -290,6 +294,30 @@ function createCollectionDraftHarness() {
     return value;
   }
 
+  function getWorkspaceIdForOwnerUserId(ownerUserId: string) {
+    return (
+      workspaceIdByOwnerUserId.get(ownerUserId) ?? `workspace_${ownerUserId}`
+    );
+  }
+
+  function getOwnerUserIdForWorkspaceId(workspaceId: string) {
+    return (
+      [...workspaceIdByOwnerUserId.entries()].find(
+        ([, candidateWorkspaceId]) => candidateWorkspaceId === workspaceId
+      )?.[0] ?? workspaceId.replace(/^workspace_/, "")
+    );
+  }
+
+  function getWorkspaceIdForDraft(collectionDraftId: string) {
+    const draft = drafts.get(collectionDraftId);
+
+    if (!draft) {
+      throw new Error("Collection draft was not found in the test harness.");
+    }
+
+    return getWorkspaceIdForOwnerUserId(draft.ownerUserId);
+  }
+
   function listPublicationTargetsForOwner(ownerUserId: string) {
     return publicationTargets.get(ownerUserId) ?? [];
   }
@@ -341,20 +369,26 @@ function createCollectionDraftHarness() {
 
   const repositories = {
     brandRepository: {
-      async findByIdForOwner(input: { id: string; ownerUserId: string }) {
+      async findByIdForWorkspace(input: { id: string; workspaceId: string }) {
         return (
-          listPublicationTargetsForOwner(input.ownerUserId).find(
-            (target) => target.id === input.id
-          ) ?? null
+          listPublicationTargetsForOwner(
+            getOwnerUserIdForWorkspaceId(input.workspaceId)
+          ).find((target) => target.id === input.id) ?? null
         );
       },
 
-      async findFirstByOwnerUserId(ownerUserId: string) {
-        return listPublicationTargetsForOwner(ownerUserId)[0] ?? null;
+      async findFirstByWorkspaceId(workspaceId: string) {
+        return (
+          listPublicationTargetsForOwner(
+            getOwnerUserIdForWorkspaceId(workspaceId)
+          )[0] ?? null
+        );
       },
 
-      async listByOwnerUserId(ownerUserId: string) {
-        return listPublicationTargetsForOwner(ownerUserId);
+      async listByWorkspaceId(workspaceId: string) {
+        return listPublicationTargetsForOwner(
+          getOwnerUserIdForWorkspaceId(workspaceId)
+        );
       }
     },
     collectionDraftItemRepository: {
@@ -456,6 +490,7 @@ function createCollectionDraftHarness() {
         ownerUserId: string;
         slug: string;
         title: string;
+        workspaceId: string;
       }) {
         draftIndex += 1;
         const timestamp = nextDate();
@@ -475,42 +510,55 @@ function createCollectionDraftHarness() {
         return draft;
       },
 
-      async findByIdForOwner(input: { id: string; ownerUserId: string }) {
+      async findByIdForWorkspace(input: { id: string; workspaceId: string }) {
         const draft = drafts.get(input.id);
 
-        if (!draft || draft.ownerUserId !== input.ownerUserId) {
+        if (
+          !draft ||
+          draft.ownerUserId !== getOwnerUserIdForWorkspaceId(input.workspaceId)
+        ) {
           return null;
         }
 
         return draft;
       },
 
-      async findDetailedByIdForOwner(input: {
+      async findDetailedByIdForWorkspace(input: {
         id: string;
-        ownerUserId: string;
+        workspaceId: string;
       }) {
         const draft = drafts.get(input.id);
 
-        if (!draft || draft.ownerUserId !== input.ownerUserId) {
+        if (
+          !draft ||
+          draft.ownerUserId !== getOwnerUserIdForWorkspaceId(input.workspaceId)
+        ) {
           return null;
         }
 
         return serializeDraft(draft.id);
       },
 
-      async findBySlugForOwner(input: { ownerUserId: string; slug: string }) {
+      async findBySlugForWorkspace(input: {
+        slug: string;
+        workspaceId: string;
+      }) {
         return (
           [...drafts.values()].find(
             (draft) =>
-              draft.ownerUserId === input.ownerUserId &&
+              draft.ownerUserId ===
+                getOwnerUserIdForWorkspaceId(input.workspaceId) &&
               draft.slug === input.slug
           ) ?? null
         );
       },
 
-      async listByOwnerUserId(ownerUserId: string) {
+      async listByWorkspaceId(workspaceId: string) {
         return [...drafts.values()]
-          .filter((draft) => draft.ownerUserId === ownerUserId)
+          .filter(
+            (draft) =>
+              draft.ownerUserId === getOwnerUserIdForWorkspaceId(workspaceId)
+          )
           .sort(
             (left, right) =>
               right.updatedAt.getTime() - left.updatedAt.getTime()
@@ -519,17 +567,20 @@ function createCollectionDraftHarness() {
           .filter(Boolean);
       },
 
-      async updateByIdForOwner(input: {
+      async updateByIdForWorkspace(input: {
         description: string | null;
         id: string;
-        ownerUserId: string;
         slug: string;
         status: "draft" | "review_ready";
         title: string;
+        workspaceId: string;
       }) {
         const draft = drafts.get(input.id);
 
-        if (!draft || draft.ownerUserId !== input.ownerUserId) {
+        if (
+          !draft ||
+          draft.ownerUserId !== getOwnerUserIdForWorkspaceId(input.workspaceId)
+        ) {
           throw new Error(
             "Collection draft was not found in the test harness."
           );
@@ -547,26 +598,58 @@ function createCollectionDraftHarness() {
         drafts.set(updatedDraft.id, updatedDraft);
 
         return updatedDraft;
+      },
+
+      async updateStatusByIdForWorkspace(input: {
+        id: string;
+        status: "draft" | "review_ready";
+        workspaceId: string;
+      }) {
+        const draft = drafts.get(input.id);
+
+        if (
+          !draft ||
+          draft.ownerUserId !== getOwnerUserIdForWorkspaceId(input.workspaceId)
+        ) {
+          return null;
+        }
+
+        const updatedDraft = {
+          ...draft,
+          status: input.status,
+          updatedAt: nextDate()
+        };
+
+        drafts.set(updatedDraft.id, updatedDraft);
+
+        return updatedDraft;
       }
     },
 
     generatedAssetRepository: {
-      async findByIdForOwner(input: { id: string; ownerUserId: string }) {
+      async findByIdForWorkspace(input: { id: string; workspaceId: string }) {
         const asset = generatedAssets.get(input.id);
 
-        if (!asset || asset.ownerUserId !== input.ownerUserId) {
+        if (
+          !asset ||
+          asset.ownerUserId !== getOwnerUserIdForWorkspaceId(input.workspaceId)
+        ) {
           return null;
         }
 
         return asset;
       },
 
-      async listRecentForOwnerUserId(input: {
+      async listRecentForWorkspaceId(input: {
         limit: number;
-        ownerUserId: string;
+        workspaceId: string;
       }) {
         return [...generatedAssets.values()]
-          .filter((asset) => asset.ownerUserId === input.ownerUserId)
+          .filter(
+            (asset) =>
+              asset.ownerUserId ===
+              getOwnerUserIdForWorkspaceId(input.workspaceId)
+          )
           .sort(
             (left, right) =>
               right.createdAt.getTime() - left.createdAt.getTime()
@@ -576,7 +659,7 @@ function createCollectionDraftHarness() {
     },
 
     opsReconciliationIssueRepository: {
-      async listOpenByOwnerUserId() {
+      async listOpenByWorkspaceId() {
         return openReconciliationIssues;
       }
     },
@@ -684,6 +767,7 @@ function createCollectionDraftHarness() {
         storefrontStatus?: "ended" | "live" | "sold_out" | "upcoming";
         totalSupply?: number | null;
         title: string;
+        workspaceId: string;
       }) {
         publicationIndex += 1;
         const publication = {
@@ -729,13 +813,14 @@ function createCollectionDraftHarness() {
         return publication;
       },
 
-      async deleteByDraftIdForOwner(input: {
-        ownerUserId: string;
+      async deleteByDraftIdForWorkspace(input: {
         sourceCollectionDraftId: string;
+        workspaceId: string;
       }) {
         const publication = [...publications.values()].find(
           (candidate) =>
-            candidate.ownerUserId === input.ownerUserId &&
+            candidate.ownerUserId ===
+              getOwnerUserIdForWorkspaceId(input.workspaceId) &&
             candidate.sourceCollectionDraftId === input.sourceCollectionDraftId
         );
 
@@ -762,30 +847,49 @@ function createCollectionDraftHarness() {
         );
       },
 
-      async findByDraftIdForOwner(input: {
-        ownerUserId: string;
+      async findByDraftIdForWorkspace(input: {
         sourceCollectionDraftId: string;
+        workspaceId: string;
       }) {
         return (
           [...publications.values()].find(
             (publication) =>
-              publication.ownerUserId === input.ownerUserId &&
+              publication.ownerUserId ===
+                getOwnerUserIdForWorkspaceId(input.workspaceId) &&
               publication.sourceCollectionDraftId ===
                 input.sourceCollectionDraftId
           ) ?? null
         );
       },
 
-      async listByOwnerUserId(ownerUserId: string) {
+      async findByIdForWorkspace(input: { id: string; workspaceId: string }) {
+        const publication = publications.get(input.id);
+
+        if (
+          !publication ||
+          publication.ownerUserId !==
+            getOwnerUserIdForWorkspaceId(input.workspaceId)
+        ) {
+          return null;
+        }
+
+        return publication;
+      },
+
+      async listByWorkspaceId(workspaceId: string) {
         return [...publications.values()]
-          .filter((publication) => publication.ownerUserId === ownerUserId)
+          .filter(
+            (publication) =>
+              publication.ownerUserId ===
+              getOwnerUserIdForWorkspaceId(workspaceId)
+          )
           .sort(
             (left, right) =>
               right.updatedAt.getTime() - left.updatedAt.getTime()
           );
       },
 
-      async updateByIdForOwner(input: {
+      async updateByIdForWorkspace(input: {
         brandName: string;
         brandSlug: string;
         contractAddress?: string | null;
@@ -800,7 +904,6 @@ function createCollectionDraftHarness() {
         id: string;
         isFeatured?: boolean;
         launchAt?: Date | null;
-        ownerUserId: string;
         priceAmountMinor?: number | null;
         priceCurrency?: string | null;
         priceLabel?: string | null;
@@ -815,10 +918,15 @@ function createCollectionDraftHarness() {
         storefrontStatus?: "ended" | "live" | "sold_out" | "upcoming";
         totalSupply?: number | null;
         title: string;
+        workspaceId: string;
       }) {
         const publication = publications.get(input.id);
 
-        if (!publication || publication.ownerUserId !== input.ownerUserId) {
+        if (
+          !publication ||
+          publication.ownerUserId !==
+            getOwnerUserIdForWorkspaceId(input.workspaceId)
+        ) {
           throw new Error(
             "Published collection was not found in the test harness."
           );
@@ -963,7 +1071,7 @@ function createCollectionDraftHarness() {
       }
     }
   };
-  const service = createCollectionDraftService({
+  const baseService = createCollectionDraftService({
     now: () => nextDate(),
     onchain: {
       async verifyDeploymentTransaction(input) {
@@ -1032,8 +1140,7 @@ function createCollectionDraftHarness() {
 
       generatedAssets.set(generatedAssetId, {
         ...asset,
-        moderatedAt:
-          moderationStatus === "pending_review" ? null : nextDate(),
+        moderatedAt: moderationStatus === "pending_review" ? null : nextDate(),
         moderationStatus
       });
     },
@@ -1080,7 +1187,160 @@ function createCollectionDraftHarness() {
     }) {
       openReconciliationIssues.push(issue);
     },
-    service
+    service: {
+      async addCollectionDraftItem(input: {
+        collectionDraftId: string;
+        generatedAssetId: string;
+        ownerUserId: string;
+      }) {
+        return baseService.addCollectionDraftItem({
+          ...input,
+          workspaceId: getWorkspaceIdForOwnerUserId(input.ownerUserId)
+        });
+      },
+      async createCollectionContractDeploymentIntent(input: {
+        chainKey: "base" | "base-sepolia";
+        collectionDraftId: string;
+        origin: string;
+        ownerUserId: string;
+        ownerWalletAddress: string;
+      }) {
+        return baseService.createCollectionContractDeploymentIntent({
+          ...input,
+          workspaceId: getWorkspaceIdForOwnerUserId(input.ownerUserId)
+        });
+      },
+      async createCollectionContractMintIntent(input: {
+        collectionDraftId: string;
+        ownerUserId: string;
+        recipientWalletAddress: string;
+        tokenId: number;
+      }) {
+        return baseService.createCollectionContractMintIntent({
+          ...input,
+          workspaceId: getWorkspaceIdForOwnerUserId(input.ownerUserId)
+        });
+      },
+      async createCollectionDraft(input: {
+        description?: string | null;
+        ownerUserId: string;
+        title: string;
+      }) {
+        return baseService.createCollectionDraft({
+          ...input,
+          workspaceId: getWorkspaceIdForOwnerUserId(input.ownerUserId)
+        });
+      },
+      async listCollectionDrafts(input: { ownerUserId: string }) {
+        return baseService.listCollectionDrafts({
+          workspaceId: getWorkspaceIdForOwnerUserId(input.ownerUserId)
+        });
+      },
+      async publishCollectionDraft(input: {
+        brandId?: string | null;
+        collectionDraftId: string;
+        ownerUserId: string;
+      }) {
+        return baseService.publishCollectionDraft({
+          ...input,
+          workspaceId: getWorkspaceIdForOwnerUserId(input.ownerUserId)
+        });
+      },
+      async recordCollectionContractDeployment(input: {
+        chainKey: "base" | "base-sepolia";
+        collectionDraftId: string;
+        deployTxHash: `0x${string}`;
+        origin: string;
+        ownerUserId: string;
+        ownerWalletAddress: string;
+      }) {
+        return baseService.recordCollectionContractDeployment({
+          ...input,
+          workspaceId: getWorkspaceIdForOwnerUserId(input.ownerUserId)
+        });
+      },
+      async recordCollectionContractMint(input: {
+        collectionDraftId: string;
+        ownerUserId: string;
+        ownerWalletAddress: string;
+        recipientWalletAddress: string;
+        tokenId: number;
+        txHash: `0x${string}`;
+      }) {
+        return baseService.recordCollectionContractMint({
+          ...input,
+          workspaceId: getWorkspaceIdForOwnerUserId(input.ownerUserId)
+        });
+      },
+      async removeCollectionDraftItem(input: {
+        collectionDraftId: string;
+        itemId: string;
+        ownerUserId: string;
+      }) {
+        return baseService.removeCollectionDraftItem({
+          ...input,
+          workspaceId: getWorkspaceIdForOwnerUserId(input.ownerUserId)
+        });
+      },
+      async reorderCollectionDraftItems(input: {
+        collectionDraftId: string;
+        itemIds: string[];
+        ownerUserId: string;
+      }) {
+        return baseService.reorderCollectionDraftItems({
+          ...input,
+          workspaceId: getWorkspaceIdForOwnerUserId(input.ownerUserId)
+        });
+      },
+      async unpublishCollectionDraft(input: {
+        collectionDraftId: string;
+        ownerUserId: string;
+      }) {
+        return baseService.unpublishCollectionDraft({
+          ...input,
+          workspaceId: getWorkspaceIdForOwnerUserId(input.ownerUserId)
+        });
+      },
+      async updateCollectionDraft(input: {
+        collectionDraftId: string;
+        description: string | null;
+        ownerUserId: string;
+        slug: string;
+        status: "draft" | "review_ready";
+        title: string;
+      }) {
+        return baseService.updateCollectionDraft({
+          ...input,
+          workspaceId: getWorkspaceIdForOwnerUserId(input.ownerUserId)
+        });
+      },
+      async updateCollectionPublicationMerchandising(input: {
+        collectionDraftId: string;
+        displayOrder: number;
+        endAt: string | null;
+        heroGeneratedAssetId: string | null;
+        isFeatured: boolean;
+        launchAt: string | null;
+        ownerUserId: string;
+        priceAmountMinor: number | null;
+        priceCurrency: string | null;
+        priceLabel: string | null;
+        primaryCtaHref: string | null;
+        primaryCtaLabel: string | null;
+        secondaryCtaHref: string | null;
+        secondaryCtaLabel: string | null;
+        soldCount: number;
+        storefrontBody: string | null;
+        storefrontHeadline: string | null;
+        storefrontStatus: "ended" | "live" | "sold_out" | "upcoming";
+        totalSupply: number | null;
+      }) {
+        return baseService.updateCollectionPublicationMerchandising({
+          ...input,
+          workspaceId: getWorkspaceIdForOwnerUserId(input.ownerUserId)
+        });
+      }
+    }
   };
 }
 
@@ -1143,10 +1403,7 @@ describe("createCollectionDraftService", () => {
       title: "Genesis Portrait Set"
     });
 
-    harness.setGeneratedAssetModeration(
-      "generated_asset_1",
-      "pending_review"
-    );
+    harness.setGeneratedAssetModeration("generated_asset_1", "pending_review");
 
     await expect(
       harness.service.addCollectionDraftItem({
@@ -1634,10 +1891,8 @@ describe("createCollectionDraftService", () => {
     );
   });
 
-  it(
-    "prepares a deployment intent and records a verified contract deployment",
-    async () => {
-      const harness = createCollectionDraftHarness();
+  it("prepares a deployment intent and records a verified contract deployment", async () => {
+    const harness = createCollectionDraftHarness();
     const createdDraft = await harness.service.createCollectionDraft({
       ownerUserId: "user_1",
       title: "Genesis Portrait Set"
@@ -1661,15 +1916,14 @@ describe("createCollectionDraftService", () => {
       ownerUserId: "user_1"
     });
 
-    const intent = await harness.service.createCollectionContractDeploymentIntent(
-      {
+    const intent =
+      await harness.service.createCollectionContractDeploymentIntent({
         chainKey: "base-sepolia",
         collectionDraftId: createdDraft.draft.id,
         origin: "https://forge.example",
         ownerUserId: "user_1",
         ownerWalletAddress: "0x1111111111111111111111111111111111111111"
-      }
-    );
+      });
     const result = await harness.service.recordCollectionContractDeployment({
       chainKey: "base-sepolia",
       collectionDraftId: createdDraft.draft.id,
@@ -1696,12 +1950,10 @@ describe("createCollectionDraftService", () => {
       expectedTokenUriBaseUrl:
         "https://forge.example/brands/demo-studio/collections/genesis-portrait-set/token-uri"
     });
-      expect(
-        harness.verifiedDeploymentTransactions[0]?.expectedDeploymentData
-      ).toBe(intent.deployment.transaction.data);
-    },
-    15_000
-  );
+    expect(
+      harness.verifiedDeploymentTransactions[0]?.expectedDeploymentData
+    ).toBe(intent.deployment.transaction.data);
+  }, 15_000);
 
   it("prepares a mint intent and records a verified mint", async () => {
     const harness = createCollectionDraftHarness();

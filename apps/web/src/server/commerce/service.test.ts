@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { createCollectionCommerceService } from "./service";
 
+const defaultWorkspaceId = "workspace_1";
+
 type HarnessPublication = {
   brandName: string;
   brandSlug: string;
@@ -20,6 +22,7 @@ type HarnessPublication = {
   storefrontStatus: "upcoming" | "live" | "sold_out" | "ended";
   title: string;
   totalSupply: number;
+  workspaceId: string;
 };
 
 function createPublicationRecord() {
@@ -46,7 +49,8 @@ function createPublicationRecord() {
     soldCount: 0,
     storefrontStatus: "live" as const,
     title: "Genesis Portrait Set",
-    totalSupply: 2
+    totalSupply: 2,
+    workspaceId: defaultWorkspaceId
   };
 }
 
@@ -138,7 +142,7 @@ function createCommerceHarness(input?: {
     publication.storefrontStatus;
   const repositories = {
     brandRepository: {
-      async listByOwnerUserId() {
+      async listByWorkspaceId() {
         return brands;
       }
     },
@@ -219,7 +223,7 @@ function createCommerceHarness(input?: {
       async findByPublicId(publicId: string) {
         return checkoutSessions.get(publicId) ?? null;
       },
-      async listDetailedByOwnerUserId() {
+      async listDetailedByWorkspaceId() {
         return [...checkoutSessions.values()];
       },
       async updateFulfillmentById(updateInput: {
@@ -450,7 +454,7 @@ function createCommerceHarness(input?: {
     }
   };
 
-  const service = createCollectionCommerceService({
+  const baseService = createCollectionCommerceService({
     fulfillmentAutomation: {
       async enqueue(enqueueInput) {
         enqueuedFulfillmentJobs.push(enqueueInput);
@@ -494,7 +498,96 @@ function createCommerceHarness(input?: {
       return storefrontStatus;
     },
     reservations,
-    service
+    service: {
+      ...baseService,
+      async cancelOwnerCheckoutSession(input: {
+        checkoutSessionId: string;
+        ownerUserId: string;
+      }) {
+        void input.ownerUserId;
+
+        return baseService.cancelOwnerCheckoutSession({
+          checkoutSessionId: input.checkoutSessionId,
+          workspaceId: defaultWorkspaceId
+        });
+      },
+      async completeOwnerManualCheckout(input: {
+        checkoutSessionId: string;
+        ownerUserId: string;
+      }) {
+        void input.ownerUserId;
+
+        return baseService.completeOwnerManualCheckout({
+          checkoutSessionId: input.checkoutSessionId,
+          workspaceId: defaultWorkspaceId
+        });
+      },
+      async exportOwnerCommerceReportCsv(input: {
+        brandSlug?: string | null;
+        ownerUserId: string;
+      }) {
+        void input.ownerUserId;
+
+        return baseService.exportOwnerCommerceReportCsv({
+          ...(input.brandSlug === undefined
+            ? {}
+            : { brandSlug: input.brandSlug }),
+          workspaceId: defaultWorkspaceId
+        });
+      },
+      async getOwnerCommerceDashboard(input: {
+        brandSlug?: string | null;
+        ownerUserId: string;
+      }) {
+        void input.ownerUserId;
+
+        return baseService.getOwnerCommerceDashboard({
+          ...(input.brandSlug === undefined
+            ? {}
+            : { brandSlug: input.brandSlug }),
+          workspaceId: defaultWorkspaceId
+        });
+      },
+      async getOwnerCommerceReport(input: {
+        brandSlug?: string | null;
+        ownerUserId: string;
+      }) {
+        void input.ownerUserId;
+
+        return baseService.getOwnerCommerceReport({
+          ...(input.brandSlug === undefined
+            ? {}
+            : { brandSlug: input.brandSlug }),
+          workspaceId: defaultWorkspaceId
+        });
+      },
+      async retryOwnerCheckoutFulfillment(input: {
+        body: unknown;
+        checkoutSessionId: string;
+        ownerUserId: string;
+      }) {
+        void input.ownerUserId;
+
+        return baseService.retryOwnerCheckoutFulfillment({
+          body: input.body,
+          checkoutSessionId: input.checkoutSessionId,
+          workspaceId: defaultWorkspaceId
+        });
+      },
+      async updateOwnerCheckoutFulfillment(input: {
+        body: unknown;
+        checkoutSessionId: string;
+        ownerUserId: string;
+      }) {
+        void input.ownerUserId;
+
+        return baseService.updateOwnerCheckoutFulfillment({
+          body: input.body,
+          checkoutSessionId: input.checkoutSessionId,
+          workspaceId: defaultWorkspaceId
+        });
+      }
+    }
   };
 }
 
