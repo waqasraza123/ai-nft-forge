@@ -25,6 +25,7 @@ import {
   studioWorkspaceRoleEscalationActionResponseSchema,
   studioWorkspaceRoleEscalationResponseSchema,
   studioWorkspaceStatusUpdateResponseSchema,
+  workspaceOffboardingOverviewResponseSchema,
   type StudioBrandSummary,
   type StudioSettingsSummary,
   type StudioWorkspaceDirectoryEntry,
@@ -32,7 +33,8 @@ import {
   type StudioWorkspaceInvitationSummary,
   type StudioWorkspaceMemberSummary,
   type StudioWorkspaceRoleEscalationSummary,
-  type StudioWorkspaceStatus
+  type StudioWorkspaceStatus,
+  type WorkspaceOffboardingEntry
 } from "@ai-nft-forge/shared";
 import {
   MetricTile,
@@ -49,6 +51,7 @@ type StudioSettingsClientProps = {
   availableWorkspaces: StudioWorkspaceScopeSummary[];
   currentWalletAddress: string;
   currentWorkspaceSlug: string | null;
+  currentWorkspaceOffboarding: WorkspaceOffboardingEntry | null;
   initialSettings: StudioSettingsSummary | null;
   ownerWalletAddress: string;
   workspaceDirectoryEntries: StudioWorkspaceDirectoryEntry[];
@@ -232,6 +235,10 @@ function formatWorkspaceStatus(status: StudioWorkspaceStatus) {
   return status.replaceAll("_", " ");
 }
 
+function formatWorkspaceOffboardingCode(code: string) {
+  return code.replaceAll("_", " ");
+}
+
 function createInactiveWorkspaceMessage(status: StudioWorkspaceStatus) {
   if (status === "archived") {
     return "This workspace is archived. Review stays available, but settings, members, publications, and ops mutations are read-only until it is reactivated.";
@@ -262,12 +269,15 @@ export function StudioSettingsClient({
   availableWorkspaces,
   currentWalletAddress,
   currentWorkspaceSlug,
+  currentWorkspaceOffboarding,
   initialSettings,
   ownerWalletAddress,
   workspaceDirectoryEntries
 }: StudioSettingsClientProps) {
   const router = useRouter();
   const [settings, setSettings] = useState(initialSettings);
+  const [currentWorkspaceOffboardingState, setCurrentWorkspaceOffboardingState] =
+    useState(currentWorkspaceOffboarding);
   const [selectedBrandId, setSelectedBrandId] = useState<string | null>(
     initialSettings?.brands[0]?.id ?? initialSettings?.brand.id ?? null
   );
@@ -347,6 +357,10 @@ export function StudioSettingsClient({
         request.targetWalletAddress.toLowerCase() ===
           currentWalletAddress.toLowerCase()
     ) ?? null;
+  const offboardingSummary =
+    currentWorkspaceOffboardingState?.summary ?? null;
+  const exportWorkspaceId =
+    currentWorkspaceOffboardingState?.workspace.id ?? settings?.workspace.id ?? null;
 
   useEffect(() => {
     const nextSelectedBrandId = resolveSelectedBrandId({
@@ -374,16 +388,32 @@ export function StudioSettingsClient({
       }
 
       try {
-        const response = await fetch("/api/studio/settings", {
-          cache: "no-store"
-        });
-        const result = await parseJsonResponse({
-          response,
-          schema: studioSettingsResponseSchema
-        });
+        const [settingsResponse, offboardingResponse] = await Promise.all([
+          fetch("/api/studio/settings", {
+            cache: "no-store"
+          }),
+          fetch("/api/studio/workspaces/offboarding", {
+            cache: "no-store"
+          })
+        ]);
+        const [result, offboardingResult] = await Promise.all([
+          parseJsonResponse({
+            response: settingsResponse,
+            schema: studioSettingsResponseSchema
+          }),
+          parseJsonResponse({
+            response: offboardingResponse,
+            schema: workspaceOffboardingOverviewResponseSchema
+          })
+        ]);
+        const nextCurrentWorkspaceOffboarding =
+          offboardingResult.overview.workspaces.find(
+            (workspace) => workspace.current
+          ) ?? null;
 
         startTransition(() => {
           setSettings(result.settings);
+          setCurrentWorkspaceOffboardingState(nextCurrentWorkspaceOffboarding);
           setSelectedBrandId((currentBrandId) =>
             resolveSelectedBrandId({
               currentBrandId,
@@ -1215,6 +1245,86 @@ export function StudioSettingsClient({
                   </button>
                 )}
               </div>
+            </>
+          ) : null}
+        </SurfaceCard>
+        <SurfaceCard
+          body="Offboarding review combines workspace-native access signals with workspace-scoped commerce and ops blockers so owners can export a durable handoff package before they archive or retire a workspace."
+          eyebrow="Offboarding"
+          span={4}
+          title="Export and archive review"
+        >
+          {!settings?.workspace ? (
+            <div className="status-banner status-banner--info">
+              <strong>No workspace selected</strong>
+              <span>Choose a workspace before exporting or reviewing archive readiness.</span>
+            </div>
+          ) : null}
+          {offboardingSummary ? (
+            <>
+              <div className="pill-row">
+                <Pill>{formatWorkspaceOffboardingCode(offboardingSummary.readiness)}</Pill>
+                <Pill>{offboardingSummary.openCheckoutCount} open checkouts</Pill>
+                <Pill>{offboardingSummary.activeAlertCount} active alerts</Pill>
+                <Pill>{offboardingSummary.openReconciliationIssueCount} open reconciliation</Pill>
+              </div>
+              {offboardingSummary.blockerCodes.length ? (
+                <div className="status-banner status-banner--error">
+                  <strong>Archive blocked</strong>
+                  <span>
+                    Resolve{" "}
+                    {offboardingSummary.blockerCodes
+                      .map(formatWorkspaceOffboardingCode)
+                      .join(", ")}
+                    {" "}before offboarding this workspace.
+                  </span>
+                </div>
+              ) : null}
+              {!offboardingSummary.blockerCodes.length &&
+              offboardingSummary.cautionCodes.length ? (
+                <div className="status-banner status-banner--info">
+                  <strong>Review before archive</strong>
+                  <span>
+                    Check{" "}
+                    {offboardingSummary.cautionCodes
+                      .map(formatWorkspaceOffboardingCode)
+                      .join(", ")}
+                    {" "}before final offboarding.
+                  </span>
+                </div>
+              ) : null}
+              {!offboardingSummary.blockerCodes.length &&
+              !offboardingSummary.cautionCodes.length ? (
+                <div className="status-banner status-banner--success">
+                  <strong>Archive-ready</strong>
+                  <span>
+                    No active operational blockers are currently attached to this workspace.
+                  </span>
+                </div>
+              ) : null}
+              {canManageWorkspace ? (
+                <div className="studio-action-row">
+                  <Link
+                    className="action-link"
+                    href={`/api/studio/workspaces/${exportWorkspaceId ?? ""}/export?format=json`}
+                  >
+                    Export JSON
+                  </Link>
+                  <Link
+                    className="inline-link"
+                    href={`/api/studio/workspaces/${exportWorkspaceId ?? ""}/export?format=csv`}
+                  >
+                    Export CSV
+                  </Link>
+                </div>
+              ) : (
+                <div className="status-banner status-banner--info">
+                  <strong>Owner only</strong>
+                  <span>
+                    Operators can review archive readiness, but only owners can export workspace data.
+                  </span>
+                </div>
+              )}
             </>
           ) : null}
         </SurfaceCard>

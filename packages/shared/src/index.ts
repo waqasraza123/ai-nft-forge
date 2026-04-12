@@ -278,6 +278,32 @@ export {
   type WorkspaceFleetWorkspaceSummary
 } from "./fleet.js";
 export {
+  workspaceExportAlertSchema,
+  workspaceExportCheckoutSchema,
+  workspaceExportFormatSchema,
+  workspaceExportPublicationSchema,
+  workspaceExportReconciliationIssueSchema,
+  workspaceExportResponseSchema,
+  workspaceOffboardingBlockerCodeSchema,
+  workspaceOffboardingCautionCodeSchema,
+  workspaceOffboardingEntrySchema,
+  workspaceOffboardingOverviewResponseSchema,
+  workspaceOffboardingReadinessSchema,
+  workspaceOffboardingSummarySchema,
+  type WorkspaceExportAlert,
+  type WorkspaceExportCheckout,
+  type WorkspaceExportFormat,
+  type WorkspaceExportPublication,
+  type WorkspaceExportReconciliationIssue,
+  type WorkspaceExportResponse,
+  type WorkspaceOffboardingBlockerCode,
+  type WorkspaceOffboardingCautionCode,
+  type WorkspaceOffboardingEntry,
+  type WorkspaceOffboardingOverviewResponse,
+  type WorkspaceOffboardingReadiness,
+  type WorkspaceOffboardingSummary
+} from "./workspaces.js";
+export {
   authSessionCookieSameSite,
   authSessionResponseSchema,
   authVerifyRequestSchema,

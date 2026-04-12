@@ -1,0 +1,132 @@
+import Link from "next/link";
+
+import { Pill, SurfaceCard } from "@ai-nft-forge/ui";
+import type { WorkspaceOffboardingEntry } from "@ai-nft-forge/shared";
+
+type WorkspaceOffboardingPanelProps = {
+  body: string;
+  entries: WorkspaceOffboardingEntry[];
+  eyebrow: string;
+  span?: 4 | 6 | 8 | 12;
+  title: string;
+};
+
+function formatDateTime(value: string | null) {
+  if (!value) {
+    return "No workspace activity recorded";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(new Date(value));
+}
+
+function formatCode(value: string) {
+  return value.replaceAll("_", " ");
+}
+
+export function WorkspaceOffboardingPanel({
+  body,
+  entries,
+  eyebrow,
+  span,
+  title
+}: WorkspaceOffboardingPanelProps) {
+  return (
+    <SurfaceCard
+      body={body}
+      eyebrow={eyebrow}
+      title={title}
+      {...(span ? { span } : {})}
+    >
+      <div className="stack-md">
+        {entries.length === 0 ? (
+          <div className="status-banner">
+            <strong>No accessible workspaces</strong>
+            <span>
+              Archive-readiness and export summaries will appear here after
+              workspace access is provisioned.
+            </span>
+          </div>
+        ) : null}
+        {entries.map((entry) => (
+          <article className="collection-list-card" key={entry.workspace.id}>
+            <div className="stack-sm">
+              <div className="collection-list-card__header">
+                <div>
+                  <h3>{entry.workspace.name}</h3>
+                  <p>
+                    {entry.workspace.slug} · {entry.workspace.role} ·{" "}
+                    {entry.workspace.status}
+                  </p>
+                </div>
+                <Pill>{formatCode(entry.summary.readiness)}</Pill>
+              </div>
+              <div className="pill-row">
+                <Pill>{entry.summary.openCheckoutCount} open checkouts</Pill>
+                <Pill>{entry.summary.activeAlertCount} active alerts</Pill>
+                <Pill>
+                  {entry.summary.openReconciliationIssueCount} open
+                  reconciliation
+                </Pill>
+                <Pill>
+                  {entry.summary.unfulfilledCheckoutCount} unfulfilled
+                </Pill>
+                <Pill>{entry.summary.livePublicationCount} live releases</Pill>
+              </div>
+              <p className="surface-card__body-copy">
+                Last activity: {formatDateTime(entry.directory.lastActivityAt)}
+              </p>
+              {entry.summary.blockerCodes.length ? (
+                <div className="status-banner status-banner--error">
+                  <strong>Archive blocked</strong>
+                  <span>
+                    Resolve {entry.summary.blockerCodes.map(formatCode).join(", ")}
+                    {" "}before offboarding this workspace.
+                  </span>
+                </div>
+              ) : null}
+              {!entry.summary.blockerCodes.length &&
+              entry.summary.cautionCodes.length ? (
+                <div className="status-banner status-banner--info">
+                  <strong>Review before archive</strong>
+                  <span>
+                    Check {entry.summary.cautionCodes.map(formatCode).join(", ")}
+                    {" "}before final offboarding.
+                  </span>
+                </div>
+              ) : null}
+              {!entry.summary.blockerCodes.length &&
+              !entry.summary.cautionCodes.length ? (
+                <div className="status-banner status-banner--success">
+                  <strong>Archive-ready</strong>
+                  <span>
+                    No active operational blockers are currently attached to
+                    this workspace.
+                  </span>
+                </div>
+              ) : null}
+              {entry.workspace.role === "owner" ? (
+                <div className="studio-action-row">
+                  <Link
+                    className="action-link"
+                    href={`/api/studio/workspaces/${entry.workspace.id}/export?format=json`}
+                  >
+                    Export JSON
+                  </Link>
+                  <Link
+                    className="inline-link"
+                    href={`/api/studio/workspaces/${entry.workspace.id}/export?format=csv`}
+                  >
+                    Export CSV
+                  </Link>
+                </div>
+              ) : null}
+            </div>
+          </article>
+        ))}
+      </div>
+    </SurfaceCard>
+  );
+}

@@ -3,9 +3,11 @@ import Link from "next/link";
 import { PageShell, SurfaceGrid } from "@ai-nft-forge/ui";
 
 import { WorkspaceDirectoryPanel } from "../../../../components/workspace-directory-panel";
+import { WorkspaceOffboardingPanel } from "../../../../components/workspace-offboarding-panel";
 import { WorkspaceScopeSwitcher } from "../../../../components/workspace-scope-switcher";
 import { loadOpsRuntime } from "../../../../server/ops/runtime";
 import { createRuntimeWorkspaceDirectoryService } from "../../../../server/workspaces/directory-service";
+import { createRuntimeWorkspaceOffboardingService } from "../../../../server/workspaces/offboarding-service";
 
 export default async function OpsWorkspacesPage() {
   const runtime = await loadOpsRuntime();
@@ -18,6 +20,25 @@ export default async function OpsWorkspacesPage() {
       )
     : {
         workspaces: []
+      };
+  const offboardingOverview = runtime.operator.access
+    ? await createRuntimeWorkspaceOffboardingService().getAccessibleWorkspaceOffboardingOverview(
+        {
+          currentWorkspaceId: runtime.operator.access.workspace?.id ?? null,
+          workspaces: runtime.operator.access.availableWorkspaces
+        }
+      )
+    : {
+        overview: {
+          generatedAt: new Date(0).toISOString(),
+          summary: {
+            blockedWorkspaceCount: 0,
+            readyWorkspaceCount: 0,
+            reviewRequiredWorkspaceCount: 0,
+            totalWorkspaceCount: 0
+          },
+          workspaces: []
+        }
       };
 
   return (
@@ -54,6 +75,13 @@ export default async function OpsWorkspacesPage() {
           eyebrow="Selection"
           span={4}
           title="Current workspace"
+        />
+        <WorkspaceOffboardingPanel
+          body="Archive-readiness combines workspace-native signals with workspace-scoped commerce and ops blockers so offboarding review does not depend on manual cross-page inspection."
+          entries={offboardingOverview.overview.workspaces}
+          eyebrow="Offboarding"
+          span={12}
+          title="Archive readiness and export"
         />
         <div className="surface-card surface-card--span-12">
           <div className="surface-card__content">
