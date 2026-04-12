@@ -242,6 +242,9 @@ model Workspace {
   name                   String                           @map("name")
   slug                   String                           @unique @map("slug")
   status                 WorkspaceStatus                  @default(active) @map("status")
+  decommissionRetentionDaysDefault Int                    @default(30) @map("decommission_retention_days_default")
+  decommissionRetentionDaysMinimum Int                    @default(7) @map("decommission_retention_days_minimum")
+  requireDecommissionReason Boolean                       @default(false) @map("require_decommission_reason")
   createdAt              DateTime                         @default(now()) @map("created_at")
   updatedAt              DateTime                         @updatedAt @map("updated_at")
   brands                 Brand[]

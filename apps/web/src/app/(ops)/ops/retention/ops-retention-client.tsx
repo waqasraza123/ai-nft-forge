@@ -187,6 +187,10 @@ export function OpsRetentionClient({
             label="Scheduled"
             value={report.summary.scheduledDecommissionCount.toString()}
           />
+          <MetricTile
+            label="Reason required"
+            value={report.summary.reasonRequiredWorkspaceCount.toString()}
+          />
         </div>
         <div className="pill-row">
           <Pill>{formatTimestamp(report.generatedAt)}</Pill>
@@ -286,6 +290,16 @@ export function OpsRetentionClient({
                       {workspace.summary.openCheckoutCount} open checkouts ·{" "}
                       {workspace.summary.openReconciliationIssueCount} open
                       reconciliation
+                    </span>
+                    <span>
+                      policy default{" "}
+                      {workspace.retentionPolicy.defaultDecommissionRetentionDays}
+                      d · minimum{" "}
+                      {workspace.retentionPolicy.minimumDecommissionRetentionDays}
+                      d · reason{" "}
+                      {workspace.retentionPolicy.requireDecommissionReason
+                        ? "required"
+                        : "optional"}
                     </span>
                     <span>
                       {workspace.decommission

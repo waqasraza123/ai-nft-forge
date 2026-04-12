@@ -26,6 +26,7 @@ import {
   workspaceExportResponseSchema,
   workspaceOffboardingOverviewResponseSchema,
   workspaceOffboardingSummarySchema,
+  workspaceRetentionPolicySchema,
   type StudioWorkspaceScopeSummary,
   type WorkspaceDecommissionSummary,
   type WorkspaceExportFormat,
@@ -283,12 +284,27 @@ type WorkspaceOffboardingRepositorySet = {
       id: string;
       ownerUserId: string;
     }): Promise<{
+      decommissionRetentionDaysDefault: number;
+      decommissionRetentionDaysMinimum: number;
       id: string;
       name: string;
       ownerUserId: string;
+      requireDecommissionReason: boolean;
       slug: string;
       status: "active" | "archived" | "suspended";
     } | null>;
+    listByIds(workspaceIds: string[]): Promise<
+      Array<{
+        decommissionRetentionDaysDefault: number;
+        decommissionRetentionDaysMinimum: number;
+        id: string;
+        name: string;
+        ownerUserId: string;
+        requireDecommissionReason: boolean;
+        slug: string;
+        status: "active" | "archived" | "suspended";
+      }>
+    >;
   };
   workspaceRoleEscalationRequestRepository: {
     countPendingByWorkspaceId(workspaceId: string): Promise<number>;
@@ -618,6 +634,18 @@ function serializeWorkspaceDecommission(input: {
   });
 }
 
+function serializeWorkspaceRetentionPolicy(input: {
+  decommissionRetentionDaysDefault: number;
+  decommissionRetentionDaysMinimum: number;
+  requireDecommissionReason: boolean;
+}) {
+  return workspaceRetentionPolicySchema.parse({
+    defaultDecommissionRetentionDays: input.decommissionRetentionDaysDefault,
+    minimumDecommissionRetentionDays: input.decommissionRetentionDaysMinimum,
+    requireDecommissionReason: input.requireDecommissionReason
+  });
+}
+
 function createWorkspaceOffboardingSummary(input: {
   activeAlertCount: number;
   livePublicationCount: number;
@@ -709,6 +737,7 @@ export function createWorkspaceOffboardingService(
             generatedAt,
             summary: {
               blockedWorkspaceCount: 0,
+              reasonRequiredWorkspaceCount: 0,
               readyWorkspaceCount: 0,
               reviewRequiredWorkspaceCount: 0,
               scheduledDecommissionCount: 0,
@@ -719,8 +748,14 @@ export function createWorkspaceOffboardingService(
         });
       }
 
-      const [publications, checkouts, alerts, reconciliationIssues, decommissions] =
-        await Promise.all([
+      const [
+        publications,
+        checkouts,
+        alerts,
+        reconciliationIssues,
+        decommissions,
+        workspaceRecords
+      ] = await Promise.all([
           dependencies.repositories.publishedCollectionRepository.listByWorkspaceIds(
             workspaceIds
           ),
@@ -735,8 +770,12 @@ export function createWorkspaceOffboardingService(
           ),
           dependencies.repositories.workspaceDecommissionRequestRepository.listScheduledByWorkspaceIds(
             workspaceIds
-          )
+          ),
+          dependencies.repositories.workspaceRepository.listByIds(workspaceIds)
         ]);
+      const workspaceById = new Map(
+        workspaceRecords.map((workspace) => [workspace.id, workspace] as const)
+      );
 
       const livePublicationCountByWorkspaceId = new Map<string, number>();
       const openCheckoutCountByWorkspaceId = new Map<string, number>();
@@ -821,6 +860,13 @@ export function createWorkspaceOffboardingService(
               directoryEntry.workspace.id
             ) ?? null,
           directory: directoryEntry,
+          retentionPolicy: serializeWorkspaceRetentionPolicy(
+            workspaceById.get(directoryEntry.workspace.id) ?? {
+              decommissionRetentionDaysDefault: 30,
+              decommissionRetentionDaysMinimum: 7,
+              requireDecommissionReason: false
+            }
+          ),
           summary,
           workspace: directoryEntry.workspace
         };
@@ -832,6 +878,9 @@ export function createWorkspaceOffboardingService(
           summary: {
             blockedWorkspaceCount: workspaces.filter(
               (workspace) => workspace.summary.readiness === "blocked"
+            ).length,
+            reasonRequiredWorkspaceCount: workspaces.filter(
+              (workspace) => workspace.retentionPolicy.requireDecommissionReason
             ).length,
             readyWorkspaceCount: workspaces.filter(
               (workspace) => workspace.summary.readiness === "ready"
@@ -1028,6 +1077,7 @@ export function createWorkspaceOffboardingService(
             severity: issue.severity,
             title: issue.title
           })),
+          retentionPolicy: serializeWorkspaceRetentionPolicy(workspace),
           roleEscalationRequests: roleEscalationRequests.map((request) =>
             serializeRoleEscalationRequest(request)
           ),
@@ -1071,6 +1121,9 @@ export function createWorkspaceOffboardingService(
         row.offboarding.unfulfilledCheckoutCount,
         row.offboarding.activeAlertCount,
         row.offboarding.openReconciliationIssueCount,
+        row.retentionPolicy.defaultDecommissionRetentionDays,
+        row.retentionPolicy.minimumDecommissionRetentionDays,
+        row.retentionPolicy.requireDecommissionReason ? "yes" : "no",
         row.decommission?.status ?? "",
         row.decommission?.retentionDays ?? "",
         row.decommission?.executeAfter ?? "",
@@ -1098,6 +1151,9 @@ export function createWorkspaceOffboardingService(
           "unfulfilled_checkout_count",
           "active_alert_count",
           "open_reconciliation_issue_count",
+          "retention_default_days",
+          "retention_minimum_days",
+          "retention_reason_required",
           "decommission_status",
           "decommission_retention_days",
           "decommission_execute_after",

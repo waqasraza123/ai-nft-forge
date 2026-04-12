@@ -214,10 +214,14 @@ describe("database repositories", () => {
     });
     const workspace = await repository.findFirstByOwnerUserId("user_1");
     const workspaces = await repository.listByOwnerUserId("user_1");
+    const workspacesById = await repository.listByIds(["workspace_1"]);
     const updatedWorkspace = await repository.updateByIdForOwner({
+      decommissionRetentionDaysDefault: 30,
+      decommissionRetentionDaysMinimum: 7,
       id: "workspace_1",
       name: "Forge Ops",
       ownerUserId: "user_1",
+      requireDecommissionReason: false,
       slug: "forge-ops",
       status: "active"
     });
@@ -263,9 +267,19 @@ describe("database repositories", () => {
         ownerUserId: "user_1"
       }
     });
+    expect(database.workspace.findMany).toHaveBeenNthCalledWith(2, {
+      where: {
+        id: {
+          in: ["workspace_1"]
+        }
+      }
+    });
     expect(database.workspace.updateMany).toHaveBeenCalledWith({
       data: {
+        decommissionRetentionDaysDefault: 30,
+        decommissionRetentionDaysMinimum: 7,
         name: "Forge Ops",
+        requireDecommissionReason: false,
         slug: "forge-ops",
         status: "active"
       },
@@ -297,6 +311,7 @@ describe("database repositories", () => {
     expect(ownedWorkspace?.id).toBe("workspace_1");
     expect(workspace?.id).toBe("workspace_1");
     expect(workspaces).toHaveLength(2);
+    expect(workspacesById).toHaveLength(2);
     expect(updatedWorkspace.slug).toBe("forge-ops");
     expect(transferredWorkspace.id).toBe("workspace_1");
     expect(deletedWorkspace.count).toBe(1);

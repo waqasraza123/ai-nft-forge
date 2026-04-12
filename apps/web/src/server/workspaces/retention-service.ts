@@ -20,12 +20,13 @@ type WorkspaceRetentionServiceDependencies = {
     }): Promise<{
       overview: {
         generatedAt: string;
-        summary: {
-          blockedWorkspaceCount: number;
-          readyWorkspaceCount: number;
-          reviewRequiredWorkspaceCount: number;
-          scheduledDecommissionCount: number;
-          totalWorkspaceCount: number;
+            summary: {
+              blockedWorkspaceCount: number;
+              reasonRequiredWorkspaceCount: number;
+              readyWorkspaceCount: number;
+              reviewRequiredWorkspaceCount: number;
+              scheduledDecommissionCount: number;
+              totalWorkspaceCount: number;
         };
         workspaces: WorkspaceOffboardingEntry[];
       };
@@ -87,6 +88,9 @@ export function createWorkspaceRetentionService(
           "workspace_status",
           "current",
           "readiness",
+          "retention_default_days",
+          "retention_minimum_days",
+          "retention_reason_required",
           "blocker_codes",
           "caution_codes",
           "open_checkout_count",
@@ -113,6 +117,9 @@ export function createWorkspaceRetentionService(
             workspace.workspace.status,
             workspace.current ? "yes" : "no",
             workspace.summary.readiness,
+            workspace.retentionPolicy.defaultDecommissionRetentionDays,
+            workspace.retentionPolicy.minimumDecommissionRetentionDays,
+            workspace.retentionPolicy.requireDecommissionReason ? "yes" : "no",
             workspace.summary.blockerCodes.join("|"),
             workspace.summary.cautionCodes.join("|"),
             workspace.summary.openCheckoutCount,

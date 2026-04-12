@@ -22,9 +22,12 @@ function createStudioSettingsHarness() {
   const workspaces = new Map<
     string,
     {
+      decommissionRetentionDaysDefault?: number;
+      decommissionRetentionDaysMinimum?: number;
       id: string;
       name: string;
       ownerUserId: string;
+      requireDecommissionReason?: boolean;
       slug: string;
       status: "active" | "archived" | "suspended";
     }
@@ -128,6 +131,26 @@ function createStudioSettingsHarness() {
     users.set(user.id, user);
 
     return user;
+  }
+
+  function normalizeWorkspace(input: {
+    decommissionRetentionDaysDefault?: number;
+    decommissionRetentionDaysMinimum?: number;
+    id: string;
+    name: string;
+    ownerUserId: string;
+    requireDecommissionReason?: boolean;
+    slug: string;
+    status: "active" | "archived" | "suspended";
+  }) {
+    return {
+      ...input,
+      decommissionRetentionDaysDefault:
+        input.decommissionRetentionDaysDefault ?? 30,
+      decommissionRetentionDaysMinimum:
+        input.decommissionRetentionDaysMinimum ?? 7,
+      requireDecommissionReason: input.requireDecommissionReason ?? false
+    };
   }
 
   const repositories = {
@@ -796,8 +819,11 @@ function createStudioSettingsHarness() {
     },
     workspaceRepository: {
       async create(input: {
+        decommissionRetentionDaysDefault?: number;
+        decommissionRetentionDaysMinimum?: number;
         name: string;
         ownerUserId: string;
+        requireDecommissionReason?: boolean;
         slug: string;
         status?: "active" | "archived" | "suspended";
       }) {
@@ -805,13 +831,30 @@ function createStudioSettingsHarness() {
           id: input.ownerUserId
         });
         workspaceIndex += 1;
-        const workspace = {
+        const workspace = normalizeWorkspace({
           id: `workspace_${workspaceIndex}`,
           name: input.name,
           ownerUserId: input.ownerUserId,
           slug: input.slug,
-          status: input.status ?? "active"
-        };
+          status: input.status ?? "active",
+          ...(input.decommissionRetentionDaysDefault !== undefined
+            ? {
+                decommissionRetentionDaysDefault:
+                  input.decommissionRetentionDaysDefault
+              }
+            : {}),
+          ...(input.decommissionRetentionDaysMinimum !== undefined
+            ? {
+                decommissionRetentionDaysMinimum:
+                  input.decommissionRetentionDaysMinimum
+              }
+            : {}),
+          ...(input.requireDecommissionReason !== undefined
+            ? {
+                requireDecommissionReason: input.requireDecommissionReason
+              }
+            : {})
+        });
 
         workspaces.set(workspace.id, workspace);
 
@@ -819,11 +862,12 @@ function createStudioSettingsHarness() {
       },
 
       async findBySlug(slug: string) {
-        return (
+        const workspace =
           [...workspaces.values()].find(
             (workspace) => workspace.slug === slug
-          ) ?? null
-        );
+          ) ?? null;
+
+        return workspace ? normalizeWorkspace(workspace) : null;
       },
 
       async findByIdForOwner(input: { id: string; ownerUserId: string }) {
@@ -833,27 +877,31 @@ function createStudioSettingsHarness() {
           return null;
         }
 
-        return workspace;
+        return normalizeWorkspace(workspace);
       },
 
       async findFirstByOwnerUserId(ownerUserId: string) {
-        return (
+        const workspace =
           [...workspaces.values()].find(
             (workspace) => workspace.ownerUserId === ownerUserId
-          ) ?? null
-        );
+          ) ?? null;
+
+        return workspace ? normalizeWorkspace(workspace) : null;
       },
 
       async listByOwnerUserId(ownerUserId: string) {
-        return [...workspaces.values()].filter(
-          (workspace) => workspace.ownerUserId === ownerUserId
-        );
+        return [...workspaces.values()]
+          .filter((workspace) => workspace.ownerUserId === ownerUserId)
+          .map((workspace) => normalizeWorkspace(workspace));
       },
 
       async updateByIdForOwner(input: {
+        decommissionRetentionDaysDefault: number;
+        decommissionRetentionDaysMinimum: number;
         id: string;
         name: string;
         ownerUserId: string;
+        requireDecommissionReason: boolean;
         slug: string;
         status: "active" | "archived" | "suspended";
       }) {
@@ -865,7 +913,12 @@ function createStudioSettingsHarness() {
 
         const updatedWorkspace = {
           ...workspace,
+          decommissionRetentionDaysDefault:
+            input.decommissionRetentionDaysDefault,
+          decommissionRetentionDaysMinimum:
+            input.decommissionRetentionDaysMinimum,
           name: input.name,
+          requireDecommissionReason: input.requireDecommissionReason,
           slug: input.slug,
           status: input.status
         };
@@ -893,7 +946,7 @@ function createStudioSettingsHarness() {
 
         workspaces.set(updatedWorkspace.id, updatedWorkspace);
 
-        return updatedWorkspace;
+        return normalizeWorkspace(updatedWorkspace);
       }
     }
   };
@@ -959,6 +1012,61 @@ describe("createStudioSettingsService", () => {
     );
     expect(result.settings?.brand.featuredReleaseLabel).toBe("Hero drop");
     expect(result.settings?.brands).toHaveLength(1);
+    expect(result.settings?.retentionPolicy).toEqual({
+      defaultDecommissionRetentionDays: 30,
+      minimumDecommissionRetentionDays: 7,
+      requireDecommissionReason: false
+    });
+  });
+
+  it("updates workspace retention policy and records an audit entry", async () => {
+    const harness = createStudioSettingsHarness();
+
+    await harness.service.updateStudioSettings({
+      accentColor: "#8b5e34",
+      brandName: "Forge Editions",
+      brandSlug: "forge-editions",
+      featuredReleaseLabel: "Hero drop",
+      landingDescription: "Storefront copy.",
+      landingHeadline: "Curated collectible releases",
+      ownerUserId: "user_1",
+      themePreset: "editorial_warm",
+      workspaceName: "Forge Operations",
+      workspaceSlug: "forge-operations"
+    });
+
+    const result = await harness.service.updateStudioSettings({
+      accentColor: "#8b5e34",
+      brandName: "Forge Editions",
+      brandSlug: "forge-editions",
+      featuredReleaseLabel: "Hero drop",
+      landingDescription: "Storefront copy.",
+      landingHeadline: "Curated collectible releases",
+      ownerUserId: "user_1",
+      retentionPolicy: {
+        defaultDecommissionRetentionDays: 45,
+        minimumDecommissionRetentionDays: 21,
+        requireDecommissionReason: true
+      },
+      themePreset: "editorial_warm",
+      workspaceName: "Forge Operations",
+      workspaceSlug: "forge-operations"
+    });
+
+    expect(result.settings?.retentionPolicy).toEqual({
+      defaultDecommissionRetentionDays: 45,
+      minimumDecommissionRetentionDays: 21,
+      requireDecommissionReason: true
+    });
+    expect(harness.auditLogs.at(-1)).toMatchObject({
+      action: "workspace_retention_policy_updated",
+      entityType: "workspace",
+      metadataJson: {
+        defaultDecommissionRetentionDays: 45,
+        minimumDecommissionRetentionDays: 21,
+        requireDecommissionReason: true
+      }
+    });
   });
 
   it("creates additional brands under the existing owner workspace", async () => {

@@ -5,8 +5,11 @@ import type { DatabaseExecutor } from "../client.js";
 type WorkspaceRepositoryDatabase = Pick<DatabaseExecutor, "workspace">;
 
 type CreateWorkspaceInput = {
+  decommissionRetentionDaysDefault?: number;
+  decommissionRetentionDaysMinimum?: number;
   name: string;
   ownerUserId: string;
+  requireDecommissionReason?: boolean;
   slug: string;
   status?: WorkspaceStatus;
 };
@@ -86,17 +89,35 @@ export function createWorkspaceRepository(
       });
     },
 
+    listByIds(ids: string[]): Promise<Workspace[]> {
+      return database.workspace.findMany({
+        where: {
+          id: {
+            in: ids
+          }
+        }
+      });
+    },
+
     updateByIdForOwner(input: {
+      decommissionRetentionDaysDefault: number;
+      decommissionRetentionDaysMinimum: number;
       id: string;
       name: string;
       ownerUserId: string;
+      requireDecommissionReason: boolean;
       slug: string;
       status: WorkspaceStatus;
     }): Promise<Workspace> {
       return database.workspace
         .updateMany({
           data: {
+            decommissionRetentionDaysDefault:
+              input.decommissionRetentionDaysDefault,
+            decommissionRetentionDaysMinimum:
+              input.decommissionRetentionDaysMinimum,
             name: input.name,
+            requireDecommissionReason: input.requireDecommissionReason,
             slug: input.slug,
             status: input.status
           },

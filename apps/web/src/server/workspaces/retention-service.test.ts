@@ -31,6 +31,7 @@ function createWorkspaceRetentionHarness() {
             generatedAt: "2026-04-12T07:00:00.000Z",
             summary: {
               blockedWorkspaceCount: 1,
+              reasonRequiredWorkspaceCount: 1,
               readyWorkspaceCount: 1,
               reviewRequiredWorkspaceCount: 1,
               scheduledDecommissionCount: 1,
@@ -68,6 +69,13 @@ function createWorkspaceRetentionHarness() {
                   workspace.id === "workspace_review" ? 1 : 0,
                 pendingRoleEscalationCount: 0,
                 workspace
+              },
+              retentionPolicy: {
+                defaultDecommissionRetentionDays:
+                  workspace.id === "workspace_ready" ? 45 : 30,
+                minimumDecommissionRetentionDays:
+                  workspace.id === "workspace_review" ? 21 : 7,
+                requireDecommissionReason: workspace.id === "workspace_review"
               },
               summary: {
                 activeAlertCount: workspace.id === "workspace_blocked" ? 1 : 0,
@@ -152,8 +160,15 @@ describe("createWorkspaceRetentionService", () => {
     });
 
     expect(report.report.summary.scheduledDecommissionCount).toBe(1);
+    expect(report.report.summary.reasonRequiredWorkspaceCount).toBe(1);
     expect(report.report.workspaces).toHaveLength(3);
+    expect(report.report.workspaces[2]?.retentionPolicy).toEqual({
+      defaultDecommissionRetentionDays: 45,
+      minimumDecommissionRetentionDays: 7,
+      requireDecommissionReason: false
+    });
     expect(csv).toContain("decommission_status");
+    expect(csv).toContain("retention_default_days");
     expect(csv).toContain("workspace_ready");
   });
 

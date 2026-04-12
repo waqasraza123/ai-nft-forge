@@ -215,6 +215,7 @@ export {
   studioWorkspaceMemberSummarySchema,
   studioWorkspaceNameSchema,
   studioWorkspaceRoleSchema,
+  studioWorkspaceRetentionPolicySchema,
   studioWorkspaceScopeSummarySchema,
   studioWorkspaceSelectionRequestSchema,
   studioWorkspaceSelectionResponseSchema,
@@ -253,6 +254,7 @@ export {
   type StudioWorkspaceMemberResponse,
   type StudioWorkspaceMemberSummary,
   type StudioWorkspaceRole,
+  type StudioWorkspaceRetentionPolicy,
   type StudioWorkspaceScopeSummary,
   type StudioWorkspaceSelectionRequest,
   type StudioWorkspaceSelectionResponse,
@@ -282,7 +284,6 @@ export {
   workspaceDecommissionExecutionResponseSchema,
   workspaceDecommissionReasonSchema,
   workspaceDecommissionResponseSchema,
-  workspaceDecommissionRetentionDaysSchema,
   workspaceDecommissionScheduleRequestSchema,
   workspaceDecommissionStatusSchema,
   workspaceDecommissionSummarySchema,
@@ -332,6 +333,14 @@ export {
   type WorkspaceRetentionBulkCancelResultStatus,
   type WorkspaceRetentionFleetReportResponse
 } from "./workspaces.js";
+export {
+  defaultWorkspaceDecommissionRetentionDays,
+  defaultWorkspaceMinimumDecommissionRetentionDays,
+  defaultWorkspaceRequireDecommissionReason,
+  workspaceDecommissionRetentionDaysSchema,
+  workspaceRetentionPolicySchema,
+  type WorkspaceRetentionPolicy
+} from "./workspace-policy.js";
 export {
   authSessionCookieSameSite,
   authSessionResponseSchema,

@@ -348,12 +348,30 @@ function createWorkspaceOffboardingHarness() {
           }
 
           return {
+            decommissionRetentionDaysDefault: 30,
+            decommissionRetentionDaysMinimum:
+              input.id === "workspace_review" ? 21 : 7,
             id: input.id,
             name: `Workspace ${input.id}`,
             ownerUserId: input.ownerUserId,
+            requireDecommissionReason: input.id === "workspace_review",
             slug: `slug-${input.id.replaceAll("_", "-")}`,
             status: "active" as const
           };
+        },
+        async listByIds(workspaceIds: string[]) {
+          return workspaceIds.map((workspaceId) => ({
+            decommissionRetentionDaysDefault:
+              workspaceId === "workspace_ready" ? 45 : 30,
+            decommissionRetentionDaysMinimum:
+              workspaceId === "workspace_review" ? 21 : 7,
+            id: workspaceId,
+            name: `Workspace ${workspaceId}`,
+            ownerUserId: "user_owner",
+            requireDecommissionReason: workspaceId === "workspace_review",
+            slug: `slug-${workspaceId.replaceAll("_", "-")}`,
+            status: "active" as const
+          }));
         }
       },
       workspaceRoleEscalationRequestRepository: {
@@ -433,6 +451,7 @@ describe("createWorkspaceOffboardingService", () => {
 
     expect(result.overview.summary).toEqual({
       blockedWorkspaceCount: 1,
+      reasonRequiredWorkspaceCount: 1,
       readyWorkspaceCount: 1,
       reviewRequiredWorkspaceCount: 1,
       scheduledDecommissionCount: 1,
@@ -463,6 +482,11 @@ describe("createWorkspaceOffboardingService", () => {
         retentionDays: 30,
         status: "scheduled"
       },
+      retentionPolicy: {
+        defaultDecommissionRetentionDays: 45,
+        minimumDecommissionRetentionDays: 7,
+        requireDecommissionReason: false
+      },
       summary: {
         readiness: "ready"
       }
@@ -487,7 +511,13 @@ describe("createWorkspaceOffboardingService", () => {
     expect(result.export.publications).toHaveLength(1);
     expect(result.export.checkouts).toHaveLength(1);
     expect(result.export.decommission).toBeNull();
+    expect(result.export.retentionPolicy).toEqual({
+      defaultDecommissionRetentionDays: 30,
+      minimumDecommissionRetentionDays: 21,
+      requireDecommissionReason: true
+    });
     expect(csv).toContain("workspace_slug");
+    expect(csv).toContain("retention_default_days");
     expect(csv).toContain("slug-workspace-review");
   });
 

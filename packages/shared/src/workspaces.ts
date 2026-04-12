@@ -13,9 +13,11 @@ import {
   studioWorkspaceInvitationSummarySchema,
   studioWorkspaceMemberSummarySchema,
   studioWorkspaceRoleEscalationSummarySchema,
+  studioWorkspaceRetentionPolicySchema,
   studioWorkspaceScopeSummarySchema,
   studioWorkspaceSummarySchema
 } from "./studio-settings.js";
+import { workspaceDecommissionRetentionDaysSchema } from "./workspace-policy.js";
 
 export const workspaceExportFormatSchema = z.enum(["json", "csv"]);
 export const workspaceDecommissionStatusSchema = z.enum([
@@ -23,11 +25,6 @@ export const workspaceDecommissionStatusSchema = z.enum([
   "canceled",
   "executed"
 ]);
-export const workspaceDecommissionRetentionDaysSchema = z
-  .number()
-  .int()
-  .min(7)
-  .max(365);
 export const workspaceDecommissionReasonSchema = z
   .string()
   .trim()
@@ -88,12 +85,14 @@ export const workspaceOffboardingEntrySchema = z.object({
   current: z.boolean(),
   decommission: workspaceDecommissionSummarySchema.nullable(),
   directory: studioWorkspaceDirectoryEntrySchema,
+  retentionPolicy: studioWorkspaceRetentionPolicySchema,
   summary: workspaceOffboardingSummarySchema,
   workspace: studioWorkspaceScopeSummarySchema
 });
 
 export const workspaceOffboardingOverviewSummarySchema = z.object({
   blockedWorkspaceCount: z.number().int().min(0),
+  reasonRequiredWorkspaceCount: z.number().int().min(0),
   readyWorkspaceCount: z.number().int().min(0),
   reviewRequiredWorkspaceCount: z.number().int().min(0),
   scheduledDecommissionCount: z.number().int().min(0),
@@ -104,7 +103,7 @@ export const workspaceDecommissionScheduleRequestSchema = z.object({
   confirmWorkspaceSlug: studioWorkspaceSummarySchema.shape.slug,
   exportConfirmed: z.literal(true),
   reason: workspaceDecommissionReasonSchema.nullish(),
-  retentionDays: workspaceDecommissionRetentionDaysSchema
+  retentionDays: workspaceDecommissionRetentionDaysSchema.nullish()
 });
 
 export const workspaceDecommissionExecuteRequestSchema = z.object({
@@ -234,6 +233,7 @@ export const workspaceExportResponseSchema = z.object({
     ownerWalletAddress: z.string().min(1),
     publications: z.array(workspaceExportPublicationSchema),
     reconciliationIssues: z.array(workspaceExportReconciliationIssueSchema),
+    retentionPolicy: studioWorkspaceRetentionPolicySchema,
     roleEscalationRequests: z.array(studioWorkspaceRoleEscalationSummarySchema),
     workspace: studioWorkspaceSummarySchema
   })

@@ -5,6 +5,9 @@ import { StudioSettingsServiceError } from "../studio-settings/error";
 import { createWorkspaceDecommissionService } from "./decommission-service";
 
 function createWorkspaceDecommissionHarness(input?: {
+  requireDecommissionReason?: boolean;
+  retentionDaysDefault?: number;
+  retentionDaysMinimum?: number;
   now?: Date;
   offboardingReadiness?: "blocked" | "ready" | "review_required";
   scheduledExecuteAfter?: Date | null;
@@ -202,9 +205,15 @@ function createWorkspaceDecommissionHarness(input?: {
         }
 
         return {
+          decommissionRetentionDaysDefault:
+            input?.retentionDaysDefault ?? 30,
+          decommissionRetentionDaysMinimum:
+            input?.retentionDaysMinimum ?? 7,
           id: "workspace_1",
           name: "Workspace One",
           ownerUserId: "user_owner",
+          requireDecommissionReason:
+            input?.requireDecommissionReason ?? false,
           slug: "workspace-one",
           status: input?.workspaceStatus ?? "archived"
         };
@@ -272,6 +281,66 @@ describe("createWorkspaceDecommissionService", () => {
     expect(result.decommission.retentionDays).toBe(30);
     expect(result.decommission.executeAfter).toBe("2026-05-12T05:00:00.000Z");
     expect(harness.auditActions).toContain("workspace_decommission_scheduled");
+  });
+
+  it("uses the workspace default retention window when none is provided", async () => {
+    const harness = createWorkspaceDecommissionHarness({
+      retentionDaysDefault: 45
+    });
+
+    const result = await harness.service.scheduleWorkspaceDecommission({
+      confirmWorkspaceSlug: "workspace-one",
+      exportConfirmed: true,
+      ownerUserId: "user_owner",
+      workspaceId: "workspace_1"
+    });
+
+    expect(result.decommission.retentionDays).toBe(45);
+    expect(result.decommission.executeAfter).toBe("2026-05-27T05:00:00.000Z");
+  });
+
+  it("rejects scheduling below the workspace minimum retention policy", async () => {
+    const harness = createWorkspaceDecommissionHarness({
+      retentionDaysMinimum: 21
+    });
+
+    await expect(
+      harness.service.scheduleWorkspaceDecommission({
+        confirmWorkspaceSlug: "workspace-one",
+        exportConfirmed: true,
+        ownerUserId: "user_owner",
+        retentionDays: 14,
+        workspaceId: "workspace_1"
+      })
+    ).rejects.toEqual(
+      new StudioSettingsServiceError(
+        "WORKSPACE_DECOMMISSION_RETENTION_POLICY_VIOLATION",
+        "Retention window must be at least 21 day(s) for this workspace.",
+        409
+      )
+    );
+  });
+
+  it("rejects scheduling without a reason when the workspace policy requires one", async () => {
+    const harness = createWorkspaceDecommissionHarness({
+      requireDecommissionReason: true
+    });
+
+    await expect(
+      harness.service.scheduleWorkspaceDecommission({
+        confirmWorkspaceSlug: "workspace-one",
+        exportConfirmed: true,
+        ownerUserId: "user_owner",
+        retentionDays: 30,
+        workspaceId: "workspace_1"
+      })
+    ).rejects.toEqual(
+      new StudioSettingsServiceError(
+        "WORKSPACE_DECOMMISSION_REASON_REQUIRED",
+        "This workspace requires a decommission reason before scheduling cleanup.",
+        409
+      )
+    );
   });
 
   it("cancels an active decommission schedule", async () => {

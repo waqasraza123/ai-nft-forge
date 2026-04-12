@@ -85,6 +85,11 @@ export async function PUT(request: Request) {
           ? {
               wordmark: body.wordmark
             }
+          : {}),
+        ...(body.retentionPolicy !== undefined
+          ? {
+              retentionPolicy: body.retentionPolicy
+            }
           : {})
       });
 

@@ -87,9 +87,12 @@ type WorkspaceDecommissionRepositorySet = {
       id: string;
       ownerUserId: string;
     }): Promise<{
+      decommissionRetentionDaysDefault: number;
+      decommissionRetentionDaysMinimum: number;
       id: string;
       name: string;
       ownerUserId: string;
+      requireDecommissionReason: boolean;
       slug: string;
       status: "active" | "archived" | "suspended";
     } | null>;
@@ -269,6 +272,36 @@ function assertOffboardingReady(input: {
   );
 }
 
+function assertWorkspaceRetentionPolicy(input: {
+  reason?: string | null | undefined;
+  retentionDays: number;
+  workspace: {
+    decommissionRetentionDaysMinimum: number;
+    requireDecommissionReason: boolean;
+  };
+}) {
+  if (
+    input.retentionDays < input.workspace.decommissionRetentionDaysMinimum
+  ) {
+    throw new StudioSettingsServiceError(
+      "WORKSPACE_DECOMMISSION_RETENTION_POLICY_VIOLATION",
+      `Retention window must be at least ${input.workspace.decommissionRetentionDaysMinimum} day(s) for this workspace.`,
+      409
+    );
+  }
+
+  if (
+    input.workspace.requireDecommissionReason &&
+    (!input.reason || input.reason.trim().length === 0)
+  ) {
+    throw new StudioSettingsServiceError(
+      "WORKSPACE_DECOMMISSION_REASON_REQUIRED",
+      "This workspace requires a decommission reason before scheduling cleanup.",
+      409
+    );
+  }
+}
+
 async function recordWorkspaceDecommissionAuditLog(input: {
   action:
     | "workspace_decommission_canceled"
@@ -328,7 +361,7 @@ export function createWorkspaceDecommissionService(
       exportConfirmed: true;
       ownerUserId: string;
       reason?: string | null | undefined;
-      retentionDays: number;
+      retentionDays?: number | null | undefined;
       workspaceId: string;
     }) {
       const now = dependencies.now();
@@ -352,6 +385,15 @@ export function createWorkspaceDecommissionService(
         workspace
       });
 
+      const retentionDays =
+        input.retentionDays ?? workspace.decommissionRetentionDaysDefault;
+      const reason = input.reason?.trim() ? input.reason.trim() : null;
+      assertWorkspaceRetentionPolicy({
+        reason,
+        retentionDays,
+        workspace
+      });
+
       if (scheduledRequest) {
         throw new StudioSettingsServiceError(
           "WORKSPACE_DECOMMISSION_ALREADY_SCHEDULED",
@@ -371,16 +413,16 @@ export function createWorkspaceDecommissionService(
       });
 
       const executeAfter = new Date(
-        now.getTime() + input.retentionDays * 24 * 60 * 60 * 1000
+        now.getTime() + retentionDays * 24 * 60 * 60 * 1000
       );
 
       await dependencies.repositories.workspaceDecommissionRequestRepository.create(
         {
           executeAfter,
           exportConfirmedAt: now,
-          reason: input.reason ?? null,
+          reason,
           requestedByUserId: owner.id,
-          retentionDays: input.retentionDays,
+          retentionDays,
           workspaceId: workspace.id
         }
       );
@@ -405,10 +447,10 @@ export function createWorkspaceDecommissionService(
         actor: owner,
         executeAfter,
         exportConfirmedAt: now,
-        reason: input.reason ?? null,
+        reason,
         repositories: dependencies.repositories,
         requestId: createdRequest.id,
-        retentionDays: input.retentionDays,
+        retentionDays,
         workspaceId: workspace.id
       });
 

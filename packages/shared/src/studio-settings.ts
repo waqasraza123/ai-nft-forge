@@ -6,6 +6,7 @@ import {
   collectionDraftSlugSchema
 } from "./collections.js";
 import { walletAddressSchema } from "./auth.js";
+import { workspaceRetentionPolicySchema } from "./workspace-policy.js";
 
 export const studioWorkspaceNameSchema = z.string().trim().min(1).max(120);
 export const studioWorkspaceSlugSchema = collectionDraftSlugSchema;
@@ -191,6 +192,7 @@ export const studioWorkspaceAuditActionSchema = z.enum([
   "workspace_member_removed",
   "workspace_owner_transferred",
   "workspace_reactivated",
+  "workspace_retention_policy_updated",
   "workspace_role_escalation_approved",
   "workspace_role_escalation_canceled",
   "workspace_role_escalation_rejected",
@@ -217,6 +219,7 @@ export const studioSettingsSummarySchema = z.object({
   brands: z.array(studioBrandSummarySchema),
   invitations: z.array(studioWorkspaceInvitationSummarySchema),
   members: z.array(studioWorkspaceMemberSummarySchema),
+  retentionPolicy: workspaceRetentionPolicySchema,
   roleEscalationRequests: z.array(studioWorkspaceRoleEscalationSummarySchema),
   workspace: studioWorkspaceSummarySchema
 });
@@ -275,6 +278,7 @@ export const studioSettingsUpdateRequestSchema = z.object({
   storyHeadline: studioBrandStoryHeadlineSchema.nullish(),
   themePreset: studioBrandThemePresetSchema,
   wordmark: studioBrandWordmarkSchema.nullish(),
+  retentionPolicy: workspaceRetentionPolicySchema.nullish(),
   workspaceName: studioWorkspaceNameSchema,
   workspaceSlug: studioWorkspaceSlugSchema
 });
@@ -360,6 +364,16 @@ export const studioSettingsErrorResponseSchema = z.object({
       "ROLE_ESCALATION_NOT_FOUND",
       "ROLE_ESCALATION_NOT_PENDING",
       "SESSION_REQUIRED",
+      "WORKSPACE_DECOMMISSION_ALREADY_SCHEDULED",
+      "WORKSPACE_DECOMMISSION_CONFIRMATION_MISMATCH",
+      "WORKSPACE_DECOMMISSION_CREATE_FAILED",
+      "WORKSPACE_DECOMMISSION_DELETE_FAILED",
+      "WORKSPACE_DECOMMISSION_NOT_READY",
+      "WORKSPACE_DECOMMISSION_NOT_SCHEDULED",
+      "WORKSPACE_DECOMMISSION_REASON_REQUIRED",
+      "WORKSPACE_DECOMMISSION_REQUIRES_ARCHIVE",
+      "WORKSPACE_DECOMMISSION_RETENTION_PENDING",
+      "WORKSPACE_DECOMMISSION_RETENTION_POLICY_VIOLATION",
       "WORKSPACE_NOT_ACTIVE",
       "WORKSPACE_REQUIRED",
       "WORKSPACE_NOT_FOUND",
@@ -372,6 +386,10 @@ export const studioSettingsErrorResponseSchema = z.object({
 export type StudioBrandSummary = z.infer<typeof studioBrandSummarySchema>;
 export type StudioBrandTheme = z.infer<typeof studioBrandThemeSchema>;
 export type StudioBrandResponse = z.infer<typeof studioBrandResponseSchema>;
+export const studioWorkspaceRetentionPolicySchema = workspaceRetentionPolicySchema;
+export type StudioWorkspaceRetentionPolicy = z.infer<
+  typeof studioWorkspaceRetentionPolicySchema
+>;
 export type StudioBrandCreateRequest = z.infer<
   typeof studioBrandCreateRequestSchema
 >;

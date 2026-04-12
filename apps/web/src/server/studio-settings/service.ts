@@ -1,4 +1,7 @@
 import {
+  defaultWorkspaceDecommissionRetentionDays,
+  defaultWorkspaceMinimumDecommissionRetentionDays,
+  defaultWorkspaceRequireDecommissionReason,
   defaultStudioBrandAccentColor,
   defaultStudioBrandLandingDescription,
   defaultStudioBrandLandingHeadline,
@@ -24,6 +27,7 @@ import {
   studioWorkspaceMemberResponseSchema,
   studioWorkspaceRoleEscalationCreateRequestSchema,
   studioWorkspaceRoleEscalationResponseSchema,
+  workspaceRetentionPolicySchema,
   type StudioWorkspaceRole,
   type StudioWorkspaceStatus
 } from "@ai-nft-forge/shared";
@@ -31,9 +35,12 @@ import {
 import { StudioSettingsServiceError } from "./error";
 
 type WorkspaceRecord = {
+  decommissionRetentionDaysDefault: number;
+  decommissionRetentionDaysMinimum: number;
   id: string;
   name: string;
   ownerUserId: string;
+  requireDecommissionReason: boolean;
   slug: string;
   status: "active" | "archived" | "suspended";
 };
@@ -328,8 +335,11 @@ type StudioSettingsRepositorySet = {
   };
   workspaceRepository: {
     create(input: {
+      decommissionRetentionDaysDefault?: number;
+      decommissionRetentionDaysMinimum?: number;
       name: string;
       ownerUserId: string;
+      requireDecommissionReason?: boolean;
       slug: string;
       status?: "active" | "archived" | "suspended";
     }): Promise<WorkspaceRecord>;
@@ -343,9 +353,12 @@ type StudioSettingsRepositorySet = {
     ): Promise<WorkspaceRecord | null>;
     listByOwnerUserId(ownerUserId: string): Promise<WorkspaceRecord[]>;
     updateByIdForOwner(input: {
+      decommissionRetentionDaysDefault: number;
+      decommissionRetentionDaysMinimum: number;
       id: string;
       name: string;
       ownerUserId: string;
+      requireDecommissionReason: boolean;
       slug: string;
       status: "active" | "archived" | "suspended";
     }): Promise<WorkspaceRecord>;
@@ -482,6 +495,28 @@ function serializeWorkspace(input: WorkspaceRecord) {
     slug: input.slug,
     status: input.status
   };
+}
+
+function serializeWorkspaceRetentionPolicy(input: WorkspaceRecord) {
+  return workspaceRetentionPolicySchema.parse({
+    defaultDecommissionRetentionDays: input.decommissionRetentionDaysDefault,
+    minimumDecommissionRetentionDays: input.decommissionRetentionDaysMinimum,
+    requireDecommissionReason: input.requireDecommissionReason
+  });
+}
+
+function workspaceRetentionPoliciesEqual(input: {
+  next: ReturnType<typeof serializeWorkspaceRetentionPolicy>;
+  workspace: WorkspaceRecord;
+}) {
+  return (
+    input.workspace.decommissionRetentionDaysDefault ===
+      input.next.defaultDecommissionRetentionDays &&
+    input.workspace.decommissionRetentionDaysMinimum ===
+      input.next.minimumDecommissionRetentionDays &&
+    input.workspace.requireDecommissionReason ===
+      input.next.requireDecommissionReason
+  );
 }
 
 function createWorkspaceAccess(role: StudioWorkspaceRole) {
@@ -662,6 +697,7 @@ async function serializeStudioSettings(input: {
           })
         )
       ],
+      retentionPolicy: serializeWorkspaceRetentionPolicy(input.workspace),
       roleEscalationRequests: roleEscalationRequests.map((request) =>
         serializeWorkspaceRoleEscalationRequest(request)
       ),
@@ -803,6 +839,7 @@ async function recordWorkspaceAuditLog(input: {
     | "workspace_member_removed"
     | "workspace_owner_transferred"
     | "workspace_reactivated"
+    | "workspace_retention_policy_updated"
     | "workspace_role_escalation_approved"
     | "workspace_role_escalation_canceled"
     | "workspace_role_escalation_rejected"
@@ -810,6 +847,7 @@ async function recordWorkspaceAuditLog(input: {
     | "workspace_suspended";
   actor: UserRecord;
   membershipId?: string | null;
+  policy?: ReturnType<typeof serializeWorkspaceRetentionPolicy>;
   requestId?: string | null;
   repositories: Pick<StudioSettingsRepositorySet, "auditLogRepository">;
   role?: StudioWorkspaceRole | null;
@@ -838,6 +876,16 @@ async function recordWorkspaceAuditLog(input: {
       ...(input.role
         ? {
             role: input.role
+          }
+        : {}),
+      ...(input.policy
+        ? {
+            defaultDecommissionRetentionDays:
+              input.policy.defaultDecommissionRetentionDays,
+            minimumDecommissionRetentionDays:
+              input.policy.minimumDecommissionRetentionDays,
+            requireDecommissionReason:
+              input.policy.requireDecommissionReason
           }
         : {}),
       ...(input.targetUserId
@@ -1011,8 +1059,14 @@ export function createStudioSettingsService(
 
       return dependencies.runTransaction(async (repositories) => {
         const workspace = await repositories.workspaceRepository.create({
+          decommissionRetentionDaysDefault:
+            defaultWorkspaceDecommissionRetentionDays,
+          decommissionRetentionDaysMinimum:
+            defaultWorkspaceMinimumDecommissionRetentionDays,
           name: parsedInput.workspaceName,
           ownerUserId: input.ownerUserId,
+          requireDecommissionReason:
+            defaultWorkspaceRequireDecommissionReason,
           slug: parsedInput.workspaceSlug,
           status: "active"
         });
@@ -1072,9 +1126,14 @@ export function createStudioSettingsService(
 
         const updatedWorkspace =
           await repositories.workspaceRepository.updateByIdForOwner({
+            decommissionRetentionDaysDefault:
+              workspace.decommissionRetentionDaysDefault,
+            decommissionRetentionDaysMinimum:
+              workspace.decommissionRetentionDaysMinimum,
             id: workspace.id,
             name: workspace.name,
             ownerUserId: input.ownerUserId,
+            requireDecommissionReason: workspace.requireDecommissionReason,
             slug: workspace.slug,
             status: parsedInput.status
           });
@@ -1202,6 +1261,11 @@ export function createStudioSettingsService(
       storyBody?: string | null;
       storyHeadline?: string | null;
       themePreset: "editorial_warm" | "gallery_mono" | "midnight_launch";
+      retentionPolicy?: {
+        defaultDecommissionRetentionDays: number;
+        minimumDecommissionRetentionDays: number;
+        requireDecommissionReason: boolean;
+      } | null;
       workspaceId?: string | null;
       wordmark?: string | null;
       workspaceName: string;
@@ -1225,6 +1289,7 @@ export function createStudioSettingsService(
         storyHeadline: input.storyHeadline,
         themePreset: input.themePreset,
         wordmark: input.wordmark,
+        retentionPolicy: input.retentionPolicy,
         workspaceName: input.workspaceName,
         workspaceSlug: input.workspaceSlug
       });
@@ -1280,6 +1345,19 @@ export function createStudioSettingsService(
               (publication) => publication.brandSlug === existingBrand.slug
             )
           : [];
+        const nextRetentionPolicy = workspaceRetentionPolicySchema.parse(
+          parsedInput.retentionPolicy ?? {
+            defaultDecommissionRetentionDays:
+              existingWorkspace?.decommissionRetentionDaysDefault ??
+              defaultWorkspaceDecommissionRetentionDays,
+            minimumDecommissionRetentionDays:
+              existingWorkspace?.decommissionRetentionDaysMinimum ??
+              defaultWorkspaceMinimumDecommissionRetentionDays,
+            requireDecommissionReason:
+              existingWorkspace?.requireDecommissionReason ??
+              defaultWorkspaceRequireDecommissionReason
+          }
+        );
 
         if (
           existingBrand &&
@@ -1296,8 +1374,14 @@ export function createStudioSettingsService(
         const workspace =
           existingWorkspace ??
           (await repositories.workspaceRepository.create({
+            decommissionRetentionDaysDefault:
+              nextRetentionPolicy.defaultDecommissionRetentionDays,
+            decommissionRetentionDaysMinimum:
+              nextRetentionPolicy.minimumDecommissionRetentionDays,
             name: parsedInput.workspaceName,
             ownerUserId: input.ownerUserId,
+            requireDecommissionReason:
+              nextRetentionPolicy.requireDecommissionReason,
             slug: parsedInput.workspaceSlug,
             status: "active"
           }));
@@ -1305,9 +1389,15 @@ export function createStudioSettingsService(
         const persistedWorkspace =
           existingWorkspace &&
           (await repositories.workspaceRepository.updateByIdForOwner({
+            decommissionRetentionDaysDefault:
+              nextRetentionPolicy.defaultDecommissionRetentionDays,
+            decommissionRetentionDaysMinimum:
+              nextRetentionPolicy.minimumDecommissionRetentionDays,
             id: existingWorkspace.id,
             name: parsedInput.workspaceName,
             ownerUserId: input.ownerUserId,
+            requireDecommissionReason:
+              nextRetentionPolicy.requireDecommissionReason,
             slug: parsedInput.workspaceSlug,
             status: existingWorkspace.status
           }));
@@ -1372,6 +1462,35 @@ export function createStudioSettingsService(
               })
             )
           );
+        }
+
+        if (
+          existingWorkspace &&
+          persistedWorkspace &&
+          !workspaceRetentionPoliciesEqual({
+            next: nextRetentionPolicy,
+            workspace: existingWorkspace
+          })
+        ) {
+          const owner = await repositories.userRepository.findById(
+            input.ownerUserId
+          );
+
+          if (!owner) {
+            throw new StudioSettingsServiceError(
+              "WORKSPACE_REQUIRED",
+              "Workspace ownership could not be resolved.",
+              409
+            );
+          }
+
+          await recordWorkspaceAuditLog({
+            action: "workspace_retention_policy_updated",
+            actor: owner,
+            policy: nextRetentionPolicy,
+            repositories,
+            workspaceId: existingWorkspace.id
+          });
         }
 
         return loadOwnerStudioSettings({

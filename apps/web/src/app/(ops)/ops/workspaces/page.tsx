@@ -33,6 +33,7 @@ export default async function OpsWorkspacesPage() {
           generatedAt: new Date(0).toISOString(),
           summary: {
             blockedWorkspaceCount: 0,
+            reasonRequiredWorkspaceCount: 0,
             readyWorkspaceCount: 0,
             reviewRequiredWorkspaceCount: 0,
             scheduledDecommissionCount: 0,

@@ -11,6 +11,8 @@ import {
 } from "react";
 
 import {
+  defaultWorkspaceDecommissionRetentionDays,
+  defaultWorkspaceMinimumDecommissionRetentionDays,
   defaultStudioBrandAccentColor,
   defaultStudioBrandLandingDescription,
   defaultStudioBrandLandingHeadline,
@@ -35,6 +37,7 @@ import {
   type StudioWorkspaceInvitationSummary,
   type StudioWorkspaceMemberSummary,
   type StudioWorkspaceRoleEscalationSummary,
+  type StudioWorkspaceRetentionPolicy,
   type StudioWorkspaceStatus,
   type WorkspaceDecommissionSummary,
   type WorkspaceOffboardingEntry
@@ -70,11 +73,14 @@ type StudioBrandEditorState = {
   brandName: string;
   brandSlug: string;
   customDomain: string;
+  defaultDecommissionRetentionDays: number;
   featuredReleaseLabel: string;
   heroKicker: string;
   landingDescription: string;
   landingHeadline: string;
+  minimumDecommissionRetentionDays: number;
   primaryCtaLabel: string;
+  requireDecommissionReason: boolean;
   secondaryCtaLabel: string;
   storyBody: string;
   storyHeadline: string;
@@ -110,6 +116,20 @@ type WorkspaceDecommissionFormState = {
   reason: string;
   retentionDays: number;
 };
+
+function resolveWorkspaceRetentionPolicy(
+  settings: StudioSettingsSummary | null
+): StudioWorkspaceRetentionPolicy {
+  return (
+    settings?.retentionPolicy ?? {
+      defaultDecommissionRetentionDays:
+        defaultWorkspaceDecommissionRetentionDays,
+      minimumDecommissionRetentionDays:
+        defaultWorkspaceMinimumDecommissionRetentionDays,
+      requireDecommissionReason: false
+    }
+  );
+}
 
 function formatTimestamp(value: string | null) {
   if (!value) {
@@ -170,6 +190,9 @@ function createInitialEditorState(settings: StudioSettingsSummary | null) {
     brandName: brand?.name ?? "",
     brandSlug: brand?.slug ?? "",
     customDomain: brand?.customDomain ?? "",
+    defaultDecommissionRetentionDays:
+      settings?.retentionPolicy.defaultDecommissionRetentionDays ??
+      defaultWorkspaceDecommissionRetentionDays,
     featuredReleaseLabel:
       brand?.featuredReleaseLabel ?? defaultStudioFeaturedReleaseLabel,
     heroKicker: brand?.heroKicker ?? "",
@@ -177,7 +200,12 @@ function createInitialEditorState(settings: StudioSettingsSummary | null) {
       brand?.landingDescription ?? defaultStudioBrandLandingDescription,
     landingHeadline:
       brand?.landingHeadline ?? defaultStudioBrandLandingHeadline,
+    minimumDecommissionRetentionDays:
+      settings?.retentionPolicy.minimumDecommissionRetentionDays ??
+      defaultWorkspaceMinimumDecommissionRetentionDays,
     primaryCtaLabel: brand?.primaryCtaLabel ?? "",
+    requireDecommissionReason:
+      settings?.retentionPolicy.requireDecommissionReason ?? false,
     secondaryCtaLabel: brand?.secondaryCtaLabel ?? "",
     storyBody: brand?.storyBody ?? "",
     storyHeadline: brand?.storyHeadline ?? "",
@@ -190,6 +218,7 @@ function createInitialEditorState(settings: StudioSettingsSummary | null) {
 
 function createEditorState(input: {
   brand: StudioBrandSummary | null;
+  retentionPolicy: StudioWorkspaceRetentionPolicy;
   workspace: StudioSettingsSummary["workspace"] | null;
 }): StudioBrandEditorState {
   return {
@@ -197,6 +226,8 @@ function createEditorState(input: {
     brandName: input.brand?.name ?? "",
     brandSlug: input.brand?.slug ?? "",
     customDomain: input.brand?.customDomain ?? "",
+    defaultDecommissionRetentionDays:
+      input.retentionPolicy.defaultDecommissionRetentionDays,
     featuredReleaseLabel:
       input.brand?.featuredReleaseLabel ?? defaultStudioFeaturedReleaseLabel,
     heroKicker: input.brand?.heroKicker ?? "",
@@ -204,7 +235,10 @@ function createEditorState(input: {
       input.brand?.landingDescription ?? defaultStudioBrandLandingDescription,
     landingHeadline:
       input.brand?.landingHeadline ?? defaultStudioBrandLandingHeadline,
+    minimumDecommissionRetentionDays:
+      input.retentionPolicy.minimumDecommissionRetentionDays,
     primaryCtaLabel: input.brand?.primaryCtaLabel ?? "",
+    requireDecommissionReason: input.retentionPolicy.requireDecommissionReason,
     secondaryCtaLabel: input.brand?.secondaryCtaLabel ?? "",
     storyBody: input.brand?.storyBody ?? "",
     storyHeadline: input.brand?.storyHeadline ?? "",
@@ -242,13 +276,16 @@ function createInitialMemberState(): MemberState {
 }
 
 function createInitialWorkspaceDecommissionFormState(
-  workspaceSlug: string | null
+  input: {
+    retentionPolicy: StudioWorkspaceRetentionPolicy;
+    workspaceSlug: string | null;
+  }
 ): WorkspaceDecommissionFormState {
   return {
-    confirmWorkspaceSlug: workspaceSlug ?? "",
-    executeConfirmWorkspaceSlug: workspaceSlug ?? "",
+    confirmWorkspaceSlug: input.workspaceSlug ?? "",
+    executeConfirmWorkspaceSlug: input.workspaceSlug ?? "",
     reason: "",
-    retentionDays: 30
+    retentionDays: input.retentionPolicy.defaultDecommissionRetentionDays
   };
 }
 
@@ -323,7 +360,10 @@ export function StudioSettingsClient({
   const [workspaceDecommissionFormState, setWorkspaceDecommissionFormState] =
     useState<WorkspaceDecommissionFormState>(() =>
       createInitialWorkspaceDecommissionFormState(
-        initialSettings?.workspace.slug ?? null
+        {
+          retentionPolicy: resolveWorkspaceRetentionPolicy(initialSettings),
+          workspaceSlug: initialSettings?.workspace.slug ?? null
+        }
       )
     );
   const [notice, setNotice] = useState<NoticeState>(null);
@@ -375,6 +415,7 @@ export function StudioSettingsClient({
   const canEditCurrentWorkspace =
     canManageWorkspace && Boolean(settings?.workspace.id) && workspaceIsActive;
   const canMutateMembers = canManageMembers && workspaceIsActive;
+  const retentionPolicy = resolveWorkspaceRetentionPolicy(settings);
 
   const selectedBrand =
     settings?.brands.find((brand) => brand.id === selectedBrandId) ??
@@ -419,29 +460,25 @@ export function StudioSettingsClient({
     setEditorState(
       createEditorState({
         brand: selectedBrand,
+        retentionPolicy: resolveWorkspaceRetentionPolicy(settings),
         workspace: settings?.workspace ?? null
       })
     );
   }, [selectedBrand, selectedBrandId, settings]);
 
   useEffect(() => {
-    setWorkspaceDecommissionFormState((currentState) => {
-      const workspaceSlug = settings?.workspace.slug ?? "";
+    const retentionPolicy = resolveWorkspaceRetentionPolicy(settings);
 
-      if (
-        currentState.confirmWorkspaceSlug === workspaceSlug &&
-        currentState.executeConfirmWorkspaceSlug === workspaceSlug
-      ) {
-        return currentState;
-      }
-
-      return {
-        ...currentState,
-        confirmWorkspaceSlug: workspaceSlug,
-        executeConfirmWorkspaceSlug: workspaceSlug
-      };
-    });
-  }, [settings?.workspace.slug]);
+    setWorkspaceDecommissionFormState((currentState) => ({
+      ...currentState,
+      confirmWorkspaceSlug: settings?.workspace.slug ?? "",
+      executeConfirmWorkspaceSlug: settings?.workspace.slug ?? "",
+      retentionDays: Math.max(
+        retentionPolicy.defaultDecommissionRetentionDays,
+        retentionPolicy.minimumDecommissionRetentionDays
+      )
+    }));
+  }, [settings?.retentionPolicy, settings?.workspace.slug]);
 
   const refreshSettings = useEffectEvent(
     async (input?: { silent?: boolean }) => {
@@ -524,7 +561,14 @@ export function StudioSettingsClient({
       const response = await fetch("/api/studio/settings", {
         body: JSON.stringify({
           ...editorState,
-          brandId: selectedBrand?.id ?? null
+          brandId: selectedBrand?.id ?? null,
+          retentionPolicy: {
+            defaultDecommissionRetentionDays:
+              editorState.defaultDecommissionRetentionDays,
+            minimumDecommissionRetentionDays:
+              editorState.minimumDecommissionRetentionDays,
+            requireDecommissionReason: editorState.requireDecommissionReason
+          }
         }),
         headers: {
           "Content-Type": "application/json"
@@ -1557,7 +1601,7 @@ export function StudioSettingsClient({
           ) : null}
         </SurfaceCard>
         <SurfaceCard
-          body="Decommission permanently removes the workspace and its workspace-scoped data after a retention window. This is owner-only, requires an archived workspace, and only unlocks when offboarding review is fully clean."
+          body="Decommission permanently removes the workspace and its workspace-scoped data after a retention window. Policy defaults and minimums are workspace-owned, execution is owner-only, and final cleanup only unlocks after archive plus a fully clean offboarding review."
           eyebrow="Retention"
           span={4}
           title="Decommission workspace"
@@ -1581,6 +1625,20 @@ export function StudioSettingsClient({
                   </span>
                 </div>
               ) : null}
+              <div className="pill-row">
+                <Pill>
+                  Default {retentionPolicy.defaultDecommissionRetentionDays} days
+                </Pill>
+                <Pill>
+                  Minimum {retentionPolicy.minimumDecommissionRetentionDays} days
+                </Pill>
+                <Pill>
+                  Reason{" "}
+                  {retentionPolicy.requireDecommissionReason
+                    ? "required"
+                    : "optional"}
+                </Pill>
+              </div>
               {canManageWorkspace && scheduledDecommission ? (
                 <>
                   <div className="pill-row">
@@ -1706,9 +1764,11 @@ export function StudioSettingsClient({
                   <label className="field-label" htmlFor="decommission-retention">
                     Retention window
                   </label>
-                  <select
+                  <input
                     className="text-input"
                     id="decommission-retention"
+                    max={365}
+                    min={retentionPolicy.minimumDecommissionRetentionDays}
                     onChange={(event) => {
                       const value = Number(event.target.value);
 
@@ -1717,12 +1777,14 @@ export function StudioSettingsClient({
                         retentionDays: value
                       }));
                     }}
+                    required
+                    type="number"
                     value={workspaceDecommissionFormState.retentionDays}
-                  >
-                    <option value={7}>7 days</option>
-                    <option value={30}>30 days</option>
-                    <option value={90}>90 days</option>
-                  </select>
+                  />
+                  <p className="surface-card__body-copy">
+                    Default policy: {retentionPolicy.defaultDecommissionRetentionDays} day(s).
+                    Minimum allowed: {retentionPolicy.minimumDecommissionRetentionDays} day(s).
+                  </p>
                   <label className="field-label" htmlFor="decommission-slug">
                     Confirm workspace slug
                   </label>
@@ -1743,6 +1805,9 @@ export function StudioSettingsClient({
                   />
                   <label className="field-label" htmlFor="decommission-reason">
                     Reason
+                    {retentionPolicy.requireDecommissionReason
+                      ? " (required)"
+                      : " (optional)"}
                   </label>
                   <textarea
                     className="text-input"
@@ -1978,6 +2043,75 @@ export function StudioSettingsClient({
                   required
                   value={editorState.workspaceSlug}
                 />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">
+                  Default decommission retention
+                </span>
+                <input
+                  className="input-field"
+                  max={365}
+                  min={editorState.minimumDecommissionRetentionDays}
+                  onChange={(event) => {
+                    const value = Number(event.target.value);
+
+                    setEditorState((current) => ({
+                      ...current,
+                      defaultDecommissionRetentionDays: value
+                    }));
+                  }}
+                  required
+                  type="number"
+                  value={editorState.defaultDecommissionRetentionDays}
+                />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">
+                  Minimum decommission retention
+                </span>
+                <input
+                  className="input-field"
+                  max={365}
+                  min={7}
+                  onChange={(event) => {
+                    const value = Number(event.target.value);
+
+                    setEditorState((current) => ({
+                      ...current,
+                      defaultDecommissionRetentionDays: Math.max(
+                        current.defaultDecommissionRetentionDays,
+                        value
+                      ),
+                      minimumDecommissionRetentionDays: value
+                    }));
+                  }}
+                  required
+                  type="number"
+                  value={editorState.minimumDecommissionRetentionDays}
+                />
+              </label>
+              <label className="field-stack">
+                <span className="field-label">
+                  Require decommission reason
+                </span>
+                <select
+                  className="input-field"
+                  onChange={(event) => {
+                    setEditorState((current) => ({
+                      ...current,
+                      requireDecommissionReason:
+                        event.target.value === "required"
+                    }));
+                  }}
+                  value={
+                    editorState.requireDecommissionReason
+                      ? "required"
+                      : "optional"
+                  }
+                >
+                  <option value="optional">Optional</option>
+                  <option value="required">Required</option>
+                </select>
               </label>
               <label className="field-stack">
                 <span className="field-label">Brand name</span>
