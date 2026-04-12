@@ -31,6 +31,7 @@ function createWorkspaceRetentionHarness() {
             generatedAt: "2026-04-12T07:00:00.000Z",
             summary: {
               blockedWorkspaceCount: 1,
+              decommissionNoticeDueWorkspaceCount: 1,
               reasonRequiredWorkspaceCount: 1,
               readyWorkspaceCount: 1,
               reviewRequiredWorkspaceCount: 1,
@@ -60,9 +61,31 @@ function createWorkspaceRetentionHarness() {
                       status: "scheduled" as const
                     }
                   : null,
+              decommissionWorkflow:
+                workspace.id === "workspace_ready"
+                  ? {
+                      latestNotification: {
+                        id: "notification_1",
+                        kind: "scheduled" as const,
+                        sentAt: "2026-04-12T02:00:00.000Z",
+                        sentByUserId: "user_owner",
+                        sentByWalletAddress:
+                          "0x1111111111111111111111111111111111111111"
+                      },
+                      nextDueKind: "upcoming" as const,
+                      notificationCount: 1
+                    }
+                  : {
+                      latestNotification: null,
+                      nextDueKind: null,
+                      notificationCount: 0
+                    },
               directory: {
                 brandCount: 1,
                 current: workspace.id === input.currentWorkspaceId,
+                expiredInvitationCount: 0,
+                expiringInvitationCount:
+                  workspace.id === "workspace_review" ? 1 : 0,
                 lastActivityAt: "2026-04-12T06:00:00.000Z",
                 memberCount: 2,
                 pendingInvitationCount:
@@ -160,6 +183,7 @@ describe("createWorkspaceRetentionService", () => {
     });
 
     expect(report.report.summary.scheduledDecommissionCount).toBe(1);
+    expect(report.report.summary.decommissionNoticeDueWorkspaceCount).toBe(1);
     expect(report.report.summary.reasonRequiredWorkspaceCount).toBe(1);
     expect(report.report.workspaces).toHaveLength(3);
     expect(report.report.workspaces[2]?.retentionPolicy).toEqual({
@@ -168,6 +192,7 @@ describe("createWorkspaceRetentionService", () => {
       requireDecommissionReason: false
     });
     expect(csv).toContain("decommission_status");
+    expect(csv).toContain("decommission_next_due_kind");
     expect(csv).toContain("retention_default_days");
     expect(csv).toContain("workspace_ready");
   });

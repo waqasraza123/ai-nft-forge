@@ -22,6 +22,7 @@ type WorkspaceRetentionServiceDependencies = {
         generatedAt: string;
             summary: {
               blockedWorkspaceCount: number;
+              decommissionNoticeDueWorkspaceCount: number;
               reasonRequiredWorkspaceCount: number;
               readyWorkspaceCount: number;
               reviewRequiredWorkspaceCount: number;
@@ -103,6 +104,10 @@ export function createWorkspaceRetentionService(
           "decommission_status",
           "decommission_execute_after",
           "decommission_retention_days",
+          "decommission_notification_count",
+          "decommission_next_due_kind",
+          "decommission_latest_notification_kind",
+          "decommission_latest_notification_sent_at",
           "last_activity_at"
         ].join(",")
       ];
@@ -132,6 +137,10 @@ export function createWorkspaceRetentionService(
             workspace.decommission?.status ?? null,
             workspace.decommission?.executeAfter ?? null,
             workspace.decommission?.retentionDays ?? null,
+            workspace.decommissionWorkflow.notificationCount,
+            workspace.decommissionWorkflow.nextDueKind ?? null,
+            workspace.decommissionWorkflow.latestNotification?.kind ?? null,
+            workspace.decommissionWorkflow.latestNotification?.sentAt ?? null,
             workspace.directory.lastActivityAt
           ]
             .map((value) => escapeCsvValue(value))

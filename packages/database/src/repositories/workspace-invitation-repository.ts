@@ -203,6 +203,49 @@ export function createWorkspaceInvitationRepository(
           workspaceId: input.workspaceId
         }
       });
+    },
+
+    listByWorkspaceId(input: {
+      workspaceId: string;
+    }): Promise<WorkspaceInvitationWithInviter[]> {
+      return database.workspaceInvitation.findMany({
+        include: {
+          invitedByUser: {
+            select: invitedByUserSelect
+          }
+        },
+        orderBy: [
+          {
+            expiresAt: "asc"
+          },
+          {
+            createdAt: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        where: {
+          workspaceId: input.workspaceId
+        }
+      });
+    },
+
+    touchReminderById(input: {
+      id: string;
+      lastRemindedAt: Date;
+    }): Promise<WorkspaceInvitation> {
+      return database.workspaceInvitation.update({
+        data: {
+          lastRemindedAt: input.lastRemindedAt,
+          reminderCount: {
+            increment: 1
+          }
+        },
+        where: {
+          id: input.id
+        }
+      });
     }
   };
 }

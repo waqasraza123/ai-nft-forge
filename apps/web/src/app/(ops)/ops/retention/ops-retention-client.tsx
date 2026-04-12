@@ -292,6 +292,11 @@ export function OpsRetentionClient({
                       reconciliation
                     </span>
                     <span>
+                      invites {workspace.directory.pendingInvitationCount} pending
+                      · {workspace.directory.expiringInvitationCount} expiring ·{" "}
+                      {workspace.directory.expiredInvitationCount} expired
+                    </span>
+                    <span>
                       policy default{" "}
                       {workspace.retentionPolicy.defaultDecommissionRetentionDays}
                       d · minimum{" "}
@@ -308,6 +313,16 @@ export function OpsRetentionClient({
                           )}`
                         : "no decommission scheduled"}
                     </span>
+                    {workspace.decommission ? (
+                      <span>
+                        notices {workspace.decommissionWorkflow.notificationCount}
+                        {workspace.decommissionWorkflow.nextDueKind
+                          ? ` · next due ${formatStatus(
+                              workspace.decommissionWorkflow.nextDueKind
+                            )}`
+                          : ""}
+                      </span>
+                    ) : null}
                   </div>
                   <div className="studio-action-row">
                     {selectable ? (

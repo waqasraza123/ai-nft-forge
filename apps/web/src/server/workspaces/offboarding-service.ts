@@ -6,6 +6,7 @@ import {
   createOpsReconciliationIssueRepository,
   createPublishedCollectionRepository,
   createUserRepository,
+  createWorkspaceDecommissionNotificationRepository,
   createWorkspaceInvitationRepository,
   createWorkspaceDecommissionRequestRepository,
   createWorkspaceMembershipRepository,
@@ -36,7 +37,15 @@ import {
 } from "@ai-nft-forge/shared";
 
 import { StudioSettingsServiceError } from "../studio-settings/error";
+import {
+  getWorkspaceInvitationStatus,
+  isWorkspaceInvitationPending
+} from "../studio/invitation-lifecycle";
 import { createRuntimeWorkspaceDirectoryService } from "./directory-service";
+import {
+  createWorkspaceDecommissionWorkflowSummary,
+  serializeWorkspaceDecommissionNotification
+} from "./decommission-workflow";
 
 type WorkspaceOffboardingRepositorySet = {
   auditLogRepository: {
@@ -191,8 +200,7 @@ type WorkspaceOffboardingRepositorySet = {
     } | null>;
   };
   workspaceInvitationRepository: {
-    listActiveByWorkspaceId(input: {
-      now: Date;
+    listByWorkspaceId(input: {
       workspaceId: string;
     }): Promise<
       Array<{
@@ -203,8 +211,38 @@ type WorkspaceOffboardingRepositorySet = {
           walletAddress: string;
         };
         invitedByUserId: string;
+        lastRemindedAt: Date | null;
+        reminderCount: number;
         role: "operator" | "owner";
         walletAddress: string;
+      }>
+    >;
+  };
+  workspaceDecommissionNotificationRepository: {
+    listByRequestId(input: {
+      requestId: string;
+    }): Promise<
+      Array<{
+        id: string;
+        kind: "ready" | "scheduled" | "upcoming";
+        requestId: string;
+        sentAt: Date;
+        sentByUser: {
+          walletAddress: string;
+        };
+        sentByUserId: string;
+      }>
+    >;
+    listByRequestIds(requestIds: string[]): Promise<
+      Array<{
+        id: string;
+        kind: "ready" | "scheduled" | "upcoming";
+        requestId: string;
+        sentAt: Date;
+        sentByUser: {
+          walletAddress: string;
+        };
+        sentByUserId: string;
       }>
     >;
   };
@@ -348,6 +386,8 @@ type WorkspaceDirectoryServiceDependency = {
       memberCount: number;
       pendingInvitationCount: number;
       pendingRoleEscalationCount: number;
+      expiringInvitationCount: number;
+      expiredInvitationCount: number;
       workspace: StudioWorkspaceScopeSummary;
     }>;
   }>;
@@ -370,6 +410,8 @@ function createWorkspaceOffboardingRepositories(database: DatabaseExecutor) {
       createOpsReconciliationIssueRepository(database),
     publishedCollectionRepository: createPublishedCollectionRepository(database),
     userRepository: createUserRepository(database),
+    workspaceDecommissionNotificationRepository:
+      createWorkspaceDecommissionNotificationRepository(database),
     workspaceDecommissionRequestRepository:
       createWorkspaceDecommissionRequestRepository(database),
     workspaceInvitationRepository:
@@ -489,16 +531,26 @@ function serializeWorkspaceInvitation(input: {
     walletAddress: string;
   };
   invitedByUserId: string;
+  lastRemindedAt: Date | null;
+  reminderCount: number;
   role: "operator" | "owner";
   walletAddress: string;
 }) {
+  const now = new Date();
+
   return {
     createdAt: input.createdAt.toISOString(),
     expiresAt: input.expiresAt.toISOString(),
     id: input.id,
     invitedByUserId: input.invitedByUserId,
     invitedByWalletAddress: input.invitedByUser.walletAddress,
+    lastRemindedAt: input.lastRemindedAt?.toISOString() ?? null,
+    reminderCount: input.reminderCount,
     role: input.role,
+    status: getWorkspaceInvitationStatus({
+      expiresAt: input.expiresAt,
+      now
+    }),
     walletAddress: input.walletAddress
   };
 }
@@ -715,6 +767,20 @@ function escapeCsvValue(value: string | number) {
   return `"${normalizedValue.replaceAll('"', '""')}"`;
 }
 
+function countPendingWorkspaceInvitations(
+  invitations: Array<{ expiresAt: Date }>,
+  now: Date
+) {
+  return invitations.filter((invitation) =>
+    isWorkspaceInvitationPending(
+      getWorkspaceInvitationStatus({
+        expiresAt: invitation.expiresAt,
+        now
+      })
+    )
+  ).length;
+}
+
 export function createWorkspaceOffboardingService(
   dependencies: WorkspaceOffboardingServiceDependencies
 ) {
@@ -723,7 +789,8 @@ export function createWorkspaceOffboardingService(
       currentWorkspaceId?: string | null | undefined;
       workspaces: StudioWorkspaceScopeSummary[];
     }) {
-      const generatedAt = dependencies.now().toISOString();
+      const now = dependencies.now();
+      const generatedAt = now.toISOString();
       const directory =
         await dependencies.directoryService.listAccessibleWorkspaceDirectory({
           currentWorkspaceId: input.currentWorkspaceId,
@@ -737,6 +804,7 @@ export function createWorkspaceOffboardingService(
             generatedAt,
             summary: {
               blockedWorkspaceCount: 0,
+              decommissionNoticeDueWorkspaceCount: 0,
               reasonRequiredWorkspaceCount: 0,
               readyWorkspaceCount: 0,
               reviewRequiredWorkspaceCount: 0,
@@ -773,6 +841,10 @@ export function createWorkspaceOffboardingService(
           ),
           dependencies.repositories.workspaceRepository.listByIds(workspaceIds)
         ]);
+      const decommissionNotifications =
+        await dependencies.repositories.workspaceDecommissionNotificationRepository.listByRequestIds(
+          decommissions.map((decommission) => decommission.id)
+        );
       const workspaceById = new Map(
         workspaceRecords.map((workspace) => [workspace.id, workspace] as const)
       );
@@ -824,14 +896,46 @@ export function createWorkspaceOffboardingService(
         );
       }
 
-      const scheduledDecommissionByWorkspaceId = new Map(
+      const decommissionNotificationsByRequestId = new Map<
+        string,
+        typeof decommissionNotifications
+      >();
+
+      for (const notification of decommissionNotifications) {
+        const currentNotifications =
+          decommissionNotificationsByRequestId.get(notification.requestId) ?? [];
+        currentNotifications.push(notification);
+        decommissionNotificationsByRequestId.set(
+          notification.requestId,
+          currentNotifications
+        );
+      }
+
+      const scheduledDecommissionByWorkspaceId = new Map<
+        string,
+        {
+          decommission: WorkspaceDecommissionSummary;
+          workflow: ReturnType<typeof createWorkspaceDecommissionWorkflowSummary>;
+        }
+      >(
         decommissions.map((decommission) => [
           decommission.workspaceId,
-          serializeWorkspaceDecommission(decommission)
+          {
+            decommission: serializeWorkspaceDecommission(decommission),
+            workflow: createWorkspaceDecommissionWorkflowSummary({
+              executeAfter: decommission.executeAfter,
+              notifications:
+                decommissionNotificationsByRequestId.get(decommission.id) ?? [],
+              now
+            })
+          }
         ])
       );
 
       const workspaces = directory.workspaces.map((directoryEntry) => {
+        const scheduledDecommission =
+          scheduledDecommissionByWorkspaceId.get(directoryEntry.workspace.id) ??
+          null;
         const summary = createWorkspaceOffboardingSummary({
           activeAlertCount:
             activeAlertCountByWorkspaceId.get(directoryEntry.workspace.id) ?? 0,
@@ -855,10 +959,13 @@ export function createWorkspaceOffboardingService(
 
         return {
           current: directoryEntry.current,
-          decommission:
-            scheduledDecommissionByWorkspaceId.get(
-              directoryEntry.workspace.id
-            ) ?? null,
+          decommission: scheduledDecommission?.decommission ?? null,
+          decommissionWorkflow:
+            scheduledDecommission?.workflow ?? {
+              latestNotification: null,
+              nextDueKind: null,
+              notificationCount: 0
+            },
           directory: directoryEntry,
           retentionPolicy: serializeWorkspaceRetentionPolicy(
             workspaceById.get(directoryEntry.workspace.id) ?? {
@@ -878,6 +985,9 @@ export function createWorkspaceOffboardingService(
           summary: {
             blockedWorkspaceCount: workspaces.filter(
               (workspace) => workspace.summary.readiness === "blocked"
+            ).length,
+            decommissionNoticeDueWorkspaceCount: workspaces.filter(
+              (workspace) => workspace.decommissionWorkflow.nextDueKind !== null
             ).length,
             reasonRequiredWorkspaceCount: workspaces.filter(
               (workspace) => workspace.retentionPolicy.requireDecommissionReason
@@ -945,9 +1055,8 @@ export function createWorkspaceOffboardingService(
         dependencies.repositories.workspaceMembershipRepository.listByWorkspaceId(
           workspace.id
         ),
-        dependencies.repositories.workspaceInvitationRepository.listActiveByWorkspaceId(
+        dependencies.repositories.workspaceInvitationRepository.listByWorkspaceId(
           {
-            now,
             workspaceId: workspace.id
           }
         ),
@@ -980,6 +1089,13 @@ export function createWorkspaceOffboardingService(
           workspace.id
         )
       ]);
+      const decommissionNotifications = decommission
+        ? await dependencies.repositories.workspaceDecommissionNotificationRepository.listByRequestId(
+            {
+              requestId: decommission.id
+            }
+          )
+        : [];
 
       const offboarding = createWorkspaceOffboardingSummary({
         activeAlertCount: alerts.length,
@@ -990,7 +1106,10 @@ export function createWorkspaceOffboardingService(
           (checkout) => checkout.status === "open"
         ).length,
         openReconciliationIssueCount: reconciliationIssues.length,
-        pendingInvitationCount: invitations.length,
+        pendingInvitationCount: countPendingWorkspaceInvitations(
+          invitations,
+          now
+        ),
         pendingRoleEscalationCount: roleEscalationRequests.filter(
           (request) => request.status === "pending"
         ).length,
@@ -1035,6 +1154,21 @@ export function createWorkspaceOffboardingService(
           decommission: decommission
             ? serializeWorkspaceDecommission(decommission)
             : null,
+          decommissionNotifications: decommissionNotifications.map(
+            (notification) =>
+              serializeWorkspaceDecommissionNotification(notification)
+          ),
+          decommissionWorkflow: decommission
+            ? createWorkspaceDecommissionWorkflowSummary({
+                executeAfter: decommission.executeAfter,
+                notifications: decommissionNotifications,
+                now
+              })
+            : {
+                latestNotification: null,
+                nextDueKind: null,
+                notificationCount: 0
+              },
           generatedAt: now.toISOString(),
           invitations: invitations.map((invitation) =>
             serializeWorkspaceInvitation(invitation)
@@ -1127,6 +1261,10 @@ export function createWorkspaceOffboardingService(
         row.decommission?.status ?? "",
         row.decommission?.retentionDays ?? "",
         row.decommission?.executeAfter ?? "",
+        row.decommissionWorkflow.notificationCount,
+        row.decommissionWorkflow.nextDueKind ?? "",
+        row.decommissionWorkflow.latestNotification?.kind ?? "",
+        row.decommissionWorkflow.latestNotification?.sentAt ?? "",
         row.generatedAt
       ];
 
@@ -1157,6 +1295,10 @@ export function createWorkspaceOffboardingService(
           "decommission_status",
           "decommission_retention_days",
           "decommission_execute_after",
+          "decommission_notification_count",
+          "decommission_next_due_kind",
+          "decommission_latest_notification_kind",
+          "decommission_latest_notification_sent_at",
           "generated_at"
         ].join(","),
         values.map((value) => escapeCsvValue(value)).join(",")

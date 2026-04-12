@@ -1,5 +1,6 @@
 import {
   createAuditLogRepository,
+  createWorkspaceDecommissionNotificationRepository,
   createWorkspaceDecommissionRequestRepository,
   createWorkspaceRepository,
   createUserRepository,
@@ -8,12 +9,19 @@ import {
 } from "@ai-nft-forge/database";
 import {
   workspaceDecommissionExecutionResponseSchema,
+  workspaceDecommissionNotificationRecordResponseSchema,
   workspaceDecommissionResponseSchema,
+  type WorkspaceDecommissionNotificationKind,
   type WorkspaceDecommissionSummary
 } from "@ai-nft-forge/shared";
 
 import { StudioSettingsServiceError } from "../studio-settings/error";
 import { createRuntimeWorkspaceOffboardingService } from "./offboarding-service";
+import {
+  createWorkspaceDecommissionWorkflowSummary,
+  getNextWorkspaceDecommissionNotificationKind,
+  serializeWorkspaceDecommissionNotification
+} from "./decommission-workflow";
 
 type WorkspaceDecommissionRepositorySet = {
   auditLogRepository: {
@@ -31,6 +39,33 @@ type WorkspaceDecommissionRepositorySet = {
       id: string;
       walletAddress: string;
     } | null>;
+  };
+  workspaceDecommissionNotificationRepository: {
+    create(input: {
+      kind: WorkspaceDecommissionNotificationKind;
+      requestId: string;
+      sentAt: Date;
+      sentByUserId: string;
+    }): Promise<{
+      id: string;
+      kind: WorkspaceDecommissionNotificationKind;
+      sentAt: Date;
+      sentByUserId: string;
+    }>;
+    listByRequestId(input: {
+      requestId: string;
+    }): Promise<
+      Array<{
+        id: string;
+        kind: WorkspaceDecommissionNotificationKind;
+        requestId: string;
+        sentAt: Date;
+        sentByUser: {
+          walletAddress: string;
+        };
+        sentByUserId: string;
+      }>
+    >;
   };
   workspaceDecommissionRequestRepository: {
     create(input: {
@@ -135,6 +170,8 @@ type WorkspaceDecommissionServiceDependencies = {
 function createWorkspaceDecommissionRepositories(database: DatabaseExecutor) {
   return {
     auditLogRepository: createAuditLogRepository(database),
+    workspaceDecommissionNotificationRepository:
+      createWorkspaceDecommissionNotificationRepository(database),
     userRepository: createUserRepository(database),
     workspaceDecommissionRequestRepository:
       createWorkspaceDecommissionRequestRepository(database),
@@ -306,11 +343,13 @@ async function recordWorkspaceDecommissionAuditLog(input: {
   action:
     | "workspace_decommission_canceled"
     | "workspace_decommission_executed"
+    | "workspace_decommission_notification_recorded"
     | "workspace_decommission_scheduled";
   actor: {
     id: string;
     walletAddress: string;
   };
+  notificationKind?: WorkspaceDecommissionNotificationKind;
   executeAfter?: Date;
   exportConfirmedAt?: Date;
   reason?: string | null;
@@ -347,6 +386,11 @@ async function recordWorkspaceDecommissionAuditLog(input: {
         ? {
             retentionDays: input.retentionDays
           }
+        : {}),
+      ...(input.notificationKind
+        ? {
+            notificationKind: input.notificationKind
+          }
         : {})
     }
   });
@@ -369,6 +413,9 @@ export function createWorkspaceDecommissionService(
         ownerUserId: input.ownerUserId,
         repositories: dependencies.repositories,
         workspaceId: input.workspaceId
+      });
+      assertWorkspaceArchived({
+        workspace
       });
       const scheduledRequest =
         await dependencies.repositories.workspaceDecommissionRequestRepository.findScheduledByWorkspaceId(
@@ -509,6 +556,112 @@ export function createWorkspaceDecommissionService(
           },
           canceledByUserId: owner.id,
           status: "canceled"
+        })
+      });
+    },
+
+    async recordWorkspaceDecommissionNotification(input: {
+      kind: WorkspaceDecommissionNotificationKind;
+      ownerUserId: string;
+      workspaceId: string;
+    }) {
+      const now = dependencies.now();
+      const { owner, workspace } = await requireOwnedWorkspace({
+        ownerUserId: input.ownerUserId,
+        repositories: dependencies.repositories,
+        workspaceId: input.workspaceId
+      });
+      const scheduledRequest =
+        await dependencies.repositories.workspaceDecommissionRequestRepository.findScheduledByWorkspaceId(
+          {
+            workspaceId: workspace.id
+          }
+        );
+
+      if (!scheduledRequest) {
+        throw new StudioSettingsServiceError(
+          "WORKSPACE_DECOMMISSION_NOT_SCHEDULED",
+          "No pending decommission schedule exists for this workspace.",
+          404
+        );
+      }
+
+      const existingNotifications =
+        await dependencies.repositories.workspaceDecommissionNotificationRepository.listByRequestId(
+          {
+            requestId: scheduledRequest.id
+          }
+        );
+      const nextDueKind = getNextWorkspaceDecommissionNotificationKind({
+        executeAfter: scheduledRequest.executeAfter,
+        existingNotificationKinds: existingNotifications.map(
+          (notification) => notification.kind
+        ),
+        now
+      });
+
+      if (nextDueKind !== input.kind) {
+        throw new StudioSettingsServiceError(
+          "WORKSPACE_DECOMMISSION_NOTIFICATION_NOT_DUE",
+          nextDueKind
+            ? `The next due decommission notification is ${nextDueKind}.`
+            : "There is no due decommission notification for this workspace.",
+          409
+        );
+      }
+
+      const { recordedNotification, recordedNotifications } =
+        await dependencies.runInTransaction(async (repositories) => {
+          await repositories.workspaceDecommissionNotificationRepository.create({
+            kind: input.kind,
+            requestId: scheduledRequest.id,
+            sentAt: now,
+            sentByUserId: owner.id
+          });
+
+          await recordWorkspaceDecommissionAuditLog({
+            action: "workspace_decommission_notification_recorded",
+            actor: owner,
+            notificationKind: input.kind,
+            repositories,
+            requestId: scheduledRequest.id,
+            workspaceId: workspace.id
+          });
+
+          const nextRecordedNotifications =
+            await repositories.workspaceDecommissionNotificationRepository.listByRequestId(
+              {
+                requestId: scheduledRequest.id
+              }
+            );
+          const nextRecordedNotification = nextRecordedNotifications.find(
+            (notification) =>
+              notification.kind === input.kind &&
+              notification.sentByUserId === owner.id &&
+              notification.sentAt.getTime() === now.getTime()
+          );
+
+          if (!nextRecordedNotification) {
+            throw new StudioSettingsServiceError(
+              "INTERNAL_SERVER_ERROR",
+              "The decommission notification could not be loaded after recording.",
+              500
+            );
+          }
+
+          return {
+            recordedNotification: nextRecordedNotification,
+            recordedNotifications: nextRecordedNotifications
+          };
+        });
+
+      return workspaceDecommissionNotificationRecordResponseSchema.parse({
+        notification:
+          serializeWorkspaceDecommissionNotification(recordedNotification),
+        workflow: createWorkspaceDecommissionWorkflowSummary({
+          executeAfter: scheduledRequest.executeAfter,
+          notifications: recordedNotifications,
+          now
         })
       });
     },

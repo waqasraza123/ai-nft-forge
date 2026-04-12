@@ -12,6 +12,11 @@ import {
   type StudioWorkspaceScopeSummary
 } from "@ai-nft-forge/shared";
 
+import {
+  getWorkspaceInvitationStatus,
+  isWorkspaceInvitationPending
+} from "../studio/invitation-lifecycle";
+
 type WorkspaceDirectoryRepositorySet = {
   auditLogRepository: {
     listByEntity(input: {
@@ -24,10 +29,9 @@ type WorkspaceDirectoryRepositorySet = {
     listByWorkspaceId(workspaceId: string): Promise<Array<{ id: string }>>;
   };
   workspaceInvitationRepository: {
-    listActiveByWorkspaceId(input: {
-      now: Date;
+    listByWorkspaceId(input: {
       workspaceId: string;
-    }): Promise<Array<{ id: string }>>;
+    }): Promise<Array<{ expiresAt: Date; id: string }>>;
   };
   workspaceMembershipRepository: {
     listByWorkspaceId(workspaceId: string): Promise<Array<{ id: string }>>;
@@ -65,9 +69,8 @@ export function createWorkspaceDirectoryService(
               repositories.workspaceMembershipRepository.listByWorkspaceId(
                 workspace.id
               ),
-              repositories.workspaceInvitationRepository.listActiveByWorkspaceId(
+              repositories.workspaceInvitationRepository.listByWorkspaceId(
                 {
-                  now,
                   workspaceId: workspace.id
                 }
               ),
@@ -81,12 +84,42 @@ export function createWorkspaceDirectoryService(
               })
             ]);
 
+          const invitationStatusCounts = invitations.reduce(
+            (counts, invitation) => {
+              const status = getWorkspaceInvitationStatus({
+                expiresAt: invitation.expiresAt,
+                now
+              });
+
+              if (isWorkspaceInvitationPending(status)) {
+                counts.pending += 1;
+              }
+
+              if (status === "expiring") {
+                counts.expiring += 1;
+              }
+
+              if (status === "expired") {
+                counts.expired += 1;
+              }
+
+              return counts;
+            },
+            {
+              expired: 0,
+              expiring: 0,
+              pending: 0
+            }
+          );
+
           return {
             brandCount: brands.length,
             current: workspace.id === input.currentWorkspaceId,
+            expiredInvitationCount: invitationStatusCounts.expired,
+            expiringInvitationCount: invitationStatusCounts.expiring,
             lastActivityAt: latestAuditLog[0]?.createdAt.toISOString() ?? null,
             memberCount: memberships.length + 1,
-            pendingInvitationCount: invitations.length,
+            pendingInvitationCount: invitationStatusCounts.pending,
             pendingRoleEscalationCount,
             workspace
           };

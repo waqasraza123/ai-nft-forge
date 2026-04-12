@@ -30,6 +30,12 @@ enum WorkspaceDecommissionRequestStatus {
   executed
 }
 
+enum WorkspaceDecommissionNotificationKind {
+  scheduled
+  upcoming
+  ready
+}
+
 enum SourceAssetStatus {
   pending_upload
   uploaded
@@ -201,6 +207,7 @@ model User {
   workspaceDecommissionRequests      WorkspaceDecommissionRequest[] @relation("WorkspaceDecommissionRequestedBy")
   workspaceDecommissionCancellations WorkspaceDecommissionRequest[] @relation("WorkspaceDecommissionCanceledBy")
   workspaceDecommissionExecutions    WorkspaceDecommissionRequest[] @relation("WorkspaceDecommissionExecutedBy")
+  workspaceDecommissionNotifications WorkspaceDecommissionNotification[]
   workspaceInvitationsSent           WorkspaceInvitation[]            @relation("WorkspaceInvitationInvitedBy")
   workspaceRoleEscalationRequests    WorkspaceRoleEscalationRequest[] @relation("WorkspaceRoleEscalationRequestedBy")
   workspaceRoleEscalationTargets     WorkspaceRoleEscalationRequest[] @relation("WorkspaceRoleEscalationTarget")
@@ -290,12 +297,29 @@ model WorkspaceDecommissionRequest {
   updatedAt         DateTime                          @updatedAt @map("updated_at")
   canceledByUser    User?                             @relation("WorkspaceDecommissionCanceledBy", fields: [canceledByUserId], references: [id], onDelete: SetNull)
   executedByUser    User?                             @relation("WorkspaceDecommissionExecutedBy", fields: [executedByUserId], references: [id], onDelete: SetNull)
+  notifications     WorkspaceDecommissionNotification[]
   requestedByUser   User                              @relation("WorkspaceDecommissionRequestedBy", fields: [requestedByUserId], references: [id], onDelete: Cascade)
   workspace         Workspace                         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId, status, executeAfter], map: "workspace_decommission_requests_ws_status_execute_idx")
   @@index([requestedByUserId, status], map: "workspace_decommission_requests_requested_status_idx")
   @@map("workspace_decommission_requests")
+}
+
+model WorkspaceDecommissionNotification {
+  id           String                               @id @default(cuid()) @map("id")
+  requestId    String                               @map("request_id")
+  kind         WorkspaceDecommissionNotificationKind @map("kind")
+  sentByUserId String                               @map("sent_by_user_id")
+  sentAt       DateTime                             @default(now()) @map("sent_at")
+  createdAt    DateTime                             @default(now()) @map("created_at")
+  request      WorkspaceDecommissionRequest         @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  sentByUser   User                                 @relation(fields: [sentByUserId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, kind], map: "workspace_decommission_notifications_request_kind_key")
+  @@index([requestId, sentAt], map: "workspace_decommission_notifications_request_sent_at_idx")
+  @@index([sentByUserId, sentAt], map: "workspace_decommission_notifications_sent_by_sent_at_idx")
+  @@map("workspace_decommission_notifications")
 }
 
 model WorkspaceMembership {
@@ -321,6 +345,8 @@ model WorkspaceInvitation {
   walletAddress   String                  @map("wallet_address")
   role            WorkspaceMembershipRole @default(operator) @map("role")
   expiresAt       DateTime                @map("expires_at")
+  lastRemindedAt  DateTime?               @map("last_reminded_at")
+  reminderCount   Int                     @default(0) @map("reminder_count")
   createdAt       DateTime                @default(now()) @map("created_at")
   updatedAt       DateTime                @updatedAt @map("updated_at")
   invitedByUser   User                    @relation("WorkspaceInvitationInvitedBy", fields: [invitedByUserId], references: [id], onDelete: Cascade)

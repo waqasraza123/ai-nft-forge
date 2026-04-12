@@ -112,6 +112,8 @@ export const studioWorkspaceScopeSummarySchema =
 export const studioWorkspaceDirectoryEntrySchema = z.object({
   brandCount: z.number().int().min(0),
   current: z.boolean(),
+  expiredInvitationCount: z.number().int().min(0),
+  expiringInvitationCount: z.number().int().min(0),
   lastActivityAt: z.string().datetime().nullable(),
   memberCount: z.number().int().min(0),
   pendingInvitationCount: z.number().int().min(0),
@@ -141,13 +143,22 @@ export const studioWorkspaceMemberSummarySchema = z.object({
   walletAddress: walletAddressSchema
 });
 
+export const studioWorkspaceInvitationStatusSchema = z.enum([
+  "active",
+  "expiring",
+  "expired"
+]);
+
 export const studioWorkspaceInvitationSummarySchema = z.object({
   createdAt: z.string().datetime(),
   expiresAt: z.string().datetime(),
   id: z.string().min(1),
   invitedByUserId: z.string().min(1),
   invitedByWalletAddress: walletAddressSchema,
+  lastRemindedAt: z.string().datetime().nullable(),
+  reminderCount: z.number().int().min(0),
   role: studioWorkspaceRoleSchema,
+  status: studioWorkspaceInvitationStatusSchema,
   walletAddress: walletAddressSchema
 });
 
@@ -188,8 +199,10 @@ export const studioWorkspaceAuditActionSchema = z.enum([
   "workspace_invitation_accepted",
   "workspace_invitation_canceled",
   "workspace_invitation_created",
+  "workspace_invitation_reminder_sent",
   "workspace_member_added",
   "workspace_member_removed",
+  "workspace_decommission_notification_recorded",
   "workspace_owner_transferred",
   "workspace_reactivated",
   "workspace_retention_policy_updated",
@@ -327,6 +340,9 @@ export const studioWorkspaceInvitationResponseSchema = z.object({
   invitation: studioWorkspaceInvitationSummarySchema
 });
 
+export const studioWorkspaceInvitationReminderResponseSchema =
+  studioWorkspaceInvitationResponseSchema;
+
 export const studioWorkspaceInvitationDeleteResponseSchema = z.object({
   invitationId: z.string().min(1),
   removed: z.boolean()
@@ -355,7 +371,9 @@ export const studioSettingsErrorResponseSchema = z.object({
       "INVALID_REQUEST",
       "INTERNAL_SERVER_ERROR",
       "INVITATION_ALREADY_EXISTS",
+      "INVITATION_EXPIRED",
       "INVITATION_NOT_FOUND",
+      "INVITATION_REMINDER_NOT_READY",
       "MEMBER_ALREADY_EXISTS",
       "MEMBER_NOT_FOUND",
       "MEMBER_WORKSPACE_CONFLICT",
@@ -370,6 +388,7 @@ export const studioSettingsErrorResponseSchema = z.object({
       "WORKSPACE_DECOMMISSION_DELETE_FAILED",
       "WORKSPACE_DECOMMISSION_NOT_READY",
       "WORKSPACE_DECOMMISSION_NOT_SCHEDULED",
+      "WORKSPACE_DECOMMISSION_NOTIFICATION_NOT_DUE",
       "WORKSPACE_DECOMMISSION_REASON_REQUIRED",
       "WORKSPACE_DECOMMISSION_REQUIRES_ARCHIVE",
       "WORKSPACE_DECOMMISSION_RETENTION_PENDING",
@@ -440,11 +459,17 @@ export type StudioWorkspaceInvitationCreateRequest = z.infer<
 export type StudioWorkspaceInvitationDeleteResponse = z.infer<
   typeof studioWorkspaceInvitationDeleteResponseSchema
 >;
+export type StudioWorkspaceInvitationReminderResponse = z.infer<
+  typeof studioWorkspaceInvitationReminderResponseSchema
+>;
 export type StudioWorkspaceInvitationResponse = z.infer<
   typeof studioWorkspaceInvitationResponseSchema
 >;
 export type StudioWorkspaceInvitationSummary = z.infer<
   typeof studioWorkspaceInvitationSummarySchema
+>;
+export type StudioWorkspaceInvitationStatus = z.infer<
+  typeof studioWorkspaceInvitationStatusSchema
 >;
 export type StudioWorkspaceRoleEscalationActionResponse = z.infer<
   typeof studioWorkspaceRoleEscalationActionResponseSchema

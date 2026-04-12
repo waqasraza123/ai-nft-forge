@@ -74,6 +74,8 @@ function createStudioSettingsHarness() {
       expiresAt: Date;
       id: string;
       invitedByUserId: string;
+      lastRemindedAt: Date | null;
+      reminderCount: number;
       role: "operator";
       walletAddress: string;
       workspaceId: string;
@@ -575,6 +577,8 @@ function createStudioSettingsHarness() {
           expiresAt: input.expiresAt,
           id: `invitation_${invitationIndex}`,
           invitedByUserId: input.invitedByUserId,
+          lastRemindedAt: null,
+          reminderCount: 0,
           role: (input.role ?? "operator") as "operator",
           walletAddress: input.walletAddress,
           workspaceId: input.workspaceId
@@ -681,6 +685,54 @@ function createStudioSettingsHarness() {
               ownerUserId: workspaces.get(invitation.workspaceId)!.ownerUserId
             }
           }));
+      },
+
+      async listByWorkspaceId(input: { workspaceId: string }) {
+        return [...workspaceInvitations.values()]
+          .filter((invitation) => invitation.workspaceId === input.workspaceId)
+          .sort((left, right) => {
+            const expiresAtDifference =
+              left.expiresAt.getTime() - right.expiresAt.getTime();
+
+            if (expiresAtDifference !== 0) {
+              return expiresAtDifference;
+            }
+
+            const createdAtDifference =
+              right.createdAt.getTime() - left.createdAt.getTime();
+
+            if (createdAtDifference !== 0) {
+              return createdAtDifference;
+            }
+
+            return right.id.localeCompare(left.id);
+          })
+          .map((invitation) => ({
+            ...invitation,
+            invitedByUser: users.get(invitation.invitedByUserId)!,
+            workspace: {
+              id: invitation.workspaceId,
+              ownerUserId: workspaces.get(invitation.workspaceId)!.ownerUserId
+            }
+          }));
+      },
+
+      async touchReminderById(input: { id: string; lastRemindedAt: Date }) {
+        const invitation = workspaceInvitations.get(input.id);
+
+        if (!invitation) {
+          throw new Error("Unexpected invitation lookup failure.");
+        }
+
+        const updatedInvitation = {
+          ...invitation,
+          lastRemindedAt: input.lastRemindedAt,
+          reminderCount: invitation.reminderCount + 1
+        };
+
+        workspaceInvitations.set(updatedInvitation.id, updatedInvitation);
+
+        return updatedInvitation;
       }
     },
     workspaceRoleEscalationRequestRepository: {
@@ -1584,6 +1636,88 @@ describe("createStudioSettingsService", () => {
       action: "workspace_invitation_created",
       targetWalletAddress: "0x4444444444444444444444444444444444444444"
     });
+  });
+
+  it("records invitation reminders and returns invitation lifecycle state", async () => {
+    const harness = createStudioSettingsHarness();
+
+    await harness.service.updateStudioSettings({
+      accentColor: "#8b5e34",
+      brandName: "Forge Editions",
+      brandSlug: "forge-editions",
+      featuredReleaseLabel: "Hero drop",
+      landingDescription: "Owner storefront copy.",
+      landingHeadline: "Curated collectible releases",
+      ownerUserId: "user_1",
+      themePreset: "editorial_warm",
+      workspaceName: "Forge Operations",
+      workspaceSlug: "forge-operations"
+    });
+
+    const invitation = await harness.service.createWorkspaceInvitation({
+      ownerUserId: "user_1",
+      walletAddress: "0x4545454545454545454545454545454545454545"
+    });
+    const reminder = await harness.service.remindWorkspaceInvitation({
+      invitationId: invitation.invitation.id,
+      ownerUserId: "user_1"
+    });
+    const settings = await harness.service.getStudioSettings({
+      ownerUserId: "user_1"
+    });
+
+    expect(reminder.invitation.reminderCount).toBe(1);
+    expect(reminder.invitation.lastRemindedAt).not.toBeNull();
+    expect(settings.settings?.invitations[0]?.status).toBe("active");
+    expect(settings.settings?.auditEntries[0]?.action).toBe(
+      "workspace_invitation_reminder_sent"
+    );
+  });
+
+  it("keeps expired invitations visible in settings and blocks reminder replay", async () => {
+    const harness = createStudioSettingsHarness();
+
+    await harness.service.updateStudioSettings({
+      accentColor: "#8b5e34",
+      brandName: "Forge Editions",
+      brandSlug: "forge-editions",
+      featuredReleaseLabel: "Hero drop",
+      landingDescription: "Owner storefront copy.",
+      landingHeadline: "Curated collectible releases",
+      ownerUserId: "user_1",
+      themePreset: "editorial_warm",
+      workspaceName: "Forge Operations",
+      workspaceSlug: "forge-operations"
+    });
+
+    harness.workspaceInvitations.set("invitation_expired", {
+      createdAt: new Date("2026-03-01T00:00:00.000Z"),
+      expiresAt: new Date("2026-03-10T00:00:00.000Z"),
+      id: "invitation_expired",
+      invitedByUserId: "user_1",
+      lastRemindedAt: null,
+      reminderCount: 0,
+      role: "operator",
+      walletAddress: "0x5656565656565656565656565656565656565656",
+      workspaceId: "workspace_1"
+    });
+    const settings = await harness.service.getStudioSettings({
+      ownerUserId: "user_1"
+    });
+
+    expect(settings.settings?.invitations[0]?.status).toBe("expired");
+    await expect(
+      harness.service.remindWorkspaceInvitation({
+        invitationId: "invitation_expired",
+        ownerUserId: "user_1"
+      })
+    ).rejects.toEqual(
+      new StudioSettingsServiceError(
+        "INVITATION_EXPIRED",
+        "This workspace invitation has already expired.",
+        409
+      )
+    );
   });
 
   it("scopes member, invitation, and role-escalation flows to the selected owned workspace", async () => {

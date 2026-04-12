@@ -63,6 +63,8 @@ export function WorkspaceDirectoryPanel({
                 <Pill>{entry.brandCount} brands</Pill>
                 <Pill>{entry.memberCount} members</Pill>
                 <Pill>{entry.pendingInvitationCount} pending invites</Pill>
+                <Pill>{entry.expiringInvitationCount} expiring invites</Pill>
+                <Pill>{entry.expiredInvitationCount} expired invites</Pill>
                 <Pill>
                   {entry.pendingRoleEscalationCount} pending escalations
                 </Pill>

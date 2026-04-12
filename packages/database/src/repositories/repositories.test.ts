@@ -22,6 +22,7 @@ import { createPublishedCollectionRepository } from "./published-collection-repo
 import { createSourceAssetRepository } from "./source-asset-repository.js";
 import { createUserRepository } from "./user-repository.js";
 import { createWorkspaceMembershipRepository } from "./workspace-membership-repository.js";
+import { createWorkspaceDecommissionNotificationRepository } from "./workspace-decommission-notification-repository.js";
 import { createWorkspaceInvitationRepository } from "./workspace-invitation-repository.js";
 import { createWorkspaceDecommissionRequestRepository } from "./workspace-decommission-request-repository.js";
 import { createWorkspaceRoleEscalationRequestRepository } from "./workspace-role-escalation-request-repository.js";
@@ -501,6 +502,133 @@ describe("database repositories", () => {
     expect(scheduledRequests).toHaveLength(1);
     expect(canceledRequest.id).toBe("request_1");
     expect(executedRequest.id).toBe("request_1");
+  });
+
+  it("delegates workspace decommission notification persistence through the repository", async () => {
+    const now = new Date("2026-04-12T00:00:00.000Z");
+    const database = {
+      workspaceDecommissionNotification: {
+        create: vi.fn().mockResolvedValue({
+          id: "notification_1"
+        }),
+        findMany: vi
+          .fn()
+          .mockResolvedValueOnce([
+            {
+              id: "notification_1",
+              kind: "scheduled",
+              requestId: "request_1",
+              sentAt: now,
+              sentByUser: {
+                avatarUrl: null,
+                displayName: "Owner",
+                id: "user_1",
+                walletAddress: "0xowner"
+              },
+              sentByUserId: "user_1"
+            }
+          ])
+          .mockResolvedValueOnce([
+            {
+              id: "notification_1",
+              kind: "scheduled",
+              requestId: "request_1",
+              sentAt: now,
+              sentByUser: {
+                avatarUrl: null,
+                displayName: "Owner",
+                id: "user_1",
+                walletAddress: "0xowner"
+              },
+              sentByUserId: "user_1"
+            }
+          ])
+      }
+    };
+    const repository = createWorkspaceDecommissionNotificationRepository(
+      database as never
+    );
+
+    const createdNotification = await repository.create({
+      kind: "scheduled",
+      requestId: "request_1",
+      sentAt: now,
+      sentByUserId: "user_1"
+    });
+    const requestNotifications = await repository.listByRequestId({
+      requestId: "request_1"
+    });
+    const requestNotificationsByIds = await repository.listByRequestIds([
+      "request_1"
+    ]);
+
+    expect(database.workspaceDecommissionNotification.create).toHaveBeenCalledWith({
+      data: {
+        kind: "scheduled",
+        requestId: "request_1",
+        sentAt: now,
+        sentByUserId: "user_1"
+      }
+    });
+    expect(database.workspaceDecommissionNotification.findMany).toHaveBeenNthCalledWith(
+      1,
+      {
+        include: {
+          sentByUser: {
+            select: {
+              avatarUrl: true,
+              displayName: true,
+              id: true,
+              walletAddress: true
+            }
+          }
+        },
+        orderBy: [
+          {
+            sentAt: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        where: {
+          requestId: "request_1"
+        }
+      }
+    );
+    expect(database.workspaceDecommissionNotification.findMany).toHaveBeenNthCalledWith(
+      2,
+      {
+        include: {
+          sentByUser: {
+            select: {
+              avatarUrl: true,
+              displayName: true,
+              id: true,
+              walletAddress: true
+            }
+          }
+        },
+        orderBy: [
+          {
+            sentAt: "desc"
+          },
+          {
+            id: "desc"
+          }
+        ],
+        where: {
+          requestId: {
+            in: ["request_1"]
+          }
+        }
+      }
+    );
+    expect(createdNotification.id).toBe("notification_1");
+    expect(requestNotifications[0]?.id).toBe("notification_1");
+    expect(requestNotificationsByIds[0]?.sentByUser.walletAddress).toBe(
+      "0xowner"
+    );
   });
 
   it("delegates workspace role escalation persistence through the role escalation repository", async () => {
@@ -1153,6 +1281,8 @@ describe("database repositories", () => {
           .mockResolvedValueOnce([
             {
               id: "invite_1",
+              lastRemindedAt: null,
+              reminderCount: 0,
               workspace: {
                 id: "workspace_1",
                 ownerUserId: "user_1"
@@ -1162,6 +1292,7 @@ describe("database repositories", () => {
           .mockResolvedValueOnce([
             {
               createdAt: now,
+              expiresAt: now,
               id: "invite_1",
               invitedByUser: {
                 avatarUrl: null,
@@ -1169,22 +1300,51 @@ describe("database repositories", () => {
                 id: "user_1",
                 walletAddress: "0xowner"
               },
+              invitedByUserId: "user_1",
+              lastRemindedAt: null,
+              reminderCount: 0,
+              role: "operator",
+              walletAddress: "0xinvitee"
+            }
+          ])
+          .mockResolvedValueOnce([
+            {
+              createdAt: now,
+              expiresAt: now,
+              id: "invite_1",
+              invitedByUser: {
+                avatarUrl: null,
+                displayName: "Owner",
+                id: "user_1",
+                walletAddress: "0xowner"
+              },
+              invitedByUserId: "user_1",
+              lastRemindedAt: null,
+              reminderCount: 0,
               role: "operator",
               walletAddress: "0xinvitee"
             }
           ]),
         findUnique: vi.fn().mockResolvedValue({
           id: "invite_1",
+          lastRemindedAt: null,
+          reminderCount: 0,
           invitedByUser: {
             avatarUrl: null,
             displayName: "Owner",
             id: "user_1",
             walletAddress: "0xowner"
           },
+          invitedByUserId: "user_1",
           workspace: {
             id: "workspace_1",
             ownerUserId: "user_1"
           }
+        }),
+        update: vi.fn().mockResolvedValue({
+          id: "invite_1",
+          lastRemindedAt: now,
+          reminderCount: 1
         })
       }
     };
@@ -1210,8 +1370,15 @@ describe("database repositories", () => {
       now,
       workspaceId: "workspace_1"
     });
+    const workspaceInvitationHistory = await repository.listByWorkspaceId({
+      workspaceId: "workspace_1"
+    });
     const invitation = await repository.findByIdWithWorkspace({
       id: "invite_1"
+    });
+    const remindedInvitation = await repository.touchReminderById({
+      id: "invite_1",
+      lastRemindedAt: now
     });
     await repository.deleteByIdForWorkspace({
       id: "invite_1",
@@ -1294,6 +1461,32 @@ describe("database repositories", () => {
         workspaceId: "workspace_1"
       }
     });
+    expect(database.workspaceInvitation.findMany).toHaveBeenNthCalledWith(3, {
+      include: {
+        invitedByUser: {
+          select: {
+            avatarUrl: true,
+            displayName: true,
+            id: true,
+            walletAddress: true
+          }
+        }
+      },
+      orderBy: [
+        {
+          expiresAt: "asc"
+        },
+        {
+          createdAt: "desc"
+        },
+        {
+          id: "desc"
+        }
+      ],
+      where: {
+        workspaceId: "workspace_1"
+      }
+    });
     expect(database.workspaceInvitation.findUnique).toHaveBeenCalledWith({
       include: {
         invitedByUser: {
@@ -1315,6 +1508,17 @@ describe("database repositories", () => {
         id: "invite_1"
       }
     });
+    expect(database.workspaceInvitation.update).toHaveBeenCalledWith({
+      data: {
+        lastRemindedAt: now,
+        reminderCount: {
+          increment: 1
+        }
+      },
+      where: {
+        id: "invite_1"
+      }
+    });
     expect(database.workspaceInvitation.deleteMany).toHaveBeenCalledWith({
       where: {
         id: "invite_1",
@@ -1325,7 +1529,9 @@ describe("database repositories", () => {
     expect(existingInvitation?.id).toBe("invite_1");
     expect(walletInvitations[0]?.workspace.id).toBe("workspace_1");
     expect(workspaceInvitations[0]?.walletAddress).toBe("0xinvitee");
+    expect(workspaceInvitationHistory[0]?.id).toBe("invite_1");
     expect(invitation?.workspace.ownerUserId).toBe("user_1");
+    expect(remindedInvitation.reminderCount).toBe(1);
   });
 
   it("delegates active generation lookup through the generation request repository", async () => {

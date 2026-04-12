@@ -95,6 +95,8 @@ describe("createWorkspaceFleetService", () => {
               {
                 brandCount: 2,
                 current: true,
+                expiredInvitationCount: 0,
+                expiringInvitationCount: 1,
                 lastActivityAt: "2026-04-12T05:55:00.000Z",
                 memberCount: 3,
                 pendingInvitationCount: 1,
@@ -113,6 +115,8 @@ describe("createWorkspaceFleetService", () => {
               {
                 brandCount: 1,
                 current: false,
+                expiredInvitationCount: 0,
+                expiringInvitationCount: 0,
                 lastActivityAt: "2026-04-12T04:55:00.000Z",
                 memberCount: 1,
                 pendingInvitationCount: 0,
@@ -228,6 +232,8 @@ describe("createWorkspaceFleetService", () => {
               {
                 brandCount: 1,
                 current: true,
+                expiredInvitationCount: 0,
+                expiringInvitationCount: 0,
                 lastActivityAt: null,
                 memberCount: 1,
                 pendingInvitationCount: 0,

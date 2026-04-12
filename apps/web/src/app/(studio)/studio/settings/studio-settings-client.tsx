@@ -22,12 +22,14 @@ import {
   studioSettingsResponseSchema,
   studioWorkspaceCreateResponseSchema,
   studioWorkspaceInvitationDeleteResponseSchema,
+  studioWorkspaceInvitationReminderResponseSchema,
   studioWorkspaceInvitationResponseSchema,
   studioWorkspaceMemberDeleteResponseSchema,
   studioWorkspaceRoleEscalationActionResponseSchema,
   studioWorkspaceRoleEscalationResponseSchema,
   studioWorkspaceStatusUpdateResponseSchema,
   workspaceDecommissionExecutionResponseSchema,
+  workspaceDecommissionNotificationRecordResponseSchema,
   workspaceDecommissionResponseSchema,
   workspaceOffboardingOverviewResponseSchema,
   type StudioBrandSummary,
@@ -39,6 +41,7 @@ import {
   type StudioWorkspaceRoleEscalationSummary,
   type StudioWorkspaceRetentionPolicy,
   type StudioWorkspaceStatus,
+  type WorkspaceDecommissionNotificationKind,
   type WorkspaceDecommissionSummary,
   type WorkspaceOffboardingEntry
 } from "@ai-nft-forge/shared";
@@ -297,6 +300,18 @@ function formatWorkspaceOffboardingCode(code: string) {
   return code.replaceAll("_", " ");
 }
 
+function formatWorkspaceInvitationStatus(
+  status: StudioWorkspaceInvitationSummary["status"]
+) {
+  return status.replaceAll("_", " ");
+}
+
+function formatDecommissionNotificationKind(
+  kind: WorkspaceDecommissionNotificationKind
+) {
+  return kind.replaceAll("_", " ");
+}
+
 function formatDecommissionDateTime(value: string) {
   return new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
@@ -376,6 +391,8 @@ export function StudioSettingsClient({
     useState(false);
   const [isCancelingDecommission, setIsCancelingDecommission] = useState(false);
   const [isExecutingDecommission, setIsExecutingDecommission] = useState(false);
+  const [recordingDecommissionNotificationKind, setRecordingDecommissionNotificationKind] =
+    useState<WorkspaceDecommissionNotificationKind | null>(null);
   const [roleEscalationJustification, setRoleEscalationJustification] =
     useState("");
   const [isRequestingRoleEscalation, setIsRequestingRoleEscalation] =
@@ -385,6 +402,9 @@ export function StudioSettingsClient({
   const [actingWorkspaceStatus, setActingWorkspaceStatus] =
     useState<StudioWorkspaceStatus | null>(null);
   const [cancelingInvitationId, setCancelingInvitationId] = useState<
+    string | null
+  >(null);
+  const [remindingInvitationId, setRemindingInvitationId] = useState<
     string | null
   >(null);
   const [removingMembershipId, setRemovingMembershipId] = useState<
@@ -440,6 +460,8 @@ export function StudioSettingsClient({
     currentWorkspaceOffboardingState?.summary ?? null;
   const scheduledDecommission =
     currentWorkspaceOffboardingState?.decommission ?? null;
+  const decommissionWorkflow =
+    currentWorkspaceOffboardingState?.decommissionWorkflow ?? null;
   const exportWorkspaceId =
     currentWorkspaceOffboardingState?.workspace.id ?? settings?.workspace.id ?? null;
   const scheduledDecommissionReadyForExecution = scheduledDecommission
@@ -1087,6 +1109,124 @@ export function StudioSettingsClient({
     }
   }
 
+  async function handleRemindInvitation(
+    invitation: StudioWorkspaceInvitationSummary
+  ) {
+    if (!canManageMembers || !workspaceIsActive) {
+      return;
+    }
+
+    setRemindingInvitationId(invitation.id);
+    setNotice({
+      message: `Recording reminder for ${invitation.walletAddress}…`,
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch(
+        `/api/studio/settings/invitations/${invitation.id}`,
+        {
+          method: "POST"
+        }
+      );
+      const payload = await parseJsonResponse({
+        response,
+        schema: studioWorkspaceInvitationReminderResponseSchema
+      });
+
+      startTransition(() => {
+        setSettings((currentSettings) => {
+          if (!currentSettings) {
+            return currentSettings;
+          }
+
+          return {
+            ...currentSettings,
+            invitations: currentSettings.invitations.map((currentInvitation) =>
+              currentInvitation.id === invitation.id
+                ? payload.invitation
+                : currentInvitation
+            )
+          };
+        });
+      });
+      setNotice({
+        message: `Reminder recorded for ${payload.invitation.walletAddress}.`,
+        tone: "success"
+      });
+      await refreshSettings({
+        silent: true
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Workspace invitation reminder could not be recorded.",
+        tone: "error"
+      });
+    } finally {
+      setRemindingInvitationId(null);
+    }
+  }
+
+  async function handleRecordDecommissionNotification(
+    kind: WorkspaceDecommissionNotificationKind
+  ) {
+    if (!canManageWorkspace || !settings?.workspace.id) {
+      setNotice({
+        message:
+          inactiveWorkspaceMessage ??
+          "Only workspace owners can record decommission notifications.",
+        tone: "error"
+      });
+      return;
+    }
+
+    setRecordingDecommissionNotificationKind(kind);
+    setNotice({
+      message: `Recording ${formatDecommissionNotificationKind(kind)} decommission notice…`,
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch(
+        `/api/studio/workspaces/${settings.workspace.id}/decommission/notifications`,
+        {
+          body: JSON.stringify({
+            kind
+          }),
+          headers: {
+            "Content-Type": "application/json"
+          },
+          method: "POST"
+        }
+      );
+      await parseJsonResponse({
+        response,
+        schema: workspaceDecommissionNotificationRecordResponseSchema
+      });
+
+      setNotice({
+        message: `${formatDecommissionNotificationKind(kind)} decommission notice recorded.`,
+        tone: "success"
+      });
+      await refreshSettings({
+        silent: true
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Decommission notification could not be recorded.",
+        tone: "error"
+      });
+    } finally {
+      setRecordingDecommissionNotificationKind(null);
+    }
+  }
+
   async function handleRemoveMember(member: StudioWorkspaceMemberSummary) {
     if (!member.membershipId || !canMutateMembers) {
       return;
@@ -1394,7 +1534,13 @@ export function StudioSettingsClient({
             />
             <MetricTile
               label="Pending invites"
-              value={settings?.invitations.length?.toString() ?? "0"}
+              value={
+                (
+                  settings?.invitations.filter(
+                    (invitation) => invitation.status !== "expired"
+                  ).length ?? 0
+                ).toString()
+              }
             />
             <MetricTile
               label="Role escalation"
@@ -1646,6 +1792,9 @@ export function StudioSettingsClient({
                     <Pill>
                       {scheduledDecommission.retentionDays} day retention
                     </Pill>
+                    <Pill>
+                      {decommissionWorkflow?.notificationCount ?? 0} notices
+                    </Pill>
                   </div>
                   <div className="status-banner status-banner--info">
                     <strong>Scheduled</strong>
@@ -1661,6 +1810,56 @@ export function StudioSettingsClient({
                     <p className="surface-card__body-copy">
                       Reason: {scheduledDecommission.reason}
                     </p>
+                  ) : null}
+                  {decommissionWorkflow?.latestNotification ? (
+                    <div className="status-banner">
+                      <strong>Latest notice recorded</strong>
+                      <span>
+                        {formatDecommissionNotificationKind(
+                          decommissionWorkflow.latestNotification.kind
+                        )}{" "}
+                        at{" "}
+                        {formatDecommissionDateTime(
+                          decommissionWorkflow.latestNotification.sentAt
+                        )}
+                        .
+                      </span>
+                    </div>
+                  ) : null}
+                  {decommissionWorkflow?.nextDueKind ? (
+                    <div className="status-banner status-banner--info">
+                      <strong>Notice due</strong>
+                      <span>
+                        Record the{" "}
+                        {formatDecommissionNotificationKind(
+                          decommissionWorkflow.nextDueKind
+                        )}{" "}
+                        notice for this decommission workflow.
+                      </span>
+                    </div>
+                  ) : null}
+                  {canManageWorkspace && decommissionWorkflow?.nextDueKind ? (
+                    <button
+                      className="button-action button-action--secondary"
+                      disabled={
+                        Boolean(recordingDecommissionNotificationKind) ||
+                        isCancelingDecommission ||
+                        isExecutingDecommission
+                      }
+                      onClick={() => {
+                        void handleRecordDecommissionNotification(
+                          decommissionWorkflow.nextDueKind!
+                        );
+                      }}
+                      type="button"
+                    >
+                      {recordingDecommissionNotificationKind ===
+                      decommissionWorkflow.nextDueKind
+                        ? "Recording notice…"
+                        : `Record ${formatDecommissionNotificationKind(
+                            decommissionWorkflow.nextDueKind
+                          )} notice`}
+                    </button>
                   ) : null}
                   <label className="field-label" htmlFor="decommission-execute-slug">
                     Confirm workspace slug to execute
@@ -2503,7 +2702,12 @@ export function StudioSettingsClient({
           <div className="pill-row">
             <Pill>{access.role}</Pill>
             <Pill>{settings?.members.length ?? 1} total members</Pill>
-            <Pill>{settings?.invitations.length ?? 0} pending invites</Pill>
+            <Pill>
+              {settings?.invitations.filter(
+                (invitation) => invitation.status !== "expired"
+              ).length ?? 0}{" "}
+              pending invites
+            </Pill>
           </div>
           {!canManageMembers ? (
             <div className="status-banner status-banner--info">
@@ -2573,19 +2777,47 @@ export function StudioSettingsClient({
                   <div className="collection-item-card__copy">
                     <strong>{invitation.walletAddress}</strong>
                     <span>
-                      Pending operator invitation
+                      {formatWorkspaceInvitationStatus(invitation.status)}{" "}
+                      operator invitation
                       {invitation.role === "owner" ? " owner" : ""}
                     </span>
                     <span>
                       Sent {formatTimestamp(invitation.createdAt)} · expires{" "}
                       {formatTimestamp(invitation.expiresAt)}
                     </span>
+                    <span>
+                      {invitation.reminderCount} reminder
+                      {invitation.reminderCount === 1 ? "" : "s"}
+                      {invitation.lastRemindedAt
+                        ? ` · last reminder ${formatTimestamp(
+                            invitation.lastRemindedAt
+                          )}`
+                        : ""}
+                    </span>
                   </div>
                   <div className="collection-item-card__actions">
+                    <button
+                      className="button-action button-action--secondary"
+                      disabled={
+                        !canMutateMembers ||
+                        invitation.status === "expired" ||
+                        remindingInvitationId === invitation.id ||
+                        cancelingInvitationId === invitation.id
+                      }
+                      onClick={() => {
+                        void handleRemindInvitation(invitation);
+                      }}
+                      type="button"
+                    >
+                      {remindingInvitationId === invitation.id
+                        ? "Recording…"
+                        : "Record reminder"}
+                    </button>
                     <button
                       className="button-action"
                       disabled={
                         !canMutateMembers ||
+                        remindingInvitationId === invitation.id ||
                         cancelingInvitationId === invitation.id
                       }
                       onClick={() => {

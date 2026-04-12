@@ -15,6 +15,7 @@ function createWorkspaceDecommissionHarness(input?: {
 }) {
   const now = input?.now ?? new Date("2026-04-12T05:00:00.000Z");
   let workspaceDeleted = false;
+  let notificationIndex = 0;
   let scheduledRequest: {
     canceledAt: Date | null;
     canceledByUser: {
@@ -64,6 +65,16 @@ function createWorkspaceDecommissionHarness(input?: {
           workspaceId: "workspace_1"
         };
   const auditActions: string[] = [];
+  const notifications: Array<{
+    id: string;
+    kind: "ready" | "scheduled" | "upcoming";
+    requestId: string;
+    sentAt: Date;
+    sentByUser: {
+      walletAddress: string;
+    };
+    sentByUserId: string;
+  }> = [];
 
   const repositories = {
     auditLogRepository: {
@@ -88,6 +99,38 @@ function createWorkspaceDecommissionHarness(input?: {
           id,
           walletAddress: "0x1111111111111111111111111111111111111111"
         };
+      }
+    },
+    workspaceDecommissionNotificationRepository: {
+      async create(inputRecord: {
+        kind: "ready" | "scheduled" | "upcoming";
+        requestId: string;
+        sentAt: Date;
+        sentByUserId: string;
+      }) {
+        notificationIndex += 1;
+        notifications.push({
+          id: `notification_${notificationIndex}`,
+          kind: inputRecord.kind,
+          requestId: inputRecord.requestId,
+          sentAt: inputRecord.sentAt,
+          sentByUser: {
+            walletAddress: "0x1111111111111111111111111111111111111111"
+          },
+          sentByUserId: inputRecord.sentByUserId
+        });
+
+        return {
+          id: `notification_${notificationIndex}`,
+          kind: inputRecord.kind,
+          sentAt: inputRecord.sentAt,
+          sentByUserId: inputRecord.sentByUserId
+        };
+      },
+      async listByRequestId(inputRecord: { requestId: string }) {
+        return notifications.filter(
+          (notification) => notification.requestId === inputRecord.requestId
+        );
       }
     },
     workspaceDecommissionRequestRepository: {
@@ -254,6 +297,9 @@ function createWorkspaceDecommissionHarness(input?: {
 
   return {
     auditActions,
+    getNotifications() {
+      return notifications;
+    },
     getScheduledRequest() {
       return scheduledRequest;
     },
@@ -343,6 +389,25 @@ describe("createWorkspaceDecommissionService", () => {
     );
   });
 
+  it("records the next due decommission notification", async () => {
+    const harness = createWorkspaceDecommissionHarness({
+      scheduledExecuteAfter: new Date("2026-04-20T05:00:00.000Z")
+    });
+
+    const result = await harness.service.recordWorkspaceDecommissionNotification({
+      kind: "scheduled",
+      ownerUserId: "user_owner",
+      workspaceId: "workspace_1"
+    });
+
+    expect(result.notification.kind).toBe("scheduled");
+    expect(result.workflow.notificationCount).toBe(1);
+    expect(result.workflow.nextDueKind).toBeNull();
+    expect(harness.auditActions).toContain(
+      "workspace_decommission_notification_recorded"
+    );
+  });
+
   it("cancels an active decommission schedule", async () => {
     const harness = createWorkspaceDecommissionHarness({
       scheduledExecuteAfter: new Date("2026-05-12T05:00:00.000Z")
@@ -391,6 +456,26 @@ describe("createWorkspaceDecommissionService", () => {
       new StudioSettingsServiceError(
         "WORKSPACE_DECOMMISSION_RETENTION_PENDING",
         "This workspace cannot be decommissioned before 2026-05-12T05:00:00.000Z.",
+        409
+      )
+    );
+  });
+
+  it("rejects decommission notification records when the requested notice is not due", async () => {
+    const harness = createWorkspaceDecommissionHarness({
+      scheduledExecuteAfter: new Date("2026-04-14T05:00:00.000Z")
+    });
+
+    await expect(
+      harness.service.recordWorkspaceDecommissionNotification({
+        kind: "scheduled",
+        ownerUserId: "user_owner",
+        workspaceId: "workspace_1"
+      })
+    ).rejects.toEqual(
+      new StudioSettingsServiceError(
+        "WORKSPACE_DECOMMISSION_NOTIFICATION_NOT_DUE",
+        "The next due decommission notification is upcoming.",
         409
       )
     );

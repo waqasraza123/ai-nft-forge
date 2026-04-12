@@ -19,6 +19,7 @@ import {
   studioWorkspaceAuditEntrySchema,
   studioWorkspaceInvitationCreateRequestSchema,
   studioWorkspaceInvitationDeleteResponseSchema,
+  studioWorkspaceInvitationReminderResponseSchema,
   studioWorkspaceInvitationResponseSchema,
   studioSettingsResponseSchema,
   studioSettingsUpdateRequestSchema,
@@ -33,6 +34,11 @@ import {
 } from "@ai-nft-forge/shared";
 
 import { StudioSettingsServiceError } from "./error";
+import {
+  canSendWorkspaceInvitationReminder,
+  getWorkspaceInvitationReminderReadyAt,
+  getWorkspaceInvitationStatus
+} from "../studio/invitation-lifecycle";
 
 type WorkspaceRecord = {
   decommissionRetentionDaysDefault: number;
@@ -91,6 +97,8 @@ type WorkspaceInvitationRecord = {
   id: string;
   invitedByUser: UserRecord;
   invitedByUserId: string;
+  lastRemindedAt: Date | null;
+  reminderCount: number;
   role: StudioWorkspaceRole;
   walletAddress: string;
   workspaceId: string;
@@ -107,6 +115,8 @@ type WorkspaceInvitationLookupRecord = {
   createdAt: Date;
   expiresAt: Date;
   id: string;
+  lastRemindedAt: Date | null;
+  reminderCount: number;
   role: StudioWorkspaceRole;
   walletAddress: string;
   workspace: {
@@ -293,6 +303,9 @@ type StudioSettingsRepositorySet = {
     findByIdWithWorkspace(input: {
       id: string;
     }): Promise<WorkspaceInvitationWithWorkspaceRecord | null>;
+    listByWorkspaceId(input: {
+      workspaceId: string;
+    }): Promise<WorkspaceInvitationRecord[]>;
     listActiveByWalletAddress(input: {
       now: Date;
       walletAddress: string;
@@ -301,6 +314,14 @@ type StudioSettingsRepositorySet = {
       now: Date;
       workspaceId: string;
     }): Promise<WorkspaceInvitationRecord[]>;
+    touchReminderById(input: {
+      id: string;
+      lastRemindedAt: Date;
+    }): Promise<{
+      id: string;
+      lastRemindedAt: Date | null;
+      reminderCount: number;
+    }>;
   };
   workspaceRoleEscalationRequestRepository: {
     create(input: {
@@ -551,13 +572,21 @@ function serializeWorkspaceMember(input: {
 }
 
 function serializeWorkspaceInvitation(input: WorkspaceInvitationRecord) {
+  const now = new Date();
+
   return {
     createdAt: input.createdAt.toISOString(),
     expiresAt: input.expiresAt.toISOString(),
     id: input.id,
     invitedByUserId: input.invitedByUserId,
     invitedByWalletAddress: input.invitedByUser.walletAddress,
+    lastRemindedAt: input.lastRemindedAt?.toISOString() ?? null,
+    reminderCount: input.reminderCount,
     role: input.role,
+    status: getWorkspaceInvitationStatus({
+      expiresAt: input.expiresAt,
+      now
+    }),
     walletAddress: input.walletAddress
   };
 }
@@ -645,14 +674,12 @@ async function serializeStudioSettings(input: {
   role: StudioWorkspaceRole;
   workspace: WorkspaceRecord;
 }) {
-  const now = new Date();
   const [memberships, invitations, roleEscalationRequests, auditLogs] =
     await Promise.all([
       input.repositories.workspaceMembershipRepository.listByWorkspaceId(
         input.workspace.id
       ),
-      input.repositories.workspaceInvitationRepository.listActiveByWorkspaceId({
-        now,
+      input.repositories.workspaceInvitationRepository.listByWorkspaceId({
         workspaceId: input.workspace.id
       }),
       input.repositories.workspaceRoleEscalationRequestRepository.listByWorkspaceId(
@@ -832,9 +859,11 @@ async function recordWorkspaceAuditLog(input: {
   action:
     | "workspace_archived"
     | "workspace_created"
+    | "workspace_decommission_notification_recorded"
     | "workspace_invitation_accepted"
     | "workspace_invitation_canceled"
     | "workspace_invitation_created"
+    | "workspace_invitation_reminder_sent"
     | "workspace_member_added"
     | "workspace_member_removed"
     | "workspace_owner_transferred"
@@ -1843,6 +1872,98 @@ export function createStudioSettingsService(
         return studioWorkspaceInvitationDeleteResponseSchema.parse({
           invitationId: input.invitationId,
           removed: true
+        });
+      });
+    },
+
+    async remindWorkspaceInvitation(input: {
+      invitationId: string;
+      ownerUserId: string;
+      role?: StudioWorkspaceRole;
+      workspaceId?: string | null;
+    }) {
+      assertOwnerRole(input.role ?? "owner");
+
+      return dependencies.runTransaction(async (repositories) => {
+        const now = new Date();
+        const { owner, workspace } = await requireOwnerWorkspace({
+          ownerUserId: input.ownerUserId,
+          repositories,
+          workspaceId: input.workspaceId
+        });
+        const invitation =
+          await repositories.workspaceInvitationRepository.findByIdWithWorkspace(
+            {
+              id: input.invitationId
+            }
+          );
+
+        if (
+          !invitation ||
+          invitation.workspace.id !== workspace.id ||
+          invitation.workspace.ownerUserId !== input.ownerUserId
+        ) {
+          throw new StudioSettingsServiceError(
+            "INVITATION_NOT_FOUND",
+            "The requested workspace invitation was not found.",
+            404
+          );
+        }
+
+        const invitationStatus = getWorkspaceInvitationStatus({
+          expiresAt: invitation.expiresAt,
+          now
+        });
+
+        if (invitationStatus === "expired") {
+          throw new StudioSettingsServiceError(
+            "INVITATION_EXPIRED",
+            "This workspace invitation has already expired.",
+            409
+          );
+        }
+
+        if (
+          !canSendWorkspaceInvitationReminder({
+            expiresAt: invitation.expiresAt,
+            lastRemindedAt: invitation.lastRemindedAt,
+            now
+          })
+        ) {
+          const reminderReadyAt = getWorkspaceInvitationReminderReadyAt({
+            lastRemindedAt: invitation.lastRemindedAt
+          });
+
+          throw new StudioSettingsServiceError(
+            "INVITATION_REMINDER_NOT_READY",
+            reminderReadyAt
+              ? `The next reminder can be recorded after ${reminderReadyAt.toISOString()}.`
+              : "This workspace invitation cannot be reminded yet.",
+            409
+          );
+        }
+
+        const updatedInvitation =
+          await repositories.workspaceInvitationRepository.touchReminderById({
+            id: invitation.id,
+            lastRemindedAt: now
+          });
+
+        await recordWorkspaceAuditLog({
+          action: "workspace_invitation_reminder_sent",
+          actor: owner,
+          repositories,
+          role: invitation.role,
+          targetWalletAddress: invitation.walletAddress,
+          workspaceId: workspace.id
+        });
+
+        return studioWorkspaceInvitationReminderResponseSchema.parse({
+          invitation: serializeWorkspaceInvitation({
+            ...invitation,
+            lastRemindedAt: updatedInvitation.lastRemindedAt,
+            reminderCount: updatedInvitation.reminderCount
+          })
         });
       });
     },

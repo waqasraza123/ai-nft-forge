@@ -31,11 +31,18 @@ describe("createWorkspaceDirectoryService", () => {
         }
       },
       workspaceInvitationRepository: {
-        async listActiveByWorkspaceId(input: { now: Date; workspaceId: string }) {
-          expect(input.now).toBeInstanceOf(Date);
-
+        async listByWorkspaceId(input: { workspaceId: string }) {
           return input.workspaceId === "workspace_1"
-            ? [{ id: "invitation_1" }]
+            ? [
+                {
+                  expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+                  id: "invitation_expiring"
+                },
+                {
+                  expiresAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+                  id: "invitation_expired"
+                }
+              ]
             : [];
         }
       },
@@ -81,6 +88,8 @@ describe("createWorkspaceDirectoryService", () => {
       {
         brandCount: 2,
         current: false,
+        expiredInvitationCount: 1,
+        expiringInvitationCount: 1,
         lastActivityAt: "2026-04-12T03:15:00.000Z",
         memberCount: 3,
         pendingInvitationCount: 1,
@@ -98,6 +107,8 @@ describe("createWorkspaceDirectoryService", () => {
       {
         brandCount: 1,
         current: true,
+        expiredInvitationCount: 0,
+        expiringInvitationCount: 0,
         lastActivityAt: null,
         memberCount: 1,
         pendingInvitationCount: 0,

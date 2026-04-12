@@ -74,6 +74,9 @@ export function WorkspaceOffboardingPanel({
                   {entry.summary.unfulfilledCheckoutCount} unfulfilled
                 </Pill>
                 <Pill>{entry.summary.livePublicationCount} live releases</Pill>
+                <Pill>{entry.directory.pendingInvitationCount} pending invites</Pill>
+                <Pill>{entry.directory.expiringInvitationCount} expiring invites</Pill>
+                <Pill>{entry.directory.expiredInvitationCount} expired invites</Pill>
                 {entry.decommission ? (
                   <Pill>
                     decommission{" "}
@@ -121,6 +124,28 @@ export function WorkspaceOffboardingPanel({
                   <span>
                     Retention window ends on{" "}
                     {formatDateTime(entry.decommission.executeAfter)}.
+                  </span>
+                </div>
+              ) : null}
+              {entry.decommission ? (
+                <div className="status-banner status-banner--info">
+                  <strong>Notice workflow</strong>
+                  <span>
+                    {entry.decommissionWorkflow.notificationCount} recorded
+                    notice(s)
+                    {entry.decommissionWorkflow.nextDueKind
+                      ? ` · next due ${formatCode(
+                          entry.decommissionWorkflow.nextDueKind
+                        )}`
+                      : ""}
+                    {entry.decommissionWorkflow.latestNotification
+                      ? ` · latest ${formatCode(
+                          entry.decommissionWorkflow.latestNotification.kind
+                        )} ${formatDateTime(
+                          entry.decommissionWorkflow.latestNotification.sentAt
+                        )}`
+                      : ""}
+                    .
                   </span>
                 </div>
               ) : null}

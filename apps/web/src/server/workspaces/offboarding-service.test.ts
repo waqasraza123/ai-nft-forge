@@ -12,6 +12,9 @@ function createWorkspaceOffboardingHarness() {
           workspaces: input.workspaces.map((workspace) => ({
             brandCount: workspace.id === "workspace_ready" ? 1 : 2,
             current: workspace.id === input.currentWorkspaceId,
+            expiredInvitationCount: 0,
+            expiringInvitationCount:
+              workspace.id === "workspace_review" ? 1 : 0,
             lastActivityAt: "2026-04-12T04:00:00.000Z",
             memberCount: 2,
             pendingInvitationCount:
@@ -251,8 +254,7 @@ function createWorkspaceOffboardingHarness() {
         }
       },
       workspaceInvitationRepository: {
-        async listActiveByWorkspaceId(input: {
-          now: Date;
+        async listByWorkspaceId(input: {
           workspaceId: string;
         }) {
           return input.workspaceId === "workspace_review"
@@ -265,8 +267,46 @@ function createWorkspaceOffboardingHarness() {
                     walletAddress: "0x1111111111111111111111111111111111111111"
                   },
                   invitedByUserId: "user_owner",
+                  lastRemindedAt: new Date("2026-04-11T12:00:00.000Z"),
+                  reminderCount: 1,
                   role: "operator" as const,
                   walletAddress: "0x2222222222222222222222222222222222222222"
+                }
+              ]
+            : [];
+        }
+      },
+      workspaceDecommissionNotificationRepository: {
+        async listByRequestId(input: { requestId: string }) {
+          return input.requestId === "decommission_ready"
+            ? [
+                {
+                  id: "notification_1",
+                  kind: "scheduled" as const,
+                  requestId: input.requestId,
+                  sentAt: new Date("2026-04-12T02:00:00.000Z"),
+                  sentByUser: {
+                    walletAddress:
+                      "0x1111111111111111111111111111111111111111"
+                  },
+                  sentByUserId: "user_owner"
+                }
+              ]
+            : [];
+        },
+        async listByRequestIds(requestIds: string[]) {
+          return requestIds.includes("decommission_ready")
+            ? [
+                {
+                  id: "notification_1",
+                  kind: "scheduled" as const,
+                  requestId: "decommission_ready",
+                  sentAt: new Date("2026-04-12T02:00:00.000Z"),
+                  sentByUser: {
+                    walletAddress:
+                      "0x1111111111111111111111111111111111111111"
+                  },
+                  sentByUserId: "user_owner"
                 }
               ]
             : [];
@@ -280,7 +320,7 @@ function createWorkspaceOffboardingHarness() {
                 canceledByUser: null,
                 canceledByUserId: null,
                 createdAt: new Date("2026-04-12T01:00:00.000Z"),
-                executeAfter: new Date("2026-05-12T01:00:00.000Z"),
+                executeAfter: new Date("2026-04-13T01:00:00.000Z"),
                 executedAt: null,
                 executedByUser: null,
                 executedByUserId: null,
@@ -305,7 +345,7 @@ function createWorkspaceOffboardingHarness() {
                   canceledByUser: null,
                   canceledByUserId: null,
                   createdAt: new Date("2026-04-12T01:00:00.000Z"),
-                  executeAfter: new Date("2026-05-12T01:00:00.000Z"),
+                  executeAfter: new Date("2026-04-13T01:00:00.000Z"),
                   executedAt: null,
                   executedByUser: null,
                   executedByUserId: null,
@@ -451,6 +491,7 @@ describe("createWorkspaceOffboardingService", () => {
 
     expect(result.overview.summary).toEqual({
       blockedWorkspaceCount: 1,
+      decommissionNoticeDueWorkspaceCount: 1,
       reasonRequiredWorkspaceCount: 1,
       readyWorkspaceCount: 1,
       reviewRequiredWorkspaceCount: 1,
@@ -482,6 +523,10 @@ describe("createWorkspaceOffboardingService", () => {
         retentionDays: 30,
         status: "scheduled"
       },
+      decommissionWorkflow: {
+        nextDueKind: "upcoming",
+        notificationCount: 1
+      },
       retentionPolicy: {
         defaultDecommissionRetentionDays: 45,
         minimumDecommissionRetentionDays: 7,
@@ -511,6 +556,12 @@ describe("createWorkspaceOffboardingService", () => {
     expect(result.export.publications).toHaveLength(1);
     expect(result.export.checkouts).toHaveLength(1);
     expect(result.export.decommission).toBeNull();
+    expect(result.export.decommissionNotifications).toEqual([]);
+    expect(result.export.decommissionWorkflow).toEqual({
+      latestNotification: null,
+      nextDueKind: null,
+      notificationCount: 0
+    });
     expect(result.export.retentionPolicy).toEqual({
       defaultDecommissionRetentionDays: 30,
       minimumDecommissionRetentionDays: 21,
@@ -518,6 +569,7 @@ describe("createWorkspaceOffboardingService", () => {
     });
     expect(csv).toContain("workspace_slug");
     expect(csv).toContain("retention_default_days");
+    expect(csv).toContain("decommission_notification_count");
     expect(csv).toContain("slug-workspace-review");
   });
 
