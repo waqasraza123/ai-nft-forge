@@ -9,6 +9,11 @@ import { walletAddressSchema } from "./auth.js";
 
 export const studioWorkspaceNameSchema = z.string().trim().min(1).max(120);
 export const studioWorkspaceSlugSchema = collectionDraftSlugSchema;
+export const studioWorkspaceStatusSchema = z.enum([
+  "active",
+  "suspended",
+  "archived"
+]);
 export const defaultStudioBrandAccentColor = "#8b5e34";
 export const defaultStudioBrandThemePreset = "editorial_warm";
 export const defaultStudioBrandLandingHeadline =
@@ -72,7 +77,7 @@ export const studioWorkspaceSummarySchema = z.object({
   id: z.string().min(1),
   name: studioWorkspaceNameSchema,
   slug: studioWorkspaceSlugSchema,
-  status: z.enum(["active", "suspended", "archived"])
+  status: studioWorkspaceStatusSchema
 });
 
 export const studioBrandSummarySchema = z.object({
@@ -174,6 +179,7 @@ export const studioWorkspaceRoleEscalationSummarySchema = z.object({
 });
 
 export const studioWorkspaceAuditActionSchema = z.enum([
+  "workspace_archived",
   "workspace_created",
   "workspace_invitation_accepted",
   "workspace_invitation_canceled",
@@ -181,10 +187,12 @@ export const studioWorkspaceAuditActionSchema = z.enum([
   "workspace_member_added",
   "workspace_member_removed",
   "workspace_owner_transferred",
+  "workspace_reactivated",
   "workspace_role_escalation_approved",
   "workspace_role_escalation_canceled",
   "workspace_role_escalation_rejected",
-  "workspace_role_escalation_requested"
+  "workspace_role_escalation_requested",
+  "workspace_suspended"
 ]);
 
 export const studioWorkspaceAuditEntrySchema = z.object({
@@ -225,6 +233,14 @@ export const studioWorkspaceCreateRequestSchema = z.object({
 
 export const studioWorkspaceCreateResponseSchema = z.object({
   brand: studioBrandSummarySchema,
+  workspace: studioWorkspaceSummarySchema
+});
+
+export const studioWorkspaceStatusUpdateRequestSchema = z.object({
+  status: studioWorkspaceStatusSchema
+});
+
+export const studioWorkspaceStatusUpdateResponseSchema = z.object({
   workspace: studioWorkspaceSummarySchema
 });
 
@@ -341,6 +357,7 @@ export const studioSettingsErrorResponseSchema = z.object({
       "ROLE_ESCALATION_NOT_FOUND",
       "ROLE_ESCALATION_NOT_PENDING",
       "SESSION_REQUIRED",
+      "WORKSPACE_NOT_ACTIVE",
       "WORKSPACE_REQUIRED",
       "WORKSPACE_NOT_FOUND",
       "WORKSPACE_SLUG_CONFLICT"
@@ -426,11 +443,20 @@ export type StudioWorkspaceRoleEscalationSummary = z.infer<
 export type StudioWorkspaceAuditAction = z.infer<
   typeof studioWorkspaceAuditActionSchema
 >;
+export type StudioWorkspaceStatus = z.infer<
+  typeof studioWorkspaceStatusSchema
+>;
 export type StudioWorkspaceCreateRequest = z.infer<
   typeof studioWorkspaceCreateRequestSchema
 >;
 export type StudioWorkspaceCreateResponse = z.infer<
   typeof studioWorkspaceCreateResponseSchema
+>;
+export type StudioWorkspaceStatusUpdateRequest = z.infer<
+  typeof studioWorkspaceStatusUpdateRequestSchema
+>;
+export type StudioWorkspaceStatusUpdateResponse = z.infer<
+  typeof studioWorkspaceStatusUpdateResponseSchema
 >;
 export type StudioWorkspaceAuditEntry = z.infer<
   typeof studioWorkspaceAuditEntrySchema

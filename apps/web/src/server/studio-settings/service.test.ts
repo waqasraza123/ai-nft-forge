@@ -1857,4 +1857,92 @@ describe("createStudioSettingsService", () => {
       "workspace_member_removed"
     ]);
   });
+
+  it("updates workspace lifecycle state and records audit events", async () => {
+    const harness = createStudioSettingsHarness();
+
+    harness.users.set("user_1", {
+      avatarUrl: null,
+      displayName: "Owner One",
+      id: "user_1",
+      walletAddress: "0x1111111111111111111111111111111111111111"
+    });
+    harness.workspaces.set("workspace_1", {
+      id: "workspace_1",
+      name: "Forge Operations",
+      ownerUserId: "user_1",
+      slug: "forge-operations",
+      status: "active"
+    });
+    harness.brands.set("brand_1", {
+      customDomain: null,
+      id: "brand_1",
+      name: "Forge Editions",
+      slug: "forge-editions",
+      themeJson: {
+        accentColor: "#8b5e34"
+      },
+      workspaceId: "workspace_1"
+    });
+
+    const suspended = await harness.service.updateWorkspaceStatus({
+      ownerUserId: "user_1",
+      status: "suspended",
+      workspaceId: "workspace_1"
+    });
+
+    expect(suspended.workspace.status).toBe("suspended");
+    expect(harness.workspaces.get("workspace_1")?.status).toBe("suspended");
+    expect(harness.auditLogs.at(-1)?.action).toBe("workspace_suspended");
+
+    const reactivated = await harness.service.updateWorkspaceStatus({
+      ownerUserId: "user_1",
+      status: "active",
+      workspaceId: "workspace_1"
+    });
+
+    expect(reactivated.workspace.status).toBe("active");
+    expect(harness.workspaces.get("workspace_1")?.status).toBe("active");
+    expect(harness.auditLogs.slice(-2).map((entry) => entry.action)).toEqual([
+      "workspace_suspended",
+      "workspace_reactivated"
+    ]);
+  });
+
+  it("does not duplicate audit entries when the requested workspace status is unchanged", async () => {
+    const harness = createStudioSettingsHarness();
+
+    harness.users.set("user_1", {
+      avatarUrl: null,
+      displayName: "Owner One",
+      id: "user_1",
+      walletAddress: "0x1111111111111111111111111111111111111111"
+    });
+    harness.workspaces.set("workspace_1", {
+      id: "workspace_1",
+      name: "Forge Operations",
+      ownerUserId: "user_1",
+      slug: "forge-operations",
+      status: "archived"
+    });
+    harness.brands.set("brand_1", {
+      customDomain: null,
+      id: "brand_1",
+      name: "Forge Editions",
+      slug: "forge-editions",
+      themeJson: {
+        accentColor: "#8b5e34"
+      },
+      workspaceId: "workspace_1"
+    });
+
+    const result = await harness.service.updateWorkspaceStatus({
+      ownerUserId: "user_1",
+      status: "archived",
+      workspaceId: "workspace_1"
+    });
+
+    expect(result.workspace.status).toBe("archived");
+    expect(harness.auditLogs).toHaveLength(0);
+  });
 });

@@ -2,6 +2,7 @@ import { opsErrorResponseSchema } from "@ai-nft-forge/shared";
 import { NextResponse } from "next/server";
 
 import { requireStudioApiSession as requireStudioApiSessionBase } from "../studio/http";
+import { assertWorkspaceIsActive } from "../studio/workspace-state";
 
 import { OpsServiceError } from "./error";
 
@@ -29,8 +30,18 @@ export async function requireOpsApiSession() {
   };
 }
 
-export async function requireOpsOwnerApiSession() {
+export async function requireActiveOpsApiSession() {
   const session = await requireOpsApiSession();
+
+  assertWorkspaceIsActive(session.workspace, (message) => {
+    return new OpsServiceError("WORKSPACE_NOT_ACTIVE", message, 409);
+  });
+
+  return session;
+}
+
+export async function requireOpsOwnerApiSession() {
+  const session = await requireActiveOpsApiSession();
 
   if (session.role !== "owner") {
     throw new OpsServiceError(

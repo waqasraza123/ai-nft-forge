@@ -4,8 +4,8 @@ import { NextResponse } from "next/server";
 import {
   createStudioSettingsErrorResponse,
   parseJsonBody,
+  requireStudioActiveOwnerApiSession,
   requireStudioApiSession,
-  requireStudioOwnerApiSession
 } from "../../../../server/studio-settings/http";
 import { createRuntimeStudioSettingsService } from "../../../../server/studio-settings/runtime";
 
@@ -28,7 +28,7 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    const session = await requireStudioOwnerApiSession();
+    const session = await requireStudioActiveOwnerApiSession();
     const body = studioSettingsUpdateRequestSchema.parse(
       await parseJsonBody(request)
     );

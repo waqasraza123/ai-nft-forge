@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import {
   createOpsErrorResponse,
-  requireOpsApiSession
+  requireActiveOpsApiSession
 } from "../../../../../../server/ops/http";
 import { createRuntimeOpsService } from "../../../../../../server/ops/runtime-service";
 
@@ -17,7 +17,7 @@ export async function POST(
   context: AcknowledgeAlertRouteContext
 ) {
   try {
-    const session = await requireOpsApiSession();
+    const session = await requireActiveOpsApiSession();
     const { alertStateId } = await context.params;
     const result = await createRuntimeOpsService().acknowledgeAlert({
       alertStateId,

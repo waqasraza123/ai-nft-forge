@@ -9,6 +9,7 @@ import {
   findAccessibleWorkspaceById,
   getCurrentStudioAccess
 } from "../../../../../../../server/studio/access";
+import { assertWorkspaceIsActive } from "../../../../../../../server/studio/workspace-state";
 
 type FleetAcknowledgeAlertRouteContext = {
   params: Promise<{
@@ -46,6 +47,9 @@ export async function POST(
         404
       );
     }
+    assertWorkspaceIsActive(workspace, (message) => {
+      return new OpsServiceError("WORKSPACE_NOT_ACTIVE", message, 409);
+    });
 
     const { alertStateId } = await context.params;
     const result = await createRuntimeOpsService().acknowledgeAlert({

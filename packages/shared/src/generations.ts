@@ -150,7 +150,8 @@ export const generationErrorResponseSchema = z.object({
       "INVALID_REQUEST",
       "SESSION_REQUIRED",
       "SOURCE_ASSET_NOT_FOUND",
-      "SOURCE_ASSET_NOT_READY"
+      "SOURCE_ASSET_NOT_READY",
+      "WORKSPACE_NOT_ACTIVE"
     ]),
     message: z.string().min(1)
   })

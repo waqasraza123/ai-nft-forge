@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import {
   createGenerationErrorResponse,
-  requireStudioApiSession
+  requireStudioActiveApiSession
 } from "../../../../../../server/generations/http";
 import { createRuntimeGenerationService } from "../../../../../../server/generations/runtime";
 
@@ -17,7 +17,7 @@ export async function POST(
   context: RetryGenerationRouteContext
 ) {
   try {
-    const session = await requireStudioApiSession();
+    const session = await requireStudioActiveApiSession();
     const { generationRequestId } = await context.params;
     const result =
       await createRuntimeGenerationService().retryGenerationRequest({

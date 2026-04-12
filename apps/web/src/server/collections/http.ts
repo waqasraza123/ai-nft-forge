@@ -5,6 +5,7 @@ import {
   parseStudioJsonBody,
   requireStudioApiSession as requireStudioApiSessionBase
 } from "../studio/http";
+import { assertWorkspaceIsActive } from "../studio/workspace-state";
 
 import { CollectionDraftServiceError } from "./error";
 
@@ -44,8 +45,18 @@ export async function requireStudioApiSession() {
   };
 }
 
-export async function requireStudioOwnerApiSession() {
+export async function requireStudioActiveApiSession() {
   const session = await requireStudioApiSession();
+
+  assertWorkspaceIsActive(session.workspace, (message) => {
+    return new CollectionDraftServiceError("WORKSPACE_NOT_ACTIVE", message, 409);
+  });
+
+  return session;
+}
+
+export async function requireStudioOwnerApiSession() {
+  const session = await requireStudioActiveApiSession();
 
   if (session.role !== "owner") {
     throw new CollectionDraftServiceError(

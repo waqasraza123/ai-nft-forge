@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 
 import {
   createOpsErrorResponse,
-  requireOpsApiSession
+  requireActiveOpsApiSession
 } from "../../../../../../server/ops/http";
 import { createRuntimeOpsService } from "../../../../../../server/ops/runtime-service";
 
@@ -26,7 +26,7 @@ async function parseMuteRequest(
 
 export async function POST(request: Request, context: MuteAlertRouteContext) {
   try {
-    const session = await requireOpsApiSession();
+    const session = await requireActiveOpsApiSession();
     const { alertStateId } = await context.params;
     const payload = await parseMuteRequest(request);
     const result = await createRuntimeOpsService().muteAlert({
@@ -49,7 +49,7 @@ export async function DELETE(
   context: MuteAlertRouteContext
 ) {
   try {
-    const session = await requireOpsApiSession();
+    const session = await requireActiveOpsApiSession();
     const { alertStateId } = await context.params;
     const result = await createRuntimeOpsService().unmuteAlert({
       alertStateId,

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import {
   createStudioSettingsErrorResponse,
-  requireStudioApiSession
+  requireStudioActiveApiSession
 } from "../../../../../../server/studio-settings/http";
 import { createRuntimeStudioSettingsService } from "../../../../../../server/studio-settings/runtime";
 
@@ -14,7 +14,7 @@ type RouteContext = {
 
 export async function DELETE(_request: Request, context: RouteContext) {
   try {
-    const session = await requireStudioApiSession();
+    const session = await requireStudioActiveApiSession();
     const { requestId } = await context.params;
     const result =
       await createRuntimeStudioSettingsService().cancelWorkspaceRoleEscalation({

@@ -4,13 +4,13 @@ import { NextResponse } from "next/server";
 import {
   createSourceAssetErrorResponse,
   parseJsonBody,
-  requireStudioApiSession
+  requireStudioActiveApiSession
 } from "../../../../../server/source-assets/http";
 import { createRuntimeSourceAssetService } from "../../../../../server/source-assets/runtime";
 
 export async function POST(request: Request) {
   try {
-    const session = await requireStudioApiSession();
+    const session = await requireStudioActiveApiSession();
     const body = sourceAssetUploadIntentRequestSchema.parse(
       await parseJsonBody(request)
     );

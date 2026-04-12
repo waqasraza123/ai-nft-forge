@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import {
   createCollectionDraftErrorResponse,
-  requireStudioApiSession
+  requireStudioActiveApiSession
 } from "../../../../../../../server/collections/http";
 import { createRuntimeCollectionDraftService } from "../../../../../../../server/collections/runtime";
 
@@ -15,7 +15,7 @@ type RouteContext = {
 
 export async function DELETE(_: Request, context: RouteContext) {
   try {
-    const session = await requireStudioApiSession();
+    const session = await requireStudioActiveApiSession();
     const { collectionDraftId, itemId } = await context.params;
     const result =
       await createRuntimeCollectionDraftService().removeCollectionDraftItem({

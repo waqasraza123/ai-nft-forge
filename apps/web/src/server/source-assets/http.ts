@@ -5,6 +5,7 @@ import {
   parseStudioJsonBody,
   requireStudioApiSession as requireStudioApiSessionBase
 } from "../studio/http";
+import { assertWorkspaceIsActive } from "../studio/workspace-state";
 
 import { SourceAssetServiceError } from "./error";
 
@@ -42,6 +43,16 @@ export async function requireStudioApiSession() {
   return session as typeof session & {
     workspace: NonNullable<typeof session.workspace>;
   };
+}
+
+export async function requireStudioActiveApiSession() {
+  const session = await requireStudioApiSession();
+
+  assertWorkspaceIsActive(session.workspace, (message) => {
+    return new SourceAssetServiceError("WORKSPACE_NOT_ACTIVE", message, 409);
+  });
+
+  return session;
 }
 
 export function createSourceAssetErrorResponse(error: unknown): NextResponse {

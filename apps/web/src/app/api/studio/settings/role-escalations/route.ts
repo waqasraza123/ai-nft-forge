@@ -4,13 +4,13 @@ import { NextResponse } from "next/server";
 import {
   createStudioSettingsErrorResponse,
   parseJsonBody,
-  requireStudioApiSession
+  requireStudioActiveApiSession
 } from "../../../../../server/studio-settings/http";
 import { createRuntimeStudioSettingsService } from "../../../../../server/studio-settings/runtime";
 
 export async function POST(request: Request) {
   try {
-    const session = await requireStudioApiSession();
+    const session = await requireStudioActiveApiSession();
     const body = studioWorkspaceRoleEscalationCreateRequestSchema.parse(
       await parseJsonBody(request)
     );

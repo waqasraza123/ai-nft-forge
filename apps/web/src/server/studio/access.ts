@@ -11,6 +11,7 @@ import type {
 import { cookies } from "next/headers";
 
 import { getCurrentAuthSession } from "../auth/session";
+import { resolvePreferredAccessibleWorkspace } from "./workspace-state";
 
 type AuthenticatedSession = NonNullable<AuthSessionResponse["session"]>;
 
@@ -185,7 +186,8 @@ export function createStudioAccessService(
           )
         : undefined;
       const selectedWorkspace =
-        selectedWorkspaceBySlug ?? accessibleWorkspaces[0]!;
+        selectedWorkspaceBySlug ??
+        resolvePreferredAccessibleWorkspace(accessibleWorkspaces)!;
 
       return {
         availableWorkspaces: accessibleWorkspaces,

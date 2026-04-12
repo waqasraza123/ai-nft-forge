@@ -218,6 +218,9 @@ export {
   studioWorkspaceScopeSummarySchema,
   studioWorkspaceSelectionRequestSchema,
   studioWorkspaceSelectionResponseSchema,
+  studioWorkspaceStatusSchema,
+  studioWorkspaceStatusUpdateRequestSchema,
+  studioWorkspaceStatusUpdateResponseSchema,
   studioWorkspaceSlugSchema,
   studioWorkspaceSummarySchema,
   type StudioBrandCreateRequest,
@@ -253,6 +256,9 @@ export {
   type StudioWorkspaceScopeSummary,
   type StudioWorkspaceSelectionRequest,
   type StudioWorkspaceSelectionResponse,
+  type StudioWorkspaceStatus,
+  type StudioWorkspaceStatusUpdateRequest,
+  type StudioWorkspaceStatusUpdateResponse,
   type StudioWorkspaceSummary
 } from "./studio-settings.js";
 export {

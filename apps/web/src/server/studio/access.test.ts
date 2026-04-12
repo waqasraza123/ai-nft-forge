@@ -350,4 +350,68 @@ describe("createStudioAccessService", () => {
       result.availableWorkspaces.map((workspace) => workspace.slug)
     ).toEqual(["forge-ops", "north-editions"]);
   });
+
+  it("prefers an active accessible workspace over archived defaults", async () => {
+    const service = createStudioAccessService({
+      workspaceMembershipRepository: {
+        async listByUserId() {
+          return [
+            {
+              workspace: {
+                id: "workspace_2",
+                name: "North Editions",
+                ownerUser: {
+                  walletAddress: "0x2222222222222222222222222222222222222222"
+                },
+                ownerUserId: "user_2",
+                slug: "north-editions",
+                status: "active" as const
+              }
+            }
+          ];
+        },
+        async findFirstByUserId() {
+          return null;
+        }
+      },
+      workspaceRepository: {
+        async listByOwnerUserId() {
+          return [
+            {
+              id: "workspace_1",
+              name: "Archive Forge",
+              ownerUserId: "user_1",
+              slug: "archive-forge",
+              status: "archived" as const
+            }
+          ];
+        },
+        async findFirstByOwnerUserId() {
+          return {
+            id: "workspace_1",
+            name: "Archive Forge",
+            ownerUserId: "user_1",
+            slug: "archive-forge",
+            status: "archived" as const
+          };
+        }
+      }
+    });
+
+    const result = await service.resolveForSession({
+      session: {
+        expiresAt: "2026-04-20T00:00:00.000Z",
+        user: {
+          avatarUrl: null,
+          displayName: "Owner",
+          id: "user_1",
+          walletAddress: "0x1111111111111111111111111111111111111111"
+        }
+      }
+    });
+
+    expect(result.role).toBe("operator");
+    expect(result.workspace?.slug).toBe("north-editions");
+    expect(result.workspace?.status).toBe("active");
+  });
 });

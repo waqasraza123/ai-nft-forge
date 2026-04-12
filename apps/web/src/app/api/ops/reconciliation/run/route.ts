@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 
 import {
   createOpsErrorResponse,
-  requireOpsApiSession
+  requireActiveOpsApiSession
 } from "../../../../../server/ops/http";
 import { createRuntimeOpsService } from "../../../../../server/ops/runtime-service";
 
 export async function POST() {
   try {
-    const session = await requireOpsApiSession();
+    const session = await requireActiveOpsApiSession();
     const result = await createRuntimeOpsService().runReconciliation({
       ownerUserId: session.ownerUserId,
       workspaceId: session.workspace.id

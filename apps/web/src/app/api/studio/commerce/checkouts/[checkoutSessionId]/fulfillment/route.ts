@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import {
   createCommerceErrorResponse,
   parseJsonBody,
-  requireStudioApiSession
+  requireStudioActiveApiSession
 } from "../../../../../../../server/commerce/http";
 import { createRuntimeCollectionCommerceService } from "../../../../../../../server/commerce/runtime";
 
@@ -15,7 +15,7 @@ type RouteContext = {
 
 export async function PATCH(request: Request, context: RouteContext) {
   try {
-    const session = await requireStudioApiSession();
+    const session = await requireStudioActiveApiSession();
     const { checkoutSessionId } = await context.params;
     const result =
       await createRuntimeCollectionCommerceService().updateOwnerCheckoutFulfillment(

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import {
   createCollectionDraftErrorResponse,
   parseJsonBody,
+  requireStudioActiveApiSession,
   requireStudioApiSession
 } from "../../../../server/collections/http";
 import { createRuntimeCollectionDraftService } from "../../../../server/collections/runtime";
@@ -28,7 +29,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await requireStudioApiSession();
+    const session = await requireStudioActiveApiSession();
     const body = collectionDraftCreateRequestSchema.parse(
       await parseJsonBody(request)
     );

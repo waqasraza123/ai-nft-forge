@@ -83,7 +83,8 @@ export const sourceAssetErrorResponseSchema = z.object({
       "INTERNAL_SERVER_ERROR",
       "INVALID_REQUEST",
       "OBJECT_MISSING",
-      "SESSION_REQUIRED"
+      "SESSION_REQUIRED",
+      "WORKSPACE_NOT_ACTIVE"
     ]),
     message: z.string().min(1)
   })

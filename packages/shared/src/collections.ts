@@ -446,7 +446,8 @@ export const collectionDraftErrorResponseSchema = z.object({
       "INTERNAL_SERVER_ERROR",
       "PUBLICATION_TARGET_NOT_FOUND",
       "STUDIO_SETTINGS_REQUIRED",
-      "SESSION_REQUIRED"
+      "SESSION_REQUIRED",
+      "WORKSPACE_NOT_ACTIVE"
     ]),
     message: z.string().min(1)
   })

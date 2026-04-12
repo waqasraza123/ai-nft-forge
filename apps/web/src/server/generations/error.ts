@@ -8,7 +8,8 @@ export class GenerationServiceError extends Error {
       | "INVALID_REQUEST"
       | "SESSION_REQUIRED"
       | "SOURCE_ASSET_NOT_FOUND"
-      | "SOURCE_ASSET_NOT_READY",
+      | "SOURCE_ASSET_NOT_READY"
+      | "WORKSPACE_NOT_ACTIVE",
     message: string,
     public readonly statusCode: 400 | 401 | 404 | 409 | 500
   ) {

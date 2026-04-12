@@ -275,6 +275,7 @@ export const collectionCommerceErrorResponseSchema = z.object({
       "INVALID_REQUEST",
       "RESERVATION_NOT_AVAILABLE",
       "SESSION_REQUIRED",
+      "WORKSPACE_NOT_ACTIVE",
       "UNSUPPORTED_CHECKOUT_PROVIDER",
       "INTERNAL_SERVER_ERROR"
     ]),

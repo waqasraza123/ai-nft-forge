@@ -5,6 +5,7 @@ import {
   parseStudioJsonBody,
   requireStudioApiSession as requireStudioApiSessionBase
 } from "../studio/http";
+import { assertWorkspaceIsActive } from "../studio/workspace-state";
 
 import { StudioSettingsServiceError } from "./error";
 
@@ -44,6 +45,42 @@ export async function requireStudioOwnerApiSession() {
       403
     );
   }
+
+  return session;
+}
+
+export async function requireStudioActiveApiSession() {
+  const session = await requireStudioApiSession();
+
+  if (!session.workspace) {
+    throw new StudioSettingsServiceError(
+      "WORKSPACE_REQUIRED",
+      "Create the workspace profile before managing operators.",
+      409
+    );
+  }
+
+  assertWorkspaceIsActive(session.workspace, (message) => {
+    return new StudioSettingsServiceError("WORKSPACE_NOT_ACTIVE", message, 409);
+  });
+
+  return session;
+}
+
+export async function requireStudioActiveOwnerApiSession() {
+  const session = await requireStudioOwnerApiSession();
+
+  if (!session.workspace) {
+    throw new StudioSettingsServiceError(
+      "WORKSPACE_REQUIRED",
+      "Create the workspace profile before managing operators.",
+      409
+    );
+  }
+
+  assertWorkspaceIsActive(session.workspace, (message) => {
+    return new StudioSettingsServiceError("WORKSPACE_NOT_ACTIVE", message, 409);
+  });
 
   return session;
 }

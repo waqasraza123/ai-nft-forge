@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import {
   createGeneratedAssetErrorResponse,
-  requireStudioApiSession
+  requireStudioActiveApiSession
 } from "../../../../../../server/generated-assets/http";
 import { createRuntimeGeneratedAssetService } from "../../../../../../server/generated-assets/runtime";
 
@@ -15,7 +15,7 @@ type RouteContext = {
 
 export async function PATCH(request: Request, context: RouteContext) {
   try {
-    const session = await requireStudioApiSession();
+    const session = await requireStudioActiveApiSession();
     const { generatedAssetId } = await context.params;
     const body = generatedAssetModerationUpdateRequestSchema.parse(
       await request.json()

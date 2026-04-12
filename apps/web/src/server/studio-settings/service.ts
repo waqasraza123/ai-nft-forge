@@ -9,6 +9,8 @@ import {
   studioBrandThemeSchema,
   studioWorkspaceCreateRequestSchema,
   studioWorkspaceCreateResponseSchema,
+  studioWorkspaceStatusUpdateRequestSchema,
+  studioWorkspaceStatusUpdateResponseSchema,
   studioWorkspaceRoleEscalationActionResponseSchema,
   studioWorkspaceAuditActionSchema,
   studioWorkspaceAuditEntrySchema,
@@ -22,7 +24,8 @@ import {
   studioWorkspaceMemberResponseSchema,
   studioWorkspaceRoleEscalationCreateRequestSchema,
   studioWorkspaceRoleEscalationResponseSchema,
-  type StudioWorkspaceRole
+  type StudioWorkspaceRole,
+  type StudioWorkspaceStatus
 } from "@ai-nft-forge/shared";
 
 import { StudioSettingsServiceError } from "./error";
@@ -472,6 +475,15 @@ function serializeBrand(input: BrandRecord) {
   };
 }
 
+function serializeWorkspace(input: WorkspaceRecord) {
+  return {
+    id: input.id,
+    name: input.name,
+    slug: input.slug,
+    status: input.status
+  };
+}
+
 function createWorkspaceAccess(role: StudioWorkspaceRole) {
   return {
     canManageMembers: role === "owner",
@@ -653,12 +665,7 @@ async function serializeStudioSettings(input: {
       roleEscalationRequests: roleEscalationRequests.map((request) =>
         serializeWorkspaceRoleEscalationRequest(request)
       ),
-      workspace: {
-        id: input.workspace.id,
-        name: input.workspace.name,
-        slug: input.workspace.slug,
-        status: input.workspace.status
-      }
+      workspace: serializeWorkspace(input.workspace)
     }
   });
 }
@@ -787,6 +794,7 @@ function assertOperatorRole(role: StudioWorkspaceRole) {
 
 async function recordWorkspaceAuditLog(input: {
   action:
+    | "workspace_archived"
     | "workspace_created"
     | "workspace_invitation_accepted"
     | "workspace_invitation_canceled"
@@ -794,10 +802,12 @@ async function recordWorkspaceAuditLog(input: {
     | "workspace_member_added"
     | "workspace_member_removed"
     | "workspace_owner_transferred"
+    | "workspace_reactivated"
     | "workspace_role_escalation_approved"
     | "workspace_role_escalation_canceled"
     | "workspace_role_escalation_rejected"
-    | "workspace_role_escalation_requested";
+    | "workspace_role_escalation_requested"
+    | "workspace_suspended";
   actor: UserRecord;
   membershipId?: string | null;
   requestId?: string | null;
@@ -1030,12 +1040,59 @@ export function createStudioSettingsService(
 
         return studioWorkspaceCreateResponseSchema.parse({
           brand: serializeBrand(brand),
-          workspace: {
+          workspace: serializeWorkspace(workspace)
+        });
+      });
+    },
+
+    async updateWorkspaceStatus(input: {
+      ownerUserId: string;
+      role?: StudioWorkspaceRole;
+      status: StudioWorkspaceStatus;
+      workspaceId: string;
+    }) {
+      assertOwnerRole(input.role ?? "owner");
+
+      const parsedInput = studioWorkspaceStatusUpdateRequestSchema.parse({
+        status: input.status
+      });
+
+      return dependencies.runTransaction(async (repositories) => {
+        const { owner, workspace } = await requireOwnerWorkspace({
+          ownerUserId: input.ownerUserId,
+          repositories,
+          workspaceId: input.workspaceId
+        });
+
+        if (workspace.status === parsedInput.status) {
+          return studioWorkspaceStatusUpdateResponseSchema.parse({
+            workspace: serializeWorkspace(workspace)
+          });
+        }
+
+        const updatedWorkspace =
+          await repositories.workspaceRepository.updateByIdForOwner({
             id: workspace.id,
             name: workspace.name,
+            ownerUserId: input.ownerUserId,
             slug: workspace.slug,
-            status: workspace.status
-          }
+            status: parsedInput.status
+          });
+
+        await recordWorkspaceAuditLog({
+          action:
+            parsedInput.status === "active"
+              ? "workspace_reactivated"
+              : parsedInput.status === "archived"
+                ? "workspace_archived"
+                : "workspace_suspended",
+          actor: owner,
+          repositories,
+          workspaceId: updatedWorkspace.id
+        });
+
+        return studioWorkspaceStatusUpdateResponseSchema.parse({
+          workspace: serializeWorkspace(updatedWorkspace)
         });
       });
     },

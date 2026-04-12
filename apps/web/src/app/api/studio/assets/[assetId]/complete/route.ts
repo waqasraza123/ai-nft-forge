@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import {
   createSourceAssetErrorResponse,
-  requireStudioApiSession
+  requireStudioActiveApiSession
 } from "../../../../../../server/source-assets/http";
 import { createRuntimeSourceAssetService } from "../../../../../../server/source-assets/runtime";
 
@@ -14,7 +14,7 @@ type RouteContext = {
 
 export async function POST(_: Request, context: RouteContext) {
   try {
-    const session = await requireStudioApiSession();
+    const session = await requireStudioActiveApiSession();
     const { assetId } = await context.params;
     const result = await createRuntimeSourceAssetService().completeUpload({
       assetId,

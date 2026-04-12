@@ -31,6 +31,12 @@ function formatTimestamp(value: string | null) {
   }).format(new Date(value));
 }
 
+function formatWorkspaceStatus(
+  status: "active" | "archived" | "suspended"
+) {
+  return status.replaceAll("_", " ");
+}
+
 function createFallbackErrorMessage(response: Response) {
   switch (response.status) {
     case 401:
@@ -209,6 +215,7 @@ export function OpsFleetClient({ initialFleet }: OpsFleetClientProps) {
           <div className="collection-item-list">
             {fleet.workspaces.map((workspace) => {
               const reconciliationBusyKey = `reconcile:${workspace.workspace.id}`;
+              const workspaceIsActive = workspace.workspace.status === "active";
 
               return (
                 <div
@@ -220,7 +227,8 @@ export function OpsFleetClient({ initialFleet }: OpsFleetClientProps) {
                       {workspace.workspace.name} · /{workspace.workspace.slug}
                     </strong>
                     <span>
-                      {workspace.workspace.role} · {workspace.workspace.status}
+                      {workspace.workspace.role} ·{" "}
+                      {formatWorkspaceStatus(workspace.workspace.status)}
                       {workspace.directory.current
                         ? " · current selection"
                         : ""}
@@ -245,7 +253,10 @@ export function OpsFleetClient({ initialFleet }: OpsFleetClientProps) {
                   <div className="studio-action-row">
                     <button
                       className="button-action button-action--secondary"
-                      disabled={busyKey === reconciliationBusyKey}
+                      disabled={
+                        !workspaceIsActive ||
+                        busyKey === reconciliationBusyKey
+                      }
                       onClick={() => {
                         void runAction({
                           busyKey: reconciliationBusyKey,
@@ -269,7 +280,9 @@ export function OpsFleetClient({ initialFleet }: OpsFleetClientProps) {
                       }}
                       type="button"
                     >
-                      {busyKey === reconciliationBusyKey
+                      {!workspaceIsActive
+                        ? "Workspace inactive"
+                        : busyKey === reconciliationBusyKey
                         ? "Running…"
                         : "Run reconciliation"}
                     </button>
@@ -293,6 +306,7 @@ export function OpsFleetClient({ initialFleet }: OpsFleetClientProps) {
               fleet.alertQueue.map((alert) => {
                 const acknowledgeBusyKey = `ack:${alert.alertStateId}`;
                 const muteBusyKey = `mute:${alert.alertStateId}`;
+                const workspaceIsActive = alert.workspace.status === "active";
 
                 return (
                   <div
@@ -305,7 +319,8 @@ export function OpsFleetClient({ initialFleet }: OpsFleetClientProps) {
                       </strong>
                       <span>
                         {alert.severity} · {alert.code} · /
-                        {alert.workspace.slug}
+                        {alert.workspace.slug} ·{" "}
+                        {formatWorkspaceStatus(alert.workspace.status)}
                       </span>
                       <span>{alert.message}</span>
                       <span>
@@ -316,7 +331,10 @@ export function OpsFleetClient({ initialFleet }: OpsFleetClientProps) {
                     <div className="studio-action-row">
                       <button
                         className="button-action button-action--secondary"
-                        disabled={busyKey === acknowledgeBusyKey}
+                        disabled={
+                          !workspaceIsActive ||
+                          busyKey === acknowledgeBusyKey
+                        }
                         onClick={() => {
                           void runAction({
                             busyKey: acknowledgeBusyKey,
@@ -346,13 +364,15 @@ export function OpsFleetClient({ initialFleet }: OpsFleetClientProps) {
                         }}
                         type="button"
                       >
-                        {busyKey === acknowledgeBusyKey
+                        {!workspaceIsActive
+                          ? "Workspace inactive"
+                          : busyKey === acknowledgeBusyKey
                           ? "Acknowledging…"
                           : "Acknowledge"}
                       </button>
                       <button
                         className="button-action button-action--secondary"
-                        disabled={busyKey === muteBusyKey}
+                        disabled={!workspaceIsActive || busyKey === muteBusyKey}
                         onClick={() => {
                           void runAction({
                             busyKey: muteBusyKey,
@@ -383,7 +403,11 @@ export function OpsFleetClient({ initialFleet }: OpsFleetClientProps) {
                         }}
                         type="button"
                       >
-                        {busyKey === muteBusyKey ? "Muting…" : "Mute 4h"}
+                        {!workspaceIsActive
+                          ? "Workspace inactive"
+                          : busyKey === muteBusyKey
+                            ? "Muting…"
+                            : "Mute 4h"}
                       </button>
                     </div>
                   </div>

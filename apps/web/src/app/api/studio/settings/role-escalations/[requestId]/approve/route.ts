@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import {
   createStudioSettingsErrorResponse,
-  requireStudioOwnerApiSession
+  requireStudioActiveOwnerApiSession
 } from "../../../../../../../server/studio-settings/http";
 import { createRuntimeStudioSettingsService } from "../../../../../../../server/studio-settings/runtime";
 
@@ -14,7 +14,7 @@ type RouteContext = {
 
 export async function POST(_request: Request, context: RouteContext) {
   try {
-    const session = await requireStudioOwnerApiSession();
+    const session = await requireStudioActiveOwnerApiSession();
     const { requestId } = await context.params;
     const result =
       await createRuntimeStudioSettingsService().approveWorkspaceRoleEscalation(

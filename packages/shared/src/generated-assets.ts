@@ -49,7 +49,8 @@ export const generatedAssetErrorResponseSchema = z.object({
       "GENERATED_ASSET_NOT_FOUND",
       "INTERNAL_SERVER_ERROR",
       "INVALID_REQUEST",
-      "SESSION_REQUIRED"
+      "SESSION_REQUIRED",
+      "WORKSPACE_NOT_ACTIVE"
     ]),
     message: z.string().min(1)
   })

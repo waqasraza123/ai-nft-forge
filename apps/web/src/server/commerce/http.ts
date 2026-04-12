@@ -5,6 +5,7 @@ import {
   parseStudioJsonBody,
   requireStudioApiSession as requireStudioApiSessionBase
 } from "../studio/http";
+import { assertWorkspaceIsActive } from "../studio/workspace-state";
 
 import { CommerceServiceError } from "./error";
 
@@ -42,6 +43,16 @@ export async function requireStudioApiSession() {
   return session as typeof session & {
     workspace: NonNullable<typeof session.workspace>;
   };
+}
+
+export async function requireStudioActiveApiSession() {
+  const session = await requireStudioApiSession();
+
+  assertWorkspaceIsActive(session.workspace, (message) => {
+    return new CommerceServiceError("WORKSPACE_NOT_ACTIVE", message, 409);
+  });
+
+  return session;
 }
 
 export function createCommerceErrorResponse(error: unknown): NextResponse {

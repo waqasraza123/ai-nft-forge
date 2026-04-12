@@ -24,13 +24,15 @@ import {
   studioWorkspaceMemberDeleteResponseSchema,
   studioWorkspaceRoleEscalationActionResponseSchema,
   studioWorkspaceRoleEscalationResponseSchema,
+  studioWorkspaceStatusUpdateResponseSchema,
   type StudioBrandSummary,
   type StudioSettingsSummary,
   type StudioWorkspaceDirectoryEntry,
   type StudioWorkspaceScopeSummary,
   type StudioWorkspaceInvitationSummary,
   type StudioWorkspaceMemberSummary,
-  type StudioWorkspaceRoleEscalationSummary
+  type StudioWorkspaceRoleEscalationSummary,
+  type StudioWorkspaceStatus
 } from "@ai-nft-forge/shared";
 import {
   MetricTile,
@@ -226,6 +228,22 @@ function createInitialMemberState(): MemberState {
   };
 }
 
+function formatWorkspaceStatus(status: StudioWorkspaceStatus) {
+  return status.replaceAll("_", " ");
+}
+
+function createInactiveWorkspaceMessage(status: StudioWorkspaceStatus) {
+  if (status === "archived") {
+    return "This workspace is archived. Review stays available, but settings, members, publications, and ops mutations are read-only until it is reactivated.";
+  }
+
+  if (status === "suspended") {
+    return "This workspace is suspended. Review stays available, but settings, members, publications, and ops mutations are read-only until it is reactivated.";
+  }
+
+  return null;
+}
+
 function resolveSelectedBrandId(input: {
   currentBrandId: string | null;
   settings: StudioSettingsSummary | null;
@@ -276,6 +294,8 @@ export function StudioSettingsClient({
     useState(false);
   const [actingRoleEscalationRequestId, setActingRoleEscalationRequestId] =
     useState<string | null>(null);
+  const [actingWorkspaceStatus, setActingWorkspaceStatus] =
+    useState<StudioWorkspaceStatus | null>(null);
   const [cancelingInvitationId, setCancelingInvitationId] = useState<
     string | null
   >(null);
@@ -297,6 +317,16 @@ export function StudioSettingsClient({
   const canManageRoleEscalations = access.canManageRoleEscalations;
   const canRequestRoleEscalation = access.canRequestRoleEscalation;
   const canManageWorkspace = access.canManageWorkspace;
+  const workspaceStatus = settings?.workspace.status ?? null;
+  const workspaceIsActive =
+    workspaceStatus === null ? false : workspaceStatus === "active";
+  const inactiveWorkspaceMessage =
+    workspaceStatus === null
+      ? "Create a workspace before changing workspace-scoped settings."
+      : createInactiveWorkspaceMessage(workspaceStatus);
+  const canEditCurrentWorkspace =
+    canManageWorkspace && Boolean(settings?.workspace.id) && workspaceIsActive;
+  const canMutateMembers = canManageMembers && workspaceIsActive;
 
   const selectedBrand =
     settings?.brands.find((brand) => brand.id === selectedBrandId) ??
@@ -380,9 +410,11 @@ export function StudioSettingsClient({
   async function handleSaveSettings(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!canManageWorkspace) {
+    if (!canEditCurrentWorkspace) {
       setNotice({
-        message: "Only workspace owners can change studio identity.",
+        message:
+          inactiveWorkspaceMessage ??
+          "Only workspace owners can change studio identity.",
         tone: "error"
       });
       return;
@@ -441,9 +473,11 @@ export function StudioSettingsClient({
   async function handleCreateBrand(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!canManageWorkspace) {
+    if (!canEditCurrentWorkspace) {
       setNotice({
-        message: "Only workspace owners can add brands.",
+        message:
+          inactiveWorkspaceMessage ??
+          "Only workspace owners can add brands.",
         tone: "error"
       });
       return;
@@ -559,12 +593,80 @@ export function StudioSettingsClient({
     }
   }
 
+  async function handleUpdateWorkspaceStatus(status: StudioWorkspaceStatus) {
+    if (!canManageWorkspace || !settings?.workspace.id) {
+      setNotice({
+        message: "Only workspace owners can change workspace lifecycle state.",
+        tone: "error"
+      });
+      return;
+    }
+
+    setActingWorkspaceStatus(status);
+    setNotice({
+      message:
+        status === "active"
+          ? "Reactivating workspace…"
+          : status === "suspended"
+            ? "Suspending workspace…"
+            : "Archiving workspace…",
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch(
+        `/api/studio/workspaces/${settings.workspace.id}/status`,
+        {
+          body: JSON.stringify({
+            status
+          }),
+          headers: {
+            "Content-Type": "application/json"
+          },
+          method: "PUT"
+        }
+      );
+      await parseJsonResponse({
+        response,
+        schema: studioWorkspaceStatusUpdateResponseSchema
+      });
+
+      await refreshSettings({
+        silent: true
+      });
+      setNotice({
+        message:
+          status === "active"
+            ? "Workspace reactivated."
+            : status === "suspended"
+              ? "Workspace suspended and switched to read-only."
+              : "Workspace archived and switched to read-only.",
+        tone: "success"
+      });
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Workspace lifecycle state could not be updated.",
+        tone: "error"
+      });
+    } finally {
+      setActingWorkspaceStatus(null);
+    }
+  }
+
   async function handleCreateInvitation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!canManageMembers) {
+    if (!canMutateMembers) {
       setNotice({
-        message: "Only workspace owners can manage invitations.",
+        message:
+          inactiveWorkspaceMessage ??
+          "Only workspace owners can manage invitations.",
         tone: "error"
       });
       return;
@@ -627,7 +729,7 @@ export function StudioSettingsClient({
   async function handleCancelInvitation(
     invitation: StudioWorkspaceInvitationSummary
   ) {
-    if (!canManageMembers) {
+    if (!canMutateMembers) {
       return;
     }
 
@@ -684,7 +786,7 @@ export function StudioSettingsClient({
   }
 
   async function handleRemoveMember(member: StudioWorkspaceMemberSummary) {
-    if (!member.membershipId || !canManageMembers) {
+    if (!member.membershipId || !canMutateMembers) {
       return;
     }
 
@@ -743,9 +845,11 @@ export function StudioSettingsClient({
   ) {
     event.preventDefault();
 
-    if (!canRequestRoleEscalation) {
+    if (!canRequestRoleEscalation || !workspaceIsActive) {
       setNotice({
-        message: "Only workspace operators can request ownership transfer.",
+        message:
+          inactiveWorkspaceMessage ??
+          "Only workspace operators can request ownership transfer.",
         tone: "error"
       });
       return;
@@ -796,7 +900,7 @@ export function StudioSettingsClient({
   async function handleApproveRoleEscalation(
     request: StudioWorkspaceRoleEscalationSummary
   ) {
-    if (!canManageRoleEscalations) {
+    if (!canManageRoleEscalations || !workspaceIsActive) {
       return;
     }
 
@@ -841,7 +945,7 @@ export function StudioSettingsClient({
   async function handleRejectRoleEscalation(
     request: StudioWorkspaceRoleEscalationSummary
   ) {
-    if (!canManageRoleEscalations) {
+    if (!canManageRoleEscalations || !workspaceIsActive) {
       return;
     }
 
@@ -886,7 +990,7 @@ export function StudioSettingsClient({
   async function handleCancelRoleEscalation(
     request: StudioWorkspaceRoleEscalationSummary
   ) {
-    if (!canRequestRoleEscalation) {
+    if (!canRequestRoleEscalation || !workspaceIsActive) {
       return;
     }
 
@@ -971,6 +1075,10 @@ export function StudioSettingsClient({
               value={settings?.workspace.slug ?? "Unconfigured"}
             />
             <MetricTile
+              label="Status"
+              value={workspaceStatus ? formatWorkspaceStatus(workspaceStatus) : "Unconfigured"}
+            />
+            <MetricTile
               label="Primary brand"
               value={settings?.brand.slug ?? "Unconfigured"}
             />
@@ -995,6 +1103,12 @@ export function StudioSettingsClient({
               ).toString()}
             />
           </div>
+          {inactiveWorkspaceMessage && settings?.workspace ? (
+            <div className="status-banner status-banner--info">
+              <strong>{formatWorkspaceStatus(settings.workspace.status)}</strong>
+              <span>{inactiveWorkspaceMessage}</span>
+            </div>
+          ) : null}
           <div className="pill-row">
             <Pill>/studio/settings</Pill>
             <Pill>
@@ -1018,6 +1132,91 @@ export function StudioSettingsClient({
             currentWorkspaceSlug={currentWorkspaceSlug}
             workspaces={availableWorkspaces}
           />
+        </SurfaceCard>
+        <SurfaceCard
+          body="Archive and suspend keep the workspace readable while blocking further settings, collection, commerce, and ops mutations. Reactivation restores normal write access."
+          eyebrow="Lifecycle"
+          span={4}
+          title="Workspace lifecycle"
+        >
+          {!settings?.workspace ? (
+            <div className="status-banner status-banner--info">
+              <strong>No workspace selected</strong>
+              <span>Create a workspace before changing lifecycle state.</span>
+            </div>
+          ) : null}
+          {settings?.workspace ? (
+            <>
+              <div className="pill-row">
+                <Pill>{formatWorkspaceStatus(settings.workspace.status)}</Pill>
+                <Pill>/{settings.workspace.slug}</Pill>
+              </div>
+              {inactiveWorkspaceMessage ? (
+                <div className="status-banner status-banner--info">
+                  <strong>Read-only</strong>
+                  <span>{inactiveWorkspaceMessage}</span>
+                </div>
+              ) : null}
+              {!canManageWorkspace ? (
+                <div className="status-banner status-banner--info">
+                  <strong>Owner only</strong>
+                  <span>
+                    Operators can review lifecycle state, but only owners can
+                    archive, suspend, or reactivate a workspace.
+                  </span>
+                </div>
+              ) : null}
+              <div className="studio-action-row">
+                {settings.workspace.status === "active" ? (
+                  <>
+                    <button
+                      className="button-action button-action--secondary"
+                      disabled={
+                        !canManageWorkspace || actingWorkspaceStatus !== null
+                      }
+                      onClick={() => {
+                        void handleUpdateWorkspaceStatus("suspended");
+                      }}
+                      type="button"
+                    >
+                      {actingWorkspaceStatus === "suspended"
+                        ? "Suspending…"
+                        : "Suspend workspace"}
+                    </button>
+                    <button
+                      className="button-action"
+                      disabled={
+                        !canManageWorkspace || actingWorkspaceStatus !== null
+                      }
+                      onClick={() => {
+                        void handleUpdateWorkspaceStatus("archived");
+                      }}
+                      type="button"
+                    >
+                      {actingWorkspaceStatus === "archived"
+                        ? "Archiving…"
+                        : "Archive workspace"}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    className="button-action button-action--accent"
+                    disabled={
+                      !canManageWorkspace || actingWorkspaceStatus !== null
+                    }
+                    onClick={() => {
+                      void handleUpdateWorkspaceStatus("active");
+                    }}
+                    type="button"
+                  >
+                    {actingWorkspaceStatus === "active"
+                      ? "Reactivating…"
+                      : "Reactivate workspace"}
+                  </button>
+                )}
+              </div>
+            </>
+          ) : null}
         </SurfaceCard>
         <WorkspaceDirectoryPanel
           body="This directory is built from workspace-native brands, members, invitations, role-escalation requests, and audit history so the current accessible estate is visible without depending on owner-anchored collection or commerce data."
@@ -1167,8 +1366,14 @@ export function StudioSettingsClient({
               </span>
             </div>
           ) : null}
+          {inactiveWorkspaceMessage && settings?.workspace ? (
+            <div className="status-banner status-banner--info">
+              <strong>Workspace read-only</strong>
+              <span>{inactiveWorkspaceMessage}</span>
+            </div>
+          ) : null}
           <form className="studio-form" onSubmit={handleSaveSettings}>
-            <fieldset disabled={!canManageWorkspace || isSaving}>
+            <fieldset disabled={!canEditCurrentWorkspace || isSaving}>
               {settings?.brands.length ? (
                 <label className="field-stack">
                   <span className="field-label">Editing brand</span>
@@ -1482,8 +1687,14 @@ export function StudioSettingsClient({
               <span>Only workspace owners can create additional brands.</span>
             </div>
           ) : null}
+          {inactiveWorkspaceMessage && settings?.workspace ? (
+            <div className="status-banner status-banner--info">
+              <strong>Workspace read-only</strong>
+              <span>{inactiveWorkspaceMessage}</span>
+            </div>
+          ) : null}
           <form className="studio-form" onSubmit={handleCreateBrand}>
-            <fieldset disabled={!canManageWorkspace || isCreatingBrand}>
+            <fieldset disabled={!canEditCurrentWorkspace || isCreatingBrand}>
               <label className="field-stack">
                 <span className="field-label">Brand name</span>
                 <input
@@ -1583,7 +1794,7 @@ export function StudioSettingsClient({
                 <button
                   className="button-action"
                   disabled={
-                    !canManageWorkspace ||
+                    !canEditCurrentWorkspace ||
                     isCreatingBrand ||
                     !settings?.workspace.id
                   }
@@ -1614,6 +1825,12 @@ export function StudioSettingsClient({
               </span>
             </div>
           ) : null}
+          {inactiveWorkspaceMessage && settings?.workspace ? (
+            <div className="status-banner status-banner--info">
+              <strong>Workspace read-only</strong>
+              <span>{inactiveWorkspaceMessage}</span>
+            </div>
+          ) : null}
           {settings?.members.length ? (
             <div className="collection-item-list">
               {settings.members.map((member) => (
@@ -1635,7 +1852,7 @@ export function StudioSettingsClient({
                       <button
                         className="button-action"
                         disabled={
-                          !canManageMembers ||
+                          !canMutateMembers ||
                           removingMembershipId === member.membershipId
                         }
                         onClick={() => {
@@ -1680,7 +1897,7 @@ export function StudioSettingsClient({
                     <button
                       className="button-action"
                       disabled={
-                        !canManageMembers ||
+                        !canMutateMembers ||
                         cancelingInvitationId === invitation.id
                       }
                       onClick={() => {
@@ -1702,7 +1919,7 @@ export function StudioSettingsClient({
             )}
           </div>
           <form className="studio-form" onSubmit={handleCreateInvitation}>
-            <fieldset disabled={!canManageMembers || isCreatingInvitation}>
+            <fieldset disabled={!canMutateMembers || isCreatingInvitation}>
               <label className="field-stack">
                 <span className="field-label">Invite operator wallet</span>
                 <input
@@ -1720,7 +1937,7 @@ export function StudioSettingsClient({
               <div className="studio-action-row">
                 <button
                   className="button-action"
-                  disabled={!canManageMembers || isCreatingInvitation}
+                  disabled={!canMutateMembers || isCreatingInvitation}
                   type="submit"
                 >
                   {isCreatingInvitation ? "Inviting…" : "Send invitation"}
@@ -1746,6 +1963,12 @@ export function StudioSettingsClient({
               {access.role === "owner" ? "owner review" : "operator request"}
             </Pill>
           </div>
+          {inactiveWorkspaceMessage && settings?.workspace ? (
+            <div className="status-banner status-banner--info">
+              <strong>Workspace read-only</strong>
+              <span>{inactiveWorkspaceMessage}</span>
+            </div>
+          ) : null}
           {canRequestRoleEscalation ? (
             actorRoleEscalationRequest ? (
               <div className="collection-item-card">
@@ -1764,8 +1987,9 @@ export function StudioSettingsClient({
                   <button
                     className="button-action"
                     disabled={
+                      !workspaceIsActive ||
                       actingRoleEscalationRequestId ===
-                      actorRoleEscalationRequest.id
+                        actorRoleEscalationRequest.id
                     }
                     onClick={() => {
                       void handleCancelRoleEscalation(
@@ -1800,6 +2024,7 @@ export function StudioSettingsClient({
                   <fieldset
                     disabled={
                       !canRequestRoleEscalation ||
+                      !workspaceIsActive ||
                       isRequestingRoleEscalation ||
                       Boolean(pendingRoleEscalationRequest)
                     }
@@ -1861,6 +2086,7 @@ export function StudioSettingsClient({
                           <button
                             className="button-action button-action--accent"
                             disabled={
+                              !workspaceIsActive ||
                               actingRoleEscalationRequestId === request.id
                             }
                             onClick={() => {
@@ -1875,6 +2101,7 @@ export function StudioSettingsClient({
                           <button
                             className="button-action"
                             disabled={
+                              !workspaceIsActive ||
                               actingRoleEscalationRequestId === request.id
                             }
                             onClick={() => {
