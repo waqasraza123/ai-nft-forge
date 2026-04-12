@@ -5,6 +5,7 @@ import { registerWorkerSignalHandlers } from "./bootstrap/signals.js";
 import { createWorkerHealthSnapshot } from "./lib/health.js";
 import { reconcileRuntimeOps } from "./ops/reconciliation-runtime.js";
 import { captureRuntimeOpsObservability } from "./ops/runtime.js";
+import { runWorkspaceLifecycleAutomation } from "./workspaces/automation-runtime.js";
 
 async function runWorkerCommand(argv: string[]) {
   const command = argv[0] ?? "start";
@@ -27,6 +28,13 @@ async function runWorkerCommand(argv: string[]) {
     const reconciliationSummary = await reconcileRuntimeOps(process.env);
 
     process.stdout.write(`${JSON.stringify(reconciliationSummary)}\n`);
+    return;
+  }
+
+  if (command === "run-lifecycle-automation") {
+    const automationSummary = await runWorkspaceLifecycleAutomation(process.env);
+
+    process.stdout.write(`${JSON.stringify(automationSummary)}\n`);
     return;
   }
 

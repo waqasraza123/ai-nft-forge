@@ -92,6 +92,46 @@ export function createWorkspaceRepository(
       });
     },
 
+    listLifecycleAutomationEligible() {
+      return database.workspace.findMany({
+        orderBy: [
+          {
+            createdAt: "asc"
+          },
+          {
+            id: "asc"
+          }
+        ],
+        select: {
+          id: true,
+          lifecycleWebhookDeliverDecommissionNotifications: true,
+          lifecycleWebhookDeliverInvitationReminders: true,
+          lifecycleWebhookEnabled: true,
+          name: true,
+          owner: {
+            select: {
+              id: true,
+              walletAddress: true
+            }
+          },
+          ownerUserId: true,
+          slug: true,
+          status: true
+        },
+        where: {
+          lifecycleWebhookEnabled: true,
+          OR: [
+            {
+              lifecycleWebhookDeliverInvitationReminders: true
+            },
+            {
+              lifecycleWebhookDeliverDecommissionNotifications: true
+            }
+          ]
+        }
+      });
+    },
+
     listByIds(ids: string[]): Promise<Workspace[]> {
       return database.workspace.findMany({
         where: {

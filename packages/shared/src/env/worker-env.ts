@@ -115,6 +115,28 @@ export const workerEnvSchema = z
       booleanEnvironmentValueSchema.default(false),
     REDIS_URL: z.string().url().default("redis://127.0.0.1:56379"),
     WORKER_SERVICE_NAME: z.string().trim().min(1).default("ai-nft-forge-worker"),
+    WORKSPACE_LIFECYCLE_AUTOMATION_INTERVAL_SECONDS: z.coerce
+      .number()
+      .int()
+      .min(60)
+      .max(86400)
+      .default(300),
+    WORKSPACE_LIFECYCLE_AUTOMATION_JITTER_SECONDS: z.coerce
+      .number()
+      .int()
+      .min(0)
+      .max(3600)
+      .default(15),
+    WORKSPACE_LIFECYCLE_AUTOMATION_LOCK_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .min(60)
+      .max(86400)
+      .default(600),
+    WORKSPACE_LIFECYCLE_AUTOMATION_RUN_ON_START:
+      booleanEnvironmentValueSchema.default(true),
+    WORKSPACE_LIFECYCLE_AUTOMATION_SCHEDULE_ENABLED:
+      booleanEnvironmentValueSchema.default(false),
     WORKSPACE_LIFECYCLE_QUEUE_CONCURRENCY: z.coerce
       .number()
       .int()

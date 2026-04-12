@@ -30,6 +30,8 @@ import {
   createQueueRegistry,
   type WorkerQueueRegistry
 } from "../queues/registry.js";
+import { startWorkspaceLifecycleAutomationScheduler } from "../workspaces/automation-scheduler.js";
+import { runWorkspaceLifecycleAutomationWithDependencies } from "../workspaces/automation-runtime.js";
 import { createWorkspaceLifecycleWebhookClient } from "../workspaces/lifecycle-webhook.js";
 
 export type WorkerApplication = {
@@ -41,6 +43,9 @@ export type WorkerApplication = {
     close: () => Promise<void>;
   };
   opsReconciliationScheduler: {
+    close: () => Promise<void>;
+  };
+  workspaceLifecycleAutomationScheduler: {
     close: () => Promise<void>;
   };
   queueRegistry: WorkerQueueRegistry;
@@ -170,9 +175,22 @@ export async function bootstrapWorkerApplication(
         databaseClient,
         logger,
         rawEnvironment
-      }),
+    }),
     redisConnection
   });
+  const workspaceLifecycleAutomationScheduler =
+    startWorkspaceLifecycleAutomationScheduler({
+      env,
+      logger,
+      redisConnection,
+      runAutomation: () =>
+        runWorkspaceLifecycleAutomationWithDependencies({
+          databaseClient,
+          env,
+          logger,
+          redisConnection
+        })
+    });
 
   let isClosed = false;
 
@@ -185,6 +203,7 @@ export async function bootstrapWorkerApplication(
 
     await opsObservabilityCaptureScheduler.close();
     await opsReconciliationScheduler.close();
+    await workspaceLifecycleAutomationScheduler.close();
     await Promise.all(
       queueRegistry.workers.map(async (worker) => worker.close())
     );
@@ -205,6 +224,7 @@ export async function bootstrapWorkerApplication(
     logger,
     opsObservabilityCaptureScheduler,
     opsReconciliationScheduler,
+    workspaceLifecycleAutomationScheduler,
     queueRegistry,
     redisConnection
   };

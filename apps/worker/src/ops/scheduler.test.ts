@@ -5,6 +5,40 @@ import {
   startOpsReconciliationScheduler
 } from "./scheduler.js";
 
+function createWorkerEnv(overrides: Record<string, unknown> = {}) {
+  return {
+    COMMERCE_FULFILLMENT_QUEUE_CONCURRENCY: 1,
+    GENERATION_ADAPTER_KIND: "storage_copy" as const,
+    GENERATION_BACKEND_TIMEOUT_MS: 30000,
+    GENERATION_QUEUE_CONCURRENCY: 1,
+    LOG_LEVEL: "info" as const,
+    NOOP_QUEUE_CONCURRENCY: 1,
+    OPS_ALERT_WEBHOOK_ENABLED: false,
+    OPS_ALERT_WEBHOOK_TIMEOUT_MS: 5000,
+    OPS_OBSERVABILITY_CAPTURE_INTERVAL_SECONDS: 300,
+    OPS_OBSERVABILITY_CAPTURE_JITTER_SECONDS: 15,
+    OPS_OBSERVABILITY_CAPTURE_LOCK_TTL_SECONDS: 600,
+    OPS_OBSERVABILITY_CAPTURE_RUN_ON_START: true,
+    OPS_OBSERVABILITY_CAPTURE_SCHEDULE_ENABLED: false,
+    OPS_RECONCILIATION_INTERVAL_SECONDS: 300,
+    OPS_RECONCILIATION_JITTER_SECONDS: 15,
+    OPS_RECONCILIATION_LOCK_TTL_SECONDS: 600,
+    OPS_RECONCILIATION_RUN_ON_START: true,
+    OPS_RECONCILIATION_SCHEDULE_ENABLED: false,
+    REDIS_URL: "redis://127.0.0.1:56379",
+    WORKER_SERVICE_NAME: "ai-nft-forge-worker",
+    WORKSPACE_LIFECYCLE_AUTOMATION_INTERVAL_SECONDS: 300,
+    WORKSPACE_LIFECYCLE_AUTOMATION_JITTER_SECONDS: 15,
+    WORKSPACE_LIFECYCLE_AUTOMATION_LOCK_TTL_SECONDS: 600,
+    WORKSPACE_LIFECYCLE_AUTOMATION_RUN_ON_START: true,
+    WORKSPACE_LIFECYCLE_AUTOMATION_SCHEDULE_ENABLED: false,
+    WORKSPACE_LIFECYCLE_QUEUE_CONCURRENCY: 1,
+    WORKSPACE_LIFECYCLE_WEBHOOK_ENABLED: false,
+    WORKSPACE_LIFECYCLE_WEBHOOK_TIMEOUT_MS: 5000,
+    ...overrides
+  };
+}
+
 function createLogger() {
   return {
     debug: vi.fn(),
@@ -27,25 +61,7 @@ describe("startOpsObservabilityCaptureScheduler", () => {
     const capture = vi.fn();
     const scheduler = startOpsObservabilityCaptureScheduler({
       capture,
-      env: {
-        GENERATION_ADAPTER_KIND: "storage_copy",
-        GENERATION_BACKEND_TIMEOUT_MS: 30000,
-        GENERATION_QUEUE_CONCURRENCY: 1,
-        LOG_LEVEL: "info",
-        NOOP_QUEUE_CONCURRENCY: 1,
-        OPS_OBSERVABILITY_CAPTURE_INTERVAL_SECONDS: 300,
-        OPS_OBSERVABILITY_CAPTURE_JITTER_SECONDS: 15,
-        OPS_OBSERVABILITY_CAPTURE_LOCK_TTL_SECONDS: 600,
-        OPS_OBSERVABILITY_CAPTURE_RUN_ON_START: true,
-        OPS_OBSERVABILITY_CAPTURE_SCHEDULE_ENABLED: false,
-        OPS_RECONCILIATION_INTERVAL_SECONDS: 300,
-        OPS_RECONCILIATION_JITTER_SECONDS: 15,
-        OPS_RECONCILIATION_LOCK_TTL_SECONDS: 600,
-        OPS_RECONCILIATION_RUN_ON_START: true,
-        OPS_RECONCILIATION_SCHEDULE_ENABLED: false,
-        REDIS_URL: "redis://127.0.0.1:56379",
-        WORKER_SERVICE_NAME: "ai-nft-forge-worker"
-      },
+      env: createWorkerEnv(),
       logger: createLogger(),
       redisConnection: {
         eval: vi.fn(),
@@ -75,25 +91,9 @@ describe("startOpsObservabilityCaptureScheduler", () => {
     };
     const scheduler = startOpsObservabilityCaptureScheduler({
       capture,
-      env: {
-        GENERATION_ADAPTER_KIND: "storage_copy",
-        GENERATION_BACKEND_TIMEOUT_MS: 30000,
-        GENERATION_QUEUE_CONCURRENCY: 1,
-        LOG_LEVEL: "info",
-        NOOP_QUEUE_CONCURRENCY: 1,
-        OPS_OBSERVABILITY_CAPTURE_INTERVAL_SECONDS: 300,
-        OPS_OBSERVABILITY_CAPTURE_JITTER_SECONDS: 15,
-        OPS_OBSERVABILITY_CAPTURE_LOCK_TTL_SECONDS: 600,
-        OPS_OBSERVABILITY_CAPTURE_RUN_ON_START: true,
-        OPS_OBSERVABILITY_CAPTURE_SCHEDULE_ENABLED: true,
-        OPS_RECONCILIATION_INTERVAL_SECONDS: 300,
-        OPS_RECONCILIATION_JITTER_SECONDS: 15,
-        OPS_RECONCILIATION_LOCK_TTL_SECONDS: 600,
-        OPS_RECONCILIATION_RUN_ON_START: true,
-        OPS_RECONCILIATION_SCHEDULE_ENABLED: false,
-        REDIS_URL: "redis://127.0.0.1:56379",
-        WORKER_SERVICE_NAME: "ai-nft-forge-worker"
-      },
+      env: createWorkerEnv({
+        OPS_OBSERVABILITY_CAPTURE_SCHEDULE_ENABLED: true
+      }),
       logger,
       random: () => 0,
       redisConnection
@@ -120,25 +120,10 @@ describe("startOpsObservabilityCaptureScheduler", () => {
     const logger = createLogger();
     const scheduler = startOpsObservabilityCaptureScheduler({
       capture,
-      env: {
-        GENERATION_ADAPTER_KIND: "storage_copy",
-        GENERATION_BACKEND_TIMEOUT_MS: 30000,
-        GENERATION_QUEUE_CONCURRENCY: 1,
-        LOG_LEVEL: "info",
-        NOOP_QUEUE_CONCURRENCY: 1,
-        OPS_OBSERVABILITY_CAPTURE_INTERVAL_SECONDS: 300,
+      env: createWorkerEnv({
         OPS_OBSERVABILITY_CAPTURE_JITTER_SECONDS: 0,
-        OPS_OBSERVABILITY_CAPTURE_LOCK_TTL_SECONDS: 600,
-        OPS_OBSERVABILITY_CAPTURE_RUN_ON_START: true,
-        OPS_OBSERVABILITY_CAPTURE_SCHEDULE_ENABLED: true,
-        OPS_RECONCILIATION_INTERVAL_SECONDS: 300,
-        OPS_RECONCILIATION_JITTER_SECONDS: 15,
-        OPS_RECONCILIATION_LOCK_TTL_SECONDS: 600,
-        OPS_RECONCILIATION_RUN_ON_START: true,
-        OPS_RECONCILIATION_SCHEDULE_ENABLED: false,
-        REDIS_URL: "redis://127.0.0.1:56379",
-        WORKER_SERVICE_NAME: "ai-nft-forge-worker"
-      },
+        OPS_OBSERVABILITY_CAPTURE_SCHEDULE_ENABLED: true
+      }),
       logger,
       redisConnection: {
         eval: vi.fn().mockResolvedValue(0),
@@ -169,25 +154,10 @@ describe("startOpsObservabilityCaptureScheduler", () => {
       set: vi.fn().mockResolvedValue("OK")
     };
     const scheduler = startOpsReconciliationScheduler({
-      env: {
-        GENERATION_ADAPTER_KIND: "storage_copy",
-        GENERATION_BACKEND_TIMEOUT_MS: 30000,
-        GENERATION_QUEUE_CONCURRENCY: 1,
-        LOG_LEVEL: "info",
-        NOOP_QUEUE_CONCURRENCY: 1,
-        OPS_OBSERVABILITY_CAPTURE_INTERVAL_SECONDS: 300,
-        OPS_OBSERVABILITY_CAPTURE_JITTER_SECONDS: 15,
-        OPS_OBSERVABILITY_CAPTURE_LOCK_TTL_SECONDS: 600,
-        OPS_OBSERVABILITY_CAPTURE_RUN_ON_START: true,
-        OPS_OBSERVABILITY_CAPTURE_SCHEDULE_ENABLED: false,
-        OPS_RECONCILIATION_INTERVAL_SECONDS: 300,
+      env: createWorkerEnv({
         OPS_RECONCILIATION_JITTER_SECONDS: 0,
-        OPS_RECONCILIATION_LOCK_TTL_SECONDS: 600,
-        OPS_RECONCILIATION_RUN_ON_START: true,
-        OPS_RECONCILIATION_SCHEDULE_ENABLED: true,
-        REDIS_URL: "redis://127.0.0.1:56379",
-        WORKER_SERVICE_NAME: "ai-nft-forge-worker"
-      },
+        OPS_RECONCILIATION_SCHEDULE_ENABLED: true
+      }),
       logger,
       random: () => 0,
       reconcile,

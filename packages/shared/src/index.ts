@@ -270,7 +270,15 @@ export {
   type StudioWorkspaceSummary
 } from "./studio-settings.js";
 export {
+  canSendWorkspaceInvitationReminder,
+  getNextWorkspaceDecommissionNotificationKind,
+  getWorkspaceInvitationReminderReadyAt,
+  getWorkspaceInvitationStatus,
+  resolveWorkspaceLifecycleDeliveryDecision,
+  workspaceDecommissionUpcomingNotificationWindowMilliseconds,
   workspaceLifecycleDeliveryPolicySchema,
+  workspaceInvitationExpiringWindowMilliseconds,
+  workspaceInvitationReminderCooldownMilliseconds,
   workspaceLifecycleNotificationDeliveryChannelSchema,
   workspaceLifecycleNotificationDeliveryOverviewSchema,
   workspaceLifecycleNotificationDeliveryRetryResponseSchema,

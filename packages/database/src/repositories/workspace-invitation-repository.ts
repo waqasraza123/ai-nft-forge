@@ -231,6 +231,48 @@ export function createWorkspaceInvitationRepository(
       });
     },
 
+    listReminderReadyByWorkspaceIds(input: {
+      now: Date;
+      reminderReadyBefore: Date;
+      workspaceIds: string[];
+    }) {
+      if (input.workspaceIds.length === 0) {
+        return Promise.resolve([] as WorkspaceInvitation[]);
+      }
+
+      return database.workspaceInvitation.findMany({
+        orderBy: [
+          {
+            expiresAt: "asc"
+          },
+          {
+            createdAt: "asc"
+          },
+          {
+            id: "asc"
+          }
+        ],
+        where: {
+          expiresAt: {
+            gt: input.now
+          },
+          workspaceId: {
+            in: input.workspaceIds
+          },
+          OR: [
+            {
+              lastRemindedAt: null
+            },
+            {
+              lastRemindedAt: {
+                lte: input.reminderReadyBefore
+              }
+            }
+          ]
+        }
+      });
+    },
+
     touchReminderById(input: {
       id: string;
       lastRemindedAt: Date;

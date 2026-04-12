@@ -38,6 +38,20 @@ export function createUserRepository(database: UserRepositoryDatabase) {
       });
     },
 
+    listByIds(ids: string[]): Promise<User[]> {
+      if (ids.length === 0) {
+        return Promise.resolve([] as User[]);
+      }
+
+      return database.user.findMany({
+        where: {
+          id: {
+            in: ids
+          }
+        }
+      });
+    },
+
     findByWalletAddress(walletAddress: string): Promise<User | null> {
       return database.user.findUnique({
         where: {

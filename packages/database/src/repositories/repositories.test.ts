@@ -215,6 +215,8 @@ describe("database repositories", () => {
     });
     const workspace = await repository.findFirstByOwnerUserId("user_1");
     const workspaces = await repository.listByOwnerUserId("user_1");
+    const automationEligibleWorkspaces =
+      await repository.listLifecycleAutomationEligible();
     const workspacesById = await repository.listByIds(["workspace_1"]);
     const updatedWorkspace = await repository.updateByIdForOwner({
       decommissionRetentionDaysDefault: 30,
@@ -272,6 +274,43 @@ describe("database repositories", () => {
       }
     });
     expect(database.workspace.findMany).toHaveBeenNthCalledWith(2, {
+      orderBy: [
+        {
+          createdAt: "asc"
+        },
+        {
+          id: "asc"
+        }
+      ],
+      select: {
+        id: true,
+        lifecycleWebhookDeliverDecommissionNotifications: true,
+        lifecycleWebhookDeliverInvitationReminders: true,
+        lifecycleWebhookEnabled: true,
+        name: true,
+        owner: {
+          select: {
+            id: true,
+            walletAddress: true
+          }
+        },
+        ownerUserId: true,
+        slug: true,
+        status: true
+      },
+      where: {
+        OR: [
+          {
+            lifecycleWebhookDeliverInvitationReminders: true
+          },
+          {
+            lifecycleWebhookDeliverDecommissionNotifications: true
+          }
+        ],
+        lifecycleWebhookEnabled: true
+      }
+    });
+    expect(database.workspace.findMany).toHaveBeenNthCalledWith(3, {
       where: {
         id: {
           in: ["workspace_1"]
@@ -318,6 +357,7 @@ describe("database repositories", () => {
     expect(ownedWorkspace?.id).toBe("workspace_1");
     expect(workspace?.id).toBe("workspace_1");
     expect(workspaces).toHaveLength(2);
+    expect(automationEligibleWorkspaces).toHaveLength(2);
     expect(workspacesById).toHaveLength(2);
     expect(updatedWorkspace.slug).toBe("forge-ops");
     expect(transferredWorkspace.id).toBe("workspace_1");
@@ -1271,6 +1311,7 @@ describe("database repositories", () => {
 
   it("delegates workspace invitation lookup and persistence through the invitation repository", async () => {
     const now = new Date("2026-04-11T00:00:00.000Z");
+    const reminderReadyBefore = new Date("2026-04-10T00:00:00.000Z");
     const database = {
       workspaceInvitation: {
         create: vi.fn().mockResolvedValue({
@@ -1293,6 +1334,24 @@ describe("database repositories", () => {
                 id: "workspace_1",
                 ownerUserId: "user_1"
               }
+            }
+          ])
+          .mockResolvedValueOnce([
+            {
+              createdAt: now,
+              expiresAt: now,
+              id: "invite_1",
+              invitedByUser: {
+                avatarUrl: null,
+                displayName: "Owner",
+                id: "user_1",
+                walletAddress: "0xowner"
+              },
+              invitedByUserId: "user_1",
+              lastRemindedAt: null,
+              reminderCount: 0,
+              role: "operator",
+              walletAddress: "0xinvitee"
             }
           ])
           .mockResolvedValueOnce([
@@ -1379,6 +1438,12 @@ describe("database repositories", () => {
     const workspaceInvitationHistory = await repository.listByWorkspaceId({
       workspaceId: "workspace_1"
     });
+    const reminderReadyInvitations =
+      await repository.listReminderReadyByWorkspaceIds({
+        now,
+        reminderReadyBefore,
+        workspaceIds: ["workspace_1"]
+      });
     const invitation = await repository.findByIdWithWorkspace({
       id: "invite_1"
     });
@@ -1493,6 +1558,37 @@ describe("database repositories", () => {
         workspaceId: "workspace_1"
       }
     });
+    expect(database.workspaceInvitation.findMany).toHaveBeenNthCalledWith(4, {
+      orderBy: [
+        {
+          expiresAt: "asc"
+        },
+        {
+          createdAt: "asc"
+        },
+        {
+          id: "asc"
+        }
+      ],
+      where: {
+        OR: [
+          {
+            lastRemindedAt: null
+          },
+          {
+            lastRemindedAt: {
+              lte: reminderReadyBefore
+            }
+          }
+        ],
+        expiresAt: {
+          gt: now
+        },
+        workspaceId: {
+          in: ["workspace_1"]
+        }
+      }
+    });
     expect(database.workspaceInvitation.findUnique).toHaveBeenCalledWith({
       include: {
         invitedByUser: {
@@ -1536,6 +1632,7 @@ describe("database repositories", () => {
     expect(walletInvitations[0]?.workspace.id).toBe("workspace_1");
     expect(workspaceInvitations[0]?.walletAddress).toBe("0xinvitee");
     expect(workspaceInvitationHistory[0]?.id).toBe("invite_1");
+    expect(reminderReadyInvitations[0]?.id).toBe("invite_1");
     expect(invitation?.workspace.ownerUserId).toBe("user_1");
     expect(remindedInvitation.reminderCount).toBe(1);
   });
@@ -1592,8 +1689,9 @@ describe("database repositories", () => {
     const repository = createUserRepository(database as never);
 
     const result = await repository.listIds();
+    const users = await repository.listByIds(["user_1", "user_2"]);
 
-    expect(database.user.findMany).toHaveBeenCalledWith({
+    expect(database.user.findMany).toHaveBeenNthCalledWith(1, {
       orderBy: [
         {
           createdAt: "asc"
@@ -1606,7 +1704,22 @@ describe("database repositories", () => {
         id: true
       }
     });
+    expect(database.user.findMany).toHaveBeenNthCalledWith(2, {
+      where: {
+        id: {
+          in: ["user_1", "user_2"]
+        }
+      }
+    });
     expect(result).toEqual(["user_1", "user_2"]);
+    expect(users).toEqual([
+      {
+        id: "user_1"
+      },
+      {
+        id: "user_2"
+      }
+    ]);
   });
 
   it("delegates distinct generation owner lookup through the generation request repository", async () => {

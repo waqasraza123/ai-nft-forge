@@ -1,4 +1,5 @@
 import {
+  resolveWorkspaceLifecycleDeliveryDecision,
   workspaceLifecycleDeliveryPolicySchema,
   workspaceLifecycleNotificationDeliveryOverviewSchema,
   workspaceLifecycleNotificationDeliverySummarySchema,
@@ -138,55 +139,6 @@ function normalizeQueueFailureMessage(error: unknown) {
   }
 
   return "The lifecycle notification could not be queued.";
-}
-
-function resolveWorkspaceLifecycleDeliveryDecision(input: {
-  eventKind: WorkspaceLifecycleNotificationEventKind;
-  transportEnabled: boolean;
-  workspace: WorkspaceLifecyclePolicyWorkspaceRecord;
-}) {
-  if (!input.workspace.lifecycleWebhookEnabled) {
-    return {
-      failureMessage:
-        "Lifecycle webhook delivery is disabled for this workspace.",
-      shouldQueue: false
-    };
-  }
-
-  if (
-    input.eventKind === "invitation_reminder" &&
-    !input.workspace.lifecycleWebhookDeliverInvitationReminders
-  ) {
-    return {
-      failureMessage:
-        "Invitation reminder webhook delivery is disabled for this workspace.",
-      shouldQueue: false
-    };
-  }
-
-  if (
-    input.eventKind === "decommission_notice" &&
-    !input.workspace.lifecycleWebhookDeliverDecommissionNotifications
-  ) {
-    return {
-      failureMessage:
-        "Decommission notice webhook delivery is disabled for this workspace.",
-      shouldQueue: false
-    };
-  }
-
-  if (!input.transportEnabled) {
-    return {
-      failureMessage:
-        "Worker lifecycle webhook transport is not configured.",
-      shouldQueue: false
-    };
-  }
-
-  return {
-    failureMessage: null,
-    shouldQueue: true
-  };
 }
 
 function buildInvitationReminderPayload(input: {
@@ -384,7 +336,9 @@ export function createWorkspaceLifecycleDeliveryService(
       const decision = resolveWorkspaceLifecycleDeliveryDecision({
         eventKind: "decommission_notice",
         transportEnabled: dependencies.transport.enabled,
-        workspace: input.workspace
+        workspacePolicy: serializeWorkspaceLifecycleDeliveryPolicy(
+          input.workspace
+        )
       });
       const delivery =
         await dependencies.repositories.workspaceLifecycleNotificationDeliveryRepository.create(
@@ -423,7 +377,9 @@ export function createWorkspaceLifecycleDeliveryService(
       const decision = resolveWorkspaceLifecycleDeliveryDecision({
         eventKind: "invitation_reminder",
         transportEnabled: dependencies.transport.enabled,
-        workspace: input.workspace
+        workspacePolicy: serializeWorkspaceLifecycleDeliveryPolicy(
+          input.workspace
+        )
       });
       const delivery =
         await dependencies.repositories.workspaceLifecycleNotificationDeliveryRepository.create(
@@ -509,7 +465,7 @@ export function createWorkspaceLifecycleDeliveryService(
       const decision = resolveWorkspaceLifecycleDeliveryDecision({
         eventKind: delivery.eventKind,
         transportEnabled: dependencies.transport.enabled,
-        workspace
+        workspacePolicy: serializeWorkspaceLifecycleDeliveryPolicy(workspace)
       });
 
       if (!decision.shouldQueue) {

@@ -4,12 +4,12 @@ import type {
   WorkspaceDecommissionWorkflowSummary
 } from "@ai-nft-forge/shared";
 import {
+  getNextWorkspaceDecommissionNotificationKind,
   workspaceDecommissionNotificationSummarySchema,
   workspaceDecommissionWorkflowSummarySchema
 } from "@ai-nft-forge/shared";
 
-const workspaceDecommissionUpcomingNotificationWindowMilliseconds =
-  72 * 60 * 60 * 1000;
+export { getNextWorkspaceDecommissionNotificationKind } from "@ai-nft-forge/shared";
 
 type DecommissionNotificationRecord = {
   id: string;
@@ -35,35 +35,6 @@ export function serializeWorkspaceDecommissionNotification(
     sentByUserId: input.sentByUserId,
     sentByWalletAddress: input.sentByUser.walletAddress
   });
-}
-
-export function getNextWorkspaceDecommissionNotificationKind(input: {
-  executeAfter: Date;
-  existingNotificationKinds: WorkspaceDecommissionNotificationKind[];
-  now: Date;
-}): WorkspaceDecommissionNotificationKind | null {
-  const kinds = new Set(input.existingNotificationKinds);
-  const nowTime = input.now.getTime();
-  const executeAfterTime = input.executeAfter.getTime();
-
-  if (nowTime >= executeAfterTime && !kinds.has("ready")) {
-    return "ready";
-  }
-
-  if (
-    nowTime >=
-      executeAfterTime -
-        workspaceDecommissionUpcomingNotificationWindowMilliseconds &&
-    !kinds.has("upcoming")
-  ) {
-    return "upcoming";
-  }
-
-  if (!kinds.has("scheduled")) {
-    return "scheduled";
-  }
-
-  return null;
 }
 
 export function createWorkspaceDecommissionWorkflowSummary(input: {

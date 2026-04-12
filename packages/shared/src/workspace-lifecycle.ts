@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import type { StudioWorkspaceInvitationStatus } from "./studio-settings.js";
 import { walletAddressSchema } from "./auth.js";
 
 export const workspaceLifecycleDeliveryPolicySchema = z.object({
@@ -64,6 +65,141 @@ export const workspaceLifecycleNotificationDeliveryRetryResponseSchema =
   z.object({
     delivery: workspaceLifecycleNotificationDeliverySummarySchema
   });
+
+export const workspaceInvitationExpiringWindowMilliseconds =
+  72 * 60 * 60 * 1000;
+export const workspaceInvitationReminderCooldownMilliseconds =
+  24 * 60 * 60 * 1000;
+export const workspaceDecommissionUpcomingNotificationWindowMilliseconds =
+  72 * 60 * 60 * 1000;
+
+export function getWorkspaceInvitationStatus(input: {
+  expiresAt: Date;
+  now: Date;
+}): StudioWorkspaceInvitationStatus {
+  const expiresAtTime = input.expiresAt.getTime();
+  const nowTime = input.now.getTime();
+
+  if (expiresAtTime <= nowTime) {
+    return "expired";
+  }
+
+  if (expiresAtTime - nowTime <= workspaceInvitationExpiringWindowMilliseconds) {
+    return "expiring";
+  }
+
+  return "active";
+}
+
+export function getWorkspaceInvitationReminderReadyAt(input: {
+  lastRemindedAt: Date | null;
+}) {
+  if (!input.lastRemindedAt) {
+    return null;
+  }
+
+  return new Date(
+    input.lastRemindedAt.getTime() +
+      workspaceInvitationReminderCooldownMilliseconds
+  );
+}
+
+export function canSendWorkspaceInvitationReminder(input: {
+  expiresAt: Date;
+  lastRemindedAt: Date | null;
+  now: Date;
+}) {
+  if (getWorkspaceInvitationStatus(input) === "expired") {
+    return false;
+  }
+
+  const reminderReadyAt = getWorkspaceInvitationReminderReadyAt({
+    lastRemindedAt: input.lastRemindedAt
+  });
+
+  if (!reminderReadyAt) {
+    return true;
+  }
+
+  return reminderReadyAt.getTime() <= input.now.getTime();
+}
+
+export function getNextWorkspaceDecommissionNotificationKind(input: {
+  executeAfter: Date;
+  existingNotificationKinds: WorkspaceLifecycleDecommissionNotificationKind[];
+  now: Date;
+}): WorkspaceLifecycleDecommissionNotificationKind | null {
+  const kinds = new Set(input.existingNotificationKinds);
+  const nowTime = input.now.getTime();
+  const executeAfterTime = input.executeAfter.getTime();
+
+  if (nowTime >= executeAfterTime && !kinds.has("ready")) {
+    return "ready";
+  }
+
+  if (
+    nowTime >=
+      executeAfterTime -
+        workspaceDecommissionUpcomingNotificationWindowMilliseconds &&
+    !kinds.has("upcoming")
+  ) {
+    return "upcoming";
+  }
+
+  if (!kinds.has("scheduled")) {
+    return "scheduled";
+  }
+
+  return null;
+}
+
+export function resolveWorkspaceLifecycleDeliveryDecision(input: {
+  eventKind: WorkspaceLifecycleNotificationEventKind;
+  transportEnabled: boolean;
+  workspacePolicy: WorkspaceLifecycleDeliveryPolicy;
+}) {
+  if (!input.workspacePolicy.webhookEnabled) {
+    return {
+      failureMessage:
+        "Lifecycle webhook delivery is disabled for this workspace.",
+      shouldQueue: false
+    };
+  }
+
+  if (
+    input.eventKind === "invitation_reminder" &&
+    !input.workspacePolicy.deliverInvitationReminders
+  ) {
+    return {
+      failureMessage:
+        "Invitation reminder webhook delivery is disabled for this workspace.",
+      shouldQueue: false
+    };
+  }
+
+  if (
+    input.eventKind === "decommission_notice" &&
+    !input.workspacePolicy.deliverDecommissionNotifications
+  ) {
+    return {
+      failureMessage:
+        "Decommission notice webhook delivery is disabled for this workspace.",
+      shouldQueue: false
+    };
+  }
+
+  if (!input.transportEnabled) {
+    return {
+      failureMessage: "Worker lifecycle webhook transport is not configured.",
+      shouldQueue: false
+    };
+  }
+
+  return {
+    failureMessage: null,
+    shouldQueue: true
+  };
+}
 
 export type WorkspaceLifecycleDeliveryPolicy = z.infer<
   typeof workspaceLifecycleDeliveryPolicySchema
