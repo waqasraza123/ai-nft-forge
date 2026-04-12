@@ -296,8 +296,14 @@ export {
   workspaceOffboardingCautionCodeSchema,
   workspaceOffboardingEntrySchema,
   workspaceOffboardingOverviewResponseSchema,
+  workspaceOffboardingOverviewSummarySchema,
   workspaceOffboardingReadinessSchema,
   workspaceOffboardingSummarySchema,
+  workspaceRetentionBulkCancelRequestSchema,
+  workspaceRetentionBulkCancelResponseSchema,
+  workspaceRetentionBulkCancelResultSchema,
+  workspaceRetentionBulkCancelResultStatusSchema,
+  workspaceRetentionFleetReportResponseSchema,
   type WorkspaceDecommissionExecuteRequest,
   type WorkspaceDecommissionExecutionResponse,
   type WorkspaceDecommissionReason,
@@ -316,8 +322,15 @@ export {
   type WorkspaceOffboardingCautionCode,
   type WorkspaceOffboardingEntry,
   type WorkspaceOffboardingOverviewResponse,
+  type WorkspaceOffboardingOverviewSummary,
   type WorkspaceOffboardingReadiness,
   type WorkspaceOffboardingSummary
+  ,
+  type WorkspaceRetentionBulkCancelRequest,
+  type WorkspaceRetentionBulkCancelResponse,
+  type WorkspaceRetentionBulkCancelResult,
+  type WorkspaceRetentionBulkCancelResultStatus,
+  type WorkspaceRetentionFleetReportResponse
 } from "./workspaces.js";
 export {
   authSessionCookieSameSite,

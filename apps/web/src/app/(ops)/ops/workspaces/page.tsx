@@ -52,6 +52,9 @@ export default async function OpsWorkspacesPage() {
           <Link className="action-link" href="/ops/audit">
             Audit activity
           </Link>
+          <Link className="action-link" href="/ops/retention">
+            Retention review
+          </Link>
           <Link className="action-link" href="/ops">
             Runtime overview
           </Link>

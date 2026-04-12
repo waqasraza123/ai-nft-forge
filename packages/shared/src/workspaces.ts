@@ -92,6 +92,14 @@ export const workspaceOffboardingEntrySchema = z.object({
   workspace: studioWorkspaceScopeSummarySchema
 });
 
+export const workspaceOffboardingOverviewSummarySchema = z.object({
+  blockedWorkspaceCount: z.number().int().min(0),
+  readyWorkspaceCount: z.number().int().min(0),
+  reviewRequiredWorkspaceCount: z.number().int().min(0),
+  scheduledDecommissionCount: z.number().int().min(0),
+  totalWorkspaceCount: z.number().int().min(0)
+});
+
 export const workspaceDecommissionScheduleRequestSchema = z.object({
   confirmWorkspaceSlug: studioWorkspaceSummarySchema.shape.slug,
   exportConfirmed: z.literal(true),
@@ -115,14 +123,46 @@ export const workspaceDecommissionExecutionResponseSchema = z.object({
 export const workspaceOffboardingOverviewResponseSchema = z.object({
   overview: z.object({
     generatedAt: z.string().datetime(),
-    summary: z.object({
-      blockedWorkspaceCount: z.number().int().min(0),
-      readyWorkspaceCount: z.number().int().min(0),
-      reviewRequiredWorkspaceCount: z.number().int().min(0),
-      scheduledDecommissionCount: z.number().int().min(0),
-      totalWorkspaceCount: z.number().int().min(0)
-    }),
+    summary: workspaceOffboardingOverviewSummarySchema,
     workspaces: z.array(workspaceOffboardingEntrySchema)
+  })
+});
+
+export const workspaceRetentionFleetReportResponseSchema = z.object({
+  report: z.object({
+    generatedAt: z.string().datetime(),
+    scopeLabel: z.string().trim().min(1).max(160),
+    summary: workspaceOffboardingOverviewSummarySchema,
+    workspaces: z.array(workspaceOffboardingEntrySchema)
+  })
+});
+
+export const workspaceRetentionBulkCancelRequestSchema = z.object({
+  workspaceIds: z.array(z.string().min(1)).min(1).max(50)
+});
+
+export const workspaceRetentionBulkCancelResultStatusSchema = z.enum([
+  "canceled",
+  "forbidden",
+  "not_found",
+  "not_scheduled"
+]);
+
+export const workspaceRetentionBulkCancelResultSchema = z.object({
+  status: workspaceRetentionBulkCancelResultStatusSchema,
+  workspaceId: z.string().min(1),
+  workspaceName: z.string().min(1).nullable(),
+  workspaceSlug: z.string().min(1).nullable()
+});
+
+export const workspaceRetentionBulkCancelResponseSchema = z.object({
+  results: z.array(workspaceRetentionBulkCancelResultSchema),
+  summary: z.object({
+    canceledCount: z.number().int().min(0),
+    forbiddenCount: z.number().int().min(0),
+    notFoundCount: z.number().int().min(0),
+    notScheduledCount: z.number().int().min(0),
+    requestedCount: z.number().int().min(0)
   })
 });
 
@@ -227,6 +267,9 @@ export type WorkspaceDecommissionSummary = z.infer<
 export type WorkspaceOffboardingEntry = z.infer<
   typeof workspaceOffboardingEntrySchema
 >;
+export type WorkspaceOffboardingOverviewSummary = z.infer<
+  typeof workspaceOffboardingOverviewSummarySchema
+>;
 export type WorkspaceDecommissionScheduleRequest = z.infer<
   typeof workspaceDecommissionScheduleRequestSchema
 >;
@@ -241,6 +284,21 @@ export type WorkspaceDecommissionExecutionResponse = z.infer<
 >;
 export type WorkspaceOffboardingOverviewResponse = z.infer<
   typeof workspaceOffboardingOverviewResponseSchema
+>;
+export type WorkspaceRetentionFleetReportResponse = z.infer<
+  typeof workspaceRetentionFleetReportResponseSchema
+>;
+export type WorkspaceRetentionBulkCancelRequest = z.infer<
+  typeof workspaceRetentionBulkCancelRequestSchema
+>;
+export type WorkspaceRetentionBulkCancelResultStatus = z.infer<
+  typeof workspaceRetentionBulkCancelResultStatusSchema
+>;
+export type WorkspaceRetentionBulkCancelResult = z.infer<
+  typeof workspaceRetentionBulkCancelResultSchema
+>;
+export type WorkspaceRetentionBulkCancelResponse = z.infer<
+  typeof workspaceRetentionBulkCancelResponseSchema
 >;
 export type WorkspaceExportPublication = z.infer<
   typeof workspaceExportPublicationSchema

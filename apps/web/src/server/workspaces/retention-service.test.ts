@@ -1,0 +1,214 @@
+import { describe, expect, it } from "vitest";
+
+import { createWorkspaceRetentionService } from "./retention-service";
+
+function createWorkspaceRetentionHarness() {
+  const canceledWorkspaceIds: string[] = [];
+
+  const service = createWorkspaceRetentionService({
+    decommissionService: {
+      async cancelWorkspaceDecommission(input) {
+        if (input.workspaceId === "workspace_not_scheduled") {
+          const { StudioSettingsServiceError } = await import(
+            "../studio-settings/error"
+          );
+
+          throw new StudioSettingsServiceError(
+            "WORKSPACE_DECOMMISSION_NOT_SCHEDULED",
+            "No pending decommission schedule exists for this workspace.",
+            404
+          );
+        }
+
+        canceledWorkspaceIds.push(input.workspaceId);
+      }
+    },
+    now: () => new Date("2026-04-12T07:00:00.000Z"),
+    offboardingService: {
+      async getAccessibleWorkspaceOffboardingOverview(input) {
+        return {
+          overview: {
+            generatedAt: "2026-04-12T07:00:00.000Z",
+            summary: {
+              blockedWorkspaceCount: 1,
+              readyWorkspaceCount: 1,
+              reviewRequiredWorkspaceCount: 1,
+              scheduledDecommissionCount: 1,
+              totalWorkspaceCount: input.workspaces.length
+            },
+            workspaces: input.workspaces.map((workspace) => ({
+              current: workspace.id === input.currentWorkspaceId,
+              decommission:
+                workspace.id === "workspace_ready"
+                  ? {
+                      canceledAt: null,
+                      canceledByUserId: null,
+                      canceledByWalletAddress: null,
+                      createdAt: "2026-04-12T01:00:00.000Z",
+                      executeAfter: "2026-05-12T01:00:00.000Z",
+                      executedAt: null,
+                      executedByUserId: null,
+                      executedByWalletAddress: null,
+                      exportConfirmedAt: "2026-04-12T01:00:00.000Z",
+                      id: "decommission_1",
+                      reason: "Workspace sunset",
+                      requestedByUserId: "user_owner",
+                      requestedByWalletAddress:
+                        "0x1111111111111111111111111111111111111111",
+                      retentionDays: 30,
+                      status: "scheduled" as const
+                    }
+                  : null,
+              directory: {
+                brandCount: 1,
+                current: workspace.id === input.currentWorkspaceId,
+                lastActivityAt: "2026-04-12T06:00:00.000Z",
+                memberCount: 2,
+                pendingInvitationCount:
+                  workspace.id === "workspace_review" ? 1 : 0,
+                pendingRoleEscalationCount: 0,
+                workspace
+              },
+              summary: {
+                activeAlertCount: workspace.id === "workspace_blocked" ? 1 : 0,
+                blockerCodes:
+                  workspace.id === "workspace_blocked"
+                    ? (["active_alerts"] as const)
+                    : [],
+                cautionCodes:
+                  workspace.id === "workspace_review"
+                    ? (["pending_invitations"] as const)
+                    : [],
+                livePublicationCount: 0,
+                openCheckoutCount: 0,
+                openReconciliationIssueCount: 0,
+                pendingInvitationCount:
+                  workspace.id === "workspace_review" ? 1 : 0,
+                pendingRoleEscalationCount: 0,
+                readiness:
+                  workspace.id === "workspace_blocked"
+                    ? ("blocked" as const)
+                    : workspace.id === "workspace_review"
+                      ? ("review_required" as const)
+                      : ("ready" as const),
+                unfulfilledCheckoutCount: 0
+              },
+              workspace
+            }))
+          }
+        };
+      }
+    }
+  });
+
+  return {
+    canceledWorkspaceIds,
+    service
+  };
+}
+
+describe("createWorkspaceRetentionService", () => {
+  it("builds an accessible retention report and emits csv", async () => {
+    const harness = createWorkspaceRetentionHarness();
+    const report =
+      await harness.service.getAccessibleWorkspaceRetentionReport({
+        currentWorkspaceId: "workspace_ready",
+        workspaces: [
+          {
+            id: "workspace_blocked",
+            name: "Blocked",
+            ownerUserId: "user_owner",
+            ownerWalletAddress:
+              "0x1111111111111111111111111111111111111111",
+            role: "owner",
+            slug: "blocked",
+            status: "active"
+          },
+          {
+            id: "workspace_review",
+            name: "Review",
+            ownerUserId: "user_owner",
+            ownerWalletAddress:
+              "0x1111111111111111111111111111111111111111",
+            role: "owner",
+            slug: "review",
+            status: "archived"
+          },
+          {
+            id: "workspace_ready",
+            name: "Ready",
+            ownerUserId: "user_owner",
+            ownerWalletAddress:
+              "0x1111111111111111111111111111111111111111",
+            role: "owner",
+            slug: "ready",
+            status: "archived"
+          }
+        ]
+      });
+    const csv = harness.service.exportAccessibleWorkspaceRetentionReportCsv({
+      format: "csv",
+      reportData: report
+    });
+
+    expect(report.report.summary.scheduledDecommissionCount).toBe(1);
+    expect(report.report.workspaces).toHaveLength(3);
+    expect(csv).toContain("decommission_status");
+    expect(csv).toContain("workspace_ready");
+  });
+
+  it("bulk cancels only owned scheduled workspaces and reports outcomes", async () => {
+    const harness = createWorkspaceRetentionHarness();
+
+    const result = await harness.service.cancelScheduledWorkspaceDecommissions({
+      actorUserId: "user_owner",
+      workspaceIds: [
+        "workspace_ready",
+        "workspace_not_scheduled",
+        "workspace_operator_only",
+        "workspace_missing"
+      ],
+      workspaces: [
+        {
+          id: "workspace_ready",
+          name: "Ready",
+          ownerUserId: "user_owner",
+          ownerWalletAddress:
+            "0x1111111111111111111111111111111111111111",
+          role: "owner",
+          slug: "ready",
+          status: "archived"
+        },
+        {
+          id: "workspace_not_scheduled",
+          name: "Not Scheduled",
+          ownerUserId: "user_owner",
+          ownerWalletAddress:
+            "0x1111111111111111111111111111111111111111",
+          role: "owner",
+          slug: "not-scheduled",
+          status: "archived"
+        },
+        {
+          id: "workspace_operator_only",
+          name: "Operator Only",
+          ownerUserId: "user_another_owner",
+          ownerWalletAddress:
+            "0x2222222222222222222222222222222222222222",
+          role: "operator",
+          slug: "operator-only",
+          status: "archived"
+        }
+      ]
+    });
+
+    expect(result.summary).toEqual({
+      canceledCount: 1,
+      forbiddenCount: 1,
+      notFoundCount: 1,
+      notScheduledCount: 1,
+      requestedCount: 4
+    });
+    expect(harness.canceledWorkspaceIds).toEqual(["workspace_ready"]);
+  });
+});
