@@ -7,6 +7,9 @@ type WorkspaceRepositoryDatabase = Pick<DatabaseExecutor, "workspace">;
 type CreateWorkspaceInput = {
   decommissionRetentionDaysDefault?: number;
   decommissionRetentionDaysMinimum?: number;
+  lifecycleWebhookDeliverDecommissionNotifications?: boolean;
+  lifecycleWebhookDeliverInvitationReminders?: boolean;
+  lifecycleWebhookEnabled?: boolean;
   name: string;
   ownerUserId: string;
   requireDecommissionReason?: boolean;
@@ -103,6 +106,9 @@ export function createWorkspaceRepository(
       decommissionRetentionDaysDefault: number;
       decommissionRetentionDaysMinimum: number;
       id: string;
+      lifecycleWebhookDeliverDecommissionNotifications: boolean;
+      lifecycleWebhookDeliverInvitationReminders: boolean;
+      lifecycleWebhookEnabled: boolean;
       name: string;
       ownerUserId: string;
       requireDecommissionReason: boolean;
@@ -116,6 +122,11 @@ export function createWorkspaceRepository(
               input.decommissionRetentionDaysDefault,
             decommissionRetentionDaysMinimum:
               input.decommissionRetentionDaysMinimum,
+            lifecycleWebhookDeliverDecommissionNotifications:
+              input.lifecycleWebhookDeliverDecommissionNotifications,
+            lifecycleWebhookDeliverInvitationReminders:
+              input.lifecycleWebhookDeliverInvitationReminders,
+            lifecycleWebhookEnabled: input.lifecycleWebhookEnabled,
             name: input.name,
             requireDecommissionReason: input.requireDecommissionReason,
             slug: input.slug,

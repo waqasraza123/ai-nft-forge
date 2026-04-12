@@ -115,6 +115,10 @@ export {
   type WorkspaceDecommissionNotificationRepository
 } from "./workspace-decommission-notification-repository.js";
 export {
+  createWorkspaceLifecycleNotificationDeliveryRepository,
+  type WorkspaceLifecycleNotificationDeliveryRepository
+} from "./workspace-lifecycle-notification-delivery-repository.js";
+export {
   createWorkspaceDecommissionRequestRepository,
   type WorkspaceDecommissionRequestRepository
 } from "./workspace-decommission-request-repository.js";

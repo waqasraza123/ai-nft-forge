@@ -36,6 +36,23 @@ enum WorkspaceDecommissionNotificationKind {
   ready
 }
 
+enum WorkspaceLifecycleNotificationDeliveryKind {
+  invitation_reminder
+  decommission_notice
+}
+
+enum WorkspaceLifecycleNotificationDeliveryChannel {
+  webhook
+}
+
+enum WorkspaceLifecycleNotificationDeliveryState {
+  queued
+  processing
+  delivered
+  failed
+  skipped
+}
+
 enum SourceAssetStatus {
   pending_upload
   uploaded
@@ -208,6 +225,7 @@ model User {
   workspaceDecommissionCancellations WorkspaceDecommissionRequest[] @relation("WorkspaceDecommissionCanceledBy")
   workspaceDecommissionExecutions    WorkspaceDecommissionRequest[] @relation("WorkspaceDecommissionExecutedBy")
   workspaceDecommissionNotifications WorkspaceDecommissionNotification[]
+  workspaceLifecycleNotificationDeliveries WorkspaceLifecycleNotificationDelivery[] @relation("WorkspaceLifecycleNotificationDeliveryOwner")
   workspaceInvitationsSent           WorkspaceInvitation[]            @relation("WorkspaceInvitationInvitedBy")
   workspaceRoleEscalationRequests    WorkspaceRoleEscalationRequest[] @relation("WorkspaceRoleEscalationRequestedBy")
   workspaceRoleEscalationTargets     WorkspaceRoleEscalationRequest[] @relation("WorkspaceRoleEscalationTarget")
@@ -252,6 +270,9 @@ model Workspace {
   decommissionRetentionDaysDefault Int                    @default(30) @map("decommission_retention_days_default")
   decommissionRetentionDaysMinimum Int                    @default(7) @map("decommission_retention_days_minimum")
   requireDecommissionReason Boolean                       @default(false) @map("require_decommission_reason")
+  lifecycleWebhookEnabled Boolean                         @default(false) @map("lifecycle_webhook_enabled")
+  lifecycleWebhookDeliverInvitationReminders Boolean      @default(true) @map("lifecycle_webhook_deliver_invitation_reminders")
+  lifecycleWebhookDeliverDecommissionNotifications Boolean @default(true) @map("lifecycle_webhook_deliver_decommission_notifications")
   createdAt              DateTime                         @default(now()) @map("created_at")
   updatedAt              DateTime                         @updatedAt @map("updated_at")
   brands                 Brand[]
@@ -260,6 +281,7 @@ model Workspace {
   generatedAssets        GeneratedAsset[]
   generationRequests     GenerationRequest[]
   invitations            WorkspaceInvitation[]
+  lifecycleNotificationDeliveries WorkspaceLifecycleNotificationDelivery[]
   memberships            WorkspaceMembership[]
   opsAlertDeliveries     OpsAlertDelivery[]
   opsAlertEscalationPolicies OpsAlertEscalationPolicy[]
@@ -313,6 +335,7 @@ model WorkspaceDecommissionNotification {
   sentByUserId String                               @map("sent_by_user_id")
   sentAt       DateTime                             @default(now()) @map("sent_at")
   createdAt    DateTime                             @default(now()) @map("created_at")
+  deliveries   WorkspaceLifecycleNotificationDelivery[]
   request      WorkspaceDecommissionRequest         @relation(fields: [requestId], references: [id], onDelete: Cascade)
   sentByUser   User                                 @relation(fields: [sentByUserId], references: [id], onDelete: Cascade)
 
@@ -349,6 +372,7 @@ model WorkspaceInvitation {
   reminderCount   Int                     @default(0) @map("reminder_count")
   createdAt       DateTime                @default(now()) @map("created_at")
   updatedAt       DateTime                @updatedAt @map("updated_at")
+  lifecycleNotificationDeliveries WorkspaceLifecycleNotificationDelivery[]
   invitedByUser   User                    @relation("WorkspaceInvitationInvitedBy", fields: [invitedByUserId], references: [id], onDelete: Cascade)
   workspace       Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
@@ -357,6 +381,37 @@ model WorkspaceInvitation {
   @@index([workspaceId], map: "workspace_invitations_workspace_id_idx")
   @@index([expiresAt], map: "workspace_invitations_expires_at_idx")
   @@map("workspace_invitations")
+}
+
+model WorkspaceLifecycleNotificationDelivery {
+  id                        String                                       @id @default(cuid()) @map("id")
+  workspaceId               String                                       @map("workspace_id")
+  ownerUserId               String                                       @map("owner_user_id")
+  invitationId              String?                                      @map("invitation_id")
+  decommissionNotificationId String?                                     @unique(map: "ws_lifecycle_deliveries_decommission_notification_id_key") @map("decommission_notification_id")
+  eventKind                 WorkspaceLifecycleNotificationDeliveryKind    @map("event_kind")
+  deliveryChannel           WorkspaceLifecycleNotificationDeliveryChannel @default(webhook) @map("delivery_channel")
+  deliveryState             WorkspaceLifecycleNotificationDeliveryState   @map("delivery_state")
+  eventOccurredAt           DateTime                                     @map("event_occurred_at")
+  payloadJson               Json                                         @map("payload_json")
+  attemptCount              Int                                          @default(0) @map("attempt_count")
+  queuedAt                  DateTime?                                    @map("queued_at")
+  lastAttemptedAt           DateTime?                                    @map("last_attempted_at")
+  deliveredAt               DateTime?                                    @map("delivered_at")
+  failedAt                  DateTime?                                    @map("failed_at")
+  failureMessage            String?                                      @map("failure_message")
+  createdAt                 DateTime                                     @default(now()) @map("created_at")
+  updatedAt                 DateTime                                     @updatedAt @map("updated_at")
+  decommissionNotification  WorkspaceDecommissionNotification?           @relation(fields: [decommissionNotificationId], references: [id], onDelete: Cascade)
+  invitation                WorkspaceInvitation?                         @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  ownerUser                 User                                         @relation("WorkspaceLifecycleNotificationDeliveryOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  workspace                 Workspace                                    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt], map: "ws_lifecycle_deliveries_workspace_created_at_idx")
+  @@index([workspaceId, deliveryState, createdAt], map: "ws_lifecycle_deliveries_workspace_state_created_at_idx")
+  @@index([ownerUserId, createdAt], map: "ws_lifecycle_deliveries_owner_created_at_idx")
+  @@index([eventKind, deliveryState, createdAt], map: "ws_lifecycle_deliveries_kind_state_created_at_idx")
+  @@map("workspace_lifecycle_notification_deliveries")
 }
 
 model WorkspaceRoleEscalationRequest {

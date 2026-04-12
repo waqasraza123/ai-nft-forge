@@ -22,6 +22,14 @@ import {
   getNextWorkspaceDecommissionNotificationKind,
   serializeWorkspaceDecommissionNotification
 } from "./decommission-workflow";
+import {
+  createRuntimeWorkspaceLifecycleDeliveryService,
+  createWorkspaceLifecycleNotificationDeliveryBoundary
+} from "./lifecycle-delivery-runtime";
+import {
+  type WorkspaceLifecycleOwnerRecord,
+  type WorkspaceLifecyclePolicyWorkspaceRecord
+} from "./lifecycle-delivery-service";
 
 type WorkspaceDecommissionRepositorySet = {
   auditLogRepository: {
@@ -35,10 +43,7 @@ type WorkspaceDecommissionRepositorySet = {
     }): Promise<{ id: string }>;
   };
   userRepository: {
-    findById(id: string): Promise<{
-      id: string;
-      walletAddress: string;
-    } | null>;
+    findById(id: string): Promise<WorkspaceLifecycleOwnerRecord | null>;
   };
   workspaceDecommissionNotificationRepository: {
     create(input: {
@@ -113,6 +118,109 @@ type WorkspaceDecommissionRepositorySet = {
       id: string;
     }): Promise<{ id: string }>;
   };
+  workspaceLifecycleNotificationDeliveryRepository: {
+    create(input: {
+      decommissionNotificationId?: string | null;
+      deliveryState: "queued" | "skipped";
+      eventKind: "invitation_reminder" | "decommission_notice";
+      eventOccurredAt: Date;
+      failureMessage?: string | null;
+      invitationId?: string | null;
+      ownerUserId: string;
+      payloadJson: unknown;
+      queuedAt?: Date | null;
+      workspaceId: string;
+    }): Promise<{
+      attemptCount: number;
+      createdAt: Date;
+      decommissionNotification: {
+        id: string;
+        kind: "ready" | "scheduled" | "upcoming";
+      } | null;
+      decommissionNotificationId: string | null;
+      deliveredAt: Date | null;
+      deliveryChannel: "webhook";
+      deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
+      eventKind: "invitation_reminder" | "decommission_notice";
+      eventOccurredAt: Date;
+      failedAt: Date | null;
+      failureMessage: string | null;
+      id: string;
+      invitation: {
+        id: string;
+        walletAddress: string;
+      } | null;
+      invitationId: string | null;
+      lastAttemptedAt: Date | null;
+      payloadJson: unknown;
+      queuedAt: Date | null;
+      updatedAt: Date;
+      workspaceId: string;
+    }>;
+    findById(id: string): Promise<{
+      attemptCount: number;
+      createdAt: Date;
+      decommissionNotification: {
+        id: string;
+        kind: "ready" | "scheduled" | "upcoming";
+      } | null;
+      decommissionNotificationId: string | null;
+      deliveredAt: Date | null;
+      deliveryChannel: "webhook";
+      deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
+      eventKind: "invitation_reminder" | "decommission_notice";
+      eventOccurredAt: Date;
+      failedAt: Date | null;
+      failureMessage: string | null;
+      id: string;
+      invitation: {
+        id: string;
+        walletAddress: string;
+      } | null;
+      invitationId: string | null;
+      lastAttemptedAt: Date | null;
+      payloadJson: unknown;
+      queuedAt: Date | null;
+      updatedAt: Date;
+      workspaceId: string;
+    } | null>;
+    updateById(input: {
+      attemptCount?: number;
+      deliveredAt?: Date | null;
+      deliveryState?: "queued" | "processing" | "delivered" | "failed" | "skipped";
+      failedAt?: Date | null;
+      failureMessage?: string | null;
+      id: string;
+      lastAttemptedAt?: Date | null;
+      queuedAt?: Date | null;
+    }): Promise<{
+      attemptCount: number;
+      createdAt: Date;
+      decommissionNotification: {
+        id: string;
+        kind: "ready" | "scheduled" | "upcoming";
+      } | null;
+      decommissionNotificationId: string | null;
+      deliveredAt: Date | null;
+      deliveryChannel: "webhook";
+      deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
+      eventKind: "invitation_reminder" | "decommission_notice";
+      eventOccurredAt: Date;
+      failedAt: Date | null;
+      failureMessage: string | null;
+      id: string;
+      invitation: {
+        id: string;
+        walletAddress: string;
+      } | null;
+      invitationId: string | null;
+      lastAttemptedAt: Date | null;
+      payloadJson: unknown;
+      queuedAt: Date | null;
+      updatedAt: Date;
+      workspaceId: string;
+    }>;
+  };
   workspaceRepository: {
     deleteByIdForOwner(input: {
       id: string;
@@ -121,15 +229,10 @@ type WorkspaceDecommissionRepositorySet = {
     findByIdForOwner(input: {
       id: string;
       ownerUserId: string;
-    }): Promise<{
+    }): Promise<WorkspaceLifecyclePolicyWorkspaceRecord & {
       decommissionRetentionDaysDefault: number;
       decommissionRetentionDaysMinimum: number;
-      id: string;
-      name: string;
-      ownerUserId: string;
       requireDecommissionReason: boolean;
-      slug: string;
-      status: "active" | "archived" | "suspended";
     } | null>;
   };
 };
@@ -159,6 +262,42 @@ type WorkspaceDecommissionServiceDependencies = {
   createTransactionalRepositories?: (
     executor: DatabaseExecutor
   ) => WorkspaceDecommissionRepositorySet;
+  lifecycleDeliveryService?: {
+    recordDecommissionNoticeDelivery(input: {
+      actor: WorkspaceLifecycleOwnerRecord;
+      notification: {
+        id: string;
+        kind: "ready" | "scheduled" | "upcoming";
+        sentAt: Date;
+      };
+      owner: WorkspaceLifecycleOwnerRecord;
+      request: {
+        executeAfter: Date;
+        id: string;
+        reason: string | null;
+        retentionDays: number;
+      };
+      workspace: WorkspaceLifecyclePolicyWorkspaceRecord;
+    }): Promise<{
+      attemptCount: number;
+      createdAt: string;
+      decommissionNotificationId: string | null;
+      decommissionNotificationKind: "ready" | "scheduled" | "upcoming" | null;
+      deliveredAt: string | null;
+      deliveryChannel: "webhook";
+      deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
+      eventKind: "invitation_reminder" | "decommission_notice";
+      eventOccurredAt: string;
+      failedAt: string | null;
+      failureMessage: string | null;
+      id: string;
+      invitationId: string | null;
+      invitationWalletAddress: string | null;
+      lastAttemptedAt: string | null;
+      queuedAt: string | null;
+      updatedAt: string;
+    }>;
+  };
   now: () => Date;
   offboardingService: WorkspaceDecommissionOffboardingDependency;
   repositories: WorkspaceDecommissionRepositorySet;
@@ -172,6 +311,8 @@ function createWorkspaceDecommissionRepositories(database: DatabaseExecutor) {
     auditLogRepository: createAuditLogRepository(database),
     workspaceDecommissionNotificationRepository:
       createWorkspaceDecommissionNotificationRepository(database),
+    workspaceLifecycleNotificationDeliveryRepository:
+      createWorkspaceLifecycleNotificationDeliveryBoundary(database),
     userRepository: createUserRepository(database),
     workspaceDecommissionRequestRepository:
       createWorkspaceDecommissionRequestRepository(database),
@@ -655,7 +796,48 @@ export function createWorkspaceDecommissionService(
           };
         });
 
+      const delivery = dependencies.lifecycleDeliveryService
+        ? await dependencies.lifecycleDeliveryService.recordDecommissionNoticeDelivery(
+            {
+              actor: owner,
+              notification: {
+                id: recordedNotification.id,
+                kind: recordedNotification.kind,
+                sentAt: recordedNotification.sentAt
+              },
+              owner,
+              request: {
+                executeAfter: scheduledRequest.executeAfter,
+                id: scheduledRequest.id,
+                reason: scheduledRequest.reason,
+                retentionDays: scheduledRequest.retentionDays
+              },
+              workspace
+            }
+          )
+        : {
+            attemptCount: 0,
+            createdAt: now.toISOString(),
+            decommissionNotificationId: recordedNotification.id,
+            decommissionNotificationKind: recordedNotification.kind,
+            deliveredAt: null,
+            deliveryChannel: "webhook" as const,
+            deliveryState: "skipped" as const,
+            eventKind: "decommission_notice" as const,
+            eventOccurredAt: recordedNotification.sentAt.toISOString(),
+            failedAt: now.toISOString(),
+            failureMessage:
+              "Lifecycle delivery orchestration is not configured for this service instance.",
+            id: `local:${recordedNotification.id}`,
+            invitationId: null,
+            invitationWalletAddress: null,
+            lastAttemptedAt: null,
+            queuedAt: null,
+            updatedAt: now.toISOString()
+          };
+
       return workspaceDecommissionNotificationRecordResponseSchema.parse({
+        delivery,
         notification:
           serializeWorkspaceDecommissionNotification(recordedNotification),
         workflow: createWorkspaceDecommissionWorkflowSummary({
@@ -788,6 +970,8 @@ export function createRuntimeWorkspaceDecommissionService(
 
   return createWorkspaceDecommissionService({
     createTransactionalRepositories: createWorkspaceDecommissionRepositories,
+    lifecycleDeliveryService:
+      createRuntimeWorkspaceLifecycleDeliveryService(rawEnvironment),
     now: () => new Date(),
     offboardingService: createRuntimeWorkspaceOffboardingService(rawEnvironment),
     repositories: createWorkspaceDecommissionRepositories(database),

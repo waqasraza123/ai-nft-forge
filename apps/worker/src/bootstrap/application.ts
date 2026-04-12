@@ -5,6 +5,7 @@ import {
   createCommerceCheckoutSessionRepository,
   createGenerationRequestRepository,
   createSourceAssetRepository,
+  createWorkspaceLifecycleNotificationDeliveryRepository,
   type DatabaseClient
 } from "@ai-nft-forge/database";
 import {
@@ -29,6 +30,7 @@ import {
   createQueueRegistry,
   type WorkerQueueRegistry
 } from "../queues/registry.js";
+import { createWorkspaceLifecycleWebhookClient } from "../workspaces/lifecycle-webhook.js";
 
 export type WorkerApplication = {
   close: () => Promise<void>;
@@ -81,6 +83,9 @@ export async function bootstrapWorkerApplication(
       storageClient: objectStorageClient,
       targetBucketName: storageConfig.S3_BUCKET_PRIVATE
     }),
+    lifecycleWebhook: createWorkspaceLifecycleWebhookClient({
+      env
+    }),
     logger,
     repositories: {
       commerceCheckoutSessionRepository: {
@@ -124,7 +129,9 @@ export async function bootstrapWorkerApplication(
       },
       generationRequestRepository:
         createGenerationRequestRepository(databaseClient),
-      sourceAssetRepository: createSourceAssetRepository(databaseClient)
+      sourceAssetRepository: createSourceAssetRepository(databaseClient),
+      workspaceLifecycleNotificationDeliveryRepository:
+        createWorkspaceLifecycleNotificationDeliveryRepository(databaseClient)
     },
     redisConnection
   });

@@ -24,6 +24,7 @@ import {
   studioWorkspaceInvitationDeleteResponseSchema,
   studioWorkspaceInvitationReminderResponseSchema,
   studioWorkspaceInvitationResponseSchema,
+  workspaceLifecycleNotificationDeliveryRetryResponseSchema,
   studioWorkspaceMemberDeleteResponseSchema,
   studioWorkspaceRoleEscalationActionResponseSchema,
   studioWorkspaceRoleEscalationResponseSchema,
@@ -37,13 +38,14 @@ import {
   type StudioWorkspaceDirectoryEntry,
   type StudioWorkspaceScopeSummary,
   type StudioWorkspaceInvitationSummary,
+  type StudioWorkspaceLifecycleDeliveryPolicy,
   type StudioWorkspaceMemberSummary,
   type StudioWorkspaceRoleEscalationSummary,
   type StudioWorkspaceRetentionPolicy,
   type StudioWorkspaceStatus,
   type WorkspaceDecommissionNotificationKind,
-  type WorkspaceDecommissionSummary,
-  type WorkspaceOffboardingEntry
+  type WorkspaceOffboardingEntry,
+  type WorkspaceLifecycleNotificationDeliverySummary
 } from "@ai-nft-forge/shared";
 import {
   MetricTile,
@@ -76,6 +78,8 @@ type StudioBrandEditorState = {
   brandName: string;
   brandSlug: string;
   customDomain: string;
+  deliverDecommissionNotifications: boolean;
+  deliverInvitationReminders: boolean;
   defaultDecommissionRetentionDays: number;
   featuredReleaseLabel: string;
   heroKicker: string;
@@ -88,6 +92,7 @@ type StudioBrandEditorState = {
   storyBody: string;
   storyHeadline: string;
   themePreset: "editorial_warm" | "gallery_mono" | "midnight_launch";
+  webhookEnabled: boolean;
   wordmark: string;
   workspaceName: string;
   workspaceSlug: string;
@@ -130,6 +135,18 @@ function resolveWorkspaceRetentionPolicy(
       minimumDecommissionRetentionDays:
         defaultWorkspaceMinimumDecommissionRetentionDays,
       requireDecommissionReason: false
+    }
+  );
+}
+
+function resolveWorkspaceLifecycleDeliveryPolicy(
+  settings: StudioSettingsSummary | null
+): StudioWorkspaceLifecycleDeliveryPolicy {
+  return (
+    settings?.lifecycleDeliveryPolicy ?? {
+      deliverDecommissionNotifications: true,
+      deliverInvitationReminders: true,
+      webhookEnabled: false
     }
   );
 }
@@ -193,6 +210,10 @@ function createInitialEditorState(settings: StudioSettingsSummary | null) {
     brandName: brand?.name ?? "",
     brandSlug: brand?.slug ?? "",
     customDomain: brand?.customDomain ?? "",
+    deliverDecommissionNotifications:
+      settings?.lifecycleDeliveryPolicy.deliverDecommissionNotifications ?? true,
+    deliverInvitationReminders:
+      settings?.lifecycleDeliveryPolicy.deliverInvitationReminders ?? true,
     defaultDecommissionRetentionDays:
       settings?.retentionPolicy.defaultDecommissionRetentionDays ??
       defaultWorkspaceDecommissionRetentionDays,
@@ -213,6 +234,7 @@ function createInitialEditorState(settings: StudioSettingsSummary | null) {
     storyBody: brand?.storyBody ?? "",
     storyHeadline: brand?.storyHeadline ?? "",
     themePreset: brand?.themePreset ?? defaultStudioBrandThemePreset,
+    webhookEnabled: settings?.lifecycleDeliveryPolicy.webhookEnabled ?? false,
     wordmark: brand?.wordmark ?? "",
     workspaceName: settings?.workspace.name ?? "",
     workspaceSlug: settings?.workspace.slug ?? ""
@@ -222,6 +244,7 @@ function createInitialEditorState(settings: StudioSettingsSummary | null) {
 function createEditorState(input: {
   brand: StudioBrandSummary | null;
   retentionPolicy: StudioWorkspaceRetentionPolicy;
+  lifecycleDeliveryPolicy: StudioWorkspaceLifecycleDeliveryPolicy;
   workspace: StudioSettingsSummary["workspace"] | null;
 }): StudioBrandEditorState {
   return {
@@ -229,6 +252,10 @@ function createEditorState(input: {
     brandName: input.brand?.name ?? "",
     brandSlug: input.brand?.slug ?? "",
     customDomain: input.brand?.customDomain ?? "",
+    deliverDecommissionNotifications:
+      input.lifecycleDeliveryPolicy.deliverDecommissionNotifications,
+    deliverInvitationReminders:
+      input.lifecycleDeliveryPolicy.deliverInvitationReminders,
     defaultDecommissionRetentionDays:
       input.retentionPolicy.defaultDecommissionRetentionDays,
     featuredReleaseLabel:
@@ -246,6 +273,7 @@ function createEditorState(input: {
     storyBody: input.brand?.storyBody ?? "",
     storyHeadline: input.brand?.storyHeadline ?? "",
     themePreset: input.brand?.themePreset ?? defaultStudioBrandThemePreset,
+    webhookEnabled: input.lifecycleDeliveryPolicy.webhookEnabled,
     wordmark: input.brand?.wordmark ?? "",
     workspaceName: input.workspace?.name ?? "",
     workspaceSlug: input.workspace?.slug ?? ""
@@ -308,6 +336,18 @@ function formatWorkspaceInvitationStatus(
 
 function formatDecommissionNotificationKind(
   kind: WorkspaceDecommissionNotificationKind
+) {
+  return kind.replaceAll("_", " ");
+}
+
+function formatLifecycleDeliveryState(
+  state: WorkspaceLifecycleNotificationDeliverySummary["deliveryState"]
+) {
+  return state.replaceAll("_", " ");
+}
+
+function formatLifecycleEventKind(
+  kind: WorkspaceLifecycleNotificationDeliverySummary["eventKind"]
 ) {
   return kind.replaceAll("_", " ");
 }
@@ -410,6 +450,8 @@ export function StudioSettingsClient({
   const [removingMembershipId, setRemovingMembershipId] = useState<
     string | null
   >(null);
+  const [retryingLifecycleDeliveryId, setRetryingLifecycleDeliveryId] =
+    useState<string | null>(null);
 
   const access = settings?.access ?? {
     canManageMembers: true,
@@ -436,6 +478,8 @@ export function StudioSettingsClient({
     canManageWorkspace && Boolean(settings?.workspace.id) && workspaceIsActive;
   const canMutateMembers = canManageMembers && workspaceIsActive;
   const retentionPolicy = resolveWorkspaceRetentionPolicy(settings);
+  const lifecycleDeliveryPolicy =
+    resolveWorkspaceLifecycleDeliveryPolicy(settings);
 
   const selectedBrand =
     settings?.brands.find((brand) => brand.id === selectedBrandId) ??
@@ -482,6 +526,8 @@ export function StudioSettingsClient({
     setEditorState(
       createEditorState({
         brand: selectedBrand,
+        lifecycleDeliveryPolicy:
+          resolveWorkspaceLifecycleDeliveryPolicy(settings),
         retentionPolicy: resolveWorkspaceRetentionPolicy(settings),
         workspace: settings?.workspace ?? null
       })
@@ -584,6 +630,13 @@ export function StudioSettingsClient({
         body: JSON.stringify({
           ...editorState,
           brandId: selectedBrand?.id ?? null,
+          lifecycleDeliveryPolicy: {
+            deliverDecommissionNotifications:
+              editorState.deliverDecommissionNotifications,
+            deliverInvitationReminders:
+              editorState.deliverInvitationReminders,
+            webhookEnabled: editorState.webhookEnabled
+          },
           retentionPolicy: {
             defaultDecommissionRetentionDays:
               editorState.defaultDecommissionRetentionDays,
@@ -1151,8 +1204,17 @@ export function StudioSettingsClient({
         });
       });
       setNotice({
-        message: `Reminder recorded for ${payload.invitation.walletAddress}.`,
-        tone: "success"
+        message:
+          payload.delivery.deliveryState === "delivered" ||
+          payload.delivery.deliveryState === "queued"
+            ? `Reminder recorded for ${payload.invitation.walletAddress}. Delivery is ${formatLifecycleDeliveryState(
+                payload.delivery.deliveryState
+              )}.`
+            : `Reminder recorded for ${payload.invitation.walletAddress}, but delivery is ${formatLifecycleDeliveryState(
+                payload.delivery.deliveryState
+              )}.`,
+        tone:
+          payload.delivery.deliveryState === "failed" ? "error" : "success"
       });
       await refreshSettings({
         silent: true
@@ -1202,14 +1264,23 @@ export function StudioSettingsClient({
           method: "POST"
         }
       );
-      await parseJsonResponse({
+      const payload = await parseJsonResponse({
         response,
         schema: workspaceDecommissionNotificationRecordResponseSchema
       });
 
       setNotice({
-        message: `${formatDecommissionNotificationKind(kind)} decommission notice recorded.`,
-        tone: "success"
+        message:
+          payload.delivery.deliveryState === "delivered" ||
+          payload.delivery.deliveryState === "queued"
+            ? `${formatDecommissionNotificationKind(kind)} decommission notice recorded. Delivery is ${formatLifecycleDeliveryState(
+                payload.delivery.deliveryState
+              )}.`
+            : `${formatDecommissionNotificationKind(kind)} decommission notice recorded, but delivery is ${formatLifecycleDeliveryState(
+                payload.delivery.deliveryState
+              )}.`,
+        tone:
+          payload.delivery.deliveryState === "failed" ? "error" : "success"
       });
       await refreshSettings({
         silent: true
@@ -1224,6 +1295,62 @@ export function StudioSettingsClient({
       });
     } finally {
       setRecordingDecommissionNotificationKind(null);
+    }
+  }
+
+  async function handleRetryLifecycleDelivery(
+    delivery: WorkspaceLifecycleNotificationDeliverySummary
+  ) {
+    if (!canManageWorkspace || !settings?.workspace.id) {
+      setNotice({
+        message: "Only workspace owners can retry lifecycle deliveries.",
+        tone: "error"
+      });
+      return;
+    }
+
+    setRetryingLifecycleDeliveryId(delivery.id);
+    setNotice({
+      message: `Retrying ${formatLifecycleEventKind(delivery.eventKind)} delivery…`,
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch(
+        `/api/studio/workspaces/${settings.workspace.id}/lifecycle-deliveries/${delivery.id}/retry`,
+        {
+          method: "POST"
+        }
+      );
+      const payload = await parseJsonResponse({
+        response,
+        schema: workspaceLifecycleNotificationDeliveryRetryResponseSchema
+      });
+
+      setNotice({
+        message:
+          payload.delivery.deliveryState === "queued" ||
+          payload.delivery.deliveryState === "processing"
+            ? `${formatLifecycleEventKind(payload.delivery.eventKind)} delivery requeued.`
+            : `${formatLifecycleEventKind(payload.delivery.eventKind)} delivery is ${formatLifecycleDeliveryState(
+                payload.delivery.deliveryState
+              )}.`,
+        tone:
+          payload.delivery.deliveryState === "failed" ? "error" : "success"
+      });
+      await refreshSettings({
+        silent: true
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Lifecycle delivery could not be retried.",
+        tone: "error"
+      });
+    } finally {
+      setRetryingLifecycleDeliveryId(null);
     }
   }
 
@@ -2036,6 +2163,96 @@ export function StudioSettingsClient({
             </div>
           ) : null}
         </SurfaceCard>
+        <SurfaceCard
+          body="Lifecycle delivery records cover owner-triggered invitation reminders and decommission notices. Delivery stays worker-owned and provider-agnostic; this surface only shows workspace policy and recent webhook attempts."
+          eyebrow="Lifecycle delivery"
+          span={8}
+          title="Lifecycle delivery health"
+        >
+          {!settings?.workspace ? (
+            <div className="status-banner status-banner--info">
+              <strong>No workspace selected</strong>
+              <span>
+                Choose a workspace before reviewing lifecycle delivery state.
+              </span>
+            </div>
+          ) : (
+            <div className="stack-md">
+              <div className="pill-row">
+                <Pill>
+                  Webhook {lifecycleDeliveryPolicy.webhookEnabled ? "enabled" : "disabled"}
+                </Pill>
+                <Pill>
+                  Invites{" "}
+                  {lifecycleDeliveryPolicy.deliverInvitationReminders
+                    ? "enabled"
+                    : "disabled"}
+                </Pill>
+                <Pill>
+                  Decommission{" "}
+                  {lifecycleDeliveryPolicy.deliverDecommissionNotifications
+                    ? "enabled"
+                    : "disabled"}
+                </Pill>
+              </div>
+              <div className="collection-item-list">
+                {settings.recentLifecycleDeliveries.length ? (
+                  settings.recentLifecycleDeliveries.map((delivery) => (
+                    <div className="collection-item-card" key={delivery.id}>
+                      <div className="collection-item-card__copy">
+                        <strong>{formatLifecycleEventKind(delivery.eventKind)}</strong>
+                        <span>
+                          {formatLifecycleDeliveryState(delivery.deliveryState)} ·{" "}
+                          {formatTimestamp(delivery.eventOccurredAt) ?? "No event time"}
+                        </span>
+                        <span>
+                          {delivery.invitationWalletAddress
+                            ? `Invitation ${delivery.invitationWalletAddress}`
+                            : delivery.decommissionNotificationKind
+                              ? `${formatDecommissionNotificationKind(
+                                  delivery.decommissionNotificationKind
+                                )} decommission notice`
+                              : "Lifecycle delivery"}
+                        </span>
+                        <span>
+                          {delivery.attemptCount} attempt
+                          {delivery.attemptCount === 1 ? "" : "s"}
+                          {delivery.failureMessage
+                            ? ` · ${delivery.failureMessage}`
+                            : ""}
+                        </span>
+                      </div>
+                      <div className="collection-item-card__actions">
+                        <Pill>{delivery.deliveryState}</Pill>
+                        <button
+                          className="button-action button-action--secondary"
+                          disabled={
+                            !canManageWorkspace ||
+                            retryingLifecycleDeliveryId === delivery.id ||
+                            (delivery.deliveryState !== "failed" &&
+                              delivery.deliveryState !== "skipped")
+                          }
+                          onClick={() => {
+                            void handleRetryLifecycleDelivery(delivery);
+                          }}
+                          type="button"
+                        >
+                          {retryingLifecycleDeliveryId === delivery.id
+                            ? "Retrying…"
+                            : "Retry"}
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="collection-empty-state">
+                    No lifecycle deliveries have been recorded yet.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </SurfaceCard>
         <WorkspaceDirectoryPanel
           body="This directory is built from workspace-native brands, members, invitations, role-escalation requests, and audit history so the current accessible estate is visible without depending on owner-anchored collection or commerce data."
           entries={workspaceDirectoryEntries}
@@ -2310,6 +2527,70 @@ export function StudioSettingsClient({
                 >
                   <option value="optional">Optional</option>
                   <option value="required">Required</option>
+                </select>
+              </label>
+              <label className="field-stack">
+                <span className="field-label">Lifecycle webhook delivery</span>
+                <select
+                  className="input-field"
+                  onChange={(event) => {
+                    setEditorState((current) => ({
+                      ...current,
+                      webhookEnabled: event.target.value === "enabled"
+                    }));
+                  }}
+                  value={editorState.webhookEnabled ? "enabled" : "disabled"}
+                >
+                  <option value="disabled">Disabled</option>
+                  <option value="enabled">Enabled</option>
+                </select>
+              </label>
+              <label className="field-stack">
+                <span className="field-label">
+                  Invitation reminder delivery
+                </span>
+                <select
+                  className="input-field"
+                  disabled={!editorState.webhookEnabled}
+                  onChange={(event) => {
+                    setEditorState((current) => ({
+                      ...current,
+                      deliverInvitationReminders:
+                        event.target.value === "enabled"
+                    }));
+                  }}
+                  value={
+                    editorState.deliverInvitationReminders
+                      ? "enabled"
+                      : "disabled"
+                  }
+                >
+                  <option value="enabled">Enabled</option>
+                  <option value="disabled">Disabled</option>
+                </select>
+              </label>
+              <label className="field-stack">
+                <span className="field-label">
+                  Decommission notice delivery
+                </span>
+                <select
+                  className="input-field"
+                  disabled={!editorState.webhookEnabled}
+                  onChange={(event) => {
+                    setEditorState((current) => ({
+                      ...current,
+                      deliverDecommissionNotifications:
+                        event.target.value === "enabled"
+                    }));
+                  }}
+                  value={
+                    editorState.deliverDecommissionNotifications
+                      ? "enabled"
+                      : "disabled"
+                  }
+                >
+                  <option value="enabled">Enabled</option>
+                  <option value="disabled">Disabled</option>
                 </select>
               </label>
               <label className="field-stack">

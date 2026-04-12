@@ -11,12 +11,17 @@ import {
   studioWorkspaceAuditEntrySchema,
   studioWorkspaceDirectoryEntrySchema,
   studioWorkspaceInvitationSummarySchema,
+  studioWorkspaceLifecycleDeliveryPolicySchema,
   studioWorkspaceMemberSummarySchema,
   studioWorkspaceRoleEscalationSummarySchema,
   studioWorkspaceRetentionPolicySchema,
   studioWorkspaceScopeSummarySchema,
   studioWorkspaceSummarySchema
 } from "./studio-settings.js";
+import {
+  workspaceLifecycleNotificationDeliveryOverviewSchema,
+  workspaceLifecycleNotificationDeliverySummarySchema
+} from "./workspace-lifecycle.js";
 import { workspaceDecommissionRetentionDaysSchema } from "./workspace-policy.js";
 
 export const workspaceExportFormatSchema = z.enum(["json", "csv"]);
@@ -105,6 +110,8 @@ export const workspaceOffboardingEntrySchema = z.object({
   decommission: workspaceDecommissionSummarySchema.nullable(),
   decommissionWorkflow: workspaceDecommissionWorkflowSummarySchema,
   directory: studioWorkspaceDirectoryEntrySchema,
+  lifecycleDelivery: workspaceLifecycleNotificationDeliveryOverviewSchema,
+  lifecycleDeliveryPolicy: studioWorkspaceLifecycleDeliveryPolicySchema,
   retentionPolicy: studioWorkspaceRetentionPolicySchema,
   summary: workspaceOffboardingSummarySchema,
   workspace: studioWorkspaceScopeSummarySchema
@@ -145,6 +152,7 @@ export const workspaceDecommissionExecutionResponseSchema = z.object({
 });
 
 export const workspaceDecommissionNotificationRecordResponseSchema = z.object({
+  delivery: workspaceLifecycleNotificationDeliverySummarySchema,
   notification: workspaceDecommissionNotificationSummarySchema,
   workflow: workspaceDecommissionWorkflowSummarySchema
 });
@@ -262,6 +270,10 @@ export const workspaceExportResponseSchema = z.object({
     decommissionWorkflow: workspaceDecommissionWorkflowSummarySchema,
     generatedAt: z.string().datetime(),
     invitations: z.array(studioWorkspaceInvitationSummarySchema),
+    lifecycleDeliveries: z.array(
+      workspaceLifecycleNotificationDeliverySummarySchema
+    ),
+    lifecycleDeliveryPolicy: studioWorkspaceLifecycleDeliveryPolicySchema,
     members: z.array(studioWorkspaceMemberSummarySchema),
     offboarding: workspaceOffboardingSummarySchema,
     ownerWalletAddress: z.string().min(1),

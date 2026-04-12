@@ -312,6 +312,43 @@ function createWorkspaceOffboardingHarness() {
             : [];
         }
       },
+      workspaceLifecycleNotificationDeliveryRepository: {
+        async listByWorkspaceIds(workspaceIds: string[]) {
+          return workspaceIds.flatMap((workspaceId) => {
+            if (workspaceId !== "workspace_review") {
+              return [];
+            }
+
+            return [
+              {
+                attemptCount: 1,
+                createdAt: new Date("2026-04-12T03:00:00.000Z"),
+                decommissionNotification: null,
+                decommissionNotificationId: null,
+                deliveredAt: null,
+                deliveryChannel: "webhook" as const,
+                deliveryState: "failed" as const,
+                eventKind: "invitation_reminder" as const,
+                eventOccurredAt: new Date("2026-04-12T02:55:00.000Z"),
+                failedAt: new Date("2026-04-12T03:00:00.000Z"),
+                failureMessage: "Webhook rejected",
+                id: "delivery_1",
+                invitation: {
+                  id: "invitation_1",
+                  walletAddress:
+                    "0x2222222222222222222222222222222222222222"
+                },
+                invitationId: "invitation_1",
+                lastAttemptedAt: new Date("2026-04-12T03:00:00.000Z"),
+                payloadJson: {},
+                queuedAt: null,
+                updatedAt: new Date("2026-04-12T03:00:00.000Z"),
+                workspaceId
+              }
+            ];
+          });
+        }
+      },
       workspaceDecommissionRequestRepository: {
         async findScheduledByWorkspaceId(input: { workspaceId: string }) {
           return input.workspaceId === "workspace_ready"
@@ -392,6 +429,10 @@ function createWorkspaceOffboardingHarness() {
             decommissionRetentionDaysMinimum:
               input.id === "workspace_review" ? 21 : 7,
             id: input.id,
+            lifecycleWebhookDeliverDecommissionNotifications: true,
+            lifecycleWebhookDeliverInvitationReminders:
+              input.id !== "workspace_blocked",
+            lifecycleWebhookEnabled: input.id !== "workspace_blocked",
             name: `Workspace ${input.id}`,
             ownerUserId: input.ownerUserId,
             requireDecommissionReason: input.id === "workspace_review",
@@ -406,6 +447,10 @@ function createWorkspaceOffboardingHarness() {
             decommissionRetentionDaysMinimum:
               workspaceId === "workspace_review" ? 21 : 7,
             id: workspaceId,
+            lifecycleWebhookDeliverDecommissionNotifications: true,
+            lifecycleWebhookDeliverInvitationReminders:
+              workspaceId !== "workspace_blocked",
+            lifecycleWebhookEnabled: workspaceId !== "workspace_blocked",
             name: `Workspace ${workspaceId}`,
             ownerUserId: "user_owner",
             requireDecommissionReason: workspaceId === "workspace_review",

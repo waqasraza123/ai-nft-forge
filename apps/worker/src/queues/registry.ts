@@ -13,6 +13,9 @@ import {
   foundationQueueNames,
   type GenerationJobPayload,
   queueCatalog,
+  workspaceLifecycleJobNames,
+  workspaceLifecycleQueueNames,
+  type WorkspaceLifecycleNotificationJobPayload,
   type NoopJobPayload,
   type WorkerEnv
 } from "@ai-nft-forge/shared";
@@ -32,12 +35,18 @@ import {
   createNoopProcessor,
   type NoopJobResult
 } from "../processors/noop-processor.js";
+import {
+  createWorkspaceLifecycleNotificationProcessor,
+  type WorkspaceLifecycleNotificationJobResult
+} from "../processors/workspace-lifecycle-notification-processor.js";
+import type { WorkspaceLifecycleWebhookBoundary } from "../workspaces/lifecycle-webhook.js";
 
 type WorkerQueueRegistryOptions = {
   databaseClient: DatabaseClient;
   env: WorkerEnv;
   fulfillmentWebhook: CheckoutFulfillmentWebhookBoundary;
   generationAdapter: GenerationAdapter;
+  lifecycleWebhook: WorkspaceLifecycleWebhookBoundary;
   logger: Logger;
   repositories: {
     commerceCheckoutSessionRepository: {
@@ -105,6 +114,25 @@ type WorkerQueueRegistryOptions = {
         status: string;
       } | null>;
     };
+    workspaceLifecycleNotificationDeliveryRepository: {
+      findById(id: string): Promise<{
+        attemptCount: number;
+        deliveredAt: Date | null;
+        deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
+        id: string;
+        payloadJson: unknown;
+      } | null>;
+      updateById(input: {
+        attemptCount?: number;
+        deliveredAt?: Date | null;
+        deliveryState?: "queued" | "processing" | "delivered" | "failed" | "skipped";
+        failedAt?: Date | null;
+        failureMessage?: string | null;
+        id: string;
+        lastAttemptedAt?: Date | null;
+        queuedAt?: Date | null;
+      }): Promise<unknown>;
+    };
   };
   redisConnection: Redis;
 };
@@ -127,6 +155,11 @@ export type WorkerQueueRegistry = {
       NoopJobResult,
       typeof foundationJobNames.noop
     >;
+    workspaceLifecycleDispatch: Queue<
+      WorkspaceLifecycleNotificationJobPayload,
+      WorkspaceLifecycleNotificationJobResult,
+      typeof workspaceLifecycleJobNames.processNotificationDelivery
+    >;
   };
   workers: Array<
     | Worker<
@@ -139,6 +172,11 @@ export type WorkerQueueRegistry = {
         GenerationRequestJobResult,
         typeof generationJobNames.processSourceAssetGeneration
       >
+    | Worker<
+        WorkspaceLifecycleNotificationJobPayload,
+        WorkspaceLifecycleNotificationJobResult,
+        typeof workspaceLifecycleJobNames.processNotificationDelivery
+      >
     | Worker<NoopJobPayload, NoopJobResult, typeof foundationJobNames.noop>
   >;
 };
@@ -148,6 +186,7 @@ export function createQueueRegistry({
   env,
   fulfillmentWebhook,
   generationAdapter,
+  lifecycleWebhook,
   logger,
   repositories,
   redisConnection
@@ -170,6 +209,15 @@ export function createQueueRegistry({
   const processNoopJob = createNoopProcessor({
     logger
   });
+  const processWorkspaceLifecycleNotification =
+    createWorkspaceLifecycleNotificationProcessor({
+      now: () => new Date(),
+      repositories: {
+        workspaceLifecycleNotificationDeliveryRepository:
+          repositories.workspaceLifecycleNotificationDeliveryRepository
+      },
+      webhook: lifecycleWebhook
+    });
   const generationDispatchQueue = new Queue<
     GenerationJobPayload,
     GenerationRequestJobResult,
@@ -197,6 +245,17 @@ export function createQueueRegistry({
     NoopJobResult,
     typeof foundationJobNames.noop
   >(foundationQueueNames.foundation, {
+    connection: redisConnection,
+    defaultJobOptions: {
+      removeOnComplete: 100,
+      removeOnFail: 100
+    }
+  });
+  const workspaceLifecycleDispatchQueue = new Queue<
+    WorkspaceLifecycleNotificationJobPayload,
+    WorkspaceLifecycleNotificationJobResult,
+    typeof workspaceLifecycleJobNames.processNotificationDelivery
+  >(workspaceLifecycleQueueNames.notificationDispatch, {
     connection: redisConnection,
     defaultJobOptions: {
       removeOnComplete: 100,
@@ -257,6 +316,24 @@ export function createQueueRegistry({
       connection: redisConnection
     }
   );
+  const workspaceLifecycleDispatchWorker = new Worker<
+    WorkspaceLifecycleNotificationJobPayload,
+    WorkspaceLifecycleNotificationJobResult,
+    typeof workspaceLifecycleJobNames.processNotificationDelivery
+  >(
+    workspaceLifecycleQueueNames.notificationDispatch,
+    async (job) => {
+      if (job.name !== workspaceLifecycleJobNames.processNotificationDelivery) {
+        throw new Error(`Unsupported job name: ${job.name}`);
+      }
+
+      return processWorkspaceLifecycleNotification(job);
+    },
+    {
+      concurrency: env.WORKSPACE_LIFECYCLE_QUEUE_CONCURRENCY,
+      connection: redisConnection
+    }
+  );
 
   logger.info("Registered worker queues", {
     queueNames: queueCatalog.map((entry) => entry.queueName)
@@ -267,8 +344,14 @@ export function createQueueRegistry({
     queues: {
       fulfillmentDispatch: fulfillmentDispatchQueue,
       generationDispatch: generationDispatchQueue,
-      foundation: foundationQueue
+      foundation: foundationQueue,
+      workspaceLifecycleDispatch: workspaceLifecycleDispatchQueue
     },
-    workers: [fulfillmentDispatchWorker, generationDispatchWorker, foundationWorker]
+    workers: [
+      fulfillmentDispatchWorker,
+      generationDispatchWorker,
+      foundationWorker,
+      workspaceLifecycleDispatchWorker
+    ]
   };
 }

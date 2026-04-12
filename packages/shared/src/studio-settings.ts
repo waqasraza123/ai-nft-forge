@@ -6,6 +6,10 @@ import {
   collectionDraftSlugSchema
 } from "./collections.js";
 import { walletAddressSchema } from "./auth.js";
+import {
+  workspaceLifecycleDeliveryPolicySchema,
+  workspaceLifecycleNotificationDeliverySummarySchema
+} from "./workspace-lifecycle.js";
 import { workspaceRetentionPolicySchema } from "./workspace-policy.js";
 
 export const studioWorkspaceNameSchema = z.string().trim().min(1).max(120);
@@ -200,6 +204,7 @@ export const studioWorkspaceAuditActionSchema = z.enum([
   "workspace_invitation_canceled",
   "workspace_invitation_created",
   "workspace_invitation_reminder_sent",
+  "workspace_lifecycle_delivery_policy_updated",
   "workspace_member_added",
   "workspace_member_removed",
   "workspace_decommission_notification_recorded",
@@ -231,6 +236,10 @@ export const studioSettingsSummarySchema = z.object({
   brand: studioBrandSummarySchema,
   brands: z.array(studioBrandSummarySchema),
   invitations: z.array(studioWorkspaceInvitationSummarySchema),
+  lifecycleDeliveryPolicy: workspaceLifecycleDeliveryPolicySchema,
+  recentLifecycleDeliveries: z.array(
+    workspaceLifecycleNotificationDeliverySummarySchema
+  ),
   members: z.array(studioWorkspaceMemberSummarySchema),
   retentionPolicy: workspaceRetentionPolicySchema,
   roleEscalationRequests: z.array(studioWorkspaceRoleEscalationSummarySchema),
@@ -291,6 +300,7 @@ export const studioSettingsUpdateRequestSchema = z.object({
   storyHeadline: studioBrandStoryHeadlineSchema.nullish(),
   themePreset: studioBrandThemePresetSchema,
   wordmark: studioBrandWordmarkSchema.nullish(),
+  lifecycleDeliveryPolicy: workspaceLifecycleDeliveryPolicySchema.nullish(),
   retentionPolicy: workspaceRetentionPolicySchema.nullish(),
   workspaceName: studioWorkspaceNameSchema,
   workspaceSlug: studioWorkspaceSlugSchema
@@ -340,8 +350,10 @@ export const studioWorkspaceInvitationResponseSchema = z.object({
   invitation: studioWorkspaceInvitationSummarySchema
 });
 
-export const studioWorkspaceInvitationReminderResponseSchema =
-  studioWorkspaceInvitationResponseSchema;
+export const studioWorkspaceInvitationReminderResponseSchema = z.object({
+  delivery: workspaceLifecycleNotificationDeliverySummarySchema,
+  invitation: studioWorkspaceInvitationSummarySchema
+});
 
 export const studioWorkspaceInvitationDeleteResponseSchema = z.object({
   invitationId: z.string().min(1),
@@ -374,6 +386,8 @@ export const studioSettingsErrorResponseSchema = z.object({
       "INVITATION_EXPIRED",
       "INVITATION_NOT_FOUND",
       "INVITATION_REMINDER_NOT_READY",
+      "LIFECYCLE_DELIVERY_NOT_FOUND",
+      "LIFECYCLE_DELIVERY_NOT_RETRYABLE",
       "MEMBER_ALREADY_EXISTS",
       "MEMBER_NOT_FOUND",
       "MEMBER_WORKSPACE_CONFLICT",
@@ -406,8 +420,13 @@ export type StudioBrandSummary = z.infer<typeof studioBrandSummarySchema>;
 export type StudioBrandTheme = z.infer<typeof studioBrandThemeSchema>;
 export type StudioBrandResponse = z.infer<typeof studioBrandResponseSchema>;
 export const studioWorkspaceRetentionPolicySchema = workspaceRetentionPolicySchema;
+export const studioWorkspaceLifecycleDeliveryPolicySchema =
+  workspaceLifecycleDeliveryPolicySchema;
 export type StudioWorkspaceRetentionPolicy = z.infer<
   typeof studioWorkspaceRetentionPolicySchema
+>;
+export type StudioWorkspaceLifecycleDeliveryPolicy = z.infer<
+  typeof studioWorkspaceLifecycleDeliveryPolicySchema
 >;
 export type StudioBrandCreateRequest = z.infer<
   typeof studioBrandCreateRequestSchema

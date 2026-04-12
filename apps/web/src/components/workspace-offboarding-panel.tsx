@@ -77,6 +77,8 @@ export function WorkspaceOffboardingPanel({
                 <Pill>{entry.directory.pendingInvitationCount} pending invites</Pill>
                 <Pill>{entry.directory.expiringInvitationCount} expiring invites</Pill>
                 <Pill>{entry.directory.expiredInvitationCount} expired invites</Pill>
+                <Pill>{entry.lifecycleDelivery.failedCount} lifecycle failed</Pill>
+                <Pill>{entry.lifecycleDelivery.deliveredCount} lifecycle delivered</Pill>
                 {entry.decommission ? (
                   <Pill>
                     decommission{" "}
@@ -145,6 +147,28 @@ export function WorkspaceOffboardingPanel({
                           entry.decommissionWorkflow.latestNotification.sentAt
                         )}`
                       : ""}
+                    .
+                  </span>
+                </div>
+              ) : null}
+              {entry.lifecycleDelivery.latestDelivery ? (
+                <div className="status-banner status-banner--info">
+                  <strong>Lifecycle delivery</strong>
+                  <span>
+                    Policy webhook{" "}
+                    {entry.lifecycleDeliveryPolicy.webhookEnabled
+                      ? "enabled"
+                      : "disabled"}
+                    {" "}· latest{" "}
+                    {formatCode(
+                      entry.lifecycleDelivery.latestDelivery.eventKind
+                    )}{" "}
+                    {formatCode(
+                      entry.lifecycleDelivery.latestDelivery.deliveryState
+                    )}{" "}
+                    {formatDateTime(
+                      entry.lifecycleDelivery.latestDelivery.updatedAt
+                    )}
                     .
                   </span>
                 </div>

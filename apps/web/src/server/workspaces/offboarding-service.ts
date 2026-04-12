@@ -7,6 +7,7 @@ import {
   createPublishedCollectionRepository,
   createUserRepository,
   createWorkspaceDecommissionNotificationRepository,
+  createWorkspaceLifecycleNotificationDeliveryRepository,
   createWorkspaceInvitationRepository,
   createWorkspaceDecommissionRequestRepository,
   createWorkspaceMembershipRepository,
@@ -46,6 +47,11 @@ import {
   createWorkspaceDecommissionWorkflowSummary,
   serializeWorkspaceDecommissionNotification
 } from "./decommission-workflow";
+import {
+  createWorkspaceLifecycleDeliveryOverview,
+  serializeWorkspaceLifecycleDeliveryPolicy,
+  serializeWorkspaceLifecycleNotificationDelivery
+} from "./lifecycle-delivery-service";
 
 type WorkspaceOffboardingRepositorySet = {
   auditLogRepository: {
@@ -246,6 +252,37 @@ type WorkspaceOffboardingRepositorySet = {
       }>
     >;
   };
+  workspaceLifecycleNotificationDeliveryRepository: {
+    listByWorkspaceIds(workspaceIds: string[]): Promise<
+      Array<{
+        attemptCount: number;
+        createdAt: Date;
+        decommissionNotification: {
+          id: string;
+          kind: "ready" | "scheduled" | "upcoming";
+        } | null;
+        decommissionNotificationId: string | null;
+        deliveredAt: Date | null;
+        deliveryChannel: "webhook";
+        deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
+        eventKind: "invitation_reminder" | "decommission_notice";
+        eventOccurredAt: Date;
+        failedAt: Date | null;
+        failureMessage: string | null;
+        id: string;
+        invitation: {
+          id: string;
+          walletAddress: string;
+        } | null;
+        invitationId: string | null;
+        lastAttemptedAt: Date | null;
+        payloadJson: unknown;
+        queuedAt: Date | null;
+        updatedAt: Date;
+        workspaceId: string;
+      }>
+    >;
+  };
   workspaceMembershipRepository: {
     listByWorkspaceId(workspaceId: string): Promise<
       Array<{
@@ -325,6 +362,9 @@ type WorkspaceOffboardingRepositorySet = {
       decommissionRetentionDaysDefault: number;
       decommissionRetentionDaysMinimum: number;
       id: string;
+      lifecycleWebhookDeliverDecommissionNotifications: boolean;
+      lifecycleWebhookDeliverInvitationReminders: boolean;
+      lifecycleWebhookEnabled: boolean;
       name: string;
       ownerUserId: string;
       requireDecommissionReason: boolean;
@@ -336,6 +376,9 @@ type WorkspaceOffboardingRepositorySet = {
         decommissionRetentionDaysDefault: number;
         decommissionRetentionDaysMinimum: number;
         id: string;
+        lifecycleWebhookDeliverDecommissionNotifications: boolean;
+        lifecycleWebhookDeliverInvitationReminders: boolean;
+        lifecycleWebhookEnabled: boolean;
         name: string;
         ownerUserId: string;
         requireDecommissionReason: boolean;
@@ -412,6 +455,8 @@ function createWorkspaceOffboardingRepositories(database: DatabaseExecutor) {
     userRepository: createUserRepository(database),
     workspaceDecommissionNotificationRepository:
       createWorkspaceDecommissionNotificationRepository(database),
+    workspaceLifecycleNotificationDeliveryRepository:
+      createWorkspaceLifecycleNotificationDeliveryRepository(database),
     workspaceDecommissionRequestRepository:
       createWorkspaceDecommissionRequestRepository(database),
     workspaceInvitationRepository:
@@ -822,6 +867,7 @@ export function createWorkspaceOffboardingService(
         alerts,
         reconciliationIssues,
         decommissions,
+        lifecycleDeliveries,
         workspaceRecords
       ] = await Promise.all([
           dependencies.repositories.publishedCollectionRepository.listByWorkspaceIds(
@@ -837,6 +883,9 @@ export function createWorkspaceOffboardingService(
             workspaceIds
           ),
           dependencies.repositories.workspaceDecommissionRequestRepository.listScheduledByWorkspaceIds(
+            workspaceIds
+          ),
+          dependencies.repositories.workspaceLifecycleNotificationDeliveryRepository.listByWorkspaceIds(
             workspaceIds
           ),
           dependencies.repositories.workspaceRepository.listByIds(workspaceIds)
@@ -931,6 +980,20 @@ export function createWorkspaceOffboardingService(
           }
         ])
       );
+      const lifecycleDeliveriesByWorkspaceId = new Map<
+        string,
+        typeof lifecycleDeliveries
+      >();
+
+      for (const delivery of lifecycleDeliveries) {
+        const currentDeliveries =
+          lifecycleDeliveriesByWorkspaceId.get(delivery.workspaceId) ?? [];
+        currentDeliveries.push(delivery);
+        lifecycleDeliveriesByWorkspaceId.set(
+          delivery.workspaceId,
+          currentDeliveries
+        );
+      }
 
       const workspaces = directory.workspaces.map((directoryEntry) => {
         const scheduledDecommission =
@@ -967,6 +1030,26 @@ export function createWorkspaceOffboardingService(
               notificationCount: 0
             },
           directory: directoryEntry,
+          lifecycleDelivery: createWorkspaceLifecycleDeliveryOverview({
+            deliveries:
+              lifecycleDeliveriesByWorkspaceId.get(directoryEntry.workspace.id) ??
+              []
+          }),
+          lifecycleDeliveryPolicy: serializeWorkspaceLifecycleDeliveryPolicy(
+            workspaceById.get(directoryEntry.workspace.id) ?? {
+              decommissionRetentionDaysDefault: 30,
+              decommissionRetentionDaysMinimum: 7,
+              lifecycleWebhookDeliverDecommissionNotifications: true,
+              lifecycleWebhookDeliverInvitationReminders: true,
+              lifecycleWebhookEnabled: false,
+              id: directoryEntry.workspace.id,
+              name: directoryEntry.workspace.name,
+              ownerUserId: directoryEntry.workspace.ownerUserId,
+              requireDecommissionReason: false,
+              slug: directoryEntry.workspace.slug,
+              status: directoryEntry.workspace.status
+            }
+          ),
           retentionPolicy: serializeWorkspaceRetentionPolicy(
             workspaceById.get(directoryEntry.workspace.id) ?? {
               decommissionRetentionDaysDefault: 30,
@@ -1049,7 +1132,8 @@ export function createWorkspaceOffboardingService(
         publications,
         checkouts,
         alerts,
-        reconciliationIssues
+        reconciliationIssues,
+        lifecycleDeliveries
       ] = await Promise.all([
         dependencies.repositories.brandRepository.listByWorkspaceId(workspace.id),
         dependencies.repositories.workspaceMembershipRepository.listByWorkspaceId(
@@ -1087,6 +1171,9 @@ export function createWorkspaceOffboardingService(
         ),
         dependencies.repositories.opsReconciliationIssueRepository.listOpenByWorkspaceId(
           workspace.id
+        ),
+        dependencies.repositories.workspaceLifecycleNotificationDeliveryRepository.listByWorkspaceIds(
+          [workspace.id]
         )
       ]);
       const decommissionNotifications = decommission
@@ -1173,6 +1260,12 @@ export function createWorkspaceOffboardingService(
           invitations: invitations.map((invitation) =>
             serializeWorkspaceInvitation(invitation)
           ),
+          lifecycleDeliveries: lifecycleDeliveries.map((delivery) =>
+            serializeWorkspaceLifecycleNotificationDelivery(delivery)
+          ),
+          lifecycleDeliveryPolicy: serializeWorkspaceLifecycleDeliveryPolicy(
+            workspace
+          ),
           members: [
             serializeWorkspaceMember({
               addedAt: null,
@@ -1258,6 +1351,27 @@ export function createWorkspaceOffboardingService(
         row.retentionPolicy.defaultDecommissionRetentionDays,
         row.retentionPolicy.minimumDecommissionRetentionDays,
         row.retentionPolicy.requireDecommissionReason ? "yes" : "no",
+        row.lifecycleDeliveryPolicy.webhookEnabled ? "yes" : "no",
+        row.lifecycleDeliveryPolicy.deliverInvitationReminders ? "yes" : "no",
+        row.lifecycleDeliveryPolicy.deliverDecommissionNotifications
+          ? "yes"
+          : "no",
+        row.lifecycleDeliveries.filter(
+          (delivery) => delivery.deliveryState === "delivered"
+        ).length,
+        row.lifecycleDeliveries.filter(
+          (delivery) => delivery.deliveryState === "failed"
+        ).length,
+        row.lifecycleDeliveries.filter(
+          (delivery) =>
+            delivery.deliveryState === "queued" ||
+            delivery.deliveryState === "processing"
+        ).length,
+        row.lifecycleDeliveries.filter(
+          (delivery) => delivery.deliveryState === "skipped"
+        ).length,
+        row.lifecycleDeliveries[0]?.deliveryState ?? "",
+        row.lifecycleDeliveries[0]?.eventKind ?? "",
         row.decommission?.status ?? "",
         row.decommission?.retentionDays ?? "",
         row.decommission?.executeAfter ?? "",
@@ -1292,6 +1406,15 @@ export function createWorkspaceOffboardingService(
           "retention_default_days",
           "retention_minimum_days",
           "retention_reason_required",
+          "lifecycle_webhook_enabled",
+          "lifecycle_deliver_invitation_reminders",
+          "lifecycle_deliver_decommission_notifications",
+          "lifecycle_delivered_count",
+          "lifecycle_failed_count",
+          "lifecycle_queued_count",
+          "lifecycle_skipped_count",
+          "lifecycle_latest_delivery_state",
+          "lifecycle_latest_event_kind",
           "decommission_status",
           "decommission_retention_days",
           "decommission_execute_after",

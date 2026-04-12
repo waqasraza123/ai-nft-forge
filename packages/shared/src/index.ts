@@ -206,6 +206,7 @@ export {
   studioWorkspaceInvitationResponseSchema,
   studioWorkspaceInvitationSummarySchema,
   studioWorkspaceInvitationStatusSchema,
+  studioWorkspaceLifecycleDeliveryPolicySchema,
   studioWorkspaceRoleEscalationActionResponseSchema,
   studioWorkspaceRoleEscalationCreateRequestSchema,
   studioWorkspaceRoleEscalationRequestStatusSchema,
@@ -248,6 +249,7 @@ export {
   type StudioWorkspaceInvitationResponse,
   type StudioWorkspaceInvitationSummary,
   type StudioWorkspaceInvitationStatus,
+  type StudioWorkspaceLifecycleDeliveryPolicy,
   type StudioWorkspaceRoleEscalationActionResponse,
   type StudioWorkspaceRoleEscalationCreateRequest,
   type StudioWorkspaceRoleEscalationRequestStatus,
@@ -267,6 +269,24 @@ export {
   type StudioWorkspaceStatusUpdateResponse,
   type StudioWorkspaceSummary
 } from "./studio-settings.js";
+export {
+  workspaceLifecycleDeliveryPolicySchema,
+  workspaceLifecycleNotificationDeliveryChannelSchema,
+  workspaceLifecycleNotificationDeliveryOverviewSchema,
+  workspaceLifecycleNotificationDeliveryRetryResponseSchema,
+  workspaceLifecycleNotificationDeliveryStateSchema,
+  workspaceLifecycleNotificationDeliverySummarySchema,
+  workspaceLifecycleNotificationEventKindSchema,
+  workspaceLifecycleDecommissionNotificationKindSchema,
+  type WorkspaceLifecycleDeliveryPolicy,
+  type WorkspaceLifecycleNotificationDeliveryChannel,
+  type WorkspaceLifecycleNotificationDeliveryOverview,
+  type WorkspaceLifecycleNotificationDeliveryRetryResponse,
+  type WorkspaceLifecycleNotificationDeliveryState,
+  type WorkspaceLifecycleNotificationDeliverySummary,
+  type WorkspaceLifecycleNotificationEventKind,
+  type WorkspaceLifecycleDecommissionNotificationKind
+} from "./workspace-lifecycle.js";
 export {
   workspaceCommerceFleetReportResponseSchema,
   workspaceCommerceFleetReportWorkspaceSchema,
@@ -504,9 +524,13 @@ export {
   foundationQueueNames,
   noopJobPayloadSchema,
   queueCatalog,
+  workspaceLifecycleJobNames,
+  workspaceLifecycleNotificationJobPayloadSchema,
+  workspaceLifecycleQueueNames,
   type CommerceFulfillmentJobPayload,
   type GenerationJobPayload,
-  type NoopJobPayload
+  type NoopJobPayload,
+  type WorkspaceLifecycleNotificationJobPayload
 } from "./queues.js";
 export {
   generationBackendArtifactSchema,

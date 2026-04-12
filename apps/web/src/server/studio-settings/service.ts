@@ -28,27 +28,30 @@ import {
   studioWorkspaceMemberResponseSchema,
   studioWorkspaceRoleEscalationCreateRequestSchema,
   studioWorkspaceRoleEscalationResponseSchema,
+  workspaceLifecycleDeliveryPolicySchema,
   workspaceRetentionPolicySchema,
+  type WorkspaceLifecycleDeliveryPolicy,
   type StudioWorkspaceRole,
   type StudioWorkspaceStatus
 } from "@ai-nft-forge/shared";
 
 import { StudioSettingsServiceError } from "./error";
 import {
+  serializeWorkspaceLifecycleNotificationDelivery,
+  serializeWorkspaceLifecycleDeliveryPolicy,
+  type WorkspaceLifecycleOwnerRecord,
+  type WorkspaceLifecyclePolicyWorkspaceRecord
+} from "../workspaces/lifecycle-delivery-service";
+import {
   canSendWorkspaceInvitationReminder,
   getWorkspaceInvitationReminderReadyAt,
   getWorkspaceInvitationStatus
 } from "../studio/invitation-lifecycle";
 
-type WorkspaceRecord = {
+type WorkspaceRecord = WorkspaceLifecyclePolicyWorkspaceRecord & {
   decommissionRetentionDaysDefault: number;
   decommissionRetentionDaysMinimum: number;
-  id: string;
-  name: string;
-  ownerUserId: string;
   requireDecommissionReason: boolean;
-  slug: string;
-  status: "active" | "archived" | "suspended";
 };
 
 type BrandRecord = {
@@ -71,11 +74,9 @@ type PublishedCollectionRecord = {
   updatedAt: Date;
 };
 
-type UserRecord = {
+type UserRecord = WorkspaceLifecycleOwnerRecord & {
   avatarUrl: string | null;
   displayName: string | null;
-  id: string;
-  walletAddress: string;
 };
 
 type WorkspaceMembershipRecord = {
@@ -323,6 +324,40 @@ type StudioSettingsRepositorySet = {
       reminderCount: number;
     }>;
   };
+  workspaceLifecycleNotificationDeliveryRepository: {
+    listRecentByWorkspaceId(input: {
+      limit: number;
+      workspaceId: string;
+    }): Promise<
+      Array<{
+        attemptCount: number;
+        createdAt: Date;
+        decommissionNotification: {
+          id: string;
+          kind: "ready" | "scheduled" | "upcoming";
+        } | null;
+        decommissionNotificationId: string | null;
+        deliveredAt: Date | null;
+        deliveryChannel: "webhook";
+        deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
+        eventKind: "invitation_reminder" | "decommission_notice";
+        eventOccurredAt: Date;
+        failedAt: Date | null;
+        failureMessage: string | null;
+        id: string;
+        invitation: {
+          id: string;
+          walletAddress: string;
+        } | null;
+        invitationId: string | null;
+        lastAttemptedAt: Date | null;
+        payloadJson: unknown;
+        queuedAt: Date | null;
+        updatedAt: Date;
+        workspaceId: string;
+      }>
+    >;
+  };
   workspaceRoleEscalationRequestRepository: {
     create(input: {
       justification?: string | null;
@@ -358,6 +393,9 @@ type StudioSettingsRepositorySet = {
     create(input: {
       decommissionRetentionDaysDefault?: number;
       decommissionRetentionDaysMinimum?: number;
+      lifecycleWebhookDeliverDecommissionNotifications?: boolean;
+      lifecycleWebhookDeliverInvitationReminders?: boolean;
+      lifecycleWebhookEnabled?: boolean;
       name: string;
       ownerUserId: string;
       requireDecommissionReason?: boolean;
@@ -377,6 +415,9 @@ type StudioSettingsRepositorySet = {
       decommissionRetentionDaysDefault: number;
       decommissionRetentionDaysMinimum: number;
       id: string;
+      lifecycleWebhookDeliverDecommissionNotifications: boolean;
+      lifecycleWebhookDeliverInvitationReminders: boolean;
+      lifecycleWebhookEnabled: boolean;
       name: string;
       ownerUserId: string;
       requireDecommissionReason: boolean;
@@ -392,6 +433,33 @@ type StudioSettingsRepositorySet = {
 };
 
 type StudioSettingsServiceDependencies = {
+  lifecycleDeliveryService?: {
+    recordInvitationReminderDelivery(input: {
+      actor: WorkspaceLifecycleOwnerRecord;
+      invitation: WorkspaceInvitationRecord;
+      occurredAt: Date;
+      owner: WorkspaceLifecycleOwnerRecord;
+      workspace: WorkspaceRecord;
+    }): Promise<{
+      attemptCount: number;
+      createdAt: string;
+      decommissionNotificationId: string | null;
+      decommissionNotificationKind: "ready" | "scheduled" | "upcoming" | null;
+      deliveredAt: string | null;
+      deliveryChannel: "webhook";
+      deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
+      eventKind: "invitation_reminder" | "decommission_notice";
+      eventOccurredAt: string;
+      failedAt: string | null;
+      failureMessage: string | null;
+      id: string;
+      invitationId: string | null;
+      invitationWalletAddress: string | null;
+      lastAttemptedAt: string | null;
+      queuedAt: string | null;
+      updatedAt: string;
+    }>;
+  };
   repositories: StudioSettingsRepositorySet;
   runTransaction<T>(
     operation: (repositories: StudioSettingsRepositorySet) => Promise<T>
@@ -524,6 +592,31 @@ function serializeWorkspaceRetentionPolicy(input: WorkspaceRecord) {
     minimumDecommissionRetentionDays: input.decommissionRetentionDaysMinimum,
     requireDecommissionReason: input.requireDecommissionReason
   });
+}
+
+function currentLifecycleDeliveryPolicy(workspace: WorkspaceRecord) {
+  return workspaceLifecycleDeliveryPolicySchema.parse({
+    deliverDecommissionNotifications:
+      workspace.lifecycleWebhookDeliverDecommissionNotifications,
+    deliverInvitationReminders:
+      workspace.lifecycleWebhookDeliverInvitationReminders,
+    webhookEnabled: workspace.lifecycleWebhookEnabled
+  });
+}
+
+function lifecycleDeliveryPoliciesEqual(input: {
+  next: ReturnType<typeof serializeWorkspaceLifecycleDeliveryPolicy>;
+  workspace: WorkspaceRecord;
+}) {
+  const currentPolicy = currentLifecycleDeliveryPolicy(input.workspace);
+
+  return (
+    currentPolicy.deliverDecommissionNotifications ===
+      input.next.deliverDecommissionNotifications &&
+    currentPolicy.deliverInvitationReminders ===
+      input.next.deliverInvitationReminders &&
+    currentPolicy.webhookEnabled === input.next.webhookEnabled
+  );
 }
 
 function workspaceRetentionPoliciesEqual(input: {
@@ -668,13 +761,20 @@ async function serializeStudioSettings(input: {
     StudioSettingsRepositorySet,
     | "auditLogRepository"
     | "workspaceInvitationRepository"
+    | "workspaceLifecycleNotificationDeliveryRepository"
     | "workspaceRoleEscalationRequestRepository"
     | "workspaceMembershipRepository"
   >;
   role: StudioWorkspaceRole;
   workspace: WorkspaceRecord;
 }) {
-  const [memberships, invitations, roleEscalationRequests, auditLogs] =
+  const [
+    memberships,
+    invitations,
+    lifecycleDeliveries,
+    roleEscalationRequests,
+    auditLogs
+  ] =
     await Promise.all([
       input.repositories.workspaceMembershipRepository.listByWorkspaceId(
         input.workspace.id
@@ -682,6 +782,12 @@ async function serializeStudioSettings(input: {
       input.repositories.workspaceInvitationRepository.listByWorkspaceId({
         workspaceId: input.workspace.id
       }),
+      input.repositories.workspaceLifecycleNotificationDeliveryRepository.listRecentByWorkspaceId(
+        {
+          limit: 10,
+          workspaceId: input.workspace.id
+        }
+      ),
       input.repositories.workspaceRoleEscalationRequestRepository.listByWorkspaceId(
         {
           workspaceId: input.workspace.id
@@ -707,6 +813,12 @@ async function serializeStudioSettings(input: {
       brands: input.brands.map((brand) => serializeBrand(brand)),
       invitations: invitations.map((invitation) =>
         serializeWorkspaceInvitation(invitation)
+      ),
+      lifecycleDeliveryPolicy: serializeWorkspaceLifecycleDeliveryPolicy(
+        input.workspace
+      ),
+      recentLifecycleDeliveries: lifecycleDeliveries.map((delivery) =>
+        serializeWorkspaceLifecycleNotificationDelivery(delivery)
       ),
       members: [
         serializeWorkspaceMember({
@@ -866,6 +978,7 @@ async function recordWorkspaceAuditLog(input: {
     | "workspace_invitation_reminder_sent"
     | "workspace_member_added"
     | "workspace_member_removed"
+    | "workspace_lifecycle_delivery_policy_updated"
     | "workspace_owner_transferred"
     | "workspace_reactivated"
     | "workspace_retention_policy_updated"
@@ -875,6 +988,7 @@ async function recordWorkspaceAuditLog(input: {
     | "workspace_role_escalation_requested"
     | "workspace_suspended";
   actor: UserRecord;
+  lifecycleDeliveryPolicy?: WorkspaceLifecycleDeliveryPolicy;
   membershipId?: string | null;
   policy?: ReturnType<typeof serializeWorkspaceRetentionPolicy>;
   requestId?: string | null;
@@ -915,6 +1029,15 @@ async function recordWorkspaceAuditLog(input: {
               input.policy.minimumDecommissionRetentionDays,
             requireDecommissionReason:
               input.policy.requireDecommissionReason
+          }
+        : {}),
+      ...(input.lifecycleDeliveryPolicy
+        ? {
+            deliverDecommissionNotifications:
+              input.lifecycleDeliveryPolicy.deliverDecommissionNotifications,
+            deliverInvitationReminders:
+              input.lifecycleDeliveryPolicy.deliverInvitationReminders,
+            webhookEnabled: input.lifecycleDeliveryPolicy.webhookEnabled
           }
         : {}),
       ...(input.targetUserId
@@ -1092,6 +1215,9 @@ export function createStudioSettingsService(
             defaultWorkspaceDecommissionRetentionDays,
           decommissionRetentionDaysMinimum:
             defaultWorkspaceMinimumDecommissionRetentionDays,
+          lifecycleWebhookDeliverDecommissionNotifications: true,
+          lifecycleWebhookDeliverInvitationReminders: true,
+          lifecycleWebhookEnabled: false,
           name: parsedInput.workspaceName,
           ownerUserId: input.ownerUserId,
           requireDecommissionReason:
@@ -1160,6 +1286,11 @@ export function createStudioSettingsService(
             decommissionRetentionDaysMinimum:
               workspace.decommissionRetentionDaysMinimum,
             id: workspace.id,
+            lifecycleWebhookDeliverDecommissionNotifications:
+              workspace.lifecycleWebhookDeliverDecommissionNotifications,
+            lifecycleWebhookDeliverInvitationReminders:
+              workspace.lifecycleWebhookDeliverInvitationReminders,
+            lifecycleWebhookEnabled: workspace.lifecycleWebhookEnabled,
             name: workspace.name,
             ownerUserId: input.ownerUserId,
             requireDecommissionReason: workspace.requireDecommissionReason,
@@ -1290,6 +1421,7 @@ export function createStudioSettingsService(
       storyBody?: string | null;
       storyHeadline?: string | null;
       themePreset: "editorial_warm" | "gallery_mono" | "midnight_launch";
+      lifecycleDeliveryPolicy?: WorkspaceLifecycleDeliveryPolicy | null;
       retentionPolicy?: {
         defaultDecommissionRetentionDays: number;
         minimumDecommissionRetentionDays: number;
@@ -1318,6 +1450,7 @@ export function createStudioSettingsService(
         storyHeadline: input.storyHeadline,
         themePreset: input.themePreset,
         wordmark: input.wordmark,
+        lifecycleDeliveryPolicy: input.lifecycleDeliveryPolicy,
         retentionPolicy: input.retentionPolicy,
         workspaceName: input.workspaceName,
         workspaceSlug: input.workspaceSlug
@@ -1387,6 +1520,17 @@ export function createStudioSettingsService(
               defaultWorkspaceRequireDecommissionReason
           }
         );
+        const nextLifecycleDeliveryPolicy =
+          workspaceLifecycleDeliveryPolicySchema.parse(
+            parsedInput.lifecycleDeliveryPolicy ??
+              (existingWorkspace
+                ? currentLifecycleDeliveryPolicy(existingWorkspace)
+                : {
+                    deliverDecommissionNotifications: true,
+                    deliverInvitationReminders: true,
+                    webhookEnabled: false
+                  })
+          );
 
         if (
           existingBrand &&
@@ -1407,6 +1551,12 @@ export function createStudioSettingsService(
               nextRetentionPolicy.defaultDecommissionRetentionDays,
             decommissionRetentionDaysMinimum:
               nextRetentionPolicy.minimumDecommissionRetentionDays,
+            lifecycleWebhookDeliverDecommissionNotifications:
+              nextLifecycleDeliveryPolicy.deliverDecommissionNotifications,
+            lifecycleWebhookDeliverInvitationReminders:
+              nextLifecycleDeliveryPolicy.deliverInvitationReminders,
+            lifecycleWebhookEnabled:
+              nextLifecycleDeliveryPolicy.webhookEnabled,
             name: parsedInput.workspaceName,
             ownerUserId: input.ownerUserId,
             requireDecommissionReason:
@@ -1423,6 +1573,12 @@ export function createStudioSettingsService(
             decommissionRetentionDaysMinimum:
               nextRetentionPolicy.minimumDecommissionRetentionDays,
             id: existingWorkspace.id,
+            lifecycleWebhookDeliverDecommissionNotifications:
+              nextLifecycleDeliveryPolicy.deliverDecommissionNotifications,
+            lifecycleWebhookDeliverInvitationReminders:
+              nextLifecycleDeliveryPolicy.deliverInvitationReminders,
+            lifecycleWebhookEnabled:
+              nextLifecycleDeliveryPolicy.webhookEnabled,
             name: parsedInput.workspaceName,
             ownerUserId: input.ownerUserId,
             requireDecommissionReason:
@@ -1517,6 +1673,35 @@ export function createStudioSettingsService(
             action: "workspace_retention_policy_updated",
             actor: owner,
             policy: nextRetentionPolicy,
+            repositories,
+            workspaceId: existingWorkspace.id
+          });
+        }
+
+        if (
+          existingWorkspace &&
+          persistedWorkspace &&
+          !lifecycleDeliveryPoliciesEqual({
+            next: nextLifecycleDeliveryPolicy,
+            workspace: existingWorkspace
+          })
+        ) {
+          const owner = await repositories.userRepository.findById(
+            input.ownerUserId
+          );
+
+          if (!owner) {
+            throw new StudioSettingsServiceError(
+              "WORKSPACE_REQUIRED",
+              "Workspace ownership could not be resolved.",
+              409
+            );
+          }
+
+          await recordWorkspaceAuditLog({
+            action: "workspace_lifecycle_delivery_policy_updated",
+            actor: owner,
+            lifecycleDeliveryPolicy: nextLifecycleDeliveryPolicy,
             repositories,
             workspaceId: existingWorkspace.id
           });
@@ -1884,7 +2069,7 @@ export function createStudioSettingsService(
     }) {
       assertOwnerRole(input.role ?? "owner");
 
-      return dependencies.runTransaction(async (repositories) => {
+      const reminderResult = await dependencies.runTransaction(async (repositories) => {
         const now = new Date();
         const { owner, workspace } = await requireOwnerWorkspace({
           ownerUserId: input.ownerUserId,
@@ -1958,13 +2143,51 @@ export function createStudioSettingsService(
           workspaceId: workspace.id
         });
 
-        return studioWorkspaceInvitationReminderResponseSchema.parse({
-          invitation: serializeWorkspaceInvitation({
+        return {
+          invitation: {
             ...invitation,
             lastRemindedAt: updatedInvitation.lastRemindedAt,
             reminderCount: updatedInvitation.reminderCount
-          })
-        });
+          },
+          owner,
+          occurredAt: now,
+          workspace
+        };
+      });
+      const delivery = dependencies.lifecycleDeliveryService
+        ? await dependencies.lifecycleDeliveryService.recordInvitationReminderDelivery(
+            {
+              actor: reminderResult.owner,
+              invitation: reminderResult.invitation,
+              occurredAt: reminderResult.occurredAt,
+              owner: reminderResult.owner,
+              workspace: reminderResult.workspace
+            }
+          )
+        : {
+            attemptCount: 0,
+            createdAt: reminderResult.occurredAt.toISOString(),
+            decommissionNotificationId: null,
+            decommissionNotificationKind: null,
+            deliveredAt: null,
+            deliveryChannel: "webhook" as const,
+            deliveryState: "skipped" as const,
+            eventKind: "invitation_reminder" as const,
+            eventOccurredAt: reminderResult.occurredAt.toISOString(),
+            failedAt: reminderResult.occurredAt.toISOString(),
+            failureMessage:
+              "Lifecycle delivery orchestration is not configured for this service instance.",
+            id: `local:${reminderResult.invitation.id}:${reminderResult.occurredAt.toISOString()}`,
+            invitationId: reminderResult.invitation.id,
+            invitationWalletAddress: reminderResult.invitation.walletAddress,
+            lastAttemptedAt: null,
+            queuedAt: null,
+            updatedAt: reminderResult.occurredAt.toISOString()
+          };
+
+      return studioWorkspaceInvitationReminderResponseSchema.parse({
+        delivery,
+        invitation: serializeWorkspaceInvitation(reminderResult.invitation)
       });
     },
 

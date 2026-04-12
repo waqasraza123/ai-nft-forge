@@ -12,6 +12,10 @@ export const commerceQueueNames = {
   fulfillmentDispatch: "commerce-fulfillment-dispatch"
 } as const;
 
+export const workspaceLifecycleQueueNames = {
+  notificationDispatch: "workspace-lifecycle-notification-dispatch"
+} as const;
+
 export const foundationJobNames = {
   noop: "noop"
 } as const;
@@ -22,6 +26,10 @@ export const generationJobNames = {
 
 export const commerceJobNames = {
   processCheckoutFulfillment: "process-checkout-fulfillment"
+} as const;
+
+export const workspaceLifecycleJobNames = {
+  processNotificationDelivery: "process-workspace-lifecycle-notification"
 } as const;
 
 export const noopJobPayloadSchema = z.object({
@@ -42,10 +50,19 @@ export const commerceFulfillmentJobPayloadSchema = z.object({
   source: z.enum(["automatic", "manual_retry"])
 });
 
+export const workspaceLifecycleNotificationJobPayloadSchema = z.object({
+  deliveryId: z.string().min(1),
+  requestedAt: z.string().datetime(),
+  source: z.enum(["automatic", "manual_retry"])
+});
+
 export type NoopJobPayload = z.infer<typeof noopJobPayloadSchema>;
 export type GenerationJobPayload = z.infer<typeof generationJobPayloadSchema>;
 export type CommerceFulfillmentJobPayload = z.infer<
   typeof commerceFulfillmentJobPayloadSchema
+>;
+export type WorkspaceLifecycleNotificationJobPayload = z.infer<
+  typeof workspaceLifecycleNotificationJobPayloadSchema
 >;
 
 export const queueCatalog = [
@@ -60,5 +77,9 @@ export const queueCatalog = [
   {
     jobName: commerceJobNames.processCheckoutFulfillment,
     queueName: commerceQueueNames.fulfillmentDispatch
+  },
+  {
+    jobName: workspaceLifecycleJobNames.processNotificationDelivery,
+    queueName: workspaceLifecycleQueueNames.notificationDispatch
   }
 ] as const;

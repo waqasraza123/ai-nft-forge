@@ -16,6 +16,10 @@ function createWorkspaceDecommissionHarness(input?: {
   const now = input?.now ?? new Date("2026-04-12T05:00:00.000Z");
   let workspaceDeleted = false;
   let notificationIndex = 0;
+  const lifecycleDeliveries: Array<{
+    deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
+    id: string;
+  }> = [];
   let scheduledRequest: {
     canceledAt: Date | null;
     canceledByUser: {
@@ -223,6 +227,57 @@ function createWorkspaceDecommissionHarness(input?: {
         };
       }
     },
+    workspaceLifecycleNotificationDeliveryRepository: {
+      async create() {
+        return {
+          attemptCount: 0,
+          createdAt: now,
+          decommissionNotification: null,
+          decommissionNotificationId: null,
+          deliveredAt: null,
+          deliveryChannel: "webhook" as const,
+          deliveryState: "queued" as const,
+          eventKind: "decommission_notice" as const,
+          eventOccurredAt: now,
+          failedAt: null,
+          failureMessage: null,
+          id: `delivery_${lifecycleDeliveries.length + 1}`,
+          invitation: null,
+          invitationId: null,
+          lastAttemptedAt: null,
+          payloadJson: {},
+          queuedAt: now,
+          updatedAt: now,
+          workspaceId: "workspace_1"
+        };
+      },
+      async findById() {
+        return null;
+      },
+      async updateById() {
+        return {
+          attemptCount: 0,
+          createdAt: now,
+          decommissionNotification: null,
+          decommissionNotificationId: null,
+          deliveredAt: null,
+          deliveryChannel: "webhook" as const,
+          deliveryState: "queued" as const,
+          eventKind: "decommission_notice" as const,
+          eventOccurredAt: now,
+          failedAt: null,
+          failureMessage: null,
+          id: "delivery_1",
+          invitation: null,
+          invitationId: null,
+          lastAttemptedAt: null,
+          payloadJson: {},
+          queuedAt: now,
+          updatedAt: now,
+          workspaceId: "workspace_1"
+        };
+      }
+    },
     workspaceRepository: {
       async deleteByIdForOwner(inputRecord: {
         id: string;
@@ -253,6 +308,9 @@ function createWorkspaceDecommissionHarness(input?: {
           decommissionRetentionDaysMinimum:
             input?.retentionDaysMinimum ?? 7,
           id: "workspace_1",
+          lifecycleWebhookDeliverDecommissionNotifications: true,
+          lifecycleWebhookDeliverInvitationReminders: true,
+          lifecycleWebhookEnabled: true,
           name: "Workspace One",
           ownerUserId: "user_owner",
           requireDecommissionReason:
@@ -265,6 +323,34 @@ function createWorkspaceDecommissionHarness(input?: {
   };
 
   const service = createWorkspaceDecommissionService({
+    lifecycleDeliveryService: {
+      async recordDecommissionNoticeDelivery(inputRecord) {
+        lifecycleDeliveries.push({
+          deliveryState: "queued",
+          id: `delivery_${lifecycleDeliveries.length + 1}`
+        });
+
+        return {
+          attemptCount: 0,
+          createdAt: inputRecord.notification.sentAt.toISOString(),
+          decommissionNotificationId: inputRecord.notification.id,
+          decommissionNotificationKind: inputRecord.notification.kind,
+          deliveredAt: null,
+          deliveryChannel: "webhook" as const,
+          deliveryState: "queued" as const,
+          eventKind: "decommission_notice" as const,
+          eventOccurredAt: inputRecord.notification.sentAt.toISOString(),
+          failedAt: null,
+          failureMessage: null,
+          id: `delivery_${lifecycleDeliveries.length}`,
+          invitationId: null,
+          invitationWalletAddress: null,
+          lastAttemptedAt: null,
+          queuedAt: inputRecord.notification.sentAt.toISOString(),
+          updatedAt: inputRecord.notification.sentAt.toISOString()
+        };
+      }
+    },
     now: () => now,
     offboardingService: {
       async exportOwnedWorkspace() {
@@ -299,6 +385,9 @@ function createWorkspaceDecommissionHarness(input?: {
     auditActions,
     getNotifications() {
       return notifications;
+    },
+    getLifecycleDeliveries() {
+      return lifecycleDeliveries;
     },
     getScheduledRequest() {
       return scheduledRequest;
@@ -400,6 +489,7 @@ describe("createWorkspaceDecommissionService", () => {
       workspaceId: "workspace_1"
     });
 
+    expect(result.delivery.deliveryState).toBe("queued");
     expect(result.notification.kind).toBe("scheduled");
     expect(result.workflow.notificationCount).toBe(1);
     expect(result.workflow.nextDueKind).toBeNull();

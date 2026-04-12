@@ -4,6 +4,7 @@ import {
   createPublishedCollectionRepository,
   createUserRepository,
   createWorkspaceInvitationRepository,
+  createWorkspaceLifecycleNotificationDeliveryRepository,
   createWorkspaceMembershipRepository,
   createWorkspaceRoleEscalationRequestRepository,
   createWorkspaceRepository,
@@ -13,6 +14,7 @@ import {
 } from "@ai-nft-forge/database";
 
 import { createStudioSettingsService } from "./service";
+import { createRuntimeWorkspaceLifecycleDeliveryService } from "../workspaces/lifecycle-delivery-runtime";
 
 function createStudioSettingsRepositories(database: DatabaseExecutor) {
   return {
@@ -23,6 +25,8 @@ function createStudioSettingsRepositories(database: DatabaseExecutor) {
     userRepository: createUserRepository(database),
     workspaceInvitationRepository:
       createWorkspaceInvitationRepository(database),
+    workspaceLifecycleNotificationDeliveryRepository:
+      createWorkspaceLifecycleNotificationDeliveryRepository(database),
     workspaceMembershipRepository:
       createWorkspaceMembershipRepository(database),
     workspaceRoleEscalationRequestRepository:
@@ -37,6 +41,8 @@ export function createRuntimeStudioSettingsService(
   const databaseClient = getDatabaseClient(rawEnvironment);
 
   return createStudioSettingsService({
+    lifecycleDeliveryService:
+      createRuntimeWorkspaceLifecycleDeliveryService(rawEnvironment),
     repositories: createStudioSettingsRepositories(databaseClient),
     runTransaction: (operation) =>
       runDatabaseTransaction(databaseClient, (transaction) =>

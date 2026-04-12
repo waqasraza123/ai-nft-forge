@@ -25,6 +25,9 @@ function createStudioSettingsHarness() {
       decommissionRetentionDaysDefault?: number;
       decommissionRetentionDaysMinimum?: number;
       id: string;
+      lifecycleWebhookDeliverDecommissionNotifications?: boolean;
+      lifecycleWebhookDeliverInvitationReminders?: boolean;
+      lifecycleWebhookEnabled?: boolean;
       name: string;
       ownerUserId: string;
       requireDecommissionReason?: boolean;
@@ -96,6 +99,33 @@ function createStudioSettingsHarness() {
       workspaceId: string;
     }
   >();
+  const lifecycleDeliveries: Array<{
+    attemptCount: number;
+    createdAt: Date;
+    decommissionNotification: {
+      id: string;
+      kind: "ready" | "scheduled" | "upcoming";
+    } | null;
+    decommissionNotificationId: string | null;
+    deliveredAt: Date | null;
+    deliveryChannel: "webhook";
+    deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
+    eventKind: "invitation_reminder" | "decommission_notice";
+    eventOccurredAt: Date;
+    failedAt: Date | null;
+    failureMessage: string | null;
+    id: string;
+    invitation: {
+      id: string;
+      walletAddress: string;
+    } | null;
+    invitationId: string | null;
+    lastAttemptedAt: Date | null;
+    payloadJson: unknown;
+    queuedAt: Date | null;
+    updatedAt: Date;
+    workspaceId: string;
+  }> = [];
   const auditLogs: Array<{
     action: string;
     actorId: string;
@@ -139,6 +169,9 @@ function createStudioSettingsHarness() {
     decommissionRetentionDaysDefault?: number;
     decommissionRetentionDaysMinimum?: number;
     id: string;
+    lifecycleWebhookDeliverDecommissionNotifications?: boolean;
+    lifecycleWebhookDeliverInvitationReminders?: boolean;
+    lifecycleWebhookEnabled?: boolean;
     name: string;
     ownerUserId: string;
     requireDecommissionReason?: boolean;
@@ -151,6 +184,11 @@ function createStudioSettingsHarness() {
         input.decommissionRetentionDaysDefault ?? 30,
       decommissionRetentionDaysMinimum:
         input.decommissionRetentionDaysMinimum ?? 7,
+      lifecycleWebhookDeliverDecommissionNotifications:
+        input.lifecycleWebhookDeliverDecommissionNotifications ?? true,
+      lifecycleWebhookDeliverInvitationReminders:
+        input.lifecycleWebhookDeliverInvitationReminders ?? true,
+      lifecycleWebhookEnabled: input.lifecycleWebhookEnabled ?? false,
       requireDecommissionReason: input.requireDecommissionReason ?? false
     };
   }
@@ -735,6 +773,16 @@ function createStudioSettingsHarness() {
         return updatedInvitation;
       }
     },
+    workspaceLifecycleNotificationDeliveryRepository: {
+      async listRecentByWorkspaceId(input: {
+        limit: number;
+        workspaceId: string;
+      }) {
+        return lifecycleDeliveries
+          .filter((delivery) => delivery.workspaceId === input.workspaceId)
+          .slice(0, input.limit);
+      }
+    },
     workspaceRoleEscalationRequestRepository: {
       async create(input: {
         justification?: string | null;
@@ -873,6 +921,9 @@ function createStudioSettingsHarness() {
       async create(input: {
         decommissionRetentionDaysDefault?: number;
         decommissionRetentionDaysMinimum?: number;
+        lifecycleWebhookDeliverDecommissionNotifications?: boolean;
+        lifecycleWebhookDeliverInvitationReminders?: boolean;
+        lifecycleWebhookEnabled?: boolean;
         name: string;
         ownerUserId: string;
         requireDecommissionReason?: boolean;
@@ -899,6 +950,23 @@ function createStudioSettingsHarness() {
             ? {
                 decommissionRetentionDaysMinimum:
                   input.decommissionRetentionDaysMinimum
+              }
+            : {}),
+          ...(input.lifecycleWebhookDeliverDecommissionNotifications !== undefined
+            ? {
+                lifecycleWebhookDeliverDecommissionNotifications:
+                  input.lifecycleWebhookDeliverDecommissionNotifications
+              }
+            : {}),
+          ...(input.lifecycleWebhookDeliverInvitationReminders !== undefined
+            ? {
+                lifecycleWebhookDeliverInvitationReminders:
+                  input.lifecycleWebhookDeliverInvitationReminders
+              }
+            : {}),
+          ...(input.lifecycleWebhookEnabled !== undefined
+            ? {
+                lifecycleWebhookEnabled: input.lifecycleWebhookEnabled
               }
             : {}),
           ...(input.requireDecommissionReason !== undefined
@@ -951,6 +1019,9 @@ function createStudioSettingsHarness() {
         decommissionRetentionDaysDefault: number;
         decommissionRetentionDaysMinimum: number;
         id: string;
+        lifecycleWebhookDeliverDecommissionNotifications: boolean;
+        lifecycleWebhookDeliverInvitationReminders: boolean;
+        lifecycleWebhookEnabled: boolean;
         name: string;
         ownerUserId: string;
         requireDecommissionReason: boolean;
@@ -969,6 +1040,11 @@ function createStudioSettingsHarness() {
             input.decommissionRetentionDaysDefault,
           decommissionRetentionDaysMinimum:
             input.decommissionRetentionDaysMinimum,
+          lifecycleWebhookDeliverDecommissionNotifications:
+            input.lifecycleWebhookDeliverDecommissionNotifications,
+          lifecycleWebhookDeliverInvitationReminders:
+            input.lifecycleWebhookDeliverInvitationReminders,
+          lifecycleWebhookEnabled: input.lifecycleWebhookEnabled,
           name: input.name,
           requireDecommissionReason: input.requireDecommissionReason,
           slug: input.slug,
@@ -1004,6 +1080,57 @@ function createStudioSettingsHarness() {
   };
 
   const service = createStudioSettingsService({
+    lifecycleDeliveryService: {
+      async recordInvitationReminderDelivery(input) {
+        const createdAt = input.occurredAt;
+        const id = `delivery_${lifecycleDeliveries.length + 1}`;
+
+        lifecycleDeliveries.unshift({
+          attemptCount: 0,
+          createdAt,
+          decommissionNotification: null,
+          decommissionNotificationId: null,
+          deliveredAt: null,
+          deliveryChannel: "webhook",
+          deliveryState: "queued",
+          eventKind: "invitation_reminder",
+          eventOccurredAt: createdAt,
+          failedAt: null,
+          failureMessage: null,
+          id,
+          invitation: {
+            id: input.invitation.id,
+            walletAddress: input.invitation.walletAddress
+          },
+          invitationId: input.invitation.id,
+          lastAttemptedAt: null,
+          payloadJson: {},
+          queuedAt: createdAt,
+          updatedAt: createdAt,
+          workspaceId: input.workspace.id
+        });
+
+        return {
+          attemptCount: 0,
+          createdAt: createdAt.toISOString(),
+          decommissionNotificationId: null,
+          decommissionNotificationKind: null,
+          deliveredAt: null,
+          deliveryChannel: "webhook" as const,
+          deliveryState: "queued" as const,
+          eventKind: "invitation_reminder" as const,
+          eventOccurredAt: createdAt.toISOString(),
+          failedAt: null,
+          failureMessage: null,
+          id,
+          invitationId: input.invitation.id,
+          invitationWalletAddress: input.invitation.walletAddress,
+          lastAttemptedAt: null,
+          queuedAt: createdAt.toISOString(),
+          updatedAt: createdAt.toISOString()
+        };
+      }
+    },
     repositories,
     async runTransaction<T>(
       operation: (repositorySet: typeof repositories) => Promise<T>

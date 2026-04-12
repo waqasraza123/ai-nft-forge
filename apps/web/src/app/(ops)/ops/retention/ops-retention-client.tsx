@@ -307,6 +307,16 @@ export function OpsRetentionClient({
                         : "optional"}
                     </span>
                     <span>
+                      lifecycle webhook{" "}
+                      {workspace.lifecycleDeliveryPolicy.webhookEnabled
+                        ? "enabled"
+                        : "disabled"}{" "}
+                      · delivered {workspace.lifecycleDelivery.deliveredCount} ·
+                      failed {workspace.lifecycleDelivery.failedCount} · queued{" "}
+                      {workspace.lifecycleDelivery.queuedCount} · skipped{" "}
+                      {workspace.lifecycleDelivery.skippedCount}
+                    </span>
+                    <span>
                       {workspace.decommission
                         ? `scheduled for ${formatTimestamp(
                             workspace.decommission.executeAfter
@@ -321,6 +331,20 @@ export function OpsRetentionClient({
                               workspace.decommissionWorkflow.nextDueKind
                             )}`
                           : ""}
+                      </span>
+                    ) : null}
+                    {workspace.lifecycleDelivery.latestDelivery ? (
+                      <span>
+                        latest lifecycle{" "}
+                        {formatStatus(
+                          workspace.lifecycleDelivery.latestDelivery.eventKind
+                        )}{" "}
+                        {formatStatus(
+                          workspace.lifecycleDelivery.latestDelivery.deliveryState
+                        )}{" "}
+                        {formatTimestamp(
+                          workspace.lifecycleDelivery.latestDelivery.updatedAt
+                        )}
                       </span>
                     ) : null}
                   </div>

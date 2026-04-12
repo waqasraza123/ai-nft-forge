@@ -24,6 +24,9 @@ describe("parseWorkerEnv", () => {
     expect(env.OPS_RECONCILIATION_JITTER_SECONDS).toBe(15);
     expect(env.OPS_RECONCILIATION_LOCK_TTL_SECONDS).toBe(600);
     expect(env.REDIS_URL).toBe("redis://127.0.0.1:56379");
+    expect(env.WORKSPACE_LIFECYCLE_QUEUE_CONCURRENCY).toBe(1);
+    expect(env.WORKSPACE_LIFECYCLE_WEBHOOK_ENABLED).toBe(false);
+    expect(env.WORKSPACE_LIFECYCLE_WEBHOOK_TIMEOUT_MS).toBe(5000);
   });
 
   it("parses explicit values", () => {
@@ -49,7 +52,13 @@ describe("parseWorkerEnv", () => {
       OPS_RECONCILIATION_RUN_ON_START: "false",
       OPS_RECONCILIATION_SCHEDULE_ENABLED: "true",
       REDIS_URL: "redis://localhost:6379",
-      WORKER_SERVICE_NAME: "forge-worker"
+      WORKER_SERVICE_NAME: "forge-worker",
+      WORKSPACE_LIFECYCLE_QUEUE_CONCURRENCY: "2",
+      WORKSPACE_LIFECYCLE_WEBHOOK_BEARER_TOKEN: "lifecycle_token_123",
+      WORKSPACE_LIFECYCLE_WEBHOOK_ENABLED: "true",
+      WORKSPACE_LIFECYCLE_WEBHOOK_TIMEOUT_MS: "7000",
+      WORKSPACE_LIFECYCLE_WEBHOOK_URL:
+        "https://alerts.example.com/hooks/workspace-lifecycle"
     });
 
     expect(env.COMMERCE_FULFILLMENT_QUEUE_CONCURRENCY).toBe(2);
@@ -76,6 +85,15 @@ describe("parseWorkerEnv", () => {
     expect(env.OPS_RECONCILIATION_JITTER_SECONDS).toBe(60);
     expect(env.OPS_RECONCILIATION_LOCK_TTL_SECONDS).toBe(1500);
     expect(env.REDIS_URL).toBe("redis://localhost:6379");
+    expect(env.WORKSPACE_LIFECYCLE_QUEUE_CONCURRENCY).toBe(2);
+    expect(env.WORKSPACE_LIFECYCLE_WEBHOOK_BEARER_TOKEN).toBe(
+      "lifecycle_token_123"
+    );
+    expect(env.WORKSPACE_LIFECYCLE_WEBHOOK_ENABLED).toBe(true);
+    expect(env.WORKSPACE_LIFECYCLE_WEBHOOK_TIMEOUT_MS).toBe(7000);
+    expect(env.WORKSPACE_LIFECYCLE_WEBHOOK_URL).toBe(
+      "https://alerts.example.com/hooks/workspace-lifecycle"
+    );
   });
 
   it("requires a backend URL when the http adapter is enabled", () => {
@@ -98,13 +116,27 @@ describe("parseWorkerEnv", () => {
     );
   });
 
+  it("requires a lifecycle webhook URL when lifecycle delivery is enabled", () => {
+    expect(() =>
+      parseWorkerEnv({
+        WORKSPACE_LIFECYCLE_WEBHOOK_ENABLED: "true"
+      })
+    ).toThrow(
+      "WORKSPACE_LIFECYCLE_WEBHOOK_URL is required when WORKSPACE_LIFECYCLE_WEBHOOK_ENABLED=true."
+    );
+  });
+
   it("treats blank optional webhook fields as undefined when delivery is disabled", () => {
     const env = parseWorkerEnv({
       OPS_ALERT_WEBHOOK_BEARER_TOKEN: "",
-      OPS_ALERT_WEBHOOK_URL: ""
+      OPS_ALERT_WEBHOOK_URL: "",
+      WORKSPACE_LIFECYCLE_WEBHOOK_BEARER_TOKEN: "",
+      WORKSPACE_LIFECYCLE_WEBHOOK_URL: ""
     });
 
     expect(env.OPS_ALERT_WEBHOOK_BEARER_TOKEN).toBeUndefined();
     expect(env.OPS_ALERT_WEBHOOK_URL).toBeUndefined();
+    expect(env.WORKSPACE_LIFECYCLE_WEBHOOK_BEARER_TOKEN).toBeUndefined();
+    expect(env.WORKSPACE_LIFECYCLE_WEBHOOK_URL).toBeUndefined();
   });
 });

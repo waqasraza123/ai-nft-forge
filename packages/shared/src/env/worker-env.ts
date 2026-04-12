@@ -114,7 +114,23 @@ export const workerEnvSchema = z
     OPS_RECONCILIATION_SCHEDULE_ENABLED:
       booleanEnvironmentValueSchema.default(false),
     REDIS_URL: z.string().url().default("redis://127.0.0.1:56379"),
-    WORKER_SERVICE_NAME: z.string().trim().min(1).default("ai-nft-forge-worker")
+    WORKER_SERVICE_NAME: z.string().trim().min(1).default("ai-nft-forge-worker"),
+    WORKSPACE_LIFECYCLE_QUEUE_CONCURRENCY: z.coerce
+      .number()
+      .int()
+      .positive()
+      .max(32)
+      .default(1),
+    WORKSPACE_LIFECYCLE_WEBHOOK_BEARER_TOKEN: optionalTrimmedStringSchema,
+    WORKSPACE_LIFECYCLE_WEBHOOK_ENABLED:
+      booleanEnvironmentValueSchema.default(false),
+    WORKSPACE_LIFECYCLE_WEBHOOK_TIMEOUT_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .max(30000)
+      .default(5000),
+    WORKSPACE_LIFECYCLE_WEBHOOK_URL: optionalUrlSchema
   })
   .superRefine((value, context) => {
     if (
@@ -135,6 +151,18 @@ export const workerEnvSchema = z
         message:
           "OPS_ALERT_WEBHOOK_URL is required when OPS_ALERT_WEBHOOK_ENABLED=true.",
         path: ["OPS_ALERT_WEBHOOK_URL"]
+      });
+    }
+
+    if (
+      value.WORKSPACE_LIFECYCLE_WEBHOOK_ENABLED &&
+      !value.WORKSPACE_LIFECYCLE_WEBHOOK_URL
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "WORKSPACE_LIFECYCLE_WEBHOOK_URL is required when WORKSPACE_LIFECYCLE_WEBHOOK_ENABLED=true.",
+        path: ["WORKSPACE_LIFECYCLE_WEBHOOK_URL"]
       });
     }
   });

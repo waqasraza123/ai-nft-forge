@@ -7,7 +7,9 @@ import {
   generationQueueNames,
   foundationJobNames,
   foundationQueueNames,
-  queueCatalog
+  queueCatalog,
+  workspaceLifecycleJobNames,
+  workspaceLifecycleQueueNames
 } from "@ai-nft-forge/shared";
 
 describe("queueCatalog", () => {
@@ -24,6 +26,10 @@ describe("queueCatalog", () => {
       {
         jobName: commerceJobNames.processCheckoutFulfillment,
         queueName: commerceQueueNames.fulfillmentDispatch
+      },
+      {
+        jobName: workspaceLifecycleJobNames.processNotificationDelivery,
+        queueName: workspaceLifecycleQueueNames.notificationDispatch
       }
     ]);
   });
