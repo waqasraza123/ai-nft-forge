@@ -28,6 +28,9 @@ function createStudioSettingsHarness() {
       lifecycleAutomationDecommissionNoticesEnabled?: boolean;
       lifecycleAutomationEnabled?: boolean;
       lifecycleAutomationInvitationRemindersEnabled?: boolean;
+      lifecycleSlaAutomationMaxAgeMinutes?: number;
+      lifecycleSlaEnabled?: boolean;
+      lifecycleSlaWebhookFailureThreshold?: number;
       lifecycleWebhookDeliverDecommissionNotifications?: boolean;
       lifecycleWebhookDeliverInvitationReminders?: boolean;
       lifecycleWebhookEnabled?: boolean;
@@ -176,6 +179,9 @@ function createStudioSettingsHarness() {
     lifecycleAutomationDecommissionNoticesEnabled?: boolean;
     lifecycleAutomationEnabled?: boolean;
     lifecycleAutomationInvitationRemindersEnabled?: boolean;
+    lifecycleSlaAutomationMaxAgeMinutes?: number;
+    lifecycleSlaEnabled?: boolean;
+    lifecycleSlaWebhookFailureThreshold?: number;
     lifecycleWebhookDeliverDecommissionNotifications?: boolean;
     lifecycleWebhookDeliverInvitationReminders?: boolean;
     lifecycleWebhookEnabled?: boolean;
@@ -196,6 +202,11 @@ function createStudioSettingsHarness() {
       lifecycleAutomationEnabled: input.lifecycleAutomationEnabled ?? true,
       lifecycleAutomationInvitationRemindersEnabled:
         input.lifecycleAutomationInvitationRemindersEnabled ?? true,
+      lifecycleSlaAutomationMaxAgeMinutes:
+        input.lifecycleSlaAutomationMaxAgeMinutes ?? 180,
+      lifecycleSlaEnabled: input.lifecycleSlaEnabled ?? true,
+      lifecycleSlaWebhookFailureThreshold:
+        input.lifecycleSlaWebhookFailureThreshold ?? 3,
       lifecycleWebhookDeliverDecommissionNotifications:
         input.lifecycleWebhookDeliverDecommissionNotifications ?? true,
       lifecycleWebhookDeliverInvitationReminders:
@@ -936,6 +947,9 @@ function createStudioSettingsHarness() {
         lifecycleAutomationDecommissionNoticesEnabled?: boolean;
         lifecycleAutomationEnabled?: boolean;
         lifecycleAutomationInvitationRemindersEnabled?: boolean;
+        lifecycleSlaAutomationMaxAgeMinutes?: number;
+        lifecycleSlaEnabled?: boolean;
+        lifecycleSlaWebhookFailureThreshold?: number;
         lifecycleWebhookDeliverDecommissionNotifications?: boolean;
         lifecycleWebhookDeliverInvitationReminders?: boolean;
         lifecycleWebhookEnabled?: boolean;
@@ -982,6 +996,23 @@ function createStudioSettingsHarness() {
             ? {
                 lifecycleAutomationInvitationRemindersEnabled:
                   input.lifecycleAutomationInvitationRemindersEnabled
+              }
+            : {}),
+          ...(input.lifecycleSlaAutomationMaxAgeMinutes !== undefined
+            ? {
+                lifecycleSlaAutomationMaxAgeMinutes:
+                  input.lifecycleSlaAutomationMaxAgeMinutes
+              }
+            : {}),
+          ...(input.lifecycleSlaEnabled !== undefined
+            ? {
+                lifecycleSlaEnabled: input.lifecycleSlaEnabled
+              }
+            : {}),
+          ...(input.lifecycleSlaWebhookFailureThreshold !== undefined
+            ? {
+                lifecycleSlaWebhookFailureThreshold:
+                  input.lifecycleSlaWebhookFailureThreshold
               }
             : {}),
           ...(input.lifecycleWebhookDeliverDecommissionNotifications !== undefined
@@ -1054,6 +1085,9 @@ function createStudioSettingsHarness() {
         lifecycleAutomationDecommissionNoticesEnabled: boolean;
         lifecycleAutomationEnabled: boolean;
         lifecycleAutomationInvitationRemindersEnabled: boolean;
+        lifecycleSlaAutomationMaxAgeMinutes: number;
+        lifecycleSlaEnabled: boolean;
+        lifecycleSlaWebhookFailureThreshold: number;
         lifecycleWebhookDeliverDecommissionNotifications: boolean;
         lifecycleWebhookDeliverInvitationReminders: boolean;
         lifecycleWebhookEnabled: boolean;
@@ -1080,6 +1114,11 @@ function createStudioSettingsHarness() {
           lifecycleAutomationEnabled: input.lifecycleAutomationEnabled,
           lifecycleAutomationInvitationRemindersEnabled:
             input.lifecycleAutomationInvitationRemindersEnabled,
+          lifecycleSlaAutomationMaxAgeMinutes:
+            input.lifecycleSlaAutomationMaxAgeMinutes,
+          lifecycleSlaEnabled: input.lifecycleSlaEnabled,
+          lifecycleSlaWebhookFailureThreshold:
+            input.lifecycleSlaWebhookFailureThreshold,
           lifecycleWebhookDeliverDecommissionNotifications:
             input.lifecycleWebhookDeliverDecommissionNotifications,
           lifecycleWebhookDeliverInvitationReminders:
@@ -1350,6 +1389,58 @@ describe("createStudioSettingsService", () => {
         automateDecommissionNotices: false,
         automateInvitationReminders: true,
         lifecycleAutomationEnabled: false
+      }
+    });
+  });
+
+  it("updates workspace lifecycle SLA policy and records an audit entry", async () => {
+    const harness = createStudioSettingsHarness();
+
+    await harness.service.updateStudioSettings({
+      accentColor: "#8b5e34",
+      brandName: "Forge Editions",
+      brandSlug: "forge-editions",
+      featuredReleaseLabel: "Hero drop",
+      landingDescription: "Storefront copy.",
+      landingHeadline: "Curated collectible releases",
+      ownerUserId: "user_1",
+      themePreset: "editorial_warm",
+      workspaceName: "Forge Operations",
+      workspaceSlug: "forge-operations"
+    });
+
+    const workspaceId = [...harness.workspaces.values()][0]!.id;
+    const result = await harness.service.updateWorkspaceLifecycleSlaPolicy({
+      lifecycleSlaPolicy: {
+        automationMaxAgeMinutes: 90,
+        enabled: true,
+        webhookFailureThreshold: 5
+      },
+      ownerUserId: "user_1",
+      workspaceId
+    });
+    const settings = await harness.service.getStudioSettings({
+      ownerUserId: "user_1",
+      workspaceId
+    });
+
+    expect(result.policy).toEqual({
+      automationMaxAgeMinutes: 90,
+      enabled: true,
+      webhookFailureThreshold: 5
+    });
+    expect(settings.settings?.lifecycleSlaPolicy).toEqual({
+      automationMaxAgeMinutes: 90,
+      enabled: true,
+      webhookFailureThreshold: 5
+    });
+    expect(harness.auditLogs.at(-1)).toMatchObject({
+      action: "workspace_lifecycle_sla_policy_updated",
+      entityType: "workspace",
+      metadataJson: {
+        lifecycleSlaAutomationMaxAgeMinutes: 90,
+        lifecycleSlaEnabled: true,
+        lifecycleSlaWebhookFailureThreshold: 5
       }
     });
   });

@@ -530,6 +530,19 @@ export function OpsRetentionClient({
                         : "disabled"}
                     </span>
                     <span>
+                      SLA {formatStatus(workspace.lifecycleSlaSummary.status)} ·
+                      max age {workspace.lifecycleSlaPolicy.automationMaxAgeMinutes}
+                      m · failure threshold{" "}
+                      {workspace.lifecycleSlaPolicy.webhookFailureThreshold} ·
+                      failed webhooks{" "}
+                      {workspace.lifecycleSlaSummary.failedWebhookCount}
+                      {workspace.lifecycleSlaSummary.reasonCodes.length
+                        ? ` · reasons ${workspace.lifecycleSlaSummary.reasonCodes
+                            .map((reasonCode) => formatStatus(reasonCode))
+                            .join(", ")}`
+                        : ""}
+                    </span>
+                    <span>
                       lifecycle webhook{" "}
                       {workspace.lifecycleDeliveryPolicy.webhookEnabled
                         ? "enabled"

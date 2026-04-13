@@ -100,6 +100,11 @@ export async function PUT(request: Request) {
           ? {
               lifecycleDeliveryPolicy: body.lifecycleDeliveryPolicy
             }
+          : {}),
+        ...(body.lifecycleSlaPolicy !== undefined
+          ? {
+              lifecycleSlaPolicy: body.lifecycleSlaPolicy
+            }
           : {})
       });
 

@@ -26,6 +26,18 @@ function formatCode(value: string) {
   return value.replaceAll("_", " ");
 }
 
+function getSlaTone(status: WorkspaceOffboardingEntry["lifecycleSlaSummary"]["status"]) {
+  if (status === "healthy") {
+    return "success";
+  }
+
+  if (status === "disabled") {
+    return "info";
+  }
+
+  return "error";
+}
+
 export function WorkspaceOffboardingPanel({
   body,
   entries,
@@ -82,6 +94,7 @@ export function WorkspaceOffboardingPanel({
                 <Pill>
                   automation {entry.lifecycleAutomationPolicy.enabled ? "on" : "off"}
                 </Pill>
+                <Pill>SLA {formatCode(entry.lifecycleSlaSummary.status)}</Pill>
                 {entry.decommission ? (
                   <Pill>
                     decommission{" "}
@@ -203,6 +216,25 @@ export function WorkspaceOffboardingPanel({
                   {entry.lifecycleAutomationPolicy.automateDecommissionNotices
                     ? "enabled"
                     : "disabled"}
+                  .
+                </span>
+              </div>
+              <div
+                className={`status-banner status-banner--${getSlaTone(
+                  entry.lifecycleSlaSummary.status
+                )}`}
+              >
+                <strong>Lifecycle SLA</strong>
+                <span>
+                  {entry.lifecycleSlaSummary.message} Policy max age{" "}
+                  {entry.lifecycleSlaPolicy.automationMaxAgeMinutes}m · webhook
+                  threshold {entry.lifecycleSlaPolicy.webhookFailureThreshold}
+                  {" "}· failed webhooks {entry.lifecycleSlaSummary.failedWebhookCount}
+                  {entry.lifecycleSlaSummary.reasonCodes.length
+                    ? ` · reasons ${entry.lifecycleSlaSummary.reasonCodes
+                        .map(formatCode)
+                        .join(", ")}`
+                    : ""}
                   .
                 </span>
               </div>

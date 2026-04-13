@@ -20,6 +20,9 @@ import {
   defaultWorkspaceLifecycleAutomationEnabled,
   defaultWorkspaceLifecycleDecommissionAutomationEnabled,
   defaultWorkspaceLifecycleInvitationAutomationEnabled,
+  defaultWorkspaceLifecycleSlaAutomationMaxAgeMinutes,
+  defaultWorkspaceLifecycleSlaEnabled,
+  defaultWorkspaceLifecycleSlaWebhookFailureThreshold,
   defaultStudioBrandAccentColor,
   defaultStudioBrandLandingDescription,
   defaultStudioBrandLandingHeadline,
@@ -62,6 +65,10 @@ import {
   serializeWorkspaceLifecycleDeliveryPolicy,
   serializeWorkspaceLifecycleNotificationDelivery
 } from "./lifecycle-delivery-service";
+import {
+  createWorkspaceLifecycleSlaSummary,
+  serializeWorkspaceLifecycleSlaPolicy
+} from "./lifecycle-sla";
 
 type WorkspaceOffboardingRepositorySet = {
   auditLogRepository: {
@@ -375,6 +382,9 @@ type WorkspaceOffboardingRepositorySet = {
       lifecycleAutomationDecommissionNoticesEnabled: boolean;
       lifecycleAutomationEnabled: boolean;
       lifecycleAutomationInvitationRemindersEnabled: boolean;
+      lifecycleSlaAutomationMaxAgeMinutes: number;
+      lifecycleSlaEnabled: boolean;
+      lifecycleSlaWebhookFailureThreshold: number;
       lifecycleWebhookDeliverDecommissionNotifications: boolean;
       lifecycleWebhookDeliverInvitationReminders: boolean;
       lifecycleWebhookEnabled: boolean;
@@ -392,6 +402,9 @@ type WorkspaceOffboardingRepositorySet = {
         lifecycleAutomationDecommissionNoticesEnabled: boolean;
         lifecycleAutomationEnabled: boolean;
         lifecycleAutomationInvitationRemindersEnabled: boolean;
+        lifecycleSlaAutomationMaxAgeMinutes: number;
+        lifecycleSlaEnabled: boolean;
+        lifecycleSlaWebhookFailureThreshold: number;
         lifecycleWebhookDeliverDecommissionNotifications: boolean;
         lifecycleWebhookDeliverInvitationReminders: boolean;
         lifecycleWebhookEnabled: boolean;
@@ -1065,6 +1078,41 @@ export function createWorkspaceOffboardingService(
         const scheduledDecommission =
           scheduledDecommissionByWorkspaceId.get(directoryEntry.workspace.id) ??
           null;
+        const workspaceRecord = workspaceById.get(directoryEntry.workspace.id) ?? {
+          decommissionRetentionDaysDefault: 30,
+          decommissionRetentionDaysMinimum: 7,
+          id: directoryEntry.workspace.id,
+          lifecycleAutomationDecommissionNoticesEnabled:
+            defaultWorkspaceLifecycleDecommissionAutomationEnabled,
+          lifecycleAutomationEnabled: defaultWorkspaceLifecycleAutomationEnabled,
+          lifecycleAutomationInvitationRemindersEnabled:
+            defaultWorkspaceLifecycleInvitationAutomationEnabled,
+          lifecycleSlaAutomationMaxAgeMinutes:
+            defaultWorkspaceLifecycleSlaAutomationMaxAgeMinutes,
+          lifecycleSlaEnabled: defaultWorkspaceLifecycleSlaEnabled,
+          lifecycleSlaWebhookFailureThreshold:
+            defaultWorkspaceLifecycleSlaWebhookFailureThreshold,
+          lifecycleWebhookDeliverDecommissionNotifications: true,
+          lifecycleWebhookDeliverInvitationReminders: true,
+          lifecycleWebhookEnabled: false,
+          name: directoryEntry.workspace.name,
+          ownerUserId: directoryEntry.workspace.ownerUserId,
+          requireDecommissionReason: false,
+          slug: directoryEntry.workspace.slug,
+          status: directoryEntry.workspace.status
+        };
+        const lifecycleAutomationPolicy =
+          serializeWorkspaceLifecycleAutomationPolicy(workspaceRecord);
+        const lifecycleDelivery = createWorkspaceLifecycleDeliveryOverview({
+          deliveries:
+            lifecycleDeliveriesByWorkspaceId.get(directoryEntry.workspace.id) ??
+            [],
+          providers: dependencies.transportProviders ?? []
+        });
+        const lifecycleDeliveryPolicy =
+          serializeWorkspaceLifecycleDeliveryPolicy(workspaceRecord);
+        const lifecycleSlaPolicy =
+          serializeWorkspaceLifecycleSlaPolicy(workspaceRecord);
         const summary = createWorkspaceOffboardingSummary({
           activeAlertCount:
             activeAlertCountByWorkspaceId.get(directoryEntry.workspace.id) ?? 0,
@@ -1096,51 +1144,19 @@ export function createWorkspaceOffboardingService(
               notificationCount: 0
             },
           directory: directoryEntry,
-          lifecycleAutomationPolicy:
-            serializeWorkspaceLifecycleAutomationPolicy(
-              workspaceById.get(directoryEntry.workspace.id) ?? {
-                lifecycleAutomationDecommissionNoticesEnabled:
-                  defaultWorkspaceLifecycleDecommissionAutomationEnabled,
-                lifecycleAutomationEnabled:
-                  defaultWorkspaceLifecycleAutomationEnabled,
-                lifecycleAutomationInvitationRemindersEnabled:
-                  defaultWorkspaceLifecycleInvitationAutomationEnabled
-              }
-            ),
-          lifecycleDelivery: createWorkspaceLifecycleDeliveryOverview({
-            deliveries:
-              lifecycleDeliveriesByWorkspaceId.get(directoryEntry.workspace.id) ??
-              [],
-            providers: dependencies.transportProviders ?? []
+          lifecycleAutomationPolicy,
+          lifecycleDelivery,
+          lifecycleDeliveryPolicy,
+          lifecycleSlaPolicy,
+          lifecycleSlaSummary: createWorkspaceLifecycleSlaSummary({
+            lifecycleAutomationHealth:
+              lifecycleAutomationSnapshot.lifecycleAutomationHealth,
+            lifecycleAutomationPolicy,
+            lifecycleDeliveryOverview: lifecycleDelivery,
+            lifecycleDeliveryPolicy,
+            policy: lifecycleSlaPolicy
           }),
-          lifecycleDeliveryPolicy: serializeWorkspaceLifecycleDeliveryPolicy(
-            workspaceById.get(directoryEntry.workspace.id) ?? {
-              decommissionRetentionDaysDefault: 30,
-              decommissionRetentionDaysMinimum: 7,
-              lifecycleAutomationDecommissionNoticesEnabled:
-                defaultWorkspaceLifecycleDecommissionAutomationEnabled,
-              lifecycleAutomationEnabled:
-                defaultWorkspaceLifecycleAutomationEnabled,
-              lifecycleAutomationInvitationRemindersEnabled:
-                defaultWorkspaceLifecycleInvitationAutomationEnabled,
-              lifecycleWebhookDeliverDecommissionNotifications: true,
-              lifecycleWebhookDeliverInvitationReminders: true,
-              lifecycleWebhookEnabled: false,
-              id: directoryEntry.workspace.id,
-              name: directoryEntry.workspace.name,
-              ownerUserId: directoryEntry.workspace.ownerUserId,
-              requireDecommissionReason: false,
-              slug: directoryEntry.workspace.slug,
-              status: directoryEntry.workspace.status
-            }
-          ),
-          retentionPolicy: serializeWorkspaceRetentionPolicy(
-            workspaceById.get(directoryEntry.workspace.id) ?? {
-              decommissionRetentionDaysDefault: 30,
-              decommissionRetentionDaysMinimum: 7,
-              requireDecommissionReason: false
-            }
-          ),
+          retentionPolicy: serializeWorkspaceRetentionPolicy(workspaceRecord),
           summary,
           workspace: directoryEntry.workspace
         };
@@ -1184,6 +1200,8 @@ export function createWorkspaceOffboardingService(
       workspaceId: string;
     }) {
       const now = dependencies.now();
+      const lifecycleAutomationSnapshot =
+        await loadLifecycleAutomationSnapshot();
       const workspace =
         await dependencies.repositories.workspaceRepository.findByIdForOwner({
           id: input.workspaceId,
@@ -1294,6 +1312,15 @@ export function createWorkspaceOffboardingService(
             checkout.fulfillmentStatus === "unfulfilled"
         ).length
       });
+      const lifecycleAutomationPolicy =
+        serializeWorkspaceLifecycleAutomationPolicy(workspace);
+      const lifecycleDeliveryOverview = createWorkspaceLifecycleDeliveryOverview({
+        deliveries: lifecycleDeliveries,
+        providers: dependencies.transportProviders ?? []
+      });
+      const lifecycleDeliveryPolicy =
+        serializeWorkspaceLifecycleDeliveryPolicy(workspace);
+      const lifecycleSlaPolicy = serializeWorkspaceLifecycleSlaPolicy(workspace);
 
       return workspaceExportResponseSchema.parse({
         export: {
@@ -1351,11 +1378,17 @@ export function createWorkspaceOffboardingService(
           lifecycleDeliveries: lifecycleDeliveries.map((delivery) =>
             serializeWorkspaceLifecycleNotificationDelivery(delivery)
           ),
-          lifecycleAutomationPolicy:
-            serializeWorkspaceLifecycleAutomationPolicy(workspace),
-          lifecycleDeliveryPolicy: serializeWorkspaceLifecycleDeliveryPolicy(
-            workspace
-          ),
+          lifecycleAutomationPolicy,
+          lifecycleDeliveryPolicy,
+          lifecycleSlaPolicy,
+          lifecycleSlaSummary: createWorkspaceLifecycleSlaSummary({
+            lifecycleAutomationHealth:
+              lifecycleAutomationSnapshot.lifecycleAutomationHealth,
+            lifecycleAutomationPolicy,
+            lifecycleDeliveryOverview,
+            lifecycleDeliveryPolicy,
+            policy: lifecycleSlaPolicy
+          }),
           members: [
             serializeWorkspaceMember({
               addedAt: null,
@@ -1446,6 +1479,13 @@ export function createWorkspaceOffboardingService(
         row.lifecycleAutomationPolicy.automateDecommissionNotices
           ? "yes"
           : "no",
+        row.lifecycleSlaPolicy.enabled ? "yes" : "no",
+        row.lifecycleSlaPolicy.automationMaxAgeMinutes,
+        row.lifecycleSlaPolicy.webhookFailureThreshold,
+        row.lifecycleSlaSummary.status,
+        row.lifecycleSlaSummary.reasonCodes.join("|"),
+        row.lifecycleSlaSummary.failedWebhookCount,
+        row.lifecycleSlaSummary.lastAutomationRunAt ?? "",
         row.lifecycleDeliveryPolicy.webhookEnabled ? "yes" : "no",
         row.lifecycleDeliveryPolicy.deliverInvitationReminders ? "yes" : "no",
         row.lifecycleDeliveryPolicy.deliverDecommissionNotifications
@@ -1504,6 +1544,13 @@ export function createWorkspaceOffboardingService(
           "lifecycle_automation_enabled",
           "lifecycle_automate_invitation_reminders",
           "lifecycle_automate_decommission_notices",
+          "lifecycle_sla_enabled",
+          "lifecycle_sla_automation_max_age_minutes",
+          "lifecycle_sla_webhook_failure_threshold",
+          "lifecycle_sla_status",
+          "lifecycle_sla_reason_codes",
+          "lifecycle_sla_failed_webhook_count",
+          "lifecycle_sla_last_automation_run_at",
           "lifecycle_webhook_enabled",
           "lifecycle_deliver_invitation_reminders",
           "lifecycle_deliver_decommission_notifications",

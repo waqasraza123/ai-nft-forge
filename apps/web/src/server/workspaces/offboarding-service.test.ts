@@ -26,6 +26,22 @@ function createWorkspaceOffboardingHarness() {
         };
       }
     },
+    lifecycleAutomationSnapshotLoader: async () => ({
+      lifecycleAutomationHealth: {
+        enabled: true,
+        intervalSeconds: 300,
+        jitterSeconds: 15,
+        lastRunAgeSeconds: 60,
+        lastRunAt: "2026-04-12T04:59:00.000Z",
+        latestRun: null,
+        lockTtlSeconds: 600,
+        message:
+          "Automatic lifecycle scheduling is active and recent runs are arriving on schedule.",
+        runOnStart: true,
+        status: "healthy" as const
+      },
+      recentLifecycleAutomationRuns: []
+    }),
     now: () => new Date("2026-04-12T05:00:00.000Z"),
     transportProviders: [
       {
@@ -441,6 +457,11 @@ function createWorkspaceOffboardingHarness() {
               input.id !== "workspace_blocked",
             lifecycleAutomationEnabled: input.id !== "workspace_blocked",
             lifecycleAutomationInvitationRemindersEnabled: true,
+            lifecycleSlaAutomationMaxAgeMinutes:
+              input.id === "workspace_ready" ? 120 : 180,
+            lifecycleSlaEnabled: input.id !== "workspace_blocked",
+            lifecycleSlaWebhookFailureThreshold:
+              input.id === "workspace_review" ? 1 : 3,
             lifecycleWebhookDeliverDecommissionNotifications: true,
             lifecycleWebhookDeliverInvitationReminders:
               input.id !== "workspace_blocked",
@@ -463,6 +484,11 @@ function createWorkspaceOffboardingHarness() {
               workspaceId !== "workspace_blocked",
             lifecycleAutomationEnabled: workspaceId !== "workspace_blocked",
             lifecycleAutomationInvitationRemindersEnabled: true,
+            lifecycleSlaAutomationMaxAgeMinutes:
+              workspaceId === "workspace_ready" ? 120 : 180,
+            lifecycleSlaEnabled: workspaceId !== "workspace_blocked",
+            lifecycleSlaWebhookFailureThreshold:
+              workspaceId === "workspace_review" ? 1 : 3,
             lifecycleWebhookDeliverDecommissionNotifications: true,
             lifecycleWebhookDeliverInvitationReminders:
               workspaceId !== "workspace_blocked",
@@ -598,6 +624,15 @@ describe("createWorkspaceOffboardingService", () => {
         automateInvitationReminders: true,
         enabled: true
       },
+      lifecycleSlaPolicy: {
+        automationMaxAgeMinutes: 120,
+        enabled: true,
+        webhookFailureThreshold: 3
+      },
+      lifecycleSlaSummary: {
+        failedWebhookCount: 0,
+        status: "healthy"
+      },
       summary: {
         readiness: "ready"
       }
@@ -638,8 +673,14 @@ describe("createWorkspaceOffboardingService", () => {
       automateInvitationReminders: true,
       enabled: true
     });
+    expect(result.export.lifecycleSlaPolicy).toEqual({
+      automationMaxAgeMinutes: 180,
+      enabled: true,
+      webhookFailureThreshold: 1
+    });
     expect(csv).toContain("workspace_slug");
     expect(csv).toContain("lifecycle_automation_enabled");
+    expect(csv).toContain("lifecycle_sla_status");
     expect(csv).toContain("retention_default_days");
     expect(csv).toContain("decommission_notification_count");
     expect(csv).toContain("slug-workspace-review");

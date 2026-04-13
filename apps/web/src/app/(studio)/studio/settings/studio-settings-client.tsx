@@ -14,6 +14,9 @@ import {
   defaultWorkspaceLifecycleAutomationEnabled,
   defaultWorkspaceLifecycleDecommissionAutomationEnabled,
   defaultWorkspaceLifecycleInvitationAutomationEnabled,
+  defaultWorkspaceLifecycleSlaAutomationMaxAgeMinutes,
+  defaultWorkspaceLifecycleSlaEnabled,
+  defaultWorkspaceLifecycleSlaWebhookFailureThreshold,
   defaultWorkspaceDecommissionRetentionDays,
   defaultWorkspaceMinimumDecommissionRetentionDays,
   defaultStudioBrandAccentColor,
@@ -28,6 +31,7 @@ import {
   studioWorkspaceInvitationReminderResponseSchema,
   studioWorkspaceInvitationResponseSchema,
   studioWorkspaceLifecycleAutomationPolicyResponseSchema,
+  studioWorkspaceLifecycleSlaPolicyResponseSchema,
   workspaceLifecycleNotificationDeliveryRetryResponseSchema,
   studioWorkspaceMemberDeleteResponseSchema,
   studioWorkspaceRoleEscalationActionResponseSchema,
@@ -44,6 +48,8 @@ import {
   type StudioWorkspaceInvitationSummary,
   type StudioWorkspaceLifecycleAutomationPolicy,
   type StudioWorkspaceLifecycleDeliveryPolicy,
+  type StudioWorkspaceLifecycleSlaPolicy,
+  type StudioWorkspaceLifecycleSlaSummary,
   type StudioWorkspaceMemberSummary,
   type StudioWorkspaceRoleEscalationSummary,
   type StudioWorkspaceRetentionPolicy,
@@ -83,6 +89,9 @@ type StudioBrandEditorState = {
   automateDecommissionNotices: boolean;
   automateInvitationReminders: boolean;
   automationEnabled: boolean;
+  lifecycleSlaAutomationMaxAgeMinutes: number;
+  lifecycleSlaEnabled: boolean;
+  lifecycleSlaWebhookFailureThreshold: number;
   brandName: string;
   brandSlug: string;
   customDomain: string;
@@ -173,6 +182,20 @@ function resolveWorkspaceLifecycleAutomationPolicy(
   );
 }
 
+function resolveWorkspaceLifecycleSlaPolicy(
+  settings: StudioSettingsSummary | null
+): StudioWorkspaceLifecycleSlaPolicy {
+  return (
+    settings?.lifecycleSlaPolicy ?? {
+      automationMaxAgeMinutes:
+        defaultWorkspaceLifecycleSlaAutomationMaxAgeMinutes,
+      enabled: defaultWorkspaceLifecycleSlaEnabled,
+      webhookFailureThreshold:
+        defaultWorkspaceLifecycleSlaWebhookFailureThreshold
+    }
+  );
+}
+
 function formatTimestamp(value: string | null) {
   if (!value) {
     return null;
@@ -234,6 +257,13 @@ function createInitialEditorState(settings: StudioSettingsSummary | null) {
     automateInvitationReminders:
       settings?.lifecycleAutomationPolicy.automateInvitationReminders ?? true,
     automationEnabled: settings?.lifecycleAutomationPolicy.enabled ?? true,
+    lifecycleSlaAutomationMaxAgeMinutes:
+      settings?.lifecycleSlaPolicy.automationMaxAgeMinutes ??
+      defaultWorkspaceLifecycleSlaAutomationMaxAgeMinutes,
+    lifecycleSlaEnabled: settings?.lifecycleSlaPolicy.enabled ?? true,
+    lifecycleSlaWebhookFailureThreshold:
+      settings?.lifecycleSlaPolicy.webhookFailureThreshold ??
+      defaultWorkspaceLifecycleSlaWebhookFailureThreshold,
     brandName: brand?.name ?? "",
     brandSlug: brand?.slug ?? "",
     customDomain: brand?.customDomain ?? "",
@@ -273,6 +303,7 @@ function createEditorState(input: {
   lifecycleAutomationPolicy: StudioWorkspaceLifecycleAutomationPolicy;
   retentionPolicy: StudioWorkspaceRetentionPolicy;
   lifecycleDeliveryPolicy: StudioWorkspaceLifecycleDeliveryPolicy;
+  lifecycleSlaPolicy: StudioWorkspaceLifecycleSlaPolicy;
   workspace: StudioSettingsSummary["workspace"] | null;
 }): StudioBrandEditorState {
   return {
@@ -282,6 +313,11 @@ function createEditorState(input: {
     automateInvitationReminders:
       input.lifecycleAutomationPolicy.automateInvitationReminders,
     automationEnabled: input.lifecycleAutomationPolicy.enabled,
+    lifecycleSlaAutomationMaxAgeMinutes:
+      input.lifecycleSlaPolicy.automationMaxAgeMinutes,
+    lifecycleSlaEnabled: input.lifecycleSlaPolicy.enabled,
+    lifecycleSlaWebhookFailureThreshold:
+      input.lifecycleSlaPolicy.webhookFailureThreshold,
     brandName: input.brand?.name ?? "",
     brandSlug: input.brand?.slug ?? "",
     customDomain: input.brand?.customDomain ?? "",
@@ -359,6 +395,20 @@ function formatWorkspaceStatus(status: StudioWorkspaceStatus) {
 
 function formatStatus(value: string) {
   return value.replaceAll("_", " ");
+}
+
+function getSlaTone(
+  status: StudioWorkspaceLifecycleSlaSummary["status"] | "unreachable"
+) {
+  if (status === "healthy") {
+    return "success";
+  }
+
+  if (status === "disabled") {
+    return "info";
+  }
+
+  return "error";
 }
 
 function formatWorkspaceOffboardingCode(code: string) {
@@ -536,6 +586,8 @@ export function StudioSettingsClient({
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingLifecycleAutomationPolicy, setIsSavingLifecycleAutomationPolicy] =
     useState(false);
+  const [isSavingLifecycleSlaPolicy, setIsSavingLifecycleSlaPolicy] =
+    useState(false);
   const [isCreatingBrand, setIsCreatingBrand] = useState(false);
   const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false);
   const [isCreatingInvitation, setIsCreatingInvitation] = useState(false);
@@ -596,6 +648,8 @@ export function StudioSettingsClient({
     resolveWorkspaceLifecycleDeliveryPolicy(settings);
   const lifecycleAutomationPolicy =
     resolveWorkspaceLifecycleAutomationPolicy(settings);
+  const lifecycleSlaPolicy = resolveWorkspaceLifecycleSlaPolicy(settings);
+  const lifecycleSlaSummary = settings?.lifecycleSlaSummary ?? null;
   const lifecycleAutomationHealth = settings?.lifecycleAutomationHealth ?? null;
   const lifecycleNotificationProviders =
     settings?.lifecycleNotificationProviders ?? [];
@@ -673,6 +727,7 @@ export function StudioSettingsClient({
           resolveWorkspaceLifecycleAutomationPolicy(settings),
         lifecycleDeliveryPolicy:
           resolveWorkspaceLifecycleDeliveryPolicy(settings),
+        lifecycleSlaPolicy: resolveWorkspaceLifecycleSlaPolicy(settings),
         retentionPolicy: resolveWorkspaceRetentionPolicy(settings),
         workspace: settings?.workspace ?? null
       })
@@ -782,6 +837,13 @@ export function StudioSettingsClient({
               editorState.automateInvitationReminders,
             enabled: editorState.automationEnabled
           },
+          lifecycleSlaPolicy: {
+            automationMaxAgeMinutes:
+              editorState.lifecycleSlaAutomationMaxAgeMinutes,
+            enabled: editorState.lifecycleSlaEnabled,
+            webhookFailureThreshold:
+              editorState.lifecycleSlaWebhookFailureThreshold
+          },
           lifecycleDeliveryPolicy: {
             deliverDecommissionNotifications:
               editorState.deliverDecommissionNotifications,
@@ -888,6 +950,64 @@ export function StudioSettingsClient({
       });
     } finally {
       setIsSavingLifecycleAutomationPolicy(false);
+    }
+  }
+
+  async function handleSaveLifecycleSlaPolicy() {
+    if (!settings?.workspace.id || !canManageLifecycleAutomation) {
+      setNotice({
+        message:
+          settings?.workspace.id
+            ? "Only workspace owners can change lifecycle SLA policy."
+            : "Choose a workspace before changing lifecycle SLA policy.",
+        tone: "error"
+      });
+      return;
+    }
+
+    setIsSavingLifecycleSlaPolicy(true);
+    setNotice({
+      message: "Saving lifecycle SLA policy…",
+      tone: "info"
+    });
+
+    try {
+      await parseJsonResponse({
+        response: await fetch(
+          `/api/studio/workspaces/${settings.workspace.id}/lifecycle-sla-policy`,
+          {
+            body: JSON.stringify({
+              automationMaxAgeMinutes:
+                editorState.lifecycleSlaAutomationMaxAgeMinutes,
+              enabled: editorState.lifecycleSlaEnabled,
+              webhookFailureThreshold:
+                editorState.lifecycleSlaWebhookFailureThreshold
+            }),
+            headers: {
+              "Content-Type": "application/json"
+            },
+            method: "PUT"
+          }
+        ),
+        schema: studioWorkspaceLifecycleSlaPolicyResponseSchema
+      });
+      await refreshSettings({
+        silent: true
+      });
+      setNotice({
+        message: "Lifecycle SLA policy saved.",
+        tone: "success"
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Lifecycle SLA policy could not be saved.",
+        tone: "error"
+      });
+    } finally {
+      setIsSavingLifecycleSlaPolicy(false);
     }
   }
 
@@ -2471,6 +2591,139 @@ export function StudioSettingsClient({
                   {isSavingLifecycleAutomationPolicy
                     ? "Saving…"
                     : "Save lifecycle automation"}
+                </button>
+              </fieldset>
+            </form>
+          )}
+        </SurfaceCard>
+        <SurfaceCard
+          body="Workspace SLA policy turns lifecycle automation health and webhook delivery failures into an explicit owner-controlled threshold instead of relying on ad hoc review."
+          eyebrow={lifecycleSlaSummary?.status ?? "unreachable"}
+          span={4}
+          title="Lifecycle SLA policy"
+        >
+          {!canManageWorkspace ? (
+            <div className="status-banner status-banner--info">
+              <strong>Operator read-only</strong>
+              <span>
+                Operators can review lifecycle SLA state, but only workspace
+                owners can change it.
+              </span>
+            </div>
+          ) : null}
+          {!settings?.workspace ? (
+            <div className="status-banner status-banner--info">
+              <strong>No workspace selected</strong>
+              <span>Choose a workspace before changing lifecycle SLA policy.</span>
+            </div>
+          ) : (
+            <form
+              className="studio-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void handleSaveLifecycleSlaPolicy();
+              }}
+            >
+              <fieldset
+                disabled={!canManageLifecycleAutomation || isSavingLifecycleSlaPolicy}
+              >
+                <label className="field-stack">
+                  <span className="field-label">SLA monitoring</span>
+                  <select
+                    className="input-field"
+                    onChange={(event) => {
+                      setEditorState((current) => ({
+                        ...current,
+                        lifecycleSlaEnabled: event.target.value === "enabled"
+                      }));
+                    }}
+                    value={editorState.lifecycleSlaEnabled ? "enabled" : "disabled"}
+                  >
+                    <option value="enabled">Enabled</option>
+                    <option value="disabled">Disabled</option>
+                  </select>
+                </label>
+                <label className="field-stack">
+                  <span className="field-label">Automation max age (minutes)</span>
+                  <input
+                    className="input-field"
+                    min={5}
+                    onChange={(event) => {
+                      const value = Number(event.target.value);
+
+                      setEditorState((current) => ({
+                        ...current,
+                        lifecycleSlaAutomationMaxAgeMinutes: Number.isFinite(value)
+                          ? value
+                          : current.lifecycleSlaAutomationMaxAgeMinutes
+                      }));
+                    }}
+                    step={1}
+                    type="number"
+                    value={editorState.lifecycleSlaAutomationMaxAgeMinutes}
+                  />
+                </label>
+                <label className="field-stack">
+                  <span className="field-label">Webhook failure threshold</span>
+                  <input
+                    className="input-field"
+                    min={1}
+                    onChange={(event) => {
+                      const value = Number(event.target.value);
+
+                      setEditorState((current) => ({
+                        ...current,
+                        lifecycleSlaWebhookFailureThreshold: Number.isFinite(value)
+                          ? value
+                          : current.lifecycleSlaWebhookFailureThreshold
+                      }));
+                    }}
+                    step={1}
+                    type="number"
+                    value={editorState.lifecycleSlaWebhookFailureThreshold}
+                  />
+                </label>
+                <div
+                  className={`status-banner status-banner--${getSlaTone(
+                    lifecycleSlaSummary?.status ?? "unreachable"
+                  )}`}
+                >
+                  <strong>{lifecycleSlaSummary?.status ?? "unreachable"}</strong>
+                  <span>
+                    {lifecycleSlaSummary?.message ??
+                      "Lifecycle SLA summary is not available on this service instance."}
+                  </span>
+                </div>
+                <div className="pill-row">
+                  <Pill>
+                    Current {lifecycleSlaPolicy.enabled ? "enabled" : "disabled"}
+                  </Pill>
+                  <Pill>
+                    Max age {lifecycleSlaPolicy.automationMaxAgeMinutes}m
+                  </Pill>
+                  <Pill>
+                    Failure threshold {lifecycleSlaPolicy.webhookFailureThreshold}
+                  </Pill>
+                  <Pill>
+                    Failed webhooks {lifecycleSlaSummary?.failedWebhookCount ?? 0}
+                  </Pill>
+                  <Pill>
+                    Last automation{" "}
+                    {formatTimestamp(lifecycleSlaSummary?.lastAutomationRunAt ?? null) ??
+                      "n/a"}
+                  </Pill>
+                </div>
+                {lifecycleSlaSummary?.reasonCodes.length ? (
+                  <div className="pill-row">
+                    {lifecycleSlaSummary.reasonCodes.map((reasonCode) => (
+                      <Pill key={reasonCode}>{formatStatus(reasonCode)}</Pill>
+                    ))}
+                  </div>
+                ) : null}
+                <button className="button-action" type="submit">
+                  {isSavingLifecycleSlaPolicy
+                    ? "Saving…"
+                    : "Save lifecycle SLA"}
                 </button>
               </fieldset>
             </form>

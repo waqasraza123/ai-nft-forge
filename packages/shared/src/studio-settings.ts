@@ -12,7 +12,9 @@ import {
   workspaceLifecycleAutomationRunSummarySchema,
   workspaceLifecycleDeliveryPolicySchema,
   workspaceLifecycleNotificationDeliverySummarySchema,
-  workspaceLifecycleNotificationTransportProviderSchema
+  workspaceLifecycleNotificationTransportProviderSchema,
+  workspaceLifecycleSlaPolicySchema,
+  workspaceLifecycleSlaSummarySchema
 } from "./workspace-lifecycle.js";
 import { workspaceRetentionPolicySchema } from "./workspace-policy.js";
 
@@ -210,6 +212,7 @@ export const studioWorkspaceAuditActionSchema = z.enum([
   "workspace_invitation_created",
   "workspace_invitation_reminder_sent",
   "workspace_lifecycle_delivery_policy_updated",
+  "workspace_lifecycle_sla_policy_updated",
   "workspace_member_added",
   "workspace_member_removed",
   "workspace_decommission_notification_recorded",
@@ -250,6 +253,8 @@ export const studioSettingsSummarySchema = z.object({
     workspaceLifecycleAutomationRunSummarySchema
   ),
   lifecycleDeliveryPolicy: workspaceLifecycleDeliveryPolicySchema,
+  lifecycleSlaPolicy: workspaceLifecycleSlaPolicySchema,
+  lifecycleSlaSummary: workspaceLifecycleSlaSummarySchema,
   recentLifecycleDeliveries: z.array(
     workspaceLifecycleNotificationDeliverySummarySchema
   ),
@@ -315,6 +320,7 @@ export const studioSettingsUpdateRequestSchema = z.object({
   wordmark: studioBrandWordmarkSchema.nullish(),
   lifecycleAutomationPolicy: workspaceLifecycleAutomationPolicySchema.nullish(),
   lifecycleDeliveryPolicy: workspaceLifecycleDeliveryPolicySchema.nullish(),
+  lifecycleSlaPolicy: workspaceLifecycleSlaPolicySchema.nullish(),
   retentionPolicy: workspaceRetentionPolicySchema.nullish(),
   workspaceName: studioWorkspaceNameSchema,
   workspaceSlug: studioWorkspaceSlugSchema
@@ -371,6 +377,11 @@ export const studioWorkspaceInvitationReminderResponseSchema = z.object({
 
 export const studioWorkspaceLifecycleAutomationPolicyResponseSchema = z.object({
   policy: workspaceLifecycleAutomationPolicySchema
+});
+
+export const studioWorkspaceLifecycleSlaPolicyResponseSchema = z.object({
+  policy: workspaceLifecycleSlaPolicySchema,
+  summary: workspaceLifecycleSlaSummarySchema
 });
 
 export const studioWorkspaceInvitationDeleteResponseSchema = z.object({
@@ -449,6 +460,12 @@ export type StudioWorkspaceLifecycleDeliveryPolicy = z.infer<
 export type StudioWorkspaceLifecycleAutomationPolicy = z.infer<
   typeof workspaceLifecycleAutomationPolicySchema
 >;
+export type StudioWorkspaceLifecycleSlaPolicy = z.infer<
+  typeof workspaceLifecycleSlaPolicySchema
+>;
+export type StudioWorkspaceLifecycleSlaSummary = z.infer<
+  typeof workspaceLifecycleSlaSummarySchema
+>;
 export type StudioWorkspaceLifecycleNotificationTransportProvider = z.infer<
   typeof workspaceLifecycleNotificationTransportProviderSchema
 >;
@@ -504,6 +521,9 @@ export type StudioWorkspaceInvitationDeleteResponse = z.infer<
 >;
 export type StudioWorkspaceLifecycleAutomationPolicyResponse = z.infer<
   typeof studioWorkspaceLifecycleAutomationPolicyResponseSchema
+>;
+export type StudioWorkspaceLifecycleSlaPolicyResponse = z.infer<
+  typeof studioWorkspaceLifecycleSlaPolicyResponseSchema
 >;
 export type StudioWorkspaceInvitationReminderResponse = z.infer<
   typeof studioWorkspaceInvitationReminderResponseSchema

@@ -12,11 +12,45 @@ export const workspaceLifecycleDeliveryPolicySchema = z.object({
 export const defaultWorkspaceLifecycleAutomationEnabled = true;
 export const defaultWorkspaceLifecycleInvitationAutomationEnabled = true;
 export const defaultWorkspaceLifecycleDecommissionAutomationEnabled = true;
+export const defaultWorkspaceLifecycleSlaEnabled = true;
+export const defaultWorkspaceLifecycleSlaWebhookFailureThreshold = 3;
+export const defaultWorkspaceLifecycleSlaAutomationMaxAgeMinutes = 180;
 
 export const workspaceLifecycleAutomationPolicySchema = z.object({
   automateDecommissionNotices: z.boolean(),
   automateInvitationReminders: z.boolean(),
   enabled: z.boolean()
+});
+
+export const workspaceLifecycleSlaPolicySchema = z.object({
+  automationMaxAgeMinutes: z.number().int().min(5).max(1440),
+  enabled: z.boolean(),
+  webhookFailureThreshold: z.number().int().min(1).max(20)
+});
+
+export const workspaceLifecycleSlaStatusSchema = z.enum([
+  "disabled",
+  "healthy",
+  "warning",
+  "breached"
+]);
+
+export const workspaceLifecycleSlaReasonCodeSchema = z.enum([
+  "automation_unreachable",
+  "automation_warning",
+  "automation_stale",
+  "webhook_failure_threshold_exceeded",
+  "webhook_failures_present"
+]);
+
+export const workspaceLifecycleSlaSummarySchema = z.object({
+  automationMaxAgeMinutes: z.number().int().min(5).max(1440),
+  failedWebhookCount: z.number().int().min(0),
+  lastAutomationRunAt: z.string().datetime().nullable(),
+  message: z.string().min(1),
+  reasonCodes: z.array(workspaceLifecycleSlaReasonCodeSchema),
+  status: workspaceLifecycleSlaStatusSchema,
+  webhookFailureThreshold: z.number().int().min(1).max(20)
 });
 
 export const workspaceLifecycleNotificationEventKindSchema = z.enum([
@@ -315,6 +349,9 @@ export type WorkspaceLifecycleDeliveryPolicy = z.infer<
 export type WorkspaceLifecycleAutomationPolicy = z.infer<
   typeof workspaceLifecycleAutomationPolicySchema
 >;
+export type WorkspaceLifecycleSlaPolicy = z.infer<
+  typeof workspaceLifecycleSlaPolicySchema
+>;
 export type WorkspaceLifecycleNotificationEventKind = z.infer<
   typeof workspaceLifecycleNotificationEventKindSchema
 >;
@@ -362,4 +399,13 @@ export type WorkspaceLifecycleAutomationHealthStatus = z.infer<
 >;
 export type WorkspaceLifecycleAutomationHealth = z.infer<
   typeof workspaceLifecycleAutomationHealthSchema
+>;
+export type WorkspaceLifecycleSlaStatus = z.infer<
+  typeof workspaceLifecycleSlaStatusSchema
+>;
+export type WorkspaceLifecycleSlaReasonCode = z.infer<
+  typeof workspaceLifecycleSlaReasonCodeSchema
+>;
+export type WorkspaceLifecycleSlaSummary = z.infer<
+  typeof workspaceLifecycleSlaSummarySchema
 >;

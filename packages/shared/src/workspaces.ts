@@ -23,7 +23,9 @@ import {
   workspaceLifecycleAutomationPolicySchema,
   workspaceLifecycleAutomationRunSummarySchema,
   workspaceLifecycleNotificationDeliveryOverviewSchema,
-  workspaceLifecycleNotificationDeliverySummarySchema
+  workspaceLifecycleNotificationDeliverySummarySchema,
+  workspaceLifecycleSlaPolicySchema,
+  workspaceLifecycleSlaSummarySchema
 } from "./workspace-lifecycle.js";
 import { workspaceDecommissionRetentionDaysSchema } from "./workspace-policy.js";
 
@@ -116,6 +118,8 @@ export const workspaceOffboardingEntrySchema = z.object({
   lifecycleAutomationPolicy: workspaceLifecycleAutomationPolicySchema,
   lifecycleDelivery: workspaceLifecycleNotificationDeliveryOverviewSchema,
   lifecycleDeliveryPolicy: studioWorkspaceLifecycleDeliveryPolicySchema,
+  lifecycleSlaPolicy: workspaceLifecycleSlaPolicySchema,
+  lifecycleSlaSummary: workspaceLifecycleSlaSummarySchema,
   retentionPolicy: studioWorkspaceRetentionPolicySchema,
   summary: workspaceOffboardingSummarySchema,
   workspace: studioWorkspaceScopeSummarySchema
@@ -318,6 +322,8 @@ export const workspaceExportResponseSchema = z.object({
     ),
     lifecycleAutomationPolicy: workspaceLifecycleAutomationPolicySchema,
     lifecycleDeliveryPolicy: studioWorkspaceLifecycleDeliveryPolicySchema,
+    lifecycleSlaPolicy: workspaceLifecycleSlaPolicySchema,
+    lifecycleSlaSummary: workspaceLifecycleSlaSummarySchema,
     members: z.array(studioWorkspaceMemberSummarySchema),
     offboarding: workspaceOffboardingSummarySchema,
     ownerWalletAddress: z.string().min(1),

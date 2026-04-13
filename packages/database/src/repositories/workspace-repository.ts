@@ -10,6 +10,9 @@ type CreateWorkspaceInput = {
   lifecycleAutomationDecommissionNoticesEnabled?: boolean;
   lifecycleAutomationEnabled?: boolean;
   lifecycleAutomationInvitationRemindersEnabled?: boolean;
+  lifecycleSlaAutomationMaxAgeMinutes?: number;
+  lifecycleSlaEnabled?: boolean;
+  lifecycleSlaWebhookFailureThreshold?: number;
   lifecycleWebhookDeliverDecommissionNotifications?: boolean;
   lifecycleWebhookDeliverInvitationReminders?: boolean;
   lifecycleWebhookEnabled?: boolean;
@@ -155,6 +158,9 @@ export function createWorkspaceRepository(
       lifecycleAutomationDecommissionNoticesEnabled: boolean;
       lifecycleAutomationEnabled: boolean;
       lifecycleAutomationInvitationRemindersEnabled: boolean;
+      lifecycleSlaAutomationMaxAgeMinutes: number;
+      lifecycleSlaEnabled: boolean;
+      lifecycleSlaWebhookFailureThreshold: number;
       lifecycleWebhookDeliverDecommissionNotifications: boolean;
       lifecycleWebhookDeliverInvitationReminders: boolean;
       lifecycleWebhookEnabled: boolean;
@@ -176,6 +182,11 @@ export function createWorkspaceRepository(
             lifecycleAutomationEnabled: input.lifecycleAutomationEnabled,
             lifecycleAutomationInvitationRemindersEnabled:
               input.lifecycleAutomationInvitationRemindersEnabled,
+            lifecycleSlaAutomationMaxAgeMinutes:
+              input.lifecycleSlaAutomationMaxAgeMinutes,
+            lifecycleSlaEnabled: input.lifecycleSlaEnabled,
+            lifecycleSlaWebhookFailureThreshold:
+              input.lifecycleSlaWebhookFailureThreshold,
             lifecycleWebhookDeliverDecommissionNotifications:
               input.lifecycleWebhookDeliverDecommissionNotifications,
             lifecycleWebhookDeliverInvitationReminders:

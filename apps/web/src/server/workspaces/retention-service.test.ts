@@ -266,6 +266,38 @@ function createWorkspaceRetentionHarness() {
                 automateInvitationReminders: true,
                 enabled: workspace.id !== "workspace_blocked"
               },
+              lifecycleSlaPolicy: {
+                automationMaxAgeMinutes:
+                  workspace.id === "workspace_ready" ? 120 : 180,
+                enabled: workspace.id !== "workspace_blocked",
+                webhookFailureThreshold:
+                  workspace.id === "workspace_review" ? 1 : 3
+              },
+              lifecycleSlaSummary: {
+                automationMaxAgeMinutes:
+                  workspace.id === "workspace_ready" ? 120 : 180,
+                failedWebhookCount:
+                  workspace.id === "workspace_review" ? 1 : 0,
+                lastAutomationRunAt: "2026-04-12T06:59:00.000Z",
+                message:
+                  workspace.id === "workspace_review"
+                    ? "Lifecycle SLA is breached: webhook delivery failures exceeded the configured threshold."
+                    : workspace.id === "workspace_blocked"
+                      ? "Lifecycle SLA monitoring is disabled for this workspace."
+                      : "Lifecycle automation and webhook delivery are within the workspace SLA policy.",
+                reasonCodes:
+                  workspace.id === "workspace_review"
+                    ? (["webhook_failure_threshold_exceeded"] as const)
+                    : [],
+                status:
+                  workspace.id === "workspace_review"
+                    ? ("breached" as const)
+                    : workspace.id === "workspace_blocked"
+                      ? ("disabled" as const)
+                      : ("healthy" as const),
+                webhookFailureThreshold:
+                  workspace.id === "workspace_review" ? 1 : 3
+              },
               lifecycleDeliveryPolicy: {
                 deliverDecommissionNotifications: true,
                 deliverInvitationReminders: workspace.id !== "workspace_blocked",
@@ -382,6 +414,11 @@ describe("createWorkspaceRetentionService", () => {
       automateInvitationReminders: true,
       enabled: false
     });
+    expect(report.report.workspaces[1]?.lifecycleSlaSummary).toMatchObject({
+      failedWebhookCount: 1,
+      status: "breached",
+      webhookFailureThreshold: 1
+    });
     expect(report.report.workspaces[2]?.retentionPolicy).toEqual({
       defaultDecommissionRetentionDays: 45,
       minimumDecommissionRetentionDays: 7,
@@ -389,6 +426,7 @@ describe("createWorkspaceRetentionService", () => {
     });
     expect(csv).toContain("decommission_status");
     expect(csv).toContain("lifecycle_automation_enabled");
+    expect(csv).toContain("lifecycle_sla_status");
     expect(csv).toContain("decommission_next_due_kind");
     expect(csv).toContain("retention_default_days");
     expect(csv).toContain("workspace_ready");

@@ -2,6 +2,9 @@ import {
   defaultWorkspaceLifecycleAutomationEnabled,
   defaultWorkspaceLifecycleDecommissionAutomationEnabled,
   defaultWorkspaceLifecycleInvitationAutomationEnabled,
+  defaultWorkspaceLifecycleSlaAutomationMaxAgeMinutes,
+  defaultWorkspaceLifecycleSlaEnabled,
+  defaultWorkspaceLifecycleSlaWebhookFailureThreshold,
   defaultWorkspaceDecommissionRetentionDays,
   defaultWorkspaceMinimumDecommissionRetentionDays,
   defaultWorkspaceRequireDecommissionReason,
@@ -25,6 +28,7 @@ import {
   studioWorkspaceInvitationReminderResponseSchema,
   studioWorkspaceInvitationResponseSchema,
   studioWorkspaceLifecycleAutomationPolicyResponseSchema,
+  studioWorkspaceLifecycleSlaPolicyResponseSchema,
   studioSettingsResponseSchema,
   studioSettingsUpdateRequestSchema,
   studioWorkspaceMemberCreateRequestSchema,
@@ -34,22 +38,30 @@ import {
   studioWorkspaceRoleEscalationResponseSchema,
   workspaceLifecycleDeliveryPolicySchema,
   workspaceLifecycleAutomationPolicySchema,
+  workspaceLifecycleSlaPolicySchema,
   workspaceRetentionPolicySchema,
   type WorkspaceLifecycleAutomationHealth,
   type WorkspaceLifecycleAutomationPolicy,
   type WorkspaceLifecycleAutomationRunSummary,
   type WorkspaceLifecycleDeliveryPolicy,
+  type WorkspaceLifecycleSlaPolicy,
   type StudioWorkspaceRole,
   type StudioWorkspaceStatus
 } from "@ai-nft-forge/shared";
 
 import { StudioSettingsServiceError } from "./error";
 import {
+  createWorkspaceLifecycleDeliveryOverview,
   serializeWorkspaceLifecycleNotificationDelivery,
   serializeWorkspaceLifecycleDeliveryPolicy,
   type WorkspaceLifecycleOwnerRecord,
   type WorkspaceLifecyclePolicyWorkspaceRecord
 } from "../workspaces/lifecycle-delivery-service";
+import {
+  createWorkspaceLifecycleSlaSummary,
+  serializeWorkspaceLifecycleSlaPolicy,
+  type WorkspaceLifecycleSlaPolicyWorkspaceRecord
+} from "../workspaces/lifecycle-sla";
 import {
   canSendWorkspaceInvitationReminder,
   getWorkspaceInvitationReminderReadyAt,
@@ -62,6 +74,9 @@ type WorkspaceRecord = WorkspaceLifecyclePolicyWorkspaceRecord & {
   lifecycleAutomationDecommissionNoticesEnabled: boolean;
   lifecycleAutomationEnabled: boolean;
   lifecycleAutomationInvitationRemindersEnabled: boolean;
+  lifecycleSlaAutomationMaxAgeMinutes: number;
+  lifecycleSlaEnabled: boolean;
+  lifecycleSlaWebhookFailureThreshold: number;
   requireDecommissionReason: boolean;
 };
 
@@ -407,6 +422,9 @@ type StudioSettingsRepositorySet = {
       lifecycleAutomationDecommissionNoticesEnabled?: boolean;
       lifecycleAutomationEnabled?: boolean;
       lifecycleAutomationInvitationRemindersEnabled?: boolean;
+      lifecycleSlaAutomationMaxAgeMinutes?: number;
+      lifecycleSlaEnabled?: boolean;
+      lifecycleSlaWebhookFailureThreshold?: number;
       lifecycleWebhookDeliverDecommissionNotifications?: boolean;
       lifecycleWebhookDeliverInvitationReminders?: boolean;
       lifecycleWebhookEnabled?: boolean;
@@ -432,6 +450,9 @@ type StudioSettingsRepositorySet = {
       lifecycleAutomationDecommissionNoticesEnabled: boolean;
       lifecycleAutomationEnabled: boolean;
       lifecycleAutomationInvitationRemindersEnabled: boolean;
+      lifecycleSlaAutomationMaxAgeMinutes: number;
+      lifecycleSlaEnabled: boolean;
+      lifecycleSlaWebhookFailureThreshold: number;
       lifecycleWebhookDeliverDecommissionNotifications: boolean;
       lifecycleWebhookDeliverInvitationReminders: boolean;
       lifecycleWebhookEnabled: boolean;
@@ -648,6 +669,10 @@ function currentLifecycleDeliveryPolicy(workspace: WorkspaceRecord) {
   });
 }
 
+function currentLifecycleSlaPolicy(workspace: WorkspaceRecord) {
+  return serializeWorkspaceLifecycleSlaPolicy(workspace);
+}
+
 function lifecycleAutomationPoliciesEqual(input: {
   next: WorkspaceLifecycleAutomationPolicy;
   workspace: WorkspaceRecord;
@@ -677,6 +702,21 @@ function lifecycleDeliveryPoliciesEqual(input: {
     currentPolicy.deliverInvitationReminders ===
       input.next.deliverInvitationReminders &&
     currentPolicy.webhookEnabled === input.next.webhookEnabled
+  );
+}
+
+function lifecycleSlaPoliciesEqual(input: {
+  next: WorkspaceLifecycleSlaPolicy;
+  workspace: WorkspaceRecord;
+}) {
+  const currentPolicy = currentLifecycleSlaPolicy(input.workspace);
+
+  return (
+    currentPolicy.automationMaxAgeMinutes ===
+      input.next.automationMaxAgeMinutes &&
+    currentPolicy.enabled === input.next.enabled &&
+    currentPolicy.webhookFailureThreshold ===
+      input.next.webhookFailureThreshold
   );
 }
 
@@ -870,6 +910,29 @@ async function serializeStudioSettings(input: {
 
     return serializedAuditEntry ? [serializedAuditEntry] : [];
   });
+  const lifecycleAutomationPolicy =
+    serializeWorkspaceLifecycleAutomationPolicy(input.workspace);
+  const lifecycleAutomationHealth =
+    input.lifecycleAutomationSnapshot?.lifecycleAutomationHealth ?? {
+      enabled: false,
+      intervalSeconds: null,
+      jitterSeconds: null,
+      lastRunAgeSeconds: null,
+      lastRunAt: null,
+      latestRun: null,
+      lockTtlSeconds: null,
+      message:
+        "Lifecycle automation health is not available on this service instance.",
+      runOnStart: null,
+      status: "unreachable" as const
+    };
+  const lifecycleDeliveryPolicy =
+    serializeWorkspaceLifecycleDeliveryPolicy(input.workspace);
+  const lifecycleDeliveryOverview = createWorkspaceLifecycleDeliveryOverview({
+    deliveries: lifecycleDeliveries,
+    providers: input.lifecycleDeliveryService?.getTransportProviders() ?? []
+  });
+  const lifecycleSlaPolicy = currentLifecycleSlaPolicy(input.workspace);
 
   return studioSettingsResponseSchema.parse({
     settings: {
@@ -880,27 +943,19 @@ async function serializeStudioSettings(input: {
       invitations: invitations.map((invitation) =>
         serializeWorkspaceInvitation(invitation)
       ),
-      lifecycleAutomationPolicy:
-        serializeWorkspaceLifecycleAutomationPolicy(input.workspace),
-      lifecycleAutomationHealth:
-        input.lifecycleAutomationSnapshot?.lifecycleAutomationHealth ?? {
-          enabled: false,
-          intervalSeconds: null,
-          jitterSeconds: null,
-          lastRunAgeSeconds: null,
-          lastRunAt: null,
-          latestRun: null,
-          lockTtlSeconds: null,
-          message:
-            "Lifecycle automation health is not available on this service instance.",
-          runOnStart: null,
-          status: "unreachable"
-        },
+      lifecycleAutomationPolicy,
+      lifecycleAutomationHealth,
       lifecycleNotificationProviders:
         input.lifecycleDeliveryService?.getTransportProviders() ?? [],
-      lifecycleDeliveryPolicy: serializeWorkspaceLifecycleDeliveryPolicy(
-        input.workspace
-      ),
+      lifecycleDeliveryPolicy,
+      lifecycleSlaPolicy,
+      lifecycleSlaSummary: createWorkspaceLifecycleSlaSummary({
+        lifecycleAutomationHealth,
+        lifecycleAutomationPolicy,
+        lifecycleDeliveryOverview,
+        lifecycleDeliveryPolicy,
+        policy: lifecycleSlaPolicy
+      }),
       recentLifecycleAutomationRuns:
         input.lifecycleAutomationSnapshot?.recentLifecycleAutomationRuns ?? [],
       recentLifecycleDeliveries: lifecycleDeliveries.map((delivery) =>
@@ -1072,6 +1127,7 @@ async function recordWorkspaceAuditLog(input: {
     | "workspace_invitation_created"
     | "workspace_invitation_reminder_sent"
     | "workspace_lifecycle_automation_policy_updated"
+    | "workspace_lifecycle_sla_policy_updated"
     | "workspace_member_added"
     | "workspace_member_removed"
     | "workspace_lifecycle_delivery_policy_updated"
@@ -1086,6 +1142,7 @@ async function recordWorkspaceAuditLog(input: {
   actor: UserRecord;
   automationPolicy?: WorkspaceLifecycleAutomationPolicy;
   lifecycleDeliveryPolicy?: WorkspaceLifecycleDeliveryPolicy;
+  lifecycleSlaPolicy?: WorkspaceLifecycleSlaPolicy;
   membershipId?: string | null;
   policy?: ReturnType<typeof serializeWorkspaceRetentionPolicy>;
   requestId?: string | null;
@@ -1144,6 +1201,15 @@ async function recordWorkspaceAuditLog(input: {
             deliverInvitationReminders:
               input.lifecycleDeliveryPolicy.deliverInvitationReminders,
             webhookEnabled: input.lifecycleDeliveryPolicy.webhookEnabled
+          }
+        : {}),
+      ...(input.lifecycleSlaPolicy
+        ? {
+            lifecycleSlaAutomationMaxAgeMinutes:
+              input.lifecycleSlaPolicy.automationMaxAgeMinutes,
+            lifecycleSlaEnabled: input.lifecycleSlaPolicy.enabled,
+            lifecycleSlaWebhookFailureThreshold:
+              input.lifecycleSlaPolicy.webhookFailureThreshold
           }
         : {}),
       ...(input.targetUserId
@@ -1406,6 +1472,11 @@ export function createStudioSettingsService(
             lifecycleAutomationEnabled: workspace.lifecycleAutomationEnabled,
             lifecycleAutomationInvitationRemindersEnabled:
               workspace.lifecycleAutomationInvitationRemindersEnabled,
+            lifecycleSlaAutomationMaxAgeMinutes:
+              workspace.lifecycleSlaAutomationMaxAgeMinutes,
+            lifecycleSlaEnabled: workspace.lifecycleSlaEnabled,
+            lifecycleSlaWebhookFailureThreshold:
+              workspace.lifecycleSlaWebhookFailureThreshold,
             lifecycleWebhookDeliverDecommissionNotifications:
               workspace.lifecycleWebhookDeliverDecommissionNotifications,
             lifecycleWebhookDeliverInvitationReminders:
@@ -1543,6 +1614,7 @@ export function createStudioSettingsService(
       themePreset: "editorial_warm" | "gallery_mono" | "midnight_launch";
       lifecycleDeliveryPolicy?: WorkspaceLifecycleDeliveryPolicy | null;
       lifecycleAutomationPolicy?: WorkspaceLifecycleAutomationPolicy | null;
+      lifecycleSlaPolicy?: WorkspaceLifecycleSlaPolicy | null;
       retentionPolicy?: {
         defaultDecommissionRetentionDays: number;
         minimumDecommissionRetentionDays: number;
@@ -1573,6 +1645,7 @@ export function createStudioSettingsService(
         wordmark: input.wordmark,
         lifecycleAutomationPolicy: input.lifecycleAutomationPolicy,
         lifecycleDeliveryPolicy: input.lifecycleDeliveryPolicy,
+        lifecycleSlaPolicy: input.lifecycleSlaPolicy,
         retentionPolicy: input.retentionPolicy,
         workspaceName: input.workspaceName,
         workspaceSlug: input.workspaceSlug
@@ -1666,6 +1739,18 @@ export function createStudioSettingsService(
                     enabled: defaultWorkspaceLifecycleAutomationEnabled
                   })
           );
+        const nextLifecycleSlaPolicy = workspaceLifecycleSlaPolicySchema.parse(
+          parsedInput.lifecycleSlaPolicy ??
+            (existingWorkspace
+              ? currentLifecycleSlaPolicy(existingWorkspace)
+              : {
+                  automationMaxAgeMinutes:
+                    defaultWorkspaceLifecycleSlaAutomationMaxAgeMinutes,
+                  enabled: defaultWorkspaceLifecycleSlaEnabled,
+                  webhookFailureThreshold:
+                    defaultWorkspaceLifecycleSlaWebhookFailureThreshold
+                })
+        );
 
         if (
           existingBrand &&
@@ -1691,6 +1776,11 @@ export function createStudioSettingsService(
             lifecycleAutomationEnabled: nextLifecycleAutomationPolicy.enabled,
             lifecycleAutomationInvitationRemindersEnabled:
               nextLifecycleAutomationPolicy.automateInvitationReminders,
+            lifecycleSlaAutomationMaxAgeMinutes:
+              nextLifecycleSlaPolicy.automationMaxAgeMinutes,
+            lifecycleSlaEnabled: nextLifecycleSlaPolicy.enabled,
+            lifecycleSlaWebhookFailureThreshold:
+              nextLifecycleSlaPolicy.webhookFailureThreshold,
             lifecycleWebhookDeliverDecommissionNotifications:
               nextLifecycleDeliveryPolicy.deliverDecommissionNotifications,
             lifecycleWebhookDeliverInvitationReminders:
@@ -1718,6 +1808,11 @@ export function createStudioSettingsService(
             lifecycleAutomationEnabled: nextLifecycleAutomationPolicy.enabled,
             lifecycleAutomationInvitationRemindersEnabled:
               nextLifecycleAutomationPolicy.automateInvitationReminders,
+            lifecycleSlaAutomationMaxAgeMinutes:
+              nextLifecycleSlaPolicy.automationMaxAgeMinutes,
+            lifecycleSlaEnabled: nextLifecycleSlaPolicy.enabled,
+            lifecycleSlaWebhookFailureThreshold:
+              nextLifecycleSlaPolicy.webhookFailureThreshold,
             lifecycleWebhookDeliverDecommissionNotifications:
               nextLifecycleDeliveryPolicy.deliverDecommissionNotifications,
             lifecycleWebhookDeliverInvitationReminders:
@@ -1855,6 +1950,35 @@ export function createStudioSettingsService(
         if (
           existingWorkspace &&
           persistedWorkspace &&
+          !lifecycleSlaPoliciesEqual({
+            next: nextLifecycleSlaPolicy,
+            workspace: existingWorkspace
+          })
+        ) {
+          const owner = await repositories.userRepository.findById(
+            input.ownerUserId
+          );
+
+          if (!owner) {
+            throw new StudioSettingsServiceError(
+              "WORKSPACE_REQUIRED",
+              "Workspace ownership could not be resolved.",
+              409
+            );
+          }
+
+          await recordWorkspaceAuditLog({
+            action: "workspace_lifecycle_sla_policy_updated",
+            actor: owner,
+            lifecycleSlaPolicy: nextLifecycleSlaPolicy,
+            repositories,
+            workspaceId: existingWorkspace.id
+          });
+        }
+
+        if (
+          existingWorkspace &&
+          persistedWorkspace &&
           !lifecycleDeliveryPoliciesEqual({
             next: nextLifecycleDeliveryPolicy,
             workspace: existingWorkspace
@@ -1936,6 +2060,11 @@ export function createStudioSettingsService(
             lifecycleAutomationEnabled: nextLifecycleAutomationPolicy.enabled,
             lifecycleAutomationInvitationRemindersEnabled:
               nextLifecycleAutomationPolicy.automateInvitationReminders,
+            lifecycleSlaAutomationMaxAgeMinutes:
+              workspace.lifecycleSlaAutomationMaxAgeMinutes,
+            lifecycleSlaEnabled: workspace.lifecycleSlaEnabled,
+            lifecycleSlaWebhookFailureThreshold:
+              workspace.lifecycleSlaWebhookFailureThreshold,
             lifecycleWebhookDeliverDecommissionNotifications:
               workspace.lifecycleWebhookDeliverDecommissionNotifications,
             lifecycleWebhookDeliverInvitationReminders:
@@ -1958,6 +2087,135 @@ export function createStudioSettingsService(
 
         return studioWorkspaceLifecycleAutomationPolicyResponseSchema.parse({
           policy: serializeWorkspaceLifecycleAutomationPolicy(updatedWorkspace)
+        });
+      });
+    },
+
+    async updateWorkspaceLifecycleSlaPolicy(input: {
+      lifecycleSlaPolicy: WorkspaceLifecycleSlaPolicy;
+      ownerUserId: string;
+      role?: StudioWorkspaceRole;
+      workspaceId: string;
+    }) {
+      assertOwnerRole(input.role ?? "owner");
+
+      const nextLifecycleSlaPolicy = workspaceLifecycleSlaPolicySchema.parse(
+        input.lifecycleSlaPolicy
+      );
+
+      return dependencies.runTransaction(async (repositories) => {
+        const { owner, workspace } = await requireOwnerWorkspace({
+          ownerUserId: input.ownerUserId,
+          repositories,
+          workspaceId: input.workspaceId
+        });
+
+        if (
+          lifecycleSlaPoliciesEqual({
+            next: nextLifecycleSlaPolicy,
+            workspace
+          })
+        ) {
+          return studioWorkspaceLifecycleSlaPolicyResponseSchema.parse({
+            policy: currentLifecycleSlaPolicy(workspace),
+            summary: createWorkspaceLifecycleSlaSummary({
+              lifecycleAutomationHealth:
+                dependencies.lifecycleAutomationSnapshotLoader
+                  ? (
+                      await dependencies.lifecycleAutomationSnapshotLoader()
+                    ).lifecycleAutomationHealth
+                  : null,
+              lifecycleAutomationPolicy:
+                serializeWorkspaceLifecycleAutomationPolicy(workspace),
+              lifecycleDeliveryOverview: createWorkspaceLifecycleDeliveryOverview(
+                {
+                  deliveries:
+                    await repositories.workspaceLifecycleNotificationDeliveryRepository.listRecentByWorkspaceId(
+                      {
+                        limit: 50,
+                        workspaceId: workspace.id
+                      }
+                    ),
+                  providers:
+                    dependencies.lifecycleDeliveryService?.getTransportProviders() ??
+                    []
+                }
+              ),
+              lifecycleDeliveryPolicy:
+                serializeWorkspaceLifecycleDeliveryPolicy(workspace),
+              policy: currentLifecycleSlaPolicy(workspace)
+            })
+          });
+        }
+
+        const updatedWorkspace =
+          await repositories.workspaceRepository.updateByIdForOwner({
+            decommissionRetentionDaysDefault:
+              workspace.decommissionRetentionDaysDefault,
+            decommissionRetentionDaysMinimum:
+              workspace.decommissionRetentionDaysMinimum,
+            id: workspace.id,
+            lifecycleAutomationDecommissionNoticesEnabled:
+              workspace.lifecycleAutomationDecommissionNoticesEnabled,
+            lifecycleAutomationEnabled: workspace.lifecycleAutomationEnabled,
+            lifecycleAutomationInvitationRemindersEnabled:
+              workspace.lifecycleAutomationInvitationRemindersEnabled,
+            lifecycleSlaAutomationMaxAgeMinutes:
+              nextLifecycleSlaPolicy.automationMaxAgeMinutes,
+            lifecycleSlaEnabled: nextLifecycleSlaPolicy.enabled,
+            lifecycleSlaWebhookFailureThreshold:
+              nextLifecycleSlaPolicy.webhookFailureThreshold,
+            lifecycleWebhookDeliverDecommissionNotifications:
+              workspace.lifecycleWebhookDeliverDecommissionNotifications,
+            lifecycleWebhookDeliverInvitationReminders:
+              workspace.lifecycleWebhookDeliverInvitationReminders,
+            lifecycleWebhookEnabled: workspace.lifecycleWebhookEnabled,
+            name: workspace.name,
+            ownerUserId: input.ownerUserId,
+            requireDecommissionReason: workspace.requireDecommissionReason,
+            slug: workspace.slug,
+            status: workspace.status
+          });
+        const [lifecycleDeliveries, lifecycleAutomationSnapshot] =
+          await Promise.all([
+            repositories.workspaceLifecycleNotificationDeliveryRepository.listRecentByWorkspaceId(
+              {
+                limit: 50,
+                workspaceId: updatedWorkspace.id
+              }
+            ),
+            dependencies.lifecycleAutomationSnapshotLoader
+              ? dependencies.lifecycleAutomationSnapshotLoader()
+              : Promise.resolve(null)
+          ]);
+
+        await recordWorkspaceAuditLog({
+          action: "workspace_lifecycle_sla_policy_updated",
+          actor: owner,
+          lifecycleSlaPolicy: nextLifecycleSlaPolicy,
+          repositories,
+          workspaceId: updatedWorkspace.id
+        });
+
+        const lifecycleDeliveryPolicy =
+          serializeWorkspaceLifecycleDeliveryPolicy(updatedWorkspace);
+
+        return studioWorkspaceLifecycleSlaPolicyResponseSchema.parse({
+          policy: currentLifecycleSlaPolicy(updatedWorkspace),
+          summary: createWorkspaceLifecycleSlaSummary({
+            lifecycleAutomationHealth:
+              lifecycleAutomationSnapshot?.lifecycleAutomationHealth ?? null,
+            lifecycleAutomationPolicy:
+              serializeWorkspaceLifecycleAutomationPolicy(updatedWorkspace),
+            lifecycleDeliveryOverview: createWorkspaceLifecycleDeliveryOverview({
+              deliveries: lifecycleDeliveries,
+              providers:
+                dependencies.lifecycleDeliveryService?.getTransportProviders() ??
+                []
+            }),
+            lifecycleDeliveryPolicy,
+            policy: currentLifecycleSlaPolicy(updatedWorkspace)
+          })
         });
       });
     },
