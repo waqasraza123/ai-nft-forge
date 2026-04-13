@@ -1,4 +1,8 @@
-import type { WorkerEnv } from "@ai-nft-forge/shared";
+import {
+  resolveWorkspaceLifecycleWebhookProviders,
+  type WorkerEnv,
+  type WorkspaceLifecycleNotificationProviderKey
+} from "@ai-nft-forge/shared";
 
 type FetchLike = typeof fetch;
 
@@ -7,7 +11,7 @@ type DeliverWorkspaceLifecycleWebhookInput = {
   payload: unknown;
 };
 
-type WorkspaceLifecycleWebhookClientDependencies = {
+type WorkspaceLifecycleWebhookProviderRegistryDependencies = {
   env: Pick<
     WorkerEnv,
     | "WORKER_SERVICE_NAME"
@@ -15,64 +19,96 @@ type WorkspaceLifecycleWebhookClientDependencies = {
     | "WORKSPACE_LIFECYCLE_WEBHOOK_ENABLED"
     | "WORKSPACE_LIFECYCLE_WEBHOOK_TIMEOUT_MS"
     | "WORKSPACE_LIFECYCLE_WEBHOOK_URL"
+    | "WORKSPACE_LIFECYCLE_WEBHOOK_SECONDARY_BEARER_TOKEN"
+    | "WORKSPACE_LIFECYCLE_WEBHOOK_SECONDARY_ENABLED"
+    | "WORKSPACE_LIFECYCLE_WEBHOOK_SECONDARY_TIMEOUT_MS"
+    | "WORKSPACE_LIFECYCLE_WEBHOOK_SECONDARY_URL"
   >;
   fetchFn?: FetchLike;
 };
 
-export function createWorkspaceLifecycleWebhookClient({
+export type WorkspaceLifecycleWebhookProviderBoundary = {
+  deliver(input: DeliverWorkspaceLifecycleWebhookInput): Promise<void>;
+  enabled: boolean;
+  key: WorkspaceLifecycleNotificationProviderKey;
+  label: string;
+};
+
+export function createWorkspaceLifecycleWebhookProviderRegistry({
   env,
   fetchFn = fetch
-}: WorkspaceLifecycleWebhookClientDependencies) {
-  const webhookUrl = env.WORKSPACE_LIFECYCLE_WEBHOOK_URL ?? null;
+}: WorkspaceLifecycleWebhookProviderRegistryDependencies) {
+  const providers = resolveWorkspaceLifecycleWebhookProviders(env).map(
+    (provider): WorkspaceLifecycleWebhookProviderBoundary => ({
+      enabled: provider.enabled,
+      key: provider.key,
+      label: provider.label,
 
-  return {
-    enabled: env.WORKSPACE_LIFECYCLE_WEBHOOK_ENABLED && webhookUrl !== null,
+      async deliver(input: DeliverWorkspaceLifecycleWebhookInput) {
+        if (!provider.enabled || !provider.url) {
+          throw new Error(
+            `${provider.label} workspace lifecycle delivery is not configured.`
+          );
+        }
 
-    async deliver(input: DeliverWorkspaceLifecycleWebhookInput) {
-      if (!env.WORKSPACE_LIFECYCLE_WEBHOOK_ENABLED || !webhookUrl) {
+        const response = await fetchFn(provider.url, {
+          body: JSON.stringify({
+            ...(typeof input.payload === "object" && input.payload !== null
+              ? input.payload
+              : {
+                  payload: input.payload
+                }),
+            deliveryId: input.deliveryId,
+            providerKey: provider.key,
+            service: env.WORKER_SERVICE_NAME
+          }),
+          headers: {
+            Accept: "application/json",
+            ...(provider.bearerToken
+              ? {
+                  Authorization: `Bearer ${provider.bearerToken}`
+                }
+              : {}),
+            "Content-Type": "application/json",
+            "X-AI-NFT-Forge-Workspace-Lifecycle-Provider": provider.key
+          },
+          method: "POST",
+          signal: AbortSignal.timeout(provider.timeoutMs)
+        });
+
+        if (response.ok) {
+          return;
+        }
+
+        const responseText = (await response.text().catch(() => "")).trim();
+
         throw new Error(
-          "Workspace lifecycle webhook delivery is not configured."
+          responseText
+            ? `${provider.label} returned ${response.status}: ${responseText}`
+            : `${provider.label} returned ${response.status}.`
         );
       }
+    })
+  );
+  const providersByKey = new Map(
+    providers.map((provider) => [provider.key, provider] as const)
+  );
 
-      const response = await fetchFn(webhookUrl, {
-        body: JSON.stringify({
-          ...(typeof input.payload === "object" && input.payload !== null
-            ? input.payload
-            : {
-                payload: input.payload
-              }),
-          deliveryId: input.deliveryId,
-          service: env.WORKER_SERVICE_NAME
-        }),
-        headers: {
-          Accept: "application/json",
-          ...(env.WORKSPACE_LIFECYCLE_WEBHOOK_BEARER_TOKEN
-            ? {
-                Authorization: `Bearer ${env.WORKSPACE_LIFECYCLE_WEBHOOK_BEARER_TOKEN}`
-              }
-            : {}),
-          "Content-Type": "application/json"
-        },
-        method: "POST",
-        signal: AbortSignal.timeout(env.WORKSPACE_LIFECYCLE_WEBHOOK_TIMEOUT_MS)
-      });
-
-      if (response.ok) {
-        return;
+  return {
+    enabledProviderKeys: providers
+      .filter((provider) => provider.enabled)
+      .map((provider) => provider.key),
+    providers,
+    resolveProvider(key: WorkspaceLifecycleNotificationProviderKey | null) {
+      if (key) {
+        return providersByKey.get(key) ?? null;
       }
 
-      const responseText = (await response.text().catch(() => "")).trim();
-
-      throw new Error(
-        responseText
-          ? `Workspace lifecycle webhook returned ${response.status}: ${responseText}`
-          : `Workspace lifecycle webhook returned ${response.status}.`
-      );
+      return providers.find((provider) => provider.enabled) ?? null;
     }
   };
 }
 
-export type WorkspaceLifecycleWebhookBoundary = ReturnType<
-  typeof createWorkspaceLifecycleWebhookClient
+export type WorkspaceLifecycleWebhookProviderRegistry = ReturnType<
+  typeof createWorkspaceLifecycleWebhookProviderRegistry
 >;

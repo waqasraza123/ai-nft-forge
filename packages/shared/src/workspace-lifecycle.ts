@@ -19,6 +19,11 @@ export const workspaceLifecycleNotificationDeliveryChannelSchema = z.enum([
   "webhook"
 ]);
 
+export const workspaceLifecycleNotificationProviderKeySchema = z.enum([
+  "primary",
+  "secondary"
+]);
+
 export const workspaceLifecycleNotificationDeliveryStateSchema = z.enum([
   "queued",
   "processing",
@@ -50,8 +55,19 @@ export const workspaceLifecycleNotificationDeliverySummarySchema = z.object({
   invitationId: z.string().min(1).nullable(),
   invitationWalletAddress: walletAddressSchema.nullable(),
   lastAttemptedAt: z.string().datetime().nullable(),
+  providerKey: workspaceLifecycleNotificationProviderKeySchema.nullable(),
   queuedAt: z.string().datetime().nullable(),
   updatedAt: z.string().datetime()
+});
+
+export const workspaceLifecycleNotificationProviderSummarySchema = z.object({
+  deliveredCount: z.number().int().min(0),
+  failedCount: z.number().int().min(0),
+  key: workspaceLifecycleNotificationProviderKeySchema,
+  label: z.string().min(1),
+  latestDelivery: workspaceLifecycleNotificationDeliverySummarySchema.nullable(),
+  queuedCount: z.number().int().min(0),
+  skippedCount: z.number().int().min(0)
 });
 
 export const workspaceLifecycleNotificationDeliveryChannelOverviewSchema =
@@ -68,9 +84,16 @@ export const workspaceLifecycleNotificationDeliveryOverviewSchema = z.object({
   deliveredCount: z.number().int().min(0),
   failedCount: z.number().int().min(0),
   latestDelivery: workspaceLifecycleNotificationDeliverySummarySchema.nullable(),
+  providers: z.array(workspaceLifecycleNotificationProviderSummarySchema),
   queuedCount: z.number().int().min(0),
   skippedCount: z.number().int().min(0),
   webhook: workspaceLifecycleNotificationDeliveryChannelOverviewSchema
+});
+
+export const workspaceLifecycleNotificationTransportProviderSchema = z.object({
+  enabled: z.boolean(),
+  key: workspaceLifecycleNotificationProviderKeySchema,
+  label: z.string().min(1)
 });
 
 export const workspaceLifecycleNotificationDeliveryRetryResponseSchema =
@@ -133,6 +156,13 @@ export const workspaceInvitationReminderCooldownMilliseconds =
   24 * 60 * 60 * 1000;
 export const workspaceDecommissionUpcomingNotificationWindowMilliseconds =
   72 * 60 * 60 * 1000;
+export const workspaceLifecycleNotificationProviderLabels: Record<
+  WorkspaceLifecycleNotificationProviderKey,
+  string
+> = {
+  primary: "Primary webhook",
+  secondary: "Secondary webhook"
+};
 
 export function getWorkspaceInvitationStatus(input: {
   expiresAt: Date;
@@ -215,12 +245,13 @@ export function getNextWorkspaceDecommissionNotificationKind(input: {
 }
 
 export function resolveWorkspaceLifecycleDeliveryDecision(input: {
+  availableProviderKeys: WorkspaceLifecycleNotificationProviderKey[];
   eventKind: WorkspaceLifecycleNotificationEventKind;
-  transportEnabled: boolean;
   workspacePolicy: WorkspaceLifecycleDeliveryPolicy;
 }) {
   if (!input.workspacePolicy.webhookEnabled) {
     return {
+      providerKeys: [] as WorkspaceLifecycleNotificationProviderKey[],
       failureMessage:
         "Lifecycle webhook delivery is disabled for this workspace.",
       shouldQueue: false
@@ -232,6 +263,7 @@ export function resolveWorkspaceLifecycleDeliveryDecision(input: {
     !input.workspacePolicy.deliverInvitationReminders
   ) {
     return {
+      providerKeys: [] as WorkspaceLifecycleNotificationProviderKey[],
       failureMessage:
         "Invitation reminder webhook delivery is disabled for this workspace.",
       shouldQueue: false
@@ -243,14 +275,18 @@ export function resolveWorkspaceLifecycleDeliveryDecision(input: {
     !input.workspacePolicy.deliverDecommissionNotifications
   ) {
     return {
+      providerKeys: [] as WorkspaceLifecycleNotificationProviderKey[],
       failureMessage:
         "Decommission notice webhook delivery is disabled for this workspace.",
       shouldQueue: false
     };
   }
 
-  if (!input.transportEnabled) {
+  const providerKeys = [...new Set(input.availableProviderKeys)];
+
+  if (providerKeys.length === 0) {
     return {
+      providerKeys,
       failureMessage: "Worker lifecycle webhook transport is not configured.",
       shouldQueue: false
     };
@@ -258,6 +294,7 @@ export function resolveWorkspaceLifecycleDeliveryDecision(input: {
 
   return {
     failureMessage: null,
+    providerKeys,
     shouldQueue: true
   };
 }
@@ -271,8 +308,14 @@ export type WorkspaceLifecycleNotificationEventKind = z.infer<
 export type WorkspaceLifecycleNotificationDeliveryChannel = z.infer<
   typeof workspaceLifecycleNotificationDeliveryChannelSchema
 >;
+export type WorkspaceLifecycleNotificationProviderKey = z.infer<
+  typeof workspaceLifecycleNotificationProviderKeySchema
+>;
 export type WorkspaceLifecycleNotificationDeliveryState = z.infer<
   typeof workspaceLifecycleNotificationDeliveryStateSchema
+>;
+export type WorkspaceLifecycleNotificationProviderSummary = z.infer<
+  typeof workspaceLifecycleNotificationProviderSummarySchema
 >;
 export type WorkspaceLifecycleNotificationDeliveryChannelOverview = z.infer<
   typeof workspaceLifecycleNotificationDeliveryChannelOverviewSchema
@@ -285,6 +328,9 @@ export type WorkspaceLifecycleNotificationDeliverySummary = z.infer<
 >;
 export type WorkspaceLifecycleNotificationDeliveryOverview = z.infer<
   typeof workspaceLifecycleNotificationDeliveryOverviewSchema
+>;
+export type WorkspaceLifecycleNotificationTransportProvider = z.infer<
+  typeof workspaceLifecycleNotificationTransportProviderSchema
 >;
 export type WorkspaceLifecycleNotificationDeliveryRetryResponse = z.infer<
   typeof workspaceLifecycleNotificationDeliveryRetryResponseSchema

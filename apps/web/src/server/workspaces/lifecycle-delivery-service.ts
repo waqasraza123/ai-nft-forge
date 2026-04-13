@@ -1,11 +1,15 @@
 import {
   resolveWorkspaceLifecycleDeliveryDecision,
+  workspaceLifecycleNotificationProviderLabels,
+  workspaceLifecycleNotificationTransportProviderSchema,
   workspaceLifecycleDeliveryPolicySchema,
   workspaceLifecycleNotificationDeliveryOverviewSchema,
   workspaceLifecycleNotificationDeliverySummarySchema,
   type WorkspaceLifecycleDeliveryPolicy,
   type WorkspaceLifecycleNotificationDeliverySummary,
-  type WorkspaceLifecycleNotificationEventKind
+  type WorkspaceLifecycleNotificationEventKind,
+  type WorkspaceLifecycleNotificationProviderKey,
+  type WorkspaceLifecycleNotificationTransportProvider
 } from "@ai-nft-forge/shared";
 
 import { StudioSettingsServiceError } from "../studio-settings/error";
@@ -71,9 +75,16 @@ type WorkspaceLifecycleDeliveryRecord = {
   invitationId: string | null;
   lastAttemptedAt: Date | null;
   payloadJson: unknown;
+  providerKey?: WorkspaceLifecycleNotificationProviderKey | null;
   queuedAt: Date | null;
   updatedAt: Date;
   workspaceId: string;
+};
+
+type WorkspaceLifecycleTransportProviderRecord = {
+  enabled: boolean;
+  key: WorkspaceLifecycleNotificationProviderKey;
+  label: string;
 };
 
 type WorkspaceLifecycleDeliveryServiceDependencies = {
@@ -100,6 +111,7 @@ type WorkspaceLifecycleDeliveryServiceDependencies = {
         invitationId?: string | null;
         ownerUserId: string;
         payloadJson: unknown;
+        providerKey?: WorkspaceLifecycleNotificationProviderKey | null;
         queuedAt?: Date | null;
         workspaceId: string;
       }): Promise<WorkspaceLifecycleDeliveryRecord>;
@@ -120,6 +132,7 @@ type WorkspaceLifecycleDeliveryServiceDependencies = {
         failureMessage?: string | null;
         id: string;
         lastAttemptedAt?: Date | null;
+        providerKey?: WorkspaceLifecycleNotificationProviderKey | null;
         queuedAt?: Date | null;
       }): Promise<WorkspaceLifecycleDeliveryRecord>;
     };
@@ -131,7 +144,7 @@ type WorkspaceLifecycleDeliveryServiceDependencies = {
     };
   };
   transport: {
-    enabled: boolean;
+    providers: WorkspaceLifecycleTransportProviderRecord[];
   };
 };
 
@@ -224,6 +237,14 @@ export function serializeWorkspaceLifecycleDeliveryPolicy(
   });
 }
 
+export function getWorkspaceLifecycleTransportProviders(input: {
+  providers: WorkspaceLifecycleTransportProviderRecord[];
+}) {
+  return input.providers.map((provider) =>
+    serializeWorkspaceLifecycleTransportProvider(provider)
+  );
+}
+
 export function serializeWorkspaceLifecycleNotificationDelivery(
   delivery: WorkspaceLifecycleDeliveryRecord
 ): WorkspaceLifecycleNotificationDeliverySummary {
@@ -243,12 +264,20 @@ export function serializeWorkspaceLifecycleNotificationDelivery(
     invitationId: delivery.invitationId,
     invitationWalletAddress: delivery.invitation?.walletAddress ?? null,
     lastAttemptedAt: delivery.lastAttemptedAt?.toISOString() ?? null,
+    providerKey: delivery.providerKey,
     queuedAt: delivery.queuedAt?.toISOString() ?? null,
     updatedAt: delivery.updatedAt.toISOString()
   });
 }
 
+export function serializeWorkspaceLifecycleTransportProvider(
+  provider: WorkspaceLifecycleTransportProviderRecord
+): WorkspaceLifecycleNotificationTransportProvider {
+  return workspaceLifecycleNotificationTransportProviderSchema.parse(provider);
+}
+
 export function createWorkspaceLifecycleDeliveryOverview(input: {
+  providers: WorkspaceLifecycleTransportProviderRecord[];
   deliveries: WorkspaceLifecycleDeliveryRecord[];
 }) {
   const sortedDeliveries = [...input.deliveries].sort((left, right) => {
@@ -269,6 +298,45 @@ export function createWorkspaceLifecycleDeliveryOverview(input: {
       (delivery) => delivery.deliveryChannel === "webhook"
     )
   } as const;
+  const providerOverviews = input.providers.map((provider) => {
+    const providerDeliveries = input.deliveries.filter(
+      (delivery) =>
+        delivery.deliveryChannel === "webhook" &&
+        delivery.providerKey === provider.key
+    );
+    const latestDelivery = [...providerDeliveries].sort((left, right) => {
+      const createdAtDifference =
+        right.createdAt.getTime() - left.createdAt.getTime();
+
+      if (createdAtDifference !== 0) {
+        return createdAtDifference;
+      }
+
+      return right.id.localeCompare(left.id);
+    })[0];
+
+    return {
+      deliveredCount: providerDeliveries.filter(
+        (delivery) => delivery.deliveryState === "delivered"
+      ).length,
+      failedCount: providerDeliveries.filter(
+        (delivery) => delivery.deliveryState === "failed"
+      ).length,
+      key: provider.key,
+      label: provider.label,
+      latestDelivery: latestDelivery
+        ? serializeWorkspaceLifecycleNotificationDelivery(latestDelivery)
+        : null,
+      queuedCount: providerDeliveries.filter(
+        (delivery) =>
+          delivery.deliveryState === "queued" ||
+          delivery.deliveryState === "processing"
+      ).length,
+      skippedCount: providerDeliveries.filter(
+        (delivery) => delivery.deliveryState === "skipped"
+      ).length
+    };
+  });
 
   const createChannelOverview = (
     deliveries: WorkspaceLifecycleDeliveryRecord[]
@@ -316,6 +384,7 @@ export function createWorkspaceLifecycleDeliveryOverview(input: {
     latestDelivery: sortedDeliveries[0]
       ? serializeWorkspaceLifecycleNotificationDelivery(sortedDeliveries[0])
       : null,
+    providers: providerOverviews,
     queuedCount: input.deliveries.filter(
       (delivery) =>
         delivery.deliveryState === "queued" ||
@@ -377,10 +446,24 @@ async function queueLifecycleDelivery(input: {
   );
 }
 
+function getAvailableLifecycleProviderKeys(
+  dependencies: WorkspaceLifecycleDeliveryServiceDependencies
+) {
+  return dependencies.transport.providers
+    .filter((provider) => provider.enabled)
+    .map((provider) => provider.key);
+}
+
 export function createWorkspaceLifecycleDeliveryService(
   dependencies: WorkspaceLifecycleDeliveryServiceDependencies
 ) {
   return {
+    getTransportProviders() {
+      return getWorkspaceLifecycleTransportProviders({
+        providers: dependencies.transport.providers
+      });
+    },
+
     async getRecentWorkspaceLifecycleDeliveries(input: {
       limit: number;
       workspaceId: string;
@@ -403,8 +486,8 @@ export function createWorkspaceLifecycleDeliveryService(
       workspace: WorkspaceLifecyclePolicyWorkspaceRecord;
     }) {
       const decision = resolveWorkspaceLifecycleDeliveryDecision({
+        availableProviderKeys: getAvailableLifecycleProviderKeys(dependencies),
         eventKind: "decommission_notice",
-        transportEnabled: dependencies.transport.enabled,
         workspacePolicy: serializeWorkspaceLifecycleDeliveryPolicy(
           input.workspace
         )
@@ -422,27 +505,48 @@ export function createWorkspaceLifecycleDeliveryService(
         createRecord,
         dependencies
       });
-      const delivery =
-        await dependencies.repositories.workspaceLifecycleNotificationDeliveryRepository.create(
-          {
-            ...createRecord,
-            deliveryChannel: "webhook",
-            deliveryState: decision.shouldQueue ? "queued" : "skipped",
-            failureMessage: decision.failureMessage,
-            queuedAt: decision.shouldQueue ? dependencies.now() : null,
-          }
-        );
-      const queuedDelivery = decision.shouldQueue
-        ? await queueLifecycleDelivery({
-            deliveryId: delivery.id,
-            dependencies,
-            source: "automatic"
-          })
-        : delivery;
+      if (!decision.shouldQueue) {
+        const skippedDelivery =
+          await dependencies.repositories.workspaceLifecycleNotificationDeliveryRepository.create(
+            {
+              ...createRecord,
+              deliveryChannel: "webhook",
+              deliveryState: "skipped",
+              failureMessage: decision.failureMessage,
+              queuedAt: null
+            }
+          );
 
-      return serializeWorkspaceLifecycleNotificationDelivery(
-        queuedDelivery ?? delivery
-      );
+        return [serializeWorkspaceLifecycleNotificationDelivery(skippedDelivery)];
+      }
+
+      const deliveries: WorkspaceLifecycleNotificationDeliverySummary[] = [];
+
+      for (const providerKey of decision.providerKeys) {
+        const delivery =
+          await dependencies.repositories.workspaceLifecycleNotificationDeliveryRepository.create(
+            {
+              ...createRecord,
+              deliveryChannel: "webhook",
+              deliveryState: "queued",
+              providerKey,
+              queuedAt: dependencies.now()
+            }
+          );
+        const queuedDelivery = await queueLifecycleDelivery({
+          deliveryId: delivery.id,
+          dependencies,
+          source: "automatic"
+        });
+
+        deliveries.push(
+          serializeWorkspaceLifecycleNotificationDelivery(
+            queuedDelivery ?? delivery
+          )
+        );
+      }
+
+      return deliveries;
     },
 
     async recordInvitationReminderDelivery(input: {
@@ -453,8 +557,8 @@ export function createWorkspaceLifecycleDeliveryService(
       workspace: WorkspaceLifecyclePolicyWorkspaceRecord;
     }) {
       const decision = resolveWorkspaceLifecycleDeliveryDecision({
+        availableProviderKeys: getAvailableLifecycleProviderKeys(dependencies),
         eventKind: "invitation_reminder",
-        transportEnabled: dependencies.transport.enabled,
         workspacePolicy: serializeWorkspaceLifecycleDeliveryPolicy(
           input.workspace
         )
@@ -472,27 +576,48 @@ export function createWorkspaceLifecycleDeliveryService(
         createRecord,
         dependencies
       });
-      const delivery =
-        await dependencies.repositories.workspaceLifecycleNotificationDeliveryRepository.create(
-          {
-            ...createRecord,
-            deliveryChannel: "webhook",
-            deliveryState: decision.shouldQueue ? "queued" : "skipped",
-            failureMessage: decision.failureMessage,
-            queuedAt: decision.shouldQueue ? dependencies.now() : null,
-          }
-        );
-      const queuedDelivery = decision.shouldQueue
-        ? await queueLifecycleDelivery({
-            deliveryId: delivery.id,
-            dependencies,
-            source: "automatic"
-          })
-        : delivery;
+      if (!decision.shouldQueue) {
+        const skippedDelivery =
+          await dependencies.repositories.workspaceLifecycleNotificationDeliveryRepository.create(
+            {
+              ...createRecord,
+              deliveryChannel: "webhook",
+              deliveryState: "skipped",
+              failureMessage: decision.failureMessage,
+              queuedAt: null
+            }
+          );
 
-      return serializeWorkspaceLifecycleNotificationDelivery(
-        queuedDelivery ?? delivery
-      );
+        return [serializeWorkspaceLifecycleNotificationDelivery(skippedDelivery)];
+      }
+
+      const deliveries: WorkspaceLifecycleNotificationDeliverySummary[] = [];
+
+      for (const providerKey of decision.providerKeys) {
+        const delivery =
+          await dependencies.repositories.workspaceLifecycleNotificationDeliveryRepository.create(
+            {
+              ...createRecord,
+              deliveryChannel: "webhook",
+              deliveryState: "queued",
+              providerKey,
+              queuedAt: dependencies.now()
+            }
+          );
+        const queuedDelivery = await queueLifecycleDelivery({
+          deliveryId: delivery.id,
+          dependencies,
+          source: "automatic"
+        });
+
+        deliveries.push(
+          serializeWorkspaceLifecycleNotificationDelivery(
+            queuedDelivery ?? delivery
+          )
+        );
+      }
+
+      return deliveries;
     },
 
     async retryWorkspaceLifecycleDelivery(input: {
@@ -558,8 +683,8 @@ export function createWorkspaceLifecycleDeliveryService(
       }
 
       const decision = resolveWorkspaceLifecycleDeliveryDecision({
+        availableProviderKeys: getAvailableLifecycleProviderKeys(dependencies),
         eventKind: delivery.eventKind,
-        transportEnabled: dependencies.transport.enabled,
         workspacePolicy: serializeWorkspaceLifecycleDeliveryPolicy(workspace)
       });
 
@@ -571,6 +696,19 @@ export function createWorkspaceLifecycleDeliveryService(
         );
       }
 
+      if (
+        delivery.providerKey &&
+        !decision.providerKeys.includes(delivery.providerKey)
+      ) {
+        throw new StudioSettingsServiceError(
+          "LIFECYCLE_DELIVERY_NOT_RETRYABLE",
+          `${
+            workspaceLifecycleNotificationProviderLabels[delivery.providerKey]
+          } is not configured for retry on this service instance.`,
+          409
+        );
+      }
+
       const queuedDelivery =
         await dependencies.repositories.workspaceLifecycleNotificationDeliveryRepository.updateById(
           {
@@ -578,6 +716,7 @@ export function createWorkspaceLifecycleDeliveryService(
             failedAt: null,
             failureMessage: null,
             id: delivery.id,
+            providerKey: delivery.providerKey ?? decision.providerKeys[0] ?? null,
             queuedAt: dependencies.now()
           }
         );

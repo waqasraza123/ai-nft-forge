@@ -122,6 +122,7 @@ function createStudioSettingsHarness() {
     invitationId: string | null;
     lastAttemptedAt: Date | null;
     payloadJson: unknown;
+    providerKey?: "primary" | "secondary" | null;
     queuedAt: Date | null;
     updatedAt: Date;
     workspaceId: string;
@@ -1081,6 +1082,15 @@ function createStudioSettingsHarness() {
 
   const service = createStudioSettingsService({
     lifecycleDeliveryService: {
+      getTransportProviders() {
+        return [
+          {
+            enabled: true,
+            key: "primary" as const,
+            label: "Primary webhook"
+          }
+        ];
+      },
       async recordInvitationReminderDelivery(input) {
         const createdAt = input.occurredAt;
         const id = `delivery_${lifecycleDeliveries.length + 1}`;
@@ -1105,30 +1115,34 @@ function createStudioSettingsHarness() {
           invitationId: input.invitation.id,
           lastAttemptedAt: null,
           payloadJson: {},
+          providerKey: "primary",
           queuedAt: createdAt,
           updatedAt: createdAt,
           workspaceId: input.workspace.id
         });
 
-        return {
-          attemptCount: 0,
-          createdAt: createdAt.toISOString(),
-          decommissionNotificationId: null,
-          decommissionNotificationKind: null,
-          deliveredAt: null,
-          deliveryChannel: "webhook" as const,
-          deliveryState: "queued" as const,
-          eventKind: "invitation_reminder" as const,
-          eventOccurredAt: createdAt.toISOString(),
-          failedAt: null,
-          failureMessage: null,
-          id,
-          invitationId: input.invitation.id,
-          invitationWalletAddress: input.invitation.walletAddress,
-          lastAttemptedAt: null,
-          queuedAt: createdAt.toISOString(),
-          updatedAt: createdAt.toISOString()
-        };
+        return [
+          {
+            attemptCount: 0,
+            createdAt: createdAt.toISOString(),
+            decommissionNotificationId: null,
+            decommissionNotificationKind: null,
+            deliveredAt: null,
+            deliveryChannel: "webhook" as const,
+            deliveryState: "queued" as const,
+            eventKind: "invitation_reminder" as const,
+            eventOccurredAt: createdAt.toISOString(),
+            failedAt: null,
+            failureMessage: null,
+            id,
+            invitationId: input.invitation.id,
+            invitationWalletAddress: input.invitation.walletAddress,
+            lastAttemptedAt: null,
+            providerKey: "primary" as const,
+            queuedAt: createdAt.toISOString(),
+            updatedAt: createdAt.toISOString()
+          }
+        ];
       }
     },
     repositories,

@@ -2,7 +2,8 @@ import type { Job } from "bullmq";
 
 import {
   workspaceLifecycleNotificationJobPayloadSchema,
-  type WorkspaceLifecycleNotificationJobPayload
+  type WorkspaceLifecycleNotificationJobPayload,
+  type WorkspaceLifecycleNotificationProviderKey
 } from "@ai-nft-forge/shared";
 
 type WorkspaceLifecycleNotificationProcessorDependencies = {
@@ -16,6 +17,7 @@ type WorkspaceLifecycleNotificationProcessorDependencies = {
         deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
         id: string;
         payloadJson: unknown;
+        providerKey: WorkspaceLifecycleNotificationProviderKey | null;
       } | null>;
       updateById(input: {
         attemptCount?: number;
@@ -25,12 +27,18 @@ type WorkspaceLifecycleNotificationProcessorDependencies = {
         failureMessage?: string | null;
         id: string;
         lastAttemptedAt?: Date | null;
+        providerKey?: WorkspaceLifecycleNotificationProviderKey | null;
         queuedAt?: Date | null;
       }): Promise<unknown>;
     };
   };
-  webhook: {
-    deliver(input: { deliveryId: string; payload: unknown }): Promise<void>;
+  transportRegistry: {
+    resolveProvider(
+      key: WorkspaceLifecycleNotificationProviderKey | null
+    ): {
+      deliver(input: { deliveryId: string; payload: unknown }): Promise<void>;
+      label: string;
+    } | null;
   };
 };
 
@@ -106,8 +114,30 @@ export function createWorkspaceLifecycleNotificationProcessor(
       }
     );
 
+    const provider = dependencies.transportRegistry.resolveProvider(
+      delivery.providerKey
+    );
+
+    if (!provider) {
+      const failureMessage = delivery.providerKey
+        ? `Lifecycle provider ${delivery.providerKey} is not configured.`
+        : "No lifecycle provider is configured for this delivery.";
+
+      await dependencies.repositories.workspaceLifecycleNotificationDeliveryRepository.updateById(
+        {
+          deliveryState: "failed",
+          failedAt: dependencies.now(),
+          failureMessage,
+          id: delivery.id,
+          queuedAt: null
+        }
+      );
+
+      throw new Error(failureMessage);
+    }
+
     try {
-      await dependencies.webhook.deliver({
+      await provider.deliver({
         deliveryId: delivery.id,
         payload: delivery.payloadJson
       });

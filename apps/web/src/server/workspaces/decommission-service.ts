@@ -278,25 +278,33 @@ type WorkspaceDecommissionServiceDependencies = {
         retentionDays: number;
       };
       workspace: WorkspaceLifecyclePolicyWorkspaceRecord;
-    }): Promise<{
-      attemptCount: number;
-      createdAt: string;
-      decommissionNotificationId: string | null;
-      decommissionNotificationKind: "ready" | "scheduled" | "upcoming" | null;
-      deliveredAt: string | null;
-      deliveryChannel: "audit_log" | "webhook";
-      deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
-      eventKind: "invitation_reminder" | "decommission_notice";
-      eventOccurredAt: string;
-      failedAt: string | null;
-      failureMessage: string | null;
-      id: string;
-      invitationId: string | null;
-      invitationWalletAddress: string | null;
-      lastAttemptedAt: string | null;
-      queuedAt: string | null;
-      updatedAt: string;
-    }>;
+    }): Promise<
+      Array<{
+        attemptCount: number;
+        createdAt: string;
+        decommissionNotificationId: string | null;
+        decommissionNotificationKind: "ready" | "scheduled" | "upcoming" | null;
+        deliveredAt: string | null;
+        deliveryChannel: "audit_log" | "webhook";
+        deliveryState:
+          | "queued"
+          | "processing"
+          | "delivered"
+          | "failed"
+          | "skipped";
+        eventKind: "invitation_reminder" | "decommission_notice";
+        eventOccurredAt: string;
+        failedAt: string | null;
+        failureMessage: string | null;
+        id: string;
+        invitationId: string | null;
+        invitationWalletAddress: string | null;
+        lastAttemptedAt: string | null;
+        providerKey: "primary" | "secondary" | null;
+        queuedAt: string | null;
+        updatedAt: string;
+      }>
+    >;
   };
   now: () => Date;
   offboardingService: WorkspaceDecommissionOffboardingDependency;
@@ -796,7 +804,7 @@ export function createWorkspaceDecommissionService(
           };
         });
 
-      const delivery = dependencies.lifecycleDeliveryService
+      const deliveries = dependencies.lifecycleDeliveryService
         ? await dependencies.lifecycleDeliveryService.recordDecommissionNoticeDelivery(
             {
               actor: owner,
@@ -815,29 +823,32 @@ export function createWorkspaceDecommissionService(
               workspace
             }
           )
-        : {
-            attemptCount: 0,
-            createdAt: now.toISOString(),
-            decommissionNotificationId: recordedNotification.id,
-            decommissionNotificationKind: recordedNotification.kind,
-            deliveredAt: null,
-            deliveryChannel: "webhook" as const,
-            deliveryState: "skipped" as const,
-            eventKind: "decommission_notice" as const,
-            eventOccurredAt: recordedNotification.sentAt.toISOString(),
-            failedAt: now.toISOString(),
-            failureMessage:
-              "Lifecycle delivery orchestration is not configured for this service instance.",
-            id: `local:${recordedNotification.id}`,
-            invitationId: null,
-            invitationWalletAddress: null,
-            lastAttemptedAt: null,
-            queuedAt: null,
-            updatedAt: now.toISOString()
-          };
+        : [
+            {
+              attemptCount: 0,
+              createdAt: now.toISOString(),
+              decommissionNotificationId: recordedNotification.id,
+              decommissionNotificationKind: recordedNotification.kind,
+              deliveredAt: null,
+              deliveryChannel: "webhook" as const,
+              deliveryState: "skipped" as const,
+              eventKind: "decommission_notice" as const,
+              eventOccurredAt: recordedNotification.sentAt.toISOString(),
+              failedAt: now.toISOString(),
+              failureMessage:
+                "Lifecycle delivery orchestration is not configured for this service instance.",
+              id: `local:${recordedNotification.id}`,
+              invitationId: null,
+              invitationWalletAddress: null,
+              lastAttemptedAt: null,
+              providerKey: null,
+              queuedAt: null,
+              updatedAt: now.toISOString()
+            }
+          ];
 
       return workspaceDecommissionNotificationRecordResponseSchema.parse({
-        delivery,
+        deliveries,
         notification:
           serializeWorkspaceDecommissionNotification(recordedNotification),
         workflow: createWorkspaceDecommissionWorkflowSummary({

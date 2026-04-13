@@ -16,6 +16,7 @@ import {
   workspaceLifecycleJobNames,
   workspaceLifecycleQueueNames,
   type WorkspaceLifecycleNotificationJobPayload,
+  type WorkspaceLifecycleNotificationProviderKey,
   type NoopJobPayload,
   type WorkerEnv
 } from "@ai-nft-forge/shared";
@@ -39,14 +40,14 @@ import {
   createWorkspaceLifecycleNotificationProcessor,
   type WorkspaceLifecycleNotificationJobResult
 } from "../processors/workspace-lifecycle-notification-processor.js";
-import type { WorkspaceLifecycleWebhookBoundary } from "../workspaces/lifecycle-webhook.js";
+import type { WorkspaceLifecycleWebhookProviderRegistry } from "../workspaces/lifecycle-webhook.js";
 
 type WorkerQueueRegistryOptions = {
   databaseClient: DatabaseClient;
   env: WorkerEnv;
   fulfillmentWebhook: CheckoutFulfillmentWebhookBoundary;
   generationAdapter: GenerationAdapter;
-  lifecycleWebhook: WorkspaceLifecycleWebhookBoundary;
+  lifecycleWebhookRegistry: WorkspaceLifecycleWebhookProviderRegistry;
   logger: Logger;
   repositories: {
     commerceCheckoutSessionRepository: {
@@ -122,6 +123,7 @@ type WorkerQueueRegistryOptions = {
         deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
         id: string;
         payloadJson: unknown;
+        providerKey: WorkspaceLifecycleNotificationProviderKey | null;
       } | null>;
       updateById(input: {
         attemptCount?: number;
@@ -131,6 +133,7 @@ type WorkerQueueRegistryOptions = {
         failureMessage?: string | null;
         id: string;
         lastAttemptedAt?: Date | null;
+        providerKey?: WorkspaceLifecycleNotificationProviderKey | null;
         queuedAt?: Date | null;
       }): Promise<unknown>;
     };
@@ -187,7 +190,7 @@ export function createQueueRegistry({
   env,
   fulfillmentWebhook,
   generationAdapter,
-  lifecycleWebhook,
+  lifecycleWebhookRegistry,
   logger,
   repositories,
   redisConnection
@@ -217,7 +220,7 @@ export function createQueueRegistry({
         workspaceLifecycleNotificationDeliveryRepository:
           repositories.workspaceLifecycleNotificationDeliveryRepository
       },
-      webhook: lifecycleWebhook
+      transportRegistry: lifecycleWebhookRegistry
     });
   const generationDispatchQueue = new Queue<
     GenerationJobPayload,

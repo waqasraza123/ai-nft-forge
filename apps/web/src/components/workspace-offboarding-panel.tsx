@@ -163,6 +163,14 @@ export function WorkspaceOffboardingPanel({
                     {entry.lifecycleDelivery.auditLog.deliveredCount}
                     {" "}· webhook failed{" "}
                     {entry.lifecycleDelivery.webhook.failedCount}
+                    {entry.lifecycleDelivery.providers.length
+                      ? ` · providers ${entry.lifecycleDelivery.providers
+                          .map(
+                            (provider) =>
+                              `${provider.label} ${provider.deliveredCount}/${provider.failedCount}/${provider.queuedCount}`
+                          )
+                          .join(", ")}`
+                      : ""}
                     {" "}· latest{" "}
                     {formatCode(
                       entry.lifecycleDelivery.latestDelivery.eventKind

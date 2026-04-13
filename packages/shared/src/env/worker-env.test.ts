@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { parseWorkerEnv } from "./worker-env.js";
+import {
+  parseWorkerEnv,
+  resolveWorkspaceLifecycleWebhookProviders
+} from "./worker-env.js";
 
 describe("parseWorkerEnv", () => {
   it("applies stable defaults for the worker shell", () => {
@@ -109,6 +112,7 @@ describe("parseWorkerEnv", () => {
     expect(env.WORKSPACE_LIFECYCLE_WEBHOOK_URL).toBe(
       "https://alerts.example.com/hooks/workspace-lifecycle"
     );
+    expect(env.WORKSPACE_LIFECYCLE_WEBHOOK_SECONDARY_ENABLED).toBe(false);
   });
 
   it("requires a backend URL when the http adapter is enabled", () => {
@@ -141,17 +145,59 @@ describe("parseWorkerEnv", () => {
     );
   });
 
+  it("requires a secondary lifecycle webhook URL when the secondary provider is enabled", () => {
+    expect(() =>
+      parseWorkerEnv({
+        WORKSPACE_LIFECYCLE_WEBHOOK_SECONDARY_ENABLED: "true"
+      })
+    ).toThrow(
+      "WORKSPACE_LIFECYCLE_WEBHOOK_SECONDARY_URL is required when WORKSPACE_LIFECYCLE_WEBHOOK_SECONDARY_ENABLED=true."
+    );
+  });
+
   it("treats blank optional webhook fields as undefined when delivery is disabled", () => {
     const env = parseWorkerEnv({
       OPS_ALERT_WEBHOOK_BEARER_TOKEN: "",
       OPS_ALERT_WEBHOOK_URL: "",
       WORKSPACE_LIFECYCLE_WEBHOOK_BEARER_TOKEN: "",
-      WORKSPACE_LIFECYCLE_WEBHOOK_URL: ""
+      WORKSPACE_LIFECYCLE_WEBHOOK_URL: "",
+      WORKSPACE_LIFECYCLE_WEBHOOK_SECONDARY_BEARER_TOKEN: "",
+      WORKSPACE_LIFECYCLE_WEBHOOK_SECONDARY_URL: ""
     });
 
     expect(env.OPS_ALERT_WEBHOOK_BEARER_TOKEN).toBeUndefined();
     expect(env.OPS_ALERT_WEBHOOK_URL).toBeUndefined();
     expect(env.WORKSPACE_LIFECYCLE_WEBHOOK_BEARER_TOKEN).toBeUndefined();
     expect(env.WORKSPACE_LIFECYCLE_WEBHOOK_URL).toBeUndefined();
+    expect(env.WORKSPACE_LIFECYCLE_WEBHOOK_SECONDARY_BEARER_TOKEN).toBeUndefined();
+    expect(env.WORKSPACE_LIFECYCLE_WEBHOOK_SECONDARY_URL).toBeUndefined();
+  });
+
+  it("resolves the enabled lifecycle webhook providers in stable order", () => {
+    const providers = resolveWorkspaceLifecycleWebhookProviders(
+      parseWorkerEnv({
+        WORKSPACE_LIFECYCLE_WEBHOOK_ENABLED: "true",
+        WORKSPACE_LIFECYCLE_WEBHOOK_URL:
+          "https://alerts.example.com/hooks/workspace-lifecycle-primary",
+        WORKSPACE_LIFECYCLE_WEBHOOK_SECONDARY_ENABLED: "true",
+        WORKSPACE_LIFECYCLE_WEBHOOK_SECONDARY_URL:
+          "https://alerts.example.com/hooks/workspace-lifecycle-secondary"
+      })
+    );
+
+    expect(providers).toEqual([
+      expect.objectContaining({
+        enabled: true,
+        key: "primary",
+        label: "Primary webhook",
+        url: "https://alerts.example.com/hooks/workspace-lifecycle-primary"
+      }),
+      expect.objectContaining({
+        enabled: true,
+        key: "secondary",
+        label: "Secondary webhook",
+        url: "https://alerts.example.com/hooks/workspace-lifecycle-secondary"
+      })
+    ]);
   });
 });

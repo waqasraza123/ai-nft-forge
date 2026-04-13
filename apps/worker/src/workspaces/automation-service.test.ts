@@ -120,7 +120,7 @@ describe("createWorkspaceLifecycleAutomationService", () => {
           workspaceInvitationRepository: txInvitationRepository
         }),
       transport: {
-        enabled: true
+        availableProviderKeys: ["primary"]
       }
     });
 
@@ -199,6 +199,7 @@ describe("createWorkspaceLifecycleAutomationService", () => {
         event: "workspace.lifecycle_notification",
         kind: "invitation_reminder"
       }),
+      providerKey: "primary",
       queuedAt: now,
       workspaceId: "workspace_1"
     });
@@ -227,6 +228,7 @@ describe("createWorkspaceLifecycleAutomationService", () => {
         event: "workspace.lifecycle_notification",
         kind: "decommission_notice"
       }),
+      providerKey: "primary",
       queuedAt: now,
       workspaceId: "workspace_1"
     });
@@ -318,7 +320,7 @@ describe("createWorkspaceLifecycleAutomationService", () => {
           workspaceInvitationRepository: txInvitationRepository
         }),
       transport: {
-        enabled: false
+        availableProviderKeys: []
       }
     });
 

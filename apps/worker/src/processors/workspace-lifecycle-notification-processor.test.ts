@@ -19,7 +19,8 @@ describe("createWorkspaceLifecycleNotificationProcessor", () => {
               payloadJson: {
                 event: "workspace.lifecycle_notification",
                 kind: "invitation_reminder"
-              }
+              },
+              providerKey: "primary" as const
             };
           },
           async updateById(input) {
@@ -28,8 +29,11 @@ describe("createWorkspaceLifecycleNotificationProcessor", () => {
           }
         }
       },
-      webhook: {
-        deliver: vi.fn().mockResolvedValue(undefined)
+      transportRegistry: {
+        resolveProvider: vi.fn().mockReturnValue({
+          deliver: vi.fn().mockResolvedValue(undefined),
+          label: "Primary webhook"
+        })
       }
     });
 
@@ -78,7 +82,8 @@ describe("createWorkspaceLifecycleNotificationProcessor", () => {
               payloadJson: {
                 event: "workspace.lifecycle_notification",
                 kind: "decommission_notice"
-              }
+              },
+              providerKey: "primary" as const
             };
           },
           async updateById(input) {
@@ -87,8 +92,11 @@ describe("createWorkspaceLifecycleNotificationProcessor", () => {
           }
         }
       },
-      webhook: {
-        deliver: vi.fn().mockRejectedValue(new Error("Webhook rejected"))
+      transportRegistry: {
+        resolveProvider: vi.fn().mockReturnValue({
+          deliver: vi.fn().mockRejectedValue(new Error("Webhook rejected")),
+          label: "Primary webhook"
+        })
       }
     });
 
@@ -121,8 +129,8 @@ describe("createWorkspaceLifecycleNotificationProcessor", () => {
 
   it("marks queued audit-log deliveries delivered without calling the webhook", async () => {
     const updates: Array<Record<string, unknown>> = [];
-    const webhook = {
-      deliver: vi.fn()
+    const transportRegistry = {
+      resolveProvider: vi.fn()
     };
     const processor = createWorkspaceLifecycleNotificationProcessor({
       now: () => new Date("2026-04-12T06:00:00.000Z"),
@@ -147,7 +155,7 @@ describe("createWorkspaceLifecycleNotificationProcessor", () => {
           }
         }
       },
-      webhook
+      transportRegistry
     });
 
     const result = await processor({
@@ -166,7 +174,7 @@ describe("createWorkspaceLifecycleNotificationProcessor", () => {
       queueName: "workspace-lifecycle-notification-dispatch",
       status: "delivered"
     });
-    expect(webhook.deliver).not.toHaveBeenCalled();
+    expect(transportRegistry.resolveProvider).not.toHaveBeenCalled();
     expect(updates).toEqual([
       expect.objectContaining({
         deliveryState: "delivered",

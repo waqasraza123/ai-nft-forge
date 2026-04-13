@@ -10,7 +10,8 @@ import {
   workspaceLifecycleAutomationHealthSchema,
   workspaceLifecycleAutomationRunSummarySchema,
   workspaceLifecycleDeliveryPolicySchema,
-  workspaceLifecycleNotificationDeliverySummarySchema
+  workspaceLifecycleNotificationDeliverySummarySchema,
+  workspaceLifecycleNotificationTransportProviderSchema
 } from "./workspace-lifecycle.js";
 import { workspaceRetentionPolicySchema } from "./workspace-policy.js";
 
@@ -239,6 +240,9 @@ export const studioSettingsSummarySchema = z.object({
   brands: z.array(studioBrandSummarySchema),
   invitations: z.array(studioWorkspaceInvitationSummarySchema),
   lifecycleAutomationHealth: workspaceLifecycleAutomationHealthSchema,
+  lifecycleNotificationProviders: z.array(
+    workspaceLifecycleNotificationTransportProviderSchema
+  ),
   recentLifecycleAutomationRuns: z.array(
     workspaceLifecycleAutomationRunSummarySchema
   ),
@@ -357,7 +361,7 @@ export const studioWorkspaceInvitationResponseSchema = z.object({
 });
 
 export const studioWorkspaceInvitationReminderResponseSchema = z.object({
-  delivery: workspaceLifecycleNotificationDeliverySummarySchema,
+  deliveries: z.array(workspaceLifecycleNotificationDeliverySummarySchema),
   invitation: studioWorkspaceInvitationSummarySchema
 });
 
@@ -433,6 +437,9 @@ export type StudioWorkspaceRetentionPolicy = z.infer<
 >;
 export type StudioWorkspaceLifecycleDeliveryPolicy = z.infer<
   typeof studioWorkspaceLifecycleDeliveryPolicySchema
+>;
+export type StudioWorkspaceLifecycleNotificationTransportProvider = z.infer<
+  typeof workspaceLifecycleNotificationTransportProviderSchema
 >;
 export type StudioBrandCreateRequest = z.infer<
   typeof studioBrandCreateRequestSchema

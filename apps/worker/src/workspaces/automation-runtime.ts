@@ -15,6 +15,7 @@ import {
 } from "@ai-nft-forge/database";
 import {
   parseWorkerEnv,
+  resolveWorkspaceLifecycleWebhookProviders,
   workspaceLifecycleJobNames,
   workspaceLifecycleQueueNames,
   type WorkerEnv,
@@ -62,6 +63,7 @@ function createTransactionalRepositories(database: DatabaseExecutor) {
           invitationId?: string | null;
           ownerUserId: string;
           payloadJson: unknown;
+          providerKey?: "primary" | "secondary" | null;
           queuedAt?: Date | null;
           workspaceId: string;
         }) {
@@ -118,9 +120,9 @@ export async function runWorkspaceLifecycleAutomationWithDependencies({
         callback(createTransactionalRepositories(executor))
       ),
     transport: {
-      enabled:
-        env.WORKSPACE_LIFECYCLE_WEBHOOK_ENABLED &&
-        Boolean(env.WORKSPACE_LIFECYCLE_WEBHOOK_URL)
+      availableProviderKeys: resolveWorkspaceLifecycleWebhookProviders(env)
+        .filter((provider) => provider.enabled)
+        .map((provider) => provider.key)
     }
   });
   const startedAt = new Date();

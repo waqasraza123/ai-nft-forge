@@ -250,6 +250,7 @@ export {
   type StudioWorkspaceInvitationSummary,
   type StudioWorkspaceInvitationStatus,
   type StudioWorkspaceLifecycleDeliveryPolicy,
+  type StudioWorkspaceLifecycleNotificationTransportProvider,
   type StudioWorkspaceRoleEscalationActionResponse,
   type StudioWorkspaceRoleEscalationCreateRequest,
   type StudioWorkspaceRoleEscalationRequestStatus,
@@ -282,6 +283,8 @@ export {
   resolveWorkspaceLifecycleDeliveryDecision,
   workspaceDecommissionUpcomingNotificationWindowMilliseconds,
   workspaceLifecycleDeliveryPolicySchema,
+  workspaceLifecycleNotificationProviderKeySchema,
+  workspaceLifecycleNotificationProviderLabels,
   workspaceInvitationExpiringWindowMilliseconds,
   workspaceInvitationReminderCooldownMilliseconds,
   workspaceLifecycleNotificationDeliveryChannelSchema,
@@ -289,9 +292,11 @@ export {
   workspaceLifecycleNotificationDeliveryOverviewSchema,
   workspaceLifecycleNotificationDeliveryRetryResponseSchema,
   workspaceLifecycleNotificationDeliveryStateSchema,
+  workspaceLifecycleNotificationProviderSummarySchema,
   workspaceLifecycleNotificationDeliverySummarySchema,
   workspaceLifecycleNotificationEventKindSchema,
   workspaceLifecycleDecommissionNotificationKindSchema,
+  workspaceLifecycleNotificationTransportProviderSchema,
   type WorkspaceLifecycleDeliveryPolicy,
   type WorkspaceLifecycleAutomationHealth,
   type WorkspaceLifecycleAutomationHealthStatus,
@@ -303,9 +308,12 @@ export {
   type WorkspaceLifecycleNotificationDeliveryOverview,
   type WorkspaceLifecycleNotificationDeliveryRetryResponse,
   type WorkspaceLifecycleNotificationDeliveryState,
+  type WorkspaceLifecycleNotificationProviderKey,
+  type WorkspaceLifecycleNotificationProviderSummary,
   type WorkspaceLifecycleNotificationDeliverySummary,
   type WorkspaceLifecycleNotificationEventKind,
-  type WorkspaceLifecycleDecommissionNotificationKind
+  type WorkspaceLifecycleDecommissionNotificationKind,
+  type WorkspaceLifecycleNotificationTransportProvider
 } from "./workspace-lifecycle.js";
 export {
   workspaceCommerceFleetReportResponseSchema,
@@ -527,11 +535,13 @@ export {
 export {
   generationAdapterKinds,
   parseWorkerEnv,
+  resolveWorkspaceLifecycleWebhookProviders,
   workerEnvSchema,
   workerLogLevels,
   type GenerationAdapterKind,
   type WorkerEnv,
-  type WorkerLogLevel
+  type WorkerLogLevel,
+  type WorkspaceLifecycleWebhookProviderConfig
 } from "./env/worker-env.js";
 export {
   commerceFulfillmentJobPayloadSchema,

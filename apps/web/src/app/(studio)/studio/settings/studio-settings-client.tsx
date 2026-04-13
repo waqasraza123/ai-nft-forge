@@ -362,6 +362,50 @@ function formatLifecycleDeliveryChannel(
   return channel.replaceAll("_", " ");
 }
 
+function formatLifecycleProviderKey(
+  key: WorkspaceLifecycleNotificationDeliverySummary["providerKey"]
+) {
+  if (key === "primary") {
+    return "Primary webhook";
+  }
+
+  if (key === "secondary") {
+    return "Secondary webhook";
+  }
+
+  return "Webhook";
+}
+
+function summarizeLifecycleDeliveries(
+  deliveries: WorkspaceLifecycleNotificationDeliverySummary[]
+) {
+  if (deliveries.length === 0) {
+    return {
+      summary: "No external delivery records were created.",
+      tone: "success" as const
+    };
+  }
+
+  const summary = deliveries
+    .map((delivery) => {
+      const label =
+        delivery.deliveryChannel === "audit_log"
+          ? "Audit-log"
+          : formatLifecycleProviderKey(delivery.providerKey);
+
+      return `${label} ${formatLifecycleDeliveryState(delivery.deliveryState)}`;
+    })
+    .join(" · ");
+  const tone = deliveries.some((delivery) => delivery.deliveryState === "failed")
+    ? ("error" as const)
+    : ("success" as const);
+
+  return {
+    summary,
+    tone
+  };
+}
+
 function formatDurationSeconds(value: number | null) {
   if (value === null) {
     return "n/a";
@@ -514,6 +558,8 @@ export function StudioSettingsClient({
   const lifecycleDeliveryPolicy =
     resolveWorkspaceLifecycleDeliveryPolicy(settings);
   const lifecycleAutomationHealth = settings?.lifecycleAutomationHealth ?? null;
+  const lifecycleNotificationProviders =
+    settings?.lifecycleNotificationProviders ?? [];
   const recentLifecycleAutomationRuns =
     settings?.recentLifecycleAutomationRuns ?? [];
   const recentLifecycleDeliveries = settings?.recentLifecycleDeliveries ?? [];
@@ -1244,6 +1290,7 @@ export function StudioSettingsClient({
         response,
         schema: studioWorkspaceInvitationReminderResponseSchema
       });
+      const deliveryResult = summarizeLifecycleDeliveries(payload.deliveries);
 
       startTransition(() => {
         setSettings((currentSettings) => {
@@ -1262,17 +1309,8 @@ export function StudioSettingsClient({
         });
       });
       setNotice({
-        message:
-          payload.delivery.deliveryState === "delivered" ||
-          payload.delivery.deliveryState === "queued"
-            ? `Reminder recorded for ${payload.invitation.walletAddress}. Delivery is ${formatLifecycleDeliveryState(
-                payload.delivery.deliveryState
-              )}.`
-            : `Reminder recorded for ${payload.invitation.walletAddress}, but delivery is ${formatLifecycleDeliveryState(
-                payload.delivery.deliveryState
-              )}.`,
-        tone:
-          payload.delivery.deliveryState === "failed" ? "error" : "success"
+        message: `Reminder recorded for ${payload.invitation.walletAddress}. ${deliveryResult.summary}.`,
+        tone: deliveryResult.tone
       });
       await refreshSettings({
         silent: true
@@ -1326,19 +1364,11 @@ export function StudioSettingsClient({
         response,
         schema: workspaceDecommissionNotificationRecordResponseSchema
       });
+      const deliveryResult = summarizeLifecycleDeliveries(payload.deliveries);
 
       setNotice({
-        message:
-          payload.delivery.deliveryState === "delivered" ||
-          payload.delivery.deliveryState === "queued"
-            ? `${formatDecommissionNotificationKind(kind)} decommission notice recorded. Delivery is ${formatLifecycleDeliveryState(
-                payload.delivery.deliveryState
-              )}.`
-            : `${formatDecommissionNotificationKind(kind)} decommission notice recorded, but delivery is ${formatLifecycleDeliveryState(
-                payload.delivery.deliveryState
-              )}.`,
-        tone:
-          payload.delivery.deliveryState === "failed" ? "error" : "success"
+        message: `${formatDecommissionNotificationKind(kind)} decommission notice recorded. ${deliveryResult.summary}.`,
+        tone: deliveryResult.tone
       });
       await refreshSettings({
         silent: true
@@ -2321,7 +2351,7 @@ export function StudioSettingsClient({
           ) : null}
         </SurfaceCard>
         <SurfaceCard
-          body="Lifecycle delivery records now show both the mandatory audit-log leg and the optional webhook leg for invitation reminders and decommission notices. Delivery stays worker-owned and provider-agnostic."
+          body="Lifecycle delivery records now show the mandatory audit-log leg plus one record per configured webhook provider for invitation reminders and decommission notices. Delivery stays worker-owned and provider-agnostic."
           eyebrow="Lifecycle delivery"
           span={8}
           title="Lifecycle delivery health"
@@ -2355,6 +2385,11 @@ export function StudioSettingsClient({
                     ? "enabled"
                     : "disabled"}
                 </Pill>
+                {lifecycleNotificationProviders.map((provider) => (
+                  <Pill key={provider.key}>
+                    {provider.label} {provider.enabled ? "configured" : "disabled"}
+                  </Pill>
+                ))}
               </div>
               <div className="collection-item-list">
                 {recentLifecycleDeliveries.length ? (
@@ -2364,6 +2399,9 @@ export function StudioSettingsClient({
                         <strong>{formatLifecycleEventKind(delivery.eventKind)}</strong>
                         <span>
                           {formatLifecycleDeliveryChannel(delivery.deliveryChannel)} ·{" "}
+                          {delivery.deliveryChannel === "webhook"
+                            ? `${formatLifecycleProviderKey(delivery.providerKey)} · `
+                            : ""}
                           {formatLifecycleDeliveryState(delivery.deliveryState)} ·{" "}
                           {formatTimestamp(delivery.eventOccurredAt) ?? "No event time"}
                         </span>

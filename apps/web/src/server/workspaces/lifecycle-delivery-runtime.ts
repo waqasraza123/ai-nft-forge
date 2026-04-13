@@ -5,7 +5,11 @@ import {
   getDatabaseClient,
   type DatabaseExecutor
 } from "@ai-nft-forge/database";
-import { parseWorkerEnv } from "@ai-nft-forge/shared";
+import {
+  parseWorkerEnv,
+  resolveWorkspaceLifecycleWebhookProviders,
+  type WorkspaceLifecycleNotificationProviderKey
+} from "@ai-nft-forge/shared";
 
 import { createWorkspaceLifecycleDeliveryService } from "./lifecycle-delivery-service";
 import { enqueueWorkspaceLifecycleNotificationJob } from "./lifecycle-delivery-queue";
@@ -28,6 +32,7 @@ export function createWorkspaceLifecycleNotificationDeliveryBoundary(
       invitationId?: string | null;
       ownerUserId: string;
       payloadJson: unknown;
+      providerKey?: WorkspaceLifecycleNotificationProviderKey | null;
       queuedAt?: Date | null;
       workspaceId: string;
     }) {
@@ -56,6 +61,7 @@ export function createWorkspaceLifecycleNotificationDeliveryBoundary(
       failureMessage?: string | null;
       id: string;
       lastAttemptedAt?: Date | null;
+      providerKey?: WorkspaceLifecycleNotificationProviderKey | null;
       queuedAt?: Date | null;
     }) {
       return repository.updateById(input);
@@ -89,9 +95,13 @@ export function createRuntimeWorkspaceLifecycleDeliveryService(
       workspaceRepository: createWorkspaceRepository(databaseClient)
     },
     transport: {
-      enabled:
-        workerEnv.WORKSPACE_LIFECYCLE_WEBHOOK_ENABLED &&
-        Boolean(workerEnv.WORKSPACE_LIFECYCLE_WEBHOOK_URL)
+      providers: resolveWorkspaceLifecycleWebhookProviders(workerEnv).map(
+        (provider) => ({
+          enabled: provider.enabled,
+          key: provider.key,
+          label: provider.label
+        })
+      )
     }
   });
 }

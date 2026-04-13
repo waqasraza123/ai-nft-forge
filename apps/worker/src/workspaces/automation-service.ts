@@ -2,7 +2,8 @@ import {
   getNextWorkspaceDecommissionNotificationKind,
   resolveWorkspaceLifecycleDeliveryDecision,
   workspaceInvitationReminderCooldownMilliseconds,
-  type WorkspaceLifecycleDecommissionNotificationKind
+  type WorkspaceLifecycleDecommissionNotificationKind,
+  type WorkspaceLifecycleNotificationProviderKey
 } from "@ai-nft-forge/shared";
 
 type WorkspaceAutomationOwnerRecord = {
@@ -104,6 +105,7 @@ type WorkspaceAutomationServiceDependencies = {
         invitationId?: string | null;
         ownerUserId: string;
         payloadJson: unknown;
+        providerKey?: WorkspaceLifecycleNotificationProviderKey | null;
         queuedAt?: Date | null;
         workspaceId: string;
       }): Promise<WorkspaceAutomationDeliveryRecord>;
@@ -112,6 +114,7 @@ type WorkspaceAutomationServiceDependencies = {
         failedAt?: Date | null;
         failureMessage?: string | null;
         id: string;
+        providerKey?: WorkspaceLifecycleNotificationProviderKey | null;
         queuedAt?: Date | null;
       }): Promise<unknown>;
     };
@@ -125,7 +128,7 @@ type WorkspaceAutomationServiceDependencies = {
     callback: (repositories: WorkspaceAutomationTransactionalRepositories) => Promise<T>
   ) => Promise<T>;
   transport: {
-    enabled: boolean;
+    availableProviderKeys: WorkspaceLifecycleNotificationProviderKey[];
   };
 };
 
@@ -277,6 +280,7 @@ async function createQueuedLifecycleDelivery(input: {
     invitationId?: string | null;
     ownerUserId: string;
     payloadJson: unknown;
+    providerKey: WorkspaceLifecycleNotificationProviderKey;
     workspaceId: string;
   };
   dependencies: WorkspaceAutomationServiceDependencies;
@@ -403,8 +407,8 @@ export function createWorkspaceLifecycleAutomationService(
         }
 
         const decision = resolveWorkspaceLifecycleDeliveryDecision({
+          availableProviderKeys: dependencies.transport.availableProviderKeys,
           eventKind: "invitation_reminder",
-          transportEnabled: dependencies.transport.enabled,
           workspacePolicy: {
             deliverDecommissionNotifications:
               workspace.lifecycleWebhookDeliverDecommissionNotifications,
@@ -470,12 +474,17 @@ export function createWorkspaceLifecycleAutomationService(
             },
             dependencies
           });
-          await createQueuedLifecycleDelivery({
-            createRecord,
-            dependencies
-          });
+          for (const providerKey of decision.providerKeys) {
+            await createQueuedLifecycleDelivery({
+              createRecord: {
+                ...createRecord,
+                providerKey
+              },
+              dependencies
+            });
+          }
           auditLogDeliveryCount += 1;
-          webhookQueuedCount += 1;
+          webhookQueuedCount += decision.providerKeys.length;
           invitationReminderCount += 1;
         } catch (error) {
           failedWorkspaceCount += 1;
@@ -513,8 +522,8 @@ export function createWorkspaceLifecycleAutomationService(
         }
 
         const decision = resolveWorkspaceLifecycleDeliveryDecision({
+          availableProviderKeys: dependencies.transport.availableProviderKeys,
           eventKind: "decommission_notice",
-          transportEnabled: dependencies.transport.enabled,
           workspacePolicy: {
             deliverDecommissionNotifications:
               workspace.lifecycleWebhookDeliverDecommissionNotifications,
@@ -582,12 +591,17 @@ export function createWorkspaceLifecycleAutomationService(
             },
             dependencies
           });
-          await createQueuedLifecycleDelivery({
-            createRecord,
-            dependencies
-          });
+          for (const providerKey of decision.providerKeys) {
+            await createQueuedLifecycleDelivery({
+              createRecord: {
+                ...createRecord,
+                providerKey
+              },
+              dependencies
+            });
+          }
           auditLogDeliveryCount += 1;
-          webhookQueuedCount += 1;
+          webhookQueuedCount += decision.providerKeys.length;
           decommissionNoticeCount += 1;
         } catch (error) {
           failedWorkspaceCount += 1;

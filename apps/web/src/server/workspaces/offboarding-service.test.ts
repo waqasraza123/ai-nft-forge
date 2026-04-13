@@ -27,6 +27,13 @@ function createWorkspaceOffboardingHarness() {
       }
     },
     now: () => new Date("2026-04-12T05:00:00.000Z"),
+    transportProviders: [
+      {
+        enabled: true,
+        key: "primary",
+        label: "Primary webhook"
+      }
+    ],
     repositories: {
       auditLogRepository: {
         async listByEntity() {
@@ -341,6 +348,7 @@ function createWorkspaceOffboardingHarness() {
                 invitationId: "invitation_1",
                 lastAttemptedAt: new Date("2026-04-12T03:00:00.000Z"),
                 payloadJson: {},
+                providerKey: "primary" as const,
                 queuedAt: null,
                 updatedAt: new Date("2026-04-12T03:00:00.000Z"),
                 workspaceId

@@ -424,6 +424,14 @@ export function OpsRetentionClient({
                       {workspace.lifecycleDelivery.webhook.failedCount} ·
                       webhook queued{" "}
                       {workspace.lifecycleDelivery.webhook.queuedCount}
+                      {workspace.lifecycleDelivery.providers.length
+                        ? ` · providers ${workspace.lifecycleDelivery.providers
+                            .map(
+                              (provider) =>
+                                `${provider.label} ${provider.deliveredCount}/${provider.failedCount}/${provider.queuedCount}`
+                            )
+                            .join(", ")}`
+                        : ""}
                     </span>
                     <span>
                       {workspace.decommission

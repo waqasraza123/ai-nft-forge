@@ -3,6 +3,7 @@ import type {
   WorkspaceLifecycleNotificationDelivery,
   WorkspaceLifecycleNotificationDeliveryChannel,
   WorkspaceLifecycleNotificationDeliveryKind,
+  WorkspaceLifecycleNotificationProviderKey,
   WorkspaceLifecycleNotificationDeliveryState
 } from "@prisma/client";
 
@@ -55,6 +56,7 @@ export function createWorkspaceLifecycleNotificationDeliveryRepository(
       invitationId?: string | null;
       ownerUserId: string;
       payloadJson: Prisma.InputJsonValue;
+      providerKey?: WorkspaceLifecycleNotificationProviderKey | null;
       queuedAt?: Date | null;
       workspaceId: string;
     }): Promise<WorkspaceLifecycleNotificationDeliveryWithRelations> {
@@ -74,6 +76,7 @@ export function createWorkspaceLifecycleNotificationDeliveryRepository(
           ...(input.invitationId ? { invitationId: input.invitationId } : {}),
           ownerUserId: input.ownerUserId,
           payloadJson: input.payloadJson,
+          providerKey: input.providerKey ?? null,
           queuedAt: input.queuedAt ?? null,
           workspaceId: input.workspaceId
         },
@@ -158,6 +161,7 @@ export function createWorkspaceLifecycleNotificationDeliveryRepository(
       id: string;
       lastAttemptedAt?: Date | null;
       payloadJson?: Prisma.InputJsonValue;
+      providerKey?: WorkspaceLifecycleNotificationProviderKey | null;
       queuedAt?: Date | null;
     }): Promise<WorkspaceLifecycleNotificationDeliveryWithRelations> {
       return database.workspaceLifecycleNotificationDelivery.update({
@@ -195,6 +199,11 @@ export function createWorkspaceLifecycleNotificationDeliveryRepository(
           ...(input.payloadJson !== undefined
             ? {
                 payloadJson: input.payloadJson
+              }
+            : {}),
+          ...(input.providerKey !== undefined
+            ? {
+                providerKey: input.providerKey
               }
             : {}),
           ...(input.queuedAt !== undefined

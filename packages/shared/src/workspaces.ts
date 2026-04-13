@@ -154,7 +154,7 @@ export const workspaceDecommissionExecutionResponseSchema = z.object({
 });
 
 export const workspaceDecommissionNotificationRecordResponseSchema = z.object({
-  delivery: workspaceLifecycleNotificationDeliverySummarySchema,
+  deliveries: z.array(workspaceLifecycleNotificationDeliverySummarySchema),
   notification: workspaceDecommissionNotificationSummarySchema,
   workflow: workspaceDecommissionWorkflowSummarySchema
 });

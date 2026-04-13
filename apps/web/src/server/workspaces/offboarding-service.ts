@@ -22,6 +22,8 @@ import {
   defaultStudioBrandLandingHeadline,
   defaultStudioBrandThemePreset,
   defaultStudioFeaturedReleaseLabel,
+  parseWorkerEnv,
+  resolveWorkspaceLifecycleWebhookProviders,
   studioBrandThemeSchema,
   studioWorkspaceAuditEntrySchema,
   workspaceDecommissionSummarySchema,
@@ -52,6 +54,7 @@ import {
 } from "./decommission-workflow";
 import {
   createWorkspaceLifecycleDeliveryOverview,
+  getWorkspaceLifecycleTransportProviders,
   serializeWorkspaceLifecycleDeliveryPolicy,
   serializeWorkspaceLifecycleNotificationDelivery
 } from "./lifecycle-delivery-service";
@@ -446,6 +449,9 @@ type WorkspaceOffboardingServiceDependencies = {
     recentLifecycleAutomationRuns: WorkspaceLifecycleAutomationRunSummary[];
   }>;
   now: () => Date;
+  transportProviders?: ReturnType<
+    typeof getWorkspaceLifecycleTransportProviders
+  >;
   repositories: WorkspaceOffboardingRepositorySet;
 };
 
@@ -1069,7 +1075,8 @@ export function createWorkspaceOffboardingService(
           lifecycleDelivery: createWorkspaceLifecycleDeliveryOverview({
             deliveries:
               lifecycleDeliveriesByWorkspaceId.get(directoryEntry.workspace.id) ??
-              []
+              [],
+            providers: dependencies.transportProviders ?? []
           }),
           lifecycleDeliveryPolicy: serializeWorkspaceLifecycleDeliveryPolicy(
             workspaceById.get(directoryEntry.workspace.id) ?? {
@@ -1474,12 +1481,22 @@ export function createRuntimeWorkspaceOffboardingService(
   rawEnvironment: NodeJS.ProcessEnv = process.env
 ) {
   const database = getDatabaseClient(rawEnvironment);
+  const workerEnv = parseWorkerEnv(rawEnvironment);
 
   return createWorkspaceOffboardingService({
     directoryService: createRuntimeWorkspaceDirectoryService(rawEnvironment),
     lifecycleAutomationSnapshotLoader: () =>
       loadWorkspaceLifecycleAutomationSnapshot(rawEnvironment),
     now: () => new Date(),
+    transportProviders: getWorkspaceLifecycleTransportProviders({
+      providers: resolveWorkspaceLifecycleWebhookProviders(workerEnv).map(
+        (provider) => ({
+          enabled: provider.enabled,
+          key: provider.key,
+          label: provider.label
+        })
+      )
+    }),
     repositories: createWorkspaceOffboardingRepositories(database)
   });
 }

@@ -32,7 +32,7 @@ import {
 } from "../queues/registry.js";
 import { startWorkspaceLifecycleAutomationScheduler } from "../workspaces/automation-scheduler.js";
 import { runWorkspaceLifecycleAutomationWithDependencies } from "../workspaces/automation-runtime.js";
-import { createWorkspaceLifecycleWebhookClient } from "../workspaces/lifecycle-webhook.js";
+import { createWorkspaceLifecycleWebhookProviderRegistry } from "../workspaces/lifecycle-webhook.js";
 
 export type WorkerApplication = {
   close: () => Promise<void>;
@@ -88,7 +88,7 @@ export async function bootstrapWorkerApplication(
       storageClient: objectStorageClient,
       targetBucketName: storageConfig.S3_BUCKET_PRIVATE
     }),
-    lifecycleWebhook: createWorkspaceLifecycleWebhookClient({
+    lifecycleWebhookRegistry: createWorkspaceLifecycleWebhookProviderRegistry({
       env
     }),
     logger,

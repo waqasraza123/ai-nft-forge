@@ -19,6 +19,7 @@ function createWorkspaceDecommissionHarness(input?: {
   const lifecycleDeliveries: Array<{
     deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
     id: string;
+    providerKey?: "primary" | "secondary" | null;
   }> = [];
   let scheduledRequest: {
     canceledAt: Date | null;
@@ -327,28 +328,32 @@ function createWorkspaceDecommissionHarness(input?: {
       async recordDecommissionNoticeDelivery(inputRecord) {
         lifecycleDeliveries.push({
           deliveryState: "queued",
-          id: `delivery_${lifecycleDeliveries.length + 1}`
+          id: `delivery_${lifecycleDeliveries.length + 1}`,
+          providerKey: "primary"
         });
 
-        return {
-          attemptCount: 0,
-          createdAt: inputRecord.notification.sentAt.toISOString(),
-          decommissionNotificationId: inputRecord.notification.id,
-          decommissionNotificationKind: inputRecord.notification.kind,
-          deliveredAt: null,
-          deliveryChannel: "webhook" as const,
-          deliveryState: "queued" as const,
-          eventKind: "decommission_notice" as const,
-          eventOccurredAt: inputRecord.notification.sentAt.toISOString(),
-          failedAt: null,
-          failureMessage: null,
-          id: `delivery_${lifecycleDeliveries.length}`,
-          invitationId: null,
-          invitationWalletAddress: null,
-          lastAttemptedAt: null,
-          queuedAt: inputRecord.notification.sentAt.toISOString(),
-          updatedAt: inputRecord.notification.sentAt.toISOString()
-        };
+        return [
+          {
+            attemptCount: 0,
+            createdAt: inputRecord.notification.sentAt.toISOString(),
+            decommissionNotificationId: inputRecord.notification.id,
+            decommissionNotificationKind: inputRecord.notification.kind,
+            deliveredAt: null,
+            deliveryChannel: "webhook" as const,
+            deliveryState: "queued" as const,
+            eventKind: "decommission_notice" as const,
+            eventOccurredAt: inputRecord.notification.sentAt.toISOString(),
+            failedAt: null,
+            failureMessage: null,
+            id: `delivery_${lifecycleDeliveries.length}`,
+            invitationId: null,
+            invitationWalletAddress: null,
+            lastAttemptedAt: null,
+            providerKey: "primary" as const,
+            queuedAt: inputRecord.notification.sentAt.toISOString(),
+            updatedAt: inputRecord.notification.sentAt.toISOString()
+          }
+        ];
       }
     },
     now: () => now,
@@ -489,7 +494,7 @@ describe("createWorkspaceDecommissionService", () => {
       workspaceId: "workspace_1"
     });
 
-    expect(result.delivery.deliveryState).toBe("queued");
+    expect(result.deliveries[0]?.deliveryState).toBe("queued");
     expect(result.notification.kind).toBe("scheduled");
     expect(result.workflow.notificationCount).toBe(1);
     expect(result.workflow.nextDueKind).toBeNull();

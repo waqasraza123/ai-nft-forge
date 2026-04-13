@@ -440,31 +440,44 @@ type StudioSettingsServiceDependencies = {
     recentLifecycleAutomationRuns: WorkspaceLifecycleAutomationRunSummary[];
   }>;
   lifecycleDeliveryService?: {
+    getTransportProviders(): Array<{
+      enabled: boolean;
+      key: "primary" | "secondary";
+      label: string;
+    }>;
     recordInvitationReminderDelivery(input: {
       actor: WorkspaceLifecycleOwnerRecord;
       invitation: WorkspaceInvitationRecord;
       occurredAt: Date;
       owner: WorkspaceLifecycleOwnerRecord;
       workspace: WorkspaceRecord;
-    }): Promise<{
-      attemptCount: number;
-      createdAt: string;
-      decommissionNotificationId: string | null;
-      decommissionNotificationKind: "ready" | "scheduled" | "upcoming" | null;
-      deliveredAt: string | null;
-      deliveryChannel: "audit_log" | "webhook";
-      deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
-      eventKind: "invitation_reminder" | "decommission_notice";
-      eventOccurredAt: string;
-      failedAt: string | null;
-      failureMessage: string | null;
-      id: string;
-      invitationId: string | null;
-      invitationWalletAddress: string | null;
-      lastAttemptedAt: string | null;
-      queuedAt: string | null;
-      updatedAt: string;
-    }>;
+    }): Promise<
+      Array<{
+        attemptCount: number;
+        createdAt: string;
+        decommissionNotificationId: string | null;
+        decommissionNotificationKind: "ready" | "scheduled" | "upcoming" | null;
+        deliveredAt: string | null;
+        deliveryChannel: "audit_log" | "webhook";
+        deliveryState:
+          | "queued"
+          | "processing"
+          | "delivered"
+          | "failed"
+          | "skipped";
+        eventKind: "invitation_reminder" | "decommission_notice";
+        eventOccurredAt: string;
+        failedAt: string | null;
+        failureMessage: string | null;
+        id: string;
+        invitationId: string | null;
+        invitationWalletAddress: string | null;
+        lastAttemptedAt: string | null;
+        providerKey: "primary" | "secondary" | null;
+        queuedAt: string | null;
+        updatedAt: string;
+      }>
+    >;
   };
   repositories: StudioSettingsRepositorySet;
   runTransaction<T>(
@@ -762,6 +775,7 @@ function serializeWorkspaceAuditEntry(input: AuditLogRecord) {
 
 async function serializeStudioSettings(input: {
   brands: BrandRecord[];
+  lifecycleDeliveryService?: StudioSettingsServiceDependencies["lifecycleDeliveryService"];
   lifecycleAutomationSnapshot?: {
     lifecycleAutomationHealth: WorkspaceLifecycleAutomationHealth;
     recentLifecycleAutomationRuns: WorkspaceLifecycleAutomationRunSummary[];
@@ -838,6 +852,8 @@ async function serializeStudioSettings(input: {
           runOnStart: null,
           status: "unreachable"
         },
+      lifecycleNotificationProviders:
+        input.lifecycleDeliveryService?.getTransportProviders() ?? [],
       lifecycleDeliveryPolicy: serializeWorkspaceLifecycleDeliveryPolicy(
         input.workspace
       ),
@@ -873,6 +889,7 @@ async function serializeStudioSettings(input: {
 
 async function loadOwnerStudioSettings(input: {
   lifecycleAutomationSnapshotLoader?: StudioSettingsServiceDependencies["lifecycleAutomationSnapshotLoader"];
+  lifecycleDeliveryService?: StudioSettingsServiceDependencies["lifecycleDeliveryService"];
   ownerUserId: string;
   repositories: StudioSettingsRepositorySet;
   role: StudioWorkspaceRole;
@@ -906,6 +923,7 @@ async function loadOwnerStudioSettings(input: {
 
   return serializeStudioSettings({
     brands,
+    lifecycleDeliveryService: input.lifecycleDeliveryService,
     lifecycleAutomationSnapshot,
     owner,
     repositories: input.repositories,
@@ -1189,6 +1207,7 @@ export function createStudioSettingsService(
       return loadOwnerStudioSettings({
         lifecycleAutomationSnapshotLoader:
           dependencies.lifecycleAutomationSnapshotLoader,
+        lifecycleDeliveryService: dependencies.lifecycleDeliveryService,
         ownerUserId: input.ownerUserId,
         repositories: dependencies.repositories,
         role: input.role ?? "owner",
@@ -1745,6 +1764,7 @@ export function createStudioSettingsService(
         return loadOwnerStudioSettings({
           lifecycleAutomationSnapshotLoader:
             dependencies.lifecycleAutomationSnapshotLoader,
+          lifecycleDeliveryService: dependencies.lifecycleDeliveryService,
           ownerUserId: input.ownerUserId,
           repositories,
           role: "owner",
@@ -2191,7 +2211,7 @@ export function createStudioSettingsService(
           workspace
         };
       });
-      const delivery = dependencies.lifecycleDeliveryService
+      const deliveries = dependencies.lifecycleDeliveryService
         ? await dependencies.lifecycleDeliveryService.recordInvitationReminderDelivery(
             {
               actor: reminderResult.owner,
@@ -2201,29 +2221,32 @@ export function createStudioSettingsService(
               workspace: reminderResult.workspace
             }
           )
-        : {
-            attemptCount: 0,
-            createdAt: reminderResult.occurredAt.toISOString(),
-            decommissionNotificationId: null,
-            decommissionNotificationKind: null,
-            deliveredAt: null,
-            deliveryChannel: "webhook" as const,
-            deliveryState: "skipped" as const,
-            eventKind: "invitation_reminder" as const,
-            eventOccurredAt: reminderResult.occurredAt.toISOString(),
-            failedAt: reminderResult.occurredAt.toISOString(),
-            failureMessage:
-              "Lifecycle delivery orchestration is not configured for this service instance.",
-            id: `local:${reminderResult.invitation.id}:${reminderResult.occurredAt.toISOString()}`,
-            invitationId: reminderResult.invitation.id,
-            invitationWalletAddress: reminderResult.invitation.walletAddress,
-            lastAttemptedAt: null,
-            queuedAt: null,
-            updatedAt: reminderResult.occurredAt.toISOString()
-          };
+        : [
+            {
+              attemptCount: 0,
+              createdAt: reminderResult.occurredAt.toISOString(),
+              decommissionNotificationId: null,
+              decommissionNotificationKind: null,
+              deliveredAt: null,
+              deliveryChannel: "webhook" as const,
+              deliveryState: "skipped" as const,
+              eventKind: "invitation_reminder" as const,
+              eventOccurredAt: reminderResult.occurredAt.toISOString(),
+              failedAt: reminderResult.occurredAt.toISOString(),
+              failureMessage:
+                "Lifecycle delivery orchestration is not configured for this service instance.",
+              id: `local:${reminderResult.invitation.id}:${reminderResult.occurredAt.toISOString()}`,
+              invitationId: reminderResult.invitation.id,
+              invitationWalletAddress: reminderResult.invitation.walletAddress,
+              lastAttemptedAt: null,
+              providerKey: null,
+              queuedAt: null,
+              updatedAt: reminderResult.occurredAt.toISOString()
+            }
+          ];
 
       return studioWorkspaceInvitationReminderResponseSchema.parse({
-        delivery,
+        deliveries,
         invitation: serializeWorkspaceInvitation(reminderResult.invitation)
       });
     },

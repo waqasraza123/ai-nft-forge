@@ -46,6 +46,11 @@ enum WorkspaceLifecycleNotificationDeliveryChannel {
   webhook
 }
 
+enum WorkspaceLifecycleNotificationProviderKey {
+  primary
+  secondary
+}
+
 enum WorkspaceLifecycleNotificationDeliveryState {
   queued
   processing
@@ -403,6 +408,7 @@ model WorkspaceLifecycleNotificationDelivery {
   decommissionNotificationId String?                                     @map("decommission_notification_id")
   eventKind                 WorkspaceLifecycleNotificationDeliveryKind    @map("event_kind")
   deliveryChannel           WorkspaceLifecycleNotificationDeliveryChannel @default(webhook) @map("delivery_channel")
+  providerKey               WorkspaceLifecycleNotificationProviderKey?    @map("provider_key")
   deliveryState             WorkspaceLifecycleNotificationDeliveryState   @map("delivery_state")
   eventOccurredAt           DateTime                                     @map("event_occurred_at")
   payloadJson               Json                                         @map("payload_json")
@@ -419,9 +425,9 @@ model WorkspaceLifecycleNotificationDelivery {
   ownerUser                 User                                         @relation("WorkspaceLifecycleNotificationDeliveryOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
   workspace                 Workspace                                    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  @@unique([decommissionNotificationId, deliveryChannel], map: "ws_lifecycle_deliveries_notification_channel_key")
+  @@unique([decommissionNotificationId, deliveryChannel, providerKey], map: "ws_lifecycle_deliveries_notification_channel_provider_key")
   @@index([workspaceId, createdAt], map: "ws_lifecycle_deliveries_workspace_created_at_idx")
-  @@index([workspaceId, deliveryChannel, createdAt], map: "ws_lifecycle_deliveries_workspace_channel_created_at_idx")
+  @@index([workspaceId, deliveryChannel, providerKey, createdAt], map: "ws_lifecycle_deliveries_ws_chan_provider_created_idx")
   @@index([workspaceId, deliveryState, createdAt], map: "ws_lifecycle_deliveries_workspace_state_created_at_idx")
   @@index([ownerUserId, createdAt], map: "ws_lifecycle_deliveries_owner_created_at_idx")
   @@index([eventKind, deliveryState, createdAt], map: "ws_lifecycle_deliveries_kind_state_created_at_idx")

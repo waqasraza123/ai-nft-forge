@@ -184,10 +184,45 @@ function createWorkspaceRetentionHarness() {
                         invitationWalletAddress:
                           "0x2222222222222222222222222222222222222222",
                         lastAttemptedAt: "2026-04-12T06:05:00.000Z",
+                        providerKey: "primary" as const,
                         queuedAt: null,
                         updatedAt: "2026-04-12T06:05:00.000Z"
                       }
                     : null,
+                providers: [
+                  {
+                    deliveredCount: 0,
+                    failedCount: workspace.id === "workspace_review" ? 1 : 0,
+                    key: "primary" as const,
+                    label: "Primary webhook",
+                    latestDelivery:
+                      workspace.id === "workspace_review"
+                        ? {
+                            attemptCount: 1,
+                            createdAt: "2026-04-12T06:05:00.000Z",
+                            decommissionNotificationId: null,
+                            decommissionNotificationKind: null,
+                            deliveredAt: null,
+                            deliveryChannel: "webhook" as const,
+                            deliveryState: "failed" as const,
+                            eventKind: "invitation_reminder" as const,
+                            eventOccurredAt: "2026-04-12T06:00:00.000Z",
+                            failedAt: "2026-04-12T06:05:00.000Z",
+                            failureMessage: "Webhook rejected",
+                            id: "delivery_1",
+                            invitationId: "invitation_1",
+                            invitationWalletAddress:
+                              "0x2222222222222222222222222222222222222222",
+                            lastAttemptedAt: "2026-04-12T06:05:00.000Z",
+                            providerKey: "primary" as const,
+                            queuedAt: null,
+                            updatedAt: "2026-04-12T06:05:00.000Z"
+                          }
+                        : null,
+                    queuedCount: 0,
+                    skippedCount: workspace.id === "workspace_blocked" ? 1 : 0
+                  }
+                ],
                 queuedCount: 0,
                 skippedCount: workspace.id === "workspace_blocked" ? 1 : 0,
                 webhook: {
@@ -212,6 +247,7 @@ function createWorkspaceRetentionHarness() {
                           invitationWalletAddress:
                             "0x2222222222222222222222222222222222222222",
                           lastAttemptedAt: "2026-04-12T06:05:00.000Z",
+                          providerKey: "primary" as const,
                           queuedAt: null,
                           updatedAt: "2026-04-12T06:05:00.000Z"
                         }
