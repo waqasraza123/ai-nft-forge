@@ -97,6 +97,9 @@ describe("createWorkspaceLifecycleAutomationService", () => {
           listLifecycleAutomationEligible: vi.fn().mockResolvedValue([
             {
               id: "workspace_1",
+              lifecycleAutomationDecommissionNoticesEnabled: true,
+              lifecycleAutomationEnabled: true,
+              lifecycleAutomationInvitationRemindersEnabled: true,
               lifecycleWebhookDeliverDecommissionNotifications: true,
               lifecycleWebhookDeliverInvitationReminders: true,
               lifecycleWebhookEnabled: true,
@@ -297,6 +300,9 @@ describe("createWorkspaceLifecycleAutomationService", () => {
           listLifecycleAutomationEligible: vi.fn().mockResolvedValue([
             {
               id: "workspace_1",
+              lifecycleAutomationDecommissionNoticesEnabled: true,
+              lifecycleAutomationEnabled: true,
+              lifecycleAutomationInvitationRemindersEnabled: true,
               lifecycleWebhookDeliverDecommissionNotifications: true,
               lifecycleWebhookDeliverInvitationReminders: true,
               lifecycleWebhookEnabled: true,
@@ -333,6 +339,88 @@ describe("createWorkspaceLifecycleAutomationService", () => {
       invitationReminderCount: 0,
       webhookQueuedCount: 0,
       workspaceCount: 1
+    });
+    expect(txInvitationRepository.touchReminderById).not.toHaveBeenCalled();
+    expect(txDecommissionNotificationRepository.create).not.toHaveBeenCalled();
+    expect(auditLogRepository.create).not.toHaveBeenCalled();
+  });
+
+  it("does not record automation events when workspace automation is disabled", async () => {
+    const now = new Date("2026-04-12T00:00:00.000Z");
+    const logger = createLogger();
+    const auditLogRepository = {
+      create: vi.fn()
+    };
+    const txInvitationRepository = {
+      touchReminderById: vi.fn()
+    };
+    const txDecommissionNotificationRepository = {
+      create: vi.fn()
+    };
+    const service = createWorkspaceLifecycleAutomationService({
+      logger,
+      now: () => now,
+      queue: {
+        enqueue: vi.fn()
+      },
+      repositories: {
+        auditLogRepository,
+        workspaceDecommissionNotificationRepository: {
+          listByRequestIds: vi.fn().mockResolvedValue([])
+        },
+        workspaceDecommissionRequestRepository: {
+          listScheduledByWorkspaceIds: vi.fn().mockResolvedValue([
+            {
+              executeAfter: new Date("2026-04-15T00:00:00.000Z"),
+              id: "request_1",
+              reason: "Retention elapsed",
+              retentionDays: 3,
+              workspaceId: "workspace_1"
+            }
+          ])
+        },
+        workspaceInvitationRepository: {
+          listReminderReadyByWorkspaceIds: vi.fn().mockResolvedValue([
+            {
+              expiresAt: new Date("2026-04-20T00:00:00.000Z"),
+              id: "invitation_1",
+              lastRemindedAt: null,
+              reminderCount: 0,
+              role: "operator",
+              walletAddress: "0x1111111111111111111111111111111111111111",
+              workspaceId: "workspace_1"
+            }
+          ])
+        },
+        workspaceLifecycleNotificationDeliveryRepository: {
+          create: vi.fn(),
+          updateById: vi.fn()
+        },
+        workspaceRepository: {
+          listLifecycleAutomationEligible: vi.fn().mockResolvedValue([])
+        }
+      },
+      runInTransaction: async (callback) =>
+        callback({
+          auditLogRepository,
+          workspaceDecommissionNotificationRepository:
+            txDecommissionNotificationRepository,
+          workspaceInvitationRepository: txInvitationRepository
+        }),
+      transport: {
+        availableProviderKeys: ["primary"]
+      }
+    });
+
+    const summary = await service.run();
+
+    expect(summary).toEqual({
+      auditLogDeliveryCount: 0,
+      decommissionNoticeCount: 0,
+      failedWorkspaceCount: 0,
+      invitationReminderCount: 0,
+      webhookQueuedCount: 0,
+      workspaceCount: 0
     });
     expect(txInvitationRepository.touchReminderById).not.toHaveBeenCalled();
     expect(txDecommissionNotificationRepository.create).not.toHaveBeenCalled();

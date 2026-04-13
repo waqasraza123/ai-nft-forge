@@ -1,5 +1,6 @@
 import {
   workspaceExportFormatSchema,
+  workspaceRetentionBulkAutomationPolicyResponseSchema,
   workspaceRetentionBulkCancelResponseSchema,
   workspaceRetentionFleetReportResponseSchema,
   type StudioWorkspaceScopeSummary,
@@ -12,6 +13,7 @@ import {
 
 import { OpsServiceError } from "../ops/error";
 import { StudioSettingsServiceError } from "../studio-settings/error";
+import { createRuntimeStudioSettingsService } from "../studio-settings/runtime";
 import { createRuntimeWorkspaceDecommissionService } from "./decommission-service";
 import { loadWorkspaceLifecycleAutomationSnapshot } from "./lifecycle-automation-runtime";
 import { createRuntimeWorkspaceOffboardingService } from "./offboarding-service";
@@ -47,6 +49,18 @@ type WorkspaceRetentionServiceDependencies = {
         workspaces: WorkspaceOffboardingEntry[];
       };
     }>;
+  };
+  studioSettingsService: {
+    updateWorkspaceLifecycleAutomationPolicy(input: {
+      lifecycleAutomationPolicy: {
+        automateDecommissionNotices: boolean;
+        automateInvitationReminders: boolean;
+        enabled: boolean;
+      };
+      ownerUserId: string;
+      role?: "owner" | "operator";
+      workspaceId: string;
+    }): Promise<unknown>;
   };
 };
 
@@ -109,6 +123,9 @@ export function createWorkspaceRetentionService(
           "workspace_role",
           "workspace_status",
           "current",
+          "lifecycle_automation_enabled",
+          "lifecycle_automate_invitation_reminders",
+          "lifecycle_automate_decommission_notices",
           "lifecycle_automation_status",
           "lifecycle_automation_last_run_at",
           "lifecycle_automation_last_run_age_seconds",
@@ -154,6 +171,13 @@ export function createWorkspaceRetentionService(
             workspace.workspace.role,
             workspace.workspace.status,
             workspace.current ? "yes" : "no",
+            workspace.lifecycleAutomationPolicy.enabled ? "yes" : "no",
+            workspace.lifecycleAutomationPolicy.automateInvitationReminders
+              ? "yes"
+              : "no",
+            workspace.lifecycleAutomationPolicy.automateDecommissionNotices
+              ? "yes"
+              : "no",
             input.reportData.report.lifecycleAutomationHealth.status,
             input.reportData.report.lifecycleAutomationHealth.lastRunAt,
             input.reportData.report.lifecycleAutomationHealth.lastRunAgeSeconds,
@@ -283,6 +307,108 @@ export function createWorkspaceRetentionService(
           requestedCount: uniqueWorkspaceIds.length
         }
       });
+    },
+
+    async updateAccessibleWorkspaceLifecycleAutomationPolicy(input: {
+      actorUserId: string;
+      currentWorkspaceId?: string | null | undefined;
+      enabled: boolean;
+      workspaces: StudioWorkspaceScopeSummary[];
+      workspaceIds: string[];
+    }) {
+      const uniqueWorkspaceIds = [...new Set(input.workspaceIds)];
+      const accessibleWorkspaceOverview =
+        await dependencies.offboardingService.getAccessibleWorkspaceOffboardingOverview(
+          {
+            currentWorkspaceId: input.currentWorkspaceId,
+            workspaces: input.workspaces
+          }
+        );
+      const accessibleWorkspaceById = new Map(
+        accessibleWorkspaceOverview.overview.workspaces.map((workspace) => [
+          workspace.workspace.id,
+          workspace
+        ] as const)
+      );
+      const results: Array<{
+        status: "forbidden" | "not_found" | "updated";
+        workspaceId: string;
+        workspaceName: string | null;
+        workspaceSlug: string | null;
+      }> = [];
+
+      for (const workspaceId of uniqueWorkspaceIds) {
+        const workspace = accessibleWorkspaceById.get(workspaceId);
+
+        if (!workspace) {
+          results.push({
+            status: "not_found",
+            workspaceId,
+            workspaceName: null,
+            workspaceSlug: null
+          });
+          continue;
+        }
+
+        if (workspace.workspace.role !== "owner") {
+          results.push({
+            status: "forbidden",
+            workspaceId,
+            workspaceName: workspace.workspace.name,
+            workspaceSlug: workspace.workspace.slug
+          });
+          continue;
+        }
+
+        try {
+          await dependencies.studioSettingsService.updateWorkspaceLifecycleAutomationPolicy(
+            {
+              lifecycleAutomationPolicy: {
+                automateDecommissionNotices:
+                  workspace.lifecycleAutomationPolicy
+                    .automateDecommissionNotices,
+                automateInvitationReminders:
+                  workspace.lifecycleAutomationPolicy
+                    .automateInvitationReminders,
+                enabled: input.enabled
+              },
+              ownerUserId: input.actorUserId,
+              role: "owner",
+              workspaceId
+            }
+          );
+          results.push({
+            status: "updated",
+            workspaceId,
+            workspaceName: workspace.workspace.name,
+            workspaceSlug: workspace.workspace.slug
+          });
+        } catch {
+          throw new OpsServiceError(
+            "INTERNAL_SERVER_ERROR",
+            "Workspace retention actions could not be completed.",
+            500
+          );
+        }
+      }
+
+      return workspaceRetentionBulkAutomationPolicyResponseSchema.parse({
+        policy: {
+          enabled: input.enabled
+        },
+        results,
+        summary: {
+          forbiddenCount: results.filter(
+            (result) => result.status === "forbidden"
+          ).length,
+          notFoundCount: results.filter(
+            (result) => result.status === "not_found"
+          ).length,
+          requestedCount: uniqueWorkspaceIds.length,
+          updatedCount: results.filter((result) => result.status === "updated")
+            .length
+        }
+      });
     }
   };
 }
@@ -297,6 +423,7 @@ export function createRuntimeWorkspaceRetentionService(
     lifecycleAutomationSnapshotLoader: () =>
       loadWorkspaceLifecycleAutomationSnapshot(rawEnvironment),
     now: () => new Date(),
-    offboardingService: createRuntimeWorkspaceOffboardingService(rawEnvironment)
+    offboardingService: createRuntimeWorkspaceOffboardingService(rawEnvironment),
+    studioSettingsService: createRuntimeStudioSettingsService(rawEnvironment)
   });
 }

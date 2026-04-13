@@ -9,6 +9,16 @@ export const workspaceLifecycleDeliveryPolicySchema = z.object({
   webhookEnabled: z.boolean()
 });
 
+export const defaultWorkspaceLifecycleAutomationEnabled = true;
+export const defaultWorkspaceLifecycleInvitationAutomationEnabled = true;
+export const defaultWorkspaceLifecycleDecommissionAutomationEnabled = true;
+
+export const workspaceLifecycleAutomationPolicySchema = z.object({
+  automateDecommissionNotices: z.boolean(),
+  automateInvitationReminders: z.boolean(),
+  enabled: z.boolean()
+});
+
 export const workspaceLifecycleNotificationEventKindSchema = z.enum([
   "invitation_reminder",
   "decommission_notice"
@@ -301,6 +311,9 @@ export function resolveWorkspaceLifecycleDeliveryDecision(input: {
 
 export type WorkspaceLifecycleDeliveryPolicy = z.infer<
   typeof workspaceLifecycleDeliveryPolicySchema
+>;
+export type WorkspaceLifecycleAutomationPolicy = z.infer<
+  typeof workspaceLifecycleAutomationPolicySchema
 >;
 export type WorkspaceLifecycleNotificationEventKind = z.infer<
   typeof workspaceLifecycleNotificationEventKindSchema

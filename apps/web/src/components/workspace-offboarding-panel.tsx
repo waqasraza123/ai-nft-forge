@@ -79,6 +79,9 @@ export function WorkspaceOffboardingPanel({
                 <Pill>{entry.directory.expiredInvitationCount} expired invites</Pill>
                 <Pill>{entry.lifecycleDelivery.failedCount} lifecycle failed</Pill>
                 <Pill>{entry.lifecycleDelivery.deliveredCount} lifecycle delivered</Pill>
+                <Pill>
+                  automation {entry.lifecycleAutomationPolicy.enabled ? "on" : "off"}
+                </Pill>
                 {entry.decommission ? (
                   <Pill>
                     decommission{" "}
@@ -188,6 +191,21 @@ export function WorkspaceOffboardingPanel({
                   </span>
                 </div>
               ) : null}
+              <div className="status-banner status-banner--info">
+                <strong>Lifecycle automation</strong>
+                <span>
+                  Scheduler {entry.lifecycleAutomationPolicy.enabled ? "enabled" : "disabled"}
+                  {" "}· invitation reminders{" "}
+                  {entry.lifecycleAutomationPolicy.automateInvitationReminders
+                    ? "enabled"
+                    : "disabled"}
+                  {" "}· decommission notices{" "}
+                  {entry.lifecycleAutomationPolicy.automateDecommissionNotices
+                    ? "enabled"
+                    : "disabled"}
+                  .
+                </span>
+              </div>
               {entry.workspace.role === "owner" ? (
                 <div className="studio-action-row">
                   <Link

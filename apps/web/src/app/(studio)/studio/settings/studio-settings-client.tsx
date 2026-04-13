@@ -11,6 +11,9 @@ import {
 } from "react";
 
 import {
+  defaultWorkspaceLifecycleAutomationEnabled,
+  defaultWorkspaceLifecycleDecommissionAutomationEnabled,
+  defaultWorkspaceLifecycleInvitationAutomationEnabled,
   defaultWorkspaceDecommissionRetentionDays,
   defaultWorkspaceMinimumDecommissionRetentionDays,
   defaultStudioBrandAccentColor,
@@ -24,6 +27,7 @@ import {
   studioWorkspaceInvitationDeleteResponseSchema,
   studioWorkspaceInvitationReminderResponseSchema,
   studioWorkspaceInvitationResponseSchema,
+  studioWorkspaceLifecycleAutomationPolicyResponseSchema,
   workspaceLifecycleNotificationDeliveryRetryResponseSchema,
   studioWorkspaceMemberDeleteResponseSchema,
   studioWorkspaceRoleEscalationActionResponseSchema,
@@ -38,6 +42,7 @@ import {
   type StudioWorkspaceDirectoryEntry,
   type StudioWorkspaceScopeSummary,
   type StudioWorkspaceInvitationSummary,
+  type StudioWorkspaceLifecycleAutomationPolicy,
   type StudioWorkspaceLifecycleDeliveryPolicy,
   type StudioWorkspaceMemberSummary,
   type StudioWorkspaceRoleEscalationSummary,
@@ -75,6 +80,9 @@ type NoticeState = {
 
 type StudioBrandEditorState = {
   accentColor: string;
+  automateDecommissionNotices: boolean;
+  automateInvitationReminders: boolean;
+  automationEnabled: boolean;
   brandName: string;
   brandSlug: string;
   customDomain: string;
@@ -151,6 +159,20 @@ function resolveWorkspaceLifecycleDeliveryPolicy(
   );
 }
 
+function resolveWorkspaceLifecycleAutomationPolicy(
+  settings: StudioSettingsSummary | null
+): StudioWorkspaceLifecycleAutomationPolicy {
+  return (
+    settings?.lifecycleAutomationPolicy ?? {
+      automateDecommissionNotices:
+        defaultWorkspaceLifecycleDecommissionAutomationEnabled,
+      automateInvitationReminders:
+        defaultWorkspaceLifecycleInvitationAutomationEnabled,
+      enabled: defaultWorkspaceLifecycleAutomationEnabled
+    }
+  );
+}
+
 function formatTimestamp(value: string | null) {
   if (!value) {
     return null;
@@ -207,6 +229,11 @@ function createInitialEditorState(settings: StudioSettingsSummary | null) {
 
   return {
     accentColor: brand?.accentColor ?? defaultStudioBrandAccentColor,
+    automateDecommissionNotices:
+      settings?.lifecycleAutomationPolicy.automateDecommissionNotices ?? true,
+    automateInvitationReminders:
+      settings?.lifecycleAutomationPolicy.automateInvitationReminders ?? true,
+    automationEnabled: settings?.lifecycleAutomationPolicy.enabled ?? true,
     brandName: brand?.name ?? "",
     brandSlug: brand?.slug ?? "",
     customDomain: brand?.customDomain ?? "",
@@ -243,12 +270,18 @@ function createInitialEditorState(settings: StudioSettingsSummary | null) {
 
 function createEditorState(input: {
   brand: StudioBrandSummary | null;
+  lifecycleAutomationPolicy: StudioWorkspaceLifecycleAutomationPolicy;
   retentionPolicy: StudioWorkspaceRetentionPolicy;
   lifecycleDeliveryPolicy: StudioWorkspaceLifecycleDeliveryPolicy;
   workspace: StudioSettingsSummary["workspace"] | null;
 }): StudioBrandEditorState {
   return {
     accentColor: input.brand?.accentColor ?? defaultStudioBrandAccentColor,
+    automateDecommissionNotices:
+      input.lifecycleAutomationPolicy.automateDecommissionNotices,
+    automateInvitationReminders:
+      input.lifecycleAutomationPolicy.automateInvitationReminders,
+    automationEnabled: input.lifecycleAutomationPolicy.enabled,
     brandName: input.brand?.name ?? "",
     brandSlug: input.brand?.slug ?? "",
     customDomain: input.brand?.customDomain ?? "",
@@ -501,6 +534,8 @@ export function StudioSettingsClient({
   const [notice, setNotice] = useState<NoticeState>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingLifecycleAutomationPolicy, setIsSavingLifecycleAutomationPolicy] =
+    useState(false);
   const [isCreatingBrand, setIsCreatingBrand] = useState(false);
   const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false);
   const [isCreatingInvitation, setIsCreatingInvitation] = useState(false);
@@ -553,10 +588,14 @@ export function StudioSettingsClient({
       : createInactiveWorkspaceMessage(workspaceStatus);
   const canEditCurrentWorkspace =
     canManageWorkspace && Boolean(settings?.workspace.id) && workspaceIsActive;
+  const canManageLifecycleAutomation =
+    canManageWorkspace && Boolean(settings?.workspace.id);
   const canMutateMembers = canManageMembers && workspaceIsActive;
   const retentionPolicy = resolveWorkspaceRetentionPolicy(settings);
   const lifecycleDeliveryPolicy =
     resolveWorkspaceLifecycleDeliveryPolicy(settings);
+  const lifecycleAutomationPolicy =
+    resolveWorkspaceLifecycleAutomationPolicy(settings);
   const lifecycleAutomationHealth = settings?.lifecycleAutomationHealth ?? null;
   const lifecycleNotificationProviders =
     settings?.lifecycleNotificationProviders ?? [];
@@ -630,6 +669,8 @@ export function StudioSettingsClient({
     setEditorState(
       createEditorState({
         brand: selectedBrand,
+        lifecycleAutomationPolicy:
+          resolveWorkspaceLifecycleAutomationPolicy(settings),
         lifecycleDeliveryPolicy:
           resolveWorkspaceLifecycleDeliveryPolicy(settings),
         retentionPolicy: resolveWorkspaceRetentionPolicy(settings),
@@ -734,6 +775,13 @@ export function StudioSettingsClient({
         body: JSON.stringify({
           ...editorState,
           brandId: selectedBrand?.id ?? null,
+          lifecycleAutomationPolicy: {
+            automateDecommissionNotices:
+              editorState.automateDecommissionNotices,
+            automateInvitationReminders:
+              editorState.automateInvitationReminders,
+            enabled: editorState.automationEnabled
+          },
           lifecycleDeliveryPolicy: {
             deliverDecommissionNotifications:
               editorState.deliverDecommissionNotifications,
@@ -782,6 +830,64 @@ export function StudioSettingsClient({
       });
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleSaveLifecycleAutomationPolicy() {
+    if (!settings?.workspace.id || !canManageLifecycleAutomation) {
+      setNotice({
+        message:
+          settings?.workspace.id
+            ? "Only workspace owners can change lifecycle automation."
+            : "Choose a workspace before changing lifecycle automation.",
+        tone: "error"
+      });
+      return;
+    }
+
+    setIsSavingLifecycleAutomationPolicy(true);
+    setNotice({
+      message: "Saving lifecycle automation policy…",
+      tone: "info"
+    });
+
+    try {
+      await parseJsonResponse({
+        response: await fetch(
+          `/api/studio/workspaces/${settings.workspace.id}/lifecycle-automation-policy`,
+          {
+            body: JSON.stringify({
+              automateDecommissionNotices:
+                editorState.automateDecommissionNotices,
+              automateInvitationReminders:
+                editorState.automateInvitationReminders,
+              enabled: editorState.automationEnabled
+            }),
+            headers: {
+              "Content-Type": "application/json"
+            },
+            method: "PUT"
+          }
+        ),
+        schema: studioWorkspaceLifecycleAutomationPolicyResponseSchema
+      });
+      await refreshSettings({
+        silent: true
+      });
+      setNotice({
+        message: "Lifecycle automation policy saved.",
+        tone: "success"
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Lifecycle automation policy could not be saved.",
+        tone: "error"
+      });
+    } finally {
+      setIsSavingLifecycleAutomationPolicy(false);
     }
   }
 
@@ -2250,6 +2356,125 @@ export function StudioSettingsClient({
               ) : null}
             </div>
           ) : null}
+        </SurfaceCard>
+        <SurfaceCard
+          body="Lifecycle automation decides whether the worker should auto-record invitation reminders and decommission notices for this workspace. Delivery transport stays separate below."
+          eyebrow={lifecycleAutomationPolicy.enabled ? "Automation on" : "Automation off"}
+          span={4}
+          title="Lifecycle automation policy"
+        >
+          {!canManageWorkspace ? (
+            <div className="status-banner status-banner--info">
+              <strong>Operator read-only</strong>
+              <span>
+                Operators can review lifecycle automation, but only workspace
+                owners can change it.
+              </span>
+            </div>
+          ) : null}
+          {!settings?.workspace ? (
+            <div className="status-banner status-banner--info">
+              <strong>No workspace selected</strong>
+              <span>
+                Choose a workspace before changing lifecycle automation.
+              </span>
+            </div>
+          ) : (
+            <form
+              className="studio-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void handleSaveLifecycleAutomationPolicy();
+              }}
+            >
+              <fieldset
+                disabled={!canManageLifecycleAutomation || isSavingLifecycleAutomationPolicy}
+              >
+                <label className="field-stack">
+                  <span className="field-label">Automation status</span>
+                  <select
+                    className="input-field"
+                    onChange={(event) => {
+                      setEditorState((current) => ({
+                        ...current,
+                        automationEnabled: event.target.value === "enabled"
+                      }));
+                    }}
+                    value={editorState.automationEnabled ? "enabled" : "disabled"}
+                  >
+                    <option value="enabled">Enabled</option>
+                    <option value="disabled">Disabled</option>
+                  </select>
+                </label>
+                <label className="field-stack">
+                  <span className="field-label">Invitation reminder automation</span>
+                  <select
+                    className="input-field"
+                    disabled={!editorState.automationEnabled}
+                    onChange={(event) => {
+                      setEditorState((current) => ({
+                        ...current,
+                        automateInvitationReminders:
+                          event.target.value === "enabled"
+                      }));
+                    }}
+                    value={
+                      editorState.automateInvitationReminders
+                        ? "enabled"
+                        : "disabled"
+                    }
+                  >
+                    <option value="enabled">Enabled</option>
+                    <option value="disabled">Disabled</option>
+                  </select>
+                </label>
+                <label className="field-stack">
+                  <span className="field-label">Decommission notice automation</span>
+                  <select
+                    className="input-field"
+                    disabled={!editorState.automationEnabled}
+                    onChange={(event) => {
+                      setEditorState((current) => ({
+                        ...current,
+                        automateDecommissionNotices:
+                          event.target.value === "enabled"
+                      }));
+                    }}
+                    value={
+                      editorState.automateDecommissionNotices
+                        ? "enabled"
+                        : "disabled"
+                    }
+                  >
+                    <option value="enabled">Enabled</option>
+                    <option value="disabled">Disabled</option>
+                  </select>
+                </label>
+                <div className="pill-row">
+                  <Pill>
+                    Current {lifecycleAutomationPolicy.enabled ? "enabled" : "disabled"}
+                  </Pill>
+                  <Pill>
+                    Invites{" "}
+                    {lifecycleAutomationPolicy.automateInvitationReminders
+                      ? "enabled"
+                      : "disabled"}
+                  </Pill>
+                  <Pill>
+                    Decommission{" "}
+                    {lifecycleAutomationPolicy.automateDecommissionNotices
+                      ? "enabled"
+                      : "disabled"}
+                  </Pill>
+                </div>
+                <button className="button-action" type="submit">
+                  {isSavingLifecycleAutomationPolicy
+                    ? "Saving…"
+                    : "Save lifecycle automation"}
+                </button>
+              </fieldset>
+            </form>
+          )}
         </SurfaceCard>
         <SurfaceCard
           body={

@@ -7,6 +7,9 @@ type WorkspaceRepositoryDatabase = Pick<DatabaseExecutor, "workspace">;
 type CreateWorkspaceInput = {
   decommissionRetentionDaysDefault?: number;
   decommissionRetentionDaysMinimum?: number;
+  lifecycleAutomationDecommissionNoticesEnabled?: boolean;
+  lifecycleAutomationEnabled?: boolean;
+  lifecycleAutomationInvitationRemindersEnabled?: boolean;
   lifecycleWebhookDeliverDecommissionNotifications?: boolean;
   lifecycleWebhookDeliverInvitationReminders?: boolean;
   lifecycleWebhookEnabled?: boolean;
@@ -104,6 +107,9 @@ export function createWorkspaceRepository(
         ],
         select: {
           id: true,
+          lifecycleAutomationDecommissionNoticesEnabled: true,
+          lifecycleAutomationEnabled: true,
+          lifecycleAutomationInvitationRemindersEnabled: true,
           lifecycleWebhookDeliverDecommissionNotifications: true,
           lifecycleWebhookDeliverInvitationReminders: true,
           lifecycleWebhookEnabled: true,
@@ -119,13 +125,13 @@ export function createWorkspaceRepository(
           status: true
         },
         where: {
-          lifecycleWebhookEnabled: true,
+          lifecycleAutomationEnabled: true,
           OR: [
             {
-              lifecycleWebhookDeliverInvitationReminders: true
+              lifecycleAutomationInvitationRemindersEnabled: true
             },
             {
-              lifecycleWebhookDeliverDecommissionNotifications: true
+              lifecycleAutomationDecommissionNoticesEnabled: true
             }
           ]
         }
@@ -146,6 +152,9 @@ export function createWorkspaceRepository(
       decommissionRetentionDaysDefault: number;
       decommissionRetentionDaysMinimum: number;
       id: string;
+      lifecycleAutomationDecommissionNoticesEnabled: boolean;
+      lifecycleAutomationEnabled: boolean;
+      lifecycleAutomationInvitationRemindersEnabled: boolean;
       lifecycleWebhookDeliverDecommissionNotifications: boolean;
       lifecycleWebhookDeliverInvitationReminders: boolean;
       lifecycleWebhookEnabled: boolean;
@@ -162,6 +171,11 @@ export function createWorkspaceRepository(
               input.decommissionRetentionDaysDefault,
             decommissionRetentionDaysMinimum:
               input.decommissionRetentionDaysMinimum,
+            lifecycleAutomationDecommissionNoticesEnabled:
+              input.lifecycleAutomationDecommissionNoticesEnabled,
+            lifecycleAutomationEnabled: input.lifecycleAutomationEnabled,
+            lifecycleAutomationInvitationRemindersEnabled:
+              input.lifecycleAutomationInvitationRemindersEnabled,
             lifecycleWebhookDeliverDecommissionNotifications:
               input.lifecycleWebhookDeliverDecommissionNotifications,
             lifecycleWebhookDeliverInvitationReminders:

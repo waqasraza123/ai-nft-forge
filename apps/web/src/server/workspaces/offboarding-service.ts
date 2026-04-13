@@ -17,6 +17,9 @@ import {
   type DatabaseExecutor
 } from "@ai-nft-forge/database";
 import {
+  defaultWorkspaceLifecycleAutomationEnabled,
+  defaultWorkspaceLifecycleDecommissionAutomationEnabled,
+  defaultWorkspaceLifecycleInvitationAutomationEnabled,
   defaultStudioBrandAccentColor,
   defaultStudioBrandLandingDescription,
   defaultStudioBrandLandingHeadline,
@@ -28,6 +31,7 @@ import {
   studioWorkspaceAuditEntrySchema,
   workspaceDecommissionSummarySchema,
   workspaceExportResponseSchema,
+  workspaceLifecycleAutomationPolicySchema,
   workspaceOffboardingOverviewResponseSchema,
   workspaceOffboardingSummarySchema,
   workspaceRetentionPolicySchema,
@@ -368,6 +372,9 @@ type WorkspaceOffboardingRepositorySet = {
       decommissionRetentionDaysDefault: number;
       decommissionRetentionDaysMinimum: number;
       id: string;
+      lifecycleAutomationDecommissionNoticesEnabled: boolean;
+      lifecycleAutomationEnabled: boolean;
+      lifecycleAutomationInvitationRemindersEnabled: boolean;
       lifecycleWebhookDeliverDecommissionNotifications: boolean;
       lifecycleWebhookDeliverInvitationReminders: boolean;
       lifecycleWebhookEnabled: boolean;
@@ -382,6 +389,9 @@ type WorkspaceOffboardingRepositorySet = {
         decommissionRetentionDaysDefault: number;
         decommissionRetentionDaysMinimum: number;
         id: string;
+        lifecycleAutomationDecommissionNoticesEnabled: boolean;
+        lifecycleAutomationEnabled: boolean;
+        lifecycleAutomationInvitationRemindersEnabled: boolean;
         lifecycleWebhookDeliverDecommissionNotifications: boolean;
         lifecycleWebhookDeliverInvitationReminders: boolean;
         lifecycleWebhookEnabled: boolean;
@@ -756,6 +766,20 @@ function serializeWorkspaceRetentionPolicy(input: {
   });
 }
 
+function serializeWorkspaceLifecycleAutomationPolicy(input: {
+  lifecycleAutomationDecommissionNoticesEnabled: boolean;
+  lifecycleAutomationEnabled: boolean;
+  lifecycleAutomationInvitationRemindersEnabled: boolean;
+}) {
+  return workspaceLifecycleAutomationPolicySchema.parse({
+    automateDecommissionNotices:
+      input.lifecycleAutomationDecommissionNoticesEnabled,
+    automateInvitationReminders:
+      input.lifecycleAutomationInvitationRemindersEnabled,
+    enabled: input.lifecycleAutomationEnabled
+  });
+}
+
 function createWorkspaceOffboardingSummary(input: {
   activeAlertCount: number;
   livePublicationCount: number;
@@ -1072,6 +1096,17 @@ export function createWorkspaceOffboardingService(
               notificationCount: 0
             },
           directory: directoryEntry,
+          lifecycleAutomationPolicy:
+            serializeWorkspaceLifecycleAutomationPolicy(
+              workspaceById.get(directoryEntry.workspace.id) ?? {
+                lifecycleAutomationDecommissionNoticesEnabled:
+                  defaultWorkspaceLifecycleDecommissionAutomationEnabled,
+                lifecycleAutomationEnabled:
+                  defaultWorkspaceLifecycleAutomationEnabled,
+                lifecycleAutomationInvitationRemindersEnabled:
+                  defaultWorkspaceLifecycleInvitationAutomationEnabled
+              }
+            ),
           lifecycleDelivery: createWorkspaceLifecycleDeliveryOverview({
             deliveries:
               lifecycleDeliveriesByWorkspaceId.get(directoryEntry.workspace.id) ??
@@ -1082,6 +1117,12 @@ export function createWorkspaceOffboardingService(
             workspaceById.get(directoryEntry.workspace.id) ?? {
               decommissionRetentionDaysDefault: 30,
               decommissionRetentionDaysMinimum: 7,
+              lifecycleAutomationDecommissionNoticesEnabled:
+                defaultWorkspaceLifecycleDecommissionAutomationEnabled,
+              lifecycleAutomationEnabled:
+                defaultWorkspaceLifecycleAutomationEnabled,
+              lifecycleAutomationInvitationRemindersEnabled:
+                defaultWorkspaceLifecycleInvitationAutomationEnabled,
               lifecycleWebhookDeliverDecommissionNotifications: true,
               lifecycleWebhookDeliverInvitationReminders: true,
               lifecycleWebhookEnabled: false,
@@ -1310,6 +1351,8 @@ export function createWorkspaceOffboardingService(
           lifecycleDeliveries: lifecycleDeliveries.map((delivery) =>
             serializeWorkspaceLifecycleNotificationDelivery(delivery)
           ),
+          lifecycleAutomationPolicy:
+            serializeWorkspaceLifecycleAutomationPolicy(workspace),
           lifecycleDeliveryPolicy: serializeWorkspaceLifecycleDeliveryPolicy(
             workspace
           ),
@@ -1398,6 +1441,11 @@ export function createWorkspaceOffboardingService(
         row.retentionPolicy.defaultDecommissionRetentionDays,
         row.retentionPolicy.minimumDecommissionRetentionDays,
         row.retentionPolicy.requireDecommissionReason ? "yes" : "no",
+        row.lifecycleAutomationPolicy.enabled ? "yes" : "no",
+        row.lifecycleAutomationPolicy.automateInvitationReminders ? "yes" : "no",
+        row.lifecycleAutomationPolicy.automateDecommissionNotices
+          ? "yes"
+          : "no",
         row.lifecycleDeliveryPolicy.webhookEnabled ? "yes" : "no",
         row.lifecycleDeliveryPolicy.deliverInvitationReminders ? "yes" : "no",
         row.lifecycleDeliveryPolicy.deliverDecommissionNotifications
@@ -1453,6 +1501,9 @@ export function createWorkspaceOffboardingService(
           "retention_default_days",
           "retention_minimum_days",
           "retention_reason_required",
+          "lifecycle_automation_enabled",
+          "lifecycle_automate_invitation_reminders",
+          "lifecycle_automate_decommission_notices",
           "lifecycle_webhook_enabled",
           "lifecycle_deliver_invitation_reminders",
           "lifecycle_deliver_decommission_notifications",

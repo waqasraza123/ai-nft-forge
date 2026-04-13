@@ -91,6 +91,11 @@ export async function PUT(request: Request) {
               retentionPolicy: body.retentionPolicy
             }
           : {}),
+        ...(body.lifecycleAutomationPolicy !== undefined
+          ? {
+              lifecycleAutomationPolicy: body.lifecycleAutomationPolicy
+            }
+          : {}),
         ...(body.lifecycleDeliveryPolicy !== undefined
           ? {
               lifecycleDeliveryPolicy: body.lifecycleDeliveryPolicy

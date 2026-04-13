@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { startTransition, useEffectEvent, useState } from "react";
 
 import {
+  workspaceRetentionBulkAutomationPolicyResponseSchema,
   workspaceRetentionBulkCancelResponseSchema,
   workspaceRetentionFleetReportResponseSchema,
   type WorkspaceRetentionFleetReportResponse
@@ -91,9 +92,14 @@ export function OpsRetentionClient({
   const router = useRouter();
   const [report, setReport] = useState(initialReport);
   const [notice, setNotice] = useState<NoticeState>(null);
-  const [selectedWorkspaceIds, setSelectedWorkspaceIds] = useState<string[]>([]);
+  const [selectedAutomationWorkspaceIds, setSelectedAutomationWorkspaceIds] =
+    useState<string[]>([]);
+  const [selectedCancelableWorkspaceIds, setSelectedCancelableWorkspaceIds] =
+    useState<string[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
+  const [isUpdatingAutomationPolicy, setIsUpdatingAutomationPolicy] =
+    useState(false);
 
   const cancelableWorkspaceIds = report.workspaces
     .filter(
@@ -101,6 +107,9 @@ export function OpsRetentionClient({
         workspace.workspace.role === "owner" &&
         workspace.decommission?.status === "scheduled"
     )
+    .map((workspace) => workspace.workspace.id);
+  const automationManageableWorkspaceIds = report.workspaces
+    .filter((workspace) => workspace.workspace.role === "owner")
     .map((workspace) => workspace.workspace.id);
 
   const refreshReport = useEffectEvent(async () => {
@@ -115,12 +124,21 @@ export function OpsRetentionClient({
       });
 
       setReport(payload.report);
-      setSelectedWorkspaceIds((current) =>
+      setSelectedCancelableWorkspaceIds((current) =>
         current.filter((workspaceId) =>
           payload.report.workspaces.some(
             (workspace) =>
               workspace.workspace.id === workspaceId &&
               workspace.decommission?.status === "scheduled" &&
+              workspace.workspace.role === "owner"
+          )
+        )
+      );
+      setSelectedAutomationWorkspaceIds((current) =>
+        current.filter((workspaceId) =>
+          payload.report.workspaces.some(
+            (workspace) =>
+              workspace.workspace.id === workspaceId &&
               workspace.workspace.role === "owner"
           )
         )
@@ -134,7 +152,7 @@ export function OpsRetentionClient({
   });
 
   async function handleBulkCancel() {
-    if (selectedWorkspaceIds.length === 0) {
+    if (selectedCancelableWorkspaceIds.length === 0) {
       setNotice({
         message: "Select at least one scheduled decommission to cancel.",
         tone: "error"
@@ -152,7 +170,7 @@ export function OpsRetentionClient({
       const payload = await parseJsonResponse({
         response: await fetch("/api/ops/retention/decommission/cancel", {
           body: JSON.stringify({
-            workspaceIds: selectedWorkspaceIds
+            workspaceIds: selectedCancelableWorkspaceIds
           }),
           headers: {
             "Content-Type": "application/json"
@@ -163,7 +181,7 @@ export function OpsRetentionClient({
       });
 
       await refreshReport();
-      setSelectedWorkspaceIds([]);
+      setSelectedCancelableWorkspaceIds([]);
       setNotice({
         message: `Canceled ${payload.summary.canceledCount} scheduled decommission(s).`,
         tone: "success"
@@ -178,6 +196,54 @@ export function OpsRetentionClient({
       });
     } finally {
       setIsCanceling(false);
+    }
+  }
+
+  async function handleBulkAutomationUpdate(enabled: boolean) {
+    if (selectedAutomationWorkspaceIds.length === 0) {
+      setNotice({
+        message: "Select at least one owner workspace to update automation.",
+        tone: "error"
+      });
+      return;
+    }
+
+    setIsUpdatingAutomationPolicy(true);
+    setNotice({
+      message: `${enabled ? "Enabling" : "Pausing"} lifecycle automation…`,
+      tone: "info"
+    });
+
+    try {
+      const payload = await parseJsonResponse({
+        response: await fetch("/api/ops/retention/automation/policy", {
+          body: JSON.stringify({
+            enabled,
+            workspaceIds: selectedAutomationWorkspaceIds
+          }),
+          headers: {
+            "Content-Type": "application/json"
+          },
+          method: "POST"
+        }),
+        schema: workspaceRetentionBulkAutomationPolicyResponseSchema
+      });
+
+      await refreshReport();
+      setNotice({
+        message: `${enabled ? "Enabled" : "Paused"} lifecycle automation for ${payload.summary.updatedCount} workspace(s).`,
+        tone: "success"
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Lifecycle automation policy could not be updated.",
+        tone: "error"
+      });
+    } finally {
+      setIsUpdatingAutomationPolicy(false);
     }
   }
 
@@ -344,17 +410,56 @@ export function OpsRetentionClient({
         title="Cancel scheduled decommissions"
       >
         <div className="pill-row">
-          <Pill>{selectedWorkspaceIds.length} selected</Pill>
+          <Pill>{selectedCancelableWorkspaceIds.length} selected</Pill>
           <Pill>{cancelableWorkspaceIds.length} cancelable</Pill>
           <button
             className="button-action"
-            disabled={isCanceling || selectedWorkspaceIds.length === 0}
+            disabled={
+              isCanceling || selectedCancelableWorkspaceIds.length === 0
+            }
             onClick={() => {
               void handleBulkCancel();
             }}
             type="button"
           >
             {isCanceling ? "Canceling…" : "Cancel selected schedules"}
+          </button>
+        </div>
+      </SurfaceCard>
+      <SurfaceCard
+        body="Bulk automation only flips the top-level workspace scheduler switch. Per-workspace invitation and decommission notice settings stay intact."
+        eyebrow="Bulk action"
+        span={12}
+        title="Lifecycle automation control"
+      >
+        <div className="pill-row">
+          <Pill>{selectedAutomationWorkspaceIds.length} selected</Pill>
+          <Pill>{automationManageableWorkspaceIds.length} owner-managed</Pill>
+          <button
+            className="button-action button-action--secondary"
+            disabled={
+              isUpdatingAutomationPolicy ||
+              selectedAutomationWorkspaceIds.length === 0
+            }
+            onClick={() => {
+              void handleBulkAutomationUpdate(false);
+            }}
+            type="button"
+          >
+            {isUpdatingAutomationPolicy ? "Updating…" : "Pause automation"}
+          </button>
+          <button
+            className="button-action"
+            disabled={
+              isUpdatingAutomationPolicy ||
+              selectedAutomationWorkspaceIds.length === 0
+            }
+            onClick={() => {
+              void handleBulkAutomationUpdate(true);
+            }}
+            type="button"
+          >
+            {isUpdatingAutomationPolicy ? "Updating…" : "Resume automation"}
           </button>
         </div>
       </SurfaceCard>
@@ -371,9 +476,6 @@ export function OpsRetentionClient({
               const selectable =
                 workspace.workspace.role === "owner" &&
                 workspace.decommission?.status === "scheduled";
-              const checked = selectedWorkspaceIds.includes(
-                workspace.workspace.id
-              );
 
               return (
                 <div
@@ -410,6 +512,22 @@ export function OpsRetentionClient({
                       {workspace.retentionPolicy.requireDecommissionReason
                         ? "required"
                         : "optional"}
+                    </span>
+                    <span>
+                      automation{" "}
+                      {workspace.lifecycleAutomationPolicy.enabled
+                        ? "enabled"
+                        : "disabled"}{" "}
+                      · invites{" "}
+                      {workspace.lifecycleAutomationPolicy
+                        .automateInvitationReminders
+                        ? "enabled"
+                        : "disabled"}{" "}
+                      · decommission{" "}
+                      {workspace.lifecycleAutomationPolicy
+                        .automateDecommissionNotices
+                        ? "enabled"
+                        : "disabled"}
                     </span>
                     <span>
                       lifecycle webhook{" "}
@@ -469,10 +587,12 @@ export function OpsRetentionClient({
                     {selectable ? (
                       <label className="pill-row" htmlFor={workspace.workspace.id}>
                         <input
-                          checked={checked}
+                          checked={selectedCancelableWorkspaceIds.includes(
+                            workspace.workspace.id
+                          )}
                           id={workspace.workspace.id}
                           onChange={(event) => {
-                            setSelectedWorkspaceIds((current) => {
+                            setSelectedCancelableWorkspaceIds((current) => {
                               if (event.target.checked) {
                                 return current.includes(workspace.workspace.id)
                                   ? current
@@ -488,6 +608,39 @@ export function OpsRetentionClient({
                           type="checkbox"
                         />
                         <span>Cancel schedule</span>
+                      </label>
+                    ) : null}
+                    {workspace.workspace.role === "owner" ? (
+                      <label
+                        className="pill-row"
+                        htmlFor={`${workspace.workspace.id}-automation`}
+                      >
+                        <input
+                          checked={selectedAutomationWorkspaceIds.includes(
+                            workspace.workspace.id
+                          )}
+                          id={`${workspace.workspace.id}-automation`}
+                          onChange={(event) => {
+                            setSelectedAutomationWorkspaceIds((current) => {
+                              if (event.target.checked) {
+                                return current.includes(workspace.workspace.id)
+                                  ? current
+                                  : [...current, workspace.workspace.id];
+                              }
+
+                              return current.filter(
+                                (workspaceId) =>
+                                  workspaceId !== workspace.workspace.id
+                              );
+                            });
+                          }}
+                          type="checkbox"
+                        />
+                        <span>
+                          {workspace.lifecycleAutomationPolicy.enabled
+                            ? "Pause/resume automation"
+                            : "Resume automation"}
+                        </span>
                       </label>
                     ) : null}
                     {workspace.workspace.role === "owner" ? (

@@ -25,6 +25,9 @@ function createStudioSettingsHarness() {
       decommissionRetentionDaysDefault?: number;
       decommissionRetentionDaysMinimum?: number;
       id: string;
+      lifecycleAutomationDecommissionNoticesEnabled?: boolean;
+      lifecycleAutomationEnabled?: boolean;
+      lifecycleAutomationInvitationRemindersEnabled?: boolean;
       lifecycleWebhookDeliverDecommissionNotifications?: boolean;
       lifecycleWebhookDeliverInvitationReminders?: boolean;
       lifecycleWebhookEnabled?: boolean;
@@ -170,6 +173,9 @@ function createStudioSettingsHarness() {
     decommissionRetentionDaysDefault?: number;
     decommissionRetentionDaysMinimum?: number;
     id: string;
+    lifecycleAutomationDecommissionNoticesEnabled?: boolean;
+    lifecycleAutomationEnabled?: boolean;
+    lifecycleAutomationInvitationRemindersEnabled?: boolean;
     lifecycleWebhookDeliverDecommissionNotifications?: boolean;
     lifecycleWebhookDeliverInvitationReminders?: boolean;
     lifecycleWebhookEnabled?: boolean;
@@ -185,6 +191,11 @@ function createStudioSettingsHarness() {
         input.decommissionRetentionDaysDefault ?? 30,
       decommissionRetentionDaysMinimum:
         input.decommissionRetentionDaysMinimum ?? 7,
+      lifecycleAutomationDecommissionNoticesEnabled:
+        input.lifecycleAutomationDecommissionNoticesEnabled ?? true,
+      lifecycleAutomationEnabled: input.lifecycleAutomationEnabled ?? true,
+      lifecycleAutomationInvitationRemindersEnabled:
+        input.lifecycleAutomationInvitationRemindersEnabled ?? true,
       lifecycleWebhookDeliverDecommissionNotifications:
         input.lifecycleWebhookDeliverDecommissionNotifications ?? true,
       lifecycleWebhookDeliverInvitationReminders:
@@ -922,6 +933,9 @@ function createStudioSettingsHarness() {
       async create(input: {
         decommissionRetentionDaysDefault?: number;
         decommissionRetentionDaysMinimum?: number;
+        lifecycleAutomationDecommissionNoticesEnabled?: boolean;
+        lifecycleAutomationEnabled?: boolean;
+        lifecycleAutomationInvitationRemindersEnabled?: boolean;
         lifecycleWebhookDeliverDecommissionNotifications?: boolean;
         lifecycleWebhookDeliverInvitationReminders?: boolean;
         lifecycleWebhookEnabled?: boolean;
@@ -951,6 +965,23 @@ function createStudioSettingsHarness() {
             ? {
                 decommissionRetentionDaysMinimum:
                   input.decommissionRetentionDaysMinimum
+              }
+            : {}),
+          ...(input.lifecycleAutomationDecommissionNoticesEnabled !== undefined
+            ? {
+                lifecycleAutomationDecommissionNoticesEnabled:
+                  input.lifecycleAutomationDecommissionNoticesEnabled
+              }
+            : {}),
+          ...(input.lifecycleAutomationEnabled !== undefined
+            ? {
+                lifecycleAutomationEnabled: input.lifecycleAutomationEnabled
+              }
+            : {}),
+          ...(input.lifecycleAutomationInvitationRemindersEnabled !== undefined
+            ? {
+                lifecycleAutomationInvitationRemindersEnabled:
+                  input.lifecycleAutomationInvitationRemindersEnabled
               }
             : {}),
           ...(input.lifecycleWebhookDeliverDecommissionNotifications !== undefined
@@ -1020,6 +1051,9 @@ function createStudioSettingsHarness() {
         decommissionRetentionDaysDefault: number;
         decommissionRetentionDaysMinimum: number;
         id: string;
+        lifecycleAutomationDecommissionNoticesEnabled: boolean;
+        lifecycleAutomationEnabled: boolean;
+        lifecycleAutomationInvitationRemindersEnabled: boolean;
         lifecycleWebhookDeliverDecommissionNotifications: boolean;
         lifecycleWebhookDeliverInvitationReminders: boolean;
         lifecycleWebhookEnabled: boolean;
@@ -1041,6 +1075,11 @@ function createStudioSettingsHarness() {
             input.decommissionRetentionDaysDefault,
           decommissionRetentionDaysMinimum:
             input.decommissionRetentionDaysMinimum,
+          lifecycleAutomationDecommissionNoticesEnabled:
+            input.lifecycleAutomationDecommissionNoticesEnabled,
+          lifecycleAutomationEnabled: input.lifecycleAutomationEnabled,
+          lifecycleAutomationInvitationRemindersEnabled:
+            input.lifecycleAutomationInvitationRemindersEnabled,
           lifecycleWebhookDeliverDecommissionNotifications:
             input.lifecycleWebhookDeliverDecommissionNotifications,
           lifecycleWebhookDeliverInvitationReminders:
@@ -1258,6 +1297,59 @@ describe("createStudioSettingsService", () => {
         defaultDecommissionRetentionDays: 45,
         minimumDecommissionRetentionDays: 21,
         requireDecommissionReason: true
+      }
+    });
+  });
+
+  it("updates workspace lifecycle automation policy and records an audit entry", async () => {
+    const harness = createStudioSettingsHarness();
+
+    await harness.service.updateStudioSettings({
+      accentColor: "#8b5e34",
+      brandName: "Forge Editions",
+      brandSlug: "forge-editions",
+      featuredReleaseLabel: "Hero drop",
+      landingDescription: "Storefront copy.",
+      landingHeadline: "Curated collectible releases",
+      ownerUserId: "user_1",
+      themePreset: "editorial_warm",
+      workspaceName: "Forge Operations",
+      workspaceSlug: "forge-operations"
+    });
+
+    const workspaceId = [...harness.workspaces.values()][0]!.id;
+    const result =
+      await harness.service.updateWorkspaceLifecycleAutomationPolicy({
+        lifecycleAutomationPolicy: {
+          automateDecommissionNotices: false,
+          automateInvitationReminders: true,
+          enabled: false
+        },
+        ownerUserId: "user_1",
+        workspaceId
+      });
+    const settings = await harness.service.getStudioSettings({
+      ownerUserId: "user_1",
+      workspaceId
+    });
+
+    expect(result.policy).toEqual({
+      automateDecommissionNotices: false,
+      automateInvitationReminders: true,
+      enabled: false
+    });
+    expect(settings.settings?.lifecycleAutomationPolicy).toEqual({
+      automateDecommissionNotices: false,
+      automateInvitationReminders: true,
+      enabled: false
+    });
+    expect(harness.auditLogs.at(-1)).toMatchObject({
+      action: "workspace_lifecycle_automation_policy_updated",
+      entityType: "workspace",
+      metadataJson: {
+        automateDecommissionNotices: false,
+        automateInvitationReminders: true,
+        lifecycleAutomationEnabled: false
       }
     });
   });

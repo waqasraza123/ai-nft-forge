@@ -437,6 +437,10 @@ function createWorkspaceOffboardingHarness() {
             decommissionRetentionDaysMinimum:
               input.id === "workspace_review" ? 21 : 7,
             id: input.id,
+            lifecycleAutomationDecommissionNoticesEnabled:
+              input.id !== "workspace_blocked",
+            lifecycleAutomationEnabled: input.id !== "workspace_blocked",
+            lifecycleAutomationInvitationRemindersEnabled: true,
             lifecycleWebhookDeliverDecommissionNotifications: true,
             lifecycleWebhookDeliverInvitationReminders:
               input.id !== "workspace_blocked",
@@ -455,6 +459,10 @@ function createWorkspaceOffboardingHarness() {
             decommissionRetentionDaysMinimum:
               workspaceId === "workspace_review" ? 21 : 7,
             id: workspaceId,
+            lifecycleAutomationDecommissionNoticesEnabled:
+              workspaceId !== "workspace_blocked",
+            lifecycleAutomationEnabled: workspaceId !== "workspace_blocked",
+            lifecycleAutomationInvitationRemindersEnabled: true,
             lifecycleWebhookDeliverDecommissionNotifications: true,
             lifecycleWebhookDeliverInvitationReminders:
               workspaceId !== "workspace_blocked",
@@ -585,6 +593,11 @@ describe("createWorkspaceOffboardingService", () => {
         minimumDecommissionRetentionDays: 7,
         requireDecommissionReason: false
       },
+      lifecycleAutomationPolicy: {
+        automateDecommissionNotices: true,
+        automateInvitationReminders: true,
+        enabled: true
+      },
       summary: {
         readiness: "ready"
       }
@@ -620,7 +633,13 @@ describe("createWorkspaceOffboardingService", () => {
       minimumDecommissionRetentionDays: 21,
       requireDecommissionReason: true
     });
+    expect(result.export.lifecycleAutomationPolicy).toEqual({
+      automateDecommissionNotices: true,
+      automateInvitationReminders: true,
+      enabled: true
+    });
     expect(csv).toContain("workspace_slug");
+    expect(csv).toContain("lifecycle_automation_enabled");
     expect(csv).toContain("retention_default_days");
     expect(csv).toContain("decommission_notification_count");
     expect(csv).toContain("slug-workspace-review");

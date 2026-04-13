@@ -20,6 +20,7 @@ import {
 } from "./studio-settings.js";
 import {
   workspaceLifecycleAutomationHealthSchema,
+  workspaceLifecycleAutomationPolicySchema,
   workspaceLifecycleAutomationRunSummarySchema,
   workspaceLifecycleNotificationDeliveryOverviewSchema,
   workspaceLifecycleNotificationDeliverySummarySchema
@@ -112,6 +113,7 @@ export const workspaceOffboardingEntrySchema = z.object({
   decommission: workspaceDecommissionSummarySchema.nullable(),
   decommissionWorkflow: workspaceDecommissionWorkflowSummarySchema,
   directory: studioWorkspaceDirectoryEntrySchema,
+  lifecycleAutomationPolicy: workspaceLifecycleAutomationPolicySchema,
   lifecycleDelivery: workspaceLifecycleNotificationDeliveryOverviewSchema,
   lifecycleDeliveryPolicy: studioWorkspaceLifecycleDeliveryPolicySchema,
   retentionPolicy: studioWorkspaceRetentionPolicySchema,
@@ -188,6 +190,11 @@ export const workspaceRetentionBulkCancelRequestSchema = z.object({
   workspaceIds: z.array(z.string().min(1)).min(1).max(50)
 });
 
+export const workspaceRetentionBulkAutomationPolicyRequestSchema = z.object({
+  enabled: z.boolean(),
+  workspaceIds: z.array(z.string().min(1)).min(1).max(50)
+});
+
 export const workspaceRetentionBulkCancelResultStatusSchema = z.enum([
   "canceled",
   "forbidden",
@@ -195,8 +202,21 @@ export const workspaceRetentionBulkCancelResultStatusSchema = z.enum([
   "not_scheduled"
 ]);
 
+export const workspaceRetentionBulkAutomationPolicyResultStatusSchema = z.enum([
+  "forbidden",
+  "not_found",
+  "updated"
+]);
+
 export const workspaceRetentionBulkCancelResultSchema = z.object({
   status: workspaceRetentionBulkCancelResultStatusSchema,
+  workspaceId: z.string().min(1),
+  workspaceName: z.string().min(1).nullable(),
+  workspaceSlug: z.string().min(1).nullable()
+});
+
+export const workspaceRetentionBulkAutomationPolicyResultSchema = z.object({
+  status: workspaceRetentionBulkAutomationPolicyResultStatusSchema,
   workspaceId: z.string().min(1),
   workspaceName: z.string().min(1).nullable(),
   workspaceSlug: z.string().min(1).nullable()
@@ -210,6 +230,19 @@ export const workspaceRetentionBulkCancelResponseSchema = z.object({
     notFoundCount: z.number().int().min(0),
     notScheduledCount: z.number().int().min(0),
     requestedCount: z.number().int().min(0)
+  })
+});
+
+export const workspaceRetentionBulkAutomationPolicyResponseSchema = z.object({
+  policy: workspaceLifecycleAutomationPolicySchema.pick({
+    enabled: true
+  }),
+  results: z.array(workspaceRetentionBulkAutomationPolicyResultSchema),
+  summary: z.object({
+    forbiddenCount: z.number().int().min(0),
+    notFoundCount: z.number().int().min(0),
+    requestedCount: z.number().int().min(0),
+    updatedCount: z.number().int().min(0)
   })
 });
 
@@ -283,6 +316,7 @@ export const workspaceExportResponseSchema = z.object({
     lifecycleDeliveries: z.array(
       workspaceLifecycleNotificationDeliverySummarySchema
     ),
+    lifecycleAutomationPolicy: workspaceLifecycleAutomationPolicySchema,
     lifecycleDeliveryPolicy: studioWorkspaceLifecycleDeliveryPolicySchema,
     members: z.array(studioWorkspaceMemberSummarySchema),
     offboarding: workspaceOffboardingSummarySchema,
@@ -370,6 +404,18 @@ export type WorkspaceRetentionBulkCancelResult = z.infer<
 >;
 export type WorkspaceRetentionBulkCancelResponse = z.infer<
   typeof workspaceRetentionBulkCancelResponseSchema
+>;
+export type WorkspaceRetentionBulkAutomationPolicyRequest = z.infer<
+  typeof workspaceRetentionBulkAutomationPolicyRequestSchema
+>;
+export type WorkspaceRetentionBulkAutomationPolicyResult = z.infer<
+  typeof workspaceRetentionBulkAutomationPolicyResultSchema
+>;
+export type WorkspaceRetentionBulkAutomationPolicyResultStatus = z.infer<
+  typeof workspaceRetentionBulkAutomationPolicyResultStatusSchema
+>;
+export type WorkspaceRetentionBulkAutomationPolicyResponse = z.infer<
+  typeof workspaceRetentionBulkAutomationPolicyResponseSchema
 >;
 export type WorkspaceExportPublication = z.infer<
   typeof workspaceExportPublicationSchema

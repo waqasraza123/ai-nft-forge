@@ -4,6 +4,10 @@ import { createWorkspaceRetentionService } from "./retention-service";
 
 function createWorkspaceRetentionHarness() {
   const canceledWorkspaceIds: string[] = [];
+  const automationPolicyUpdates: Array<{
+    enabled: boolean;
+    workspaceId: string;
+  }> = [];
 
   const service = createWorkspaceRetentionService({
     decommissionService: {
@@ -256,6 +260,12 @@ function createWorkspaceRetentionHarness() {
                   skippedCount: workspace.id === "workspace_blocked" ? 1 : 0
                 }
               },
+              lifecycleAutomationPolicy: {
+                automateDecommissionNotices:
+                  workspace.id !== "workspace_blocked",
+                automateInvitationReminders: true,
+                enabled: workspace.id !== "workspace_blocked"
+              },
               lifecycleDeliveryPolicy: {
                 deliverDecommissionNotifications: true,
                 deliverInvitationReminders: workspace.id !== "workspace_blocked",
@@ -297,10 +307,23 @@ function createWorkspaceRetentionHarness() {
           }
         };
       }
+    },
+    studioSettingsService: {
+      async updateWorkspaceLifecycleAutomationPolicy(input) {
+        automationPolicyUpdates.push({
+          enabled: input.lifecycleAutomationPolicy.enabled,
+          workspaceId: input.workspaceId
+        });
+
+        return {
+          policy: input.lifecycleAutomationPolicy
+        };
+      }
     }
   });
 
   return {
+    automationPolicyUpdates,
     canceledWorkspaceIds,
     service
   };
@@ -354,12 +377,18 @@ describe("createWorkspaceRetentionService", () => {
     expect(report.report.summary.decommissionNoticeDueWorkspaceCount).toBe(1);
     expect(report.report.summary.reasonRequiredWorkspaceCount).toBe(1);
     expect(report.report.workspaces).toHaveLength(3);
+    expect(report.report.workspaces[0]?.lifecycleAutomationPolicy).toEqual({
+      automateDecommissionNotices: false,
+      automateInvitationReminders: true,
+      enabled: false
+    });
     expect(report.report.workspaces[2]?.retentionPolicy).toEqual({
       defaultDecommissionRetentionDays: 45,
       minimumDecommissionRetentionDays: 7,
       requireDecommissionReason: false
     });
     expect(csv).toContain("decommission_status");
+    expect(csv).toContain("lifecycle_automation_enabled");
     expect(csv).toContain("decommission_next_due_kind");
     expect(csv).toContain("retention_default_days");
     expect(csv).toContain("workspace_ready");
@@ -418,5 +447,59 @@ describe("createWorkspaceRetentionService", () => {
       requestedCount: 4
     });
     expect(harness.canceledWorkspaceIds).toEqual(["workspace_ready"]);
+  });
+
+  it("bulk updates owner workspace lifecycle automation enablement", async () => {
+    const harness = createWorkspaceRetentionHarness();
+
+    const result =
+      await harness.service.updateAccessibleWorkspaceLifecycleAutomationPolicy({
+        actorUserId: "user_owner",
+        currentWorkspaceId: "workspace_ready",
+        enabled: false,
+        workspaceIds: [
+          "workspace_ready",
+          "workspace_operator_only",
+          "workspace_missing"
+        ],
+        workspaces: [
+          {
+            id: "workspace_ready",
+            name: "Ready",
+            ownerUserId: "user_owner",
+            ownerWalletAddress:
+              "0x1111111111111111111111111111111111111111",
+            role: "owner",
+            slug: "ready",
+            status: "archived"
+          },
+          {
+            id: "workspace_operator_only",
+            name: "Operator Only",
+            ownerUserId: "user_another_owner",
+            ownerWalletAddress:
+              "0x2222222222222222222222222222222222222222",
+            role: "operator",
+            slug: "operator-only",
+            status: "archived"
+          }
+        ]
+      });
+
+    expect(result.policy).toEqual({
+      enabled: false
+    });
+    expect(result.summary).toEqual({
+      forbiddenCount: 1,
+      notFoundCount: 1,
+      requestedCount: 3,
+      updatedCount: 1
+    });
+    expect(harness.automationPolicyUpdates).toEqual([
+      {
+        enabled: false,
+        workspaceId: "workspace_ready"
+      }
+    ]);
   });
 });

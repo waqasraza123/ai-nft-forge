@@ -13,6 +13,9 @@ type WorkspaceAutomationOwnerRecord = {
 
 type WorkspaceAutomationWorkspaceRecord = {
   id: string;
+  lifecycleAutomationDecommissionNoticesEnabled: boolean;
+  lifecycleAutomationEnabled: boolean;
+  lifecycleAutomationInvitationRemindersEnabled: boolean;
   lifecycleWebhookDeliverDecommissionNotifications: boolean;
   lifecycleWebhookDeliverInvitationReminders: boolean;
   lifecycleWebhookEnabled: boolean;
@@ -356,12 +359,17 @@ export function createWorkspaceLifecycleAutomationService(
         now.getTime() - workspaceInvitationReminderCooldownMilliseconds
       );
       const invitationWorkspaceIds = eligibleWorkspaces
-        .filter((workspace) => workspace.lifecycleWebhookDeliverInvitationReminders)
+        .filter(
+          (workspace) =>
+            workspace.lifecycleAutomationEnabled &&
+            workspace.lifecycleAutomationInvitationRemindersEnabled
+        )
         .map((workspace) => workspace.id);
       const decommissionWorkspaceIds = eligibleWorkspaces
         .filter(
           (workspace) =>
-            workspace.lifecycleWebhookDeliverDecommissionNotifications
+            workspace.lifecycleAutomationEnabled &&
+            workspace.lifecycleAutomationDecommissionNoticesEnabled
         )
         .map((workspace) => workspace.id);
       const [dueInvitations, scheduledDecommissionRequests] = await Promise.all([

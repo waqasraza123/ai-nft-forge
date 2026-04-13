@@ -7,6 +7,7 @@ import {
 } from "./collections.js";
 import { walletAddressSchema } from "./auth.js";
 import {
+  workspaceLifecycleAutomationPolicySchema,
   workspaceLifecycleAutomationHealthSchema,
   workspaceLifecycleAutomationRunSummarySchema,
   workspaceLifecycleDeliveryPolicySchema,
@@ -199,6 +200,7 @@ export const studioWorkspaceRoleEscalationSummarySchema = z.object({
 
 export const studioWorkspaceAuditActionSchema = z.enum([
   "workspace_archived",
+  "workspace_lifecycle_automation_policy_updated",
   "workspace_created",
   "workspace_decommission_canceled",
   "workspace_decommission_executed",
@@ -239,6 +241,7 @@ export const studioSettingsSummarySchema = z.object({
   brand: studioBrandSummarySchema,
   brands: z.array(studioBrandSummarySchema),
   invitations: z.array(studioWorkspaceInvitationSummarySchema),
+  lifecycleAutomationPolicy: workspaceLifecycleAutomationPolicySchema,
   lifecycleAutomationHealth: workspaceLifecycleAutomationHealthSchema,
   lifecycleNotificationProviders: z.array(
     workspaceLifecycleNotificationTransportProviderSchema
@@ -310,6 +313,7 @@ export const studioSettingsUpdateRequestSchema = z.object({
   storyHeadline: studioBrandStoryHeadlineSchema.nullish(),
   themePreset: studioBrandThemePresetSchema,
   wordmark: studioBrandWordmarkSchema.nullish(),
+  lifecycleAutomationPolicy: workspaceLifecycleAutomationPolicySchema.nullish(),
   lifecycleDeliveryPolicy: workspaceLifecycleDeliveryPolicySchema.nullish(),
   retentionPolicy: workspaceRetentionPolicySchema.nullish(),
   workspaceName: studioWorkspaceNameSchema,
@@ -363,6 +367,10 @@ export const studioWorkspaceInvitationResponseSchema = z.object({
 export const studioWorkspaceInvitationReminderResponseSchema = z.object({
   deliveries: z.array(workspaceLifecycleNotificationDeliverySummarySchema),
   invitation: studioWorkspaceInvitationSummarySchema
+});
+
+export const studioWorkspaceLifecycleAutomationPolicyResponseSchema = z.object({
+  policy: workspaceLifecycleAutomationPolicySchema
 });
 
 export const studioWorkspaceInvitationDeleteResponseSchema = z.object({
@@ -438,6 +446,9 @@ export type StudioWorkspaceRetentionPolicy = z.infer<
 export type StudioWorkspaceLifecycleDeliveryPolicy = z.infer<
   typeof studioWorkspaceLifecycleDeliveryPolicySchema
 >;
+export type StudioWorkspaceLifecycleAutomationPolicy = z.infer<
+  typeof workspaceLifecycleAutomationPolicySchema
+>;
 export type StudioWorkspaceLifecycleNotificationTransportProvider = z.infer<
   typeof workspaceLifecycleNotificationTransportProviderSchema
 >;
@@ -490,6 +501,9 @@ export type StudioWorkspaceInvitationCreateRequest = z.infer<
 >;
 export type StudioWorkspaceInvitationDeleteResponse = z.infer<
   typeof studioWorkspaceInvitationDeleteResponseSchema
+>;
+export type StudioWorkspaceLifecycleAutomationPolicyResponse = z.infer<
+  typeof studioWorkspaceLifecycleAutomationPolicyResponseSchema
 >;
 export type StudioWorkspaceInvitationReminderResponse = z.infer<
   typeof studioWorkspaceInvitationReminderResponseSchema

@@ -222,6 +222,9 @@ describe("database repositories", () => {
       decommissionRetentionDaysDefault: 30,
       decommissionRetentionDaysMinimum: 7,
       id: "workspace_1",
+      lifecycleAutomationDecommissionNoticesEnabled: true,
+      lifecycleAutomationEnabled: true,
+      lifecycleAutomationInvitationRemindersEnabled: true,
       lifecycleWebhookDeliverDecommissionNotifications: true,
       lifecycleWebhookDeliverInvitationReminders: true,
       lifecycleWebhookEnabled: false,
@@ -284,6 +287,9 @@ describe("database repositories", () => {
       ],
       select: {
         id: true,
+        lifecycleAutomationDecommissionNoticesEnabled: true,
+        lifecycleAutomationEnabled: true,
+        lifecycleAutomationInvitationRemindersEnabled: true,
         lifecycleWebhookDeliverDecommissionNotifications: true,
         lifecycleWebhookDeliverInvitationReminders: true,
         lifecycleWebhookEnabled: true,
@@ -301,13 +307,13 @@ describe("database repositories", () => {
       where: {
         OR: [
           {
-            lifecycleWebhookDeliverInvitationReminders: true
+            lifecycleAutomationInvitationRemindersEnabled: true
           },
           {
-            lifecycleWebhookDeliverDecommissionNotifications: true
+            lifecycleAutomationDecommissionNoticesEnabled: true
           }
         ],
-        lifecycleWebhookEnabled: true
+        lifecycleAutomationEnabled: true
       }
     });
     expect(database.workspace.findMany).toHaveBeenNthCalledWith(3, {
@@ -321,6 +327,9 @@ describe("database repositories", () => {
       data: {
         decommissionRetentionDaysDefault: 30,
         decommissionRetentionDaysMinimum: 7,
+        lifecycleAutomationDecommissionNoticesEnabled: true,
+        lifecycleAutomationEnabled: true,
+        lifecycleAutomationInvitationRemindersEnabled: true,
         lifecycleWebhookDeliverDecommissionNotifications: true,
         lifecycleWebhookDeliverInvitationReminders: true,
         lifecycleWebhookEnabled: false,

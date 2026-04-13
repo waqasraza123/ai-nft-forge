@@ -1,4 +1,7 @@
 import {
+  defaultWorkspaceLifecycleAutomationEnabled,
+  defaultWorkspaceLifecycleDecommissionAutomationEnabled,
+  defaultWorkspaceLifecycleInvitationAutomationEnabled,
   defaultWorkspaceDecommissionRetentionDays,
   defaultWorkspaceMinimumDecommissionRetentionDays,
   defaultWorkspaceRequireDecommissionReason,
@@ -21,6 +24,7 @@ import {
   studioWorkspaceInvitationDeleteResponseSchema,
   studioWorkspaceInvitationReminderResponseSchema,
   studioWorkspaceInvitationResponseSchema,
+  studioWorkspaceLifecycleAutomationPolicyResponseSchema,
   studioSettingsResponseSchema,
   studioSettingsUpdateRequestSchema,
   studioWorkspaceMemberCreateRequestSchema,
@@ -29,8 +33,10 @@ import {
   studioWorkspaceRoleEscalationCreateRequestSchema,
   studioWorkspaceRoleEscalationResponseSchema,
   workspaceLifecycleDeliveryPolicySchema,
+  workspaceLifecycleAutomationPolicySchema,
   workspaceRetentionPolicySchema,
   type WorkspaceLifecycleAutomationHealth,
+  type WorkspaceLifecycleAutomationPolicy,
   type WorkspaceLifecycleAutomationRunSummary,
   type WorkspaceLifecycleDeliveryPolicy,
   type StudioWorkspaceRole,
@@ -53,6 +59,9 @@ import {
 type WorkspaceRecord = WorkspaceLifecyclePolicyWorkspaceRecord & {
   decommissionRetentionDaysDefault: number;
   decommissionRetentionDaysMinimum: number;
+  lifecycleAutomationDecommissionNoticesEnabled: boolean;
+  lifecycleAutomationEnabled: boolean;
+  lifecycleAutomationInvitationRemindersEnabled: boolean;
   requireDecommissionReason: boolean;
 };
 
@@ -395,6 +404,9 @@ type StudioSettingsRepositorySet = {
     create(input: {
       decommissionRetentionDaysDefault?: number;
       decommissionRetentionDaysMinimum?: number;
+      lifecycleAutomationDecommissionNoticesEnabled?: boolean;
+      lifecycleAutomationEnabled?: boolean;
+      lifecycleAutomationInvitationRemindersEnabled?: boolean;
       lifecycleWebhookDeliverDecommissionNotifications?: boolean;
       lifecycleWebhookDeliverInvitationReminders?: boolean;
       lifecycleWebhookEnabled?: boolean;
@@ -417,6 +429,9 @@ type StudioSettingsRepositorySet = {
       decommissionRetentionDaysDefault: number;
       decommissionRetentionDaysMinimum: number;
       id: string;
+      lifecycleAutomationDecommissionNoticesEnabled: boolean;
+      lifecycleAutomationEnabled: boolean;
+      lifecycleAutomationInvitationRemindersEnabled: boolean;
       lifecycleWebhookDeliverDecommissionNotifications: boolean;
       lifecycleWebhookDeliverInvitationReminders: boolean;
       lifecycleWebhookEnabled: boolean;
@@ -613,6 +628,16 @@ function serializeWorkspaceRetentionPolicy(input: WorkspaceRecord) {
   });
 }
 
+function serializeWorkspaceLifecycleAutomationPolicy(input: WorkspaceRecord) {
+  return workspaceLifecycleAutomationPolicySchema.parse({
+    automateDecommissionNotices:
+      input.lifecycleAutomationDecommissionNoticesEnabled,
+    automateInvitationReminders:
+      input.lifecycleAutomationInvitationRemindersEnabled,
+    enabled: input.lifecycleAutomationEnabled
+  });
+}
+
 function currentLifecycleDeliveryPolicy(workspace: WorkspaceRecord) {
   return workspaceLifecycleDeliveryPolicySchema.parse({
     deliverDecommissionNotifications:
@@ -621,6 +646,23 @@ function currentLifecycleDeliveryPolicy(workspace: WorkspaceRecord) {
       workspace.lifecycleWebhookDeliverInvitationReminders,
     webhookEnabled: workspace.lifecycleWebhookEnabled
   });
+}
+
+function lifecycleAutomationPoliciesEqual(input: {
+  next: WorkspaceLifecycleAutomationPolicy;
+  workspace: WorkspaceRecord;
+}) {
+  const currentPolicy = serializeWorkspaceLifecycleAutomationPolicy(
+    input.workspace
+  );
+
+  return (
+    currentPolicy.automateDecommissionNotices ===
+      input.next.automateDecommissionNotices &&
+    currentPolicy.automateInvitationReminders ===
+      input.next.automateInvitationReminders &&
+    currentPolicy.enabled === input.next.enabled
+  );
 }
 
 function lifecycleDeliveryPoliciesEqual(input: {
@@ -838,6 +880,8 @@ async function serializeStudioSettings(input: {
       invitations: invitations.map((invitation) =>
         serializeWorkspaceInvitation(invitation)
       ),
+      lifecycleAutomationPolicy:
+        serializeWorkspaceLifecycleAutomationPolicy(input.workspace),
       lifecycleAutomationHealth:
         input.lifecycleAutomationSnapshot?.lifecycleAutomationHealth ?? {
           enabled: false,
@@ -1027,6 +1071,7 @@ async function recordWorkspaceAuditLog(input: {
     | "workspace_invitation_canceled"
     | "workspace_invitation_created"
     | "workspace_invitation_reminder_sent"
+    | "workspace_lifecycle_automation_policy_updated"
     | "workspace_member_added"
     | "workspace_member_removed"
     | "workspace_lifecycle_delivery_policy_updated"
@@ -1039,6 +1084,7 @@ async function recordWorkspaceAuditLog(input: {
     | "workspace_role_escalation_requested"
     | "workspace_suspended";
   actor: UserRecord;
+  automationPolicy?: WorkspaceLifecycleAutomationPolicy;
   lifecycleDeliveryPolicy?: WorkspaceLifecycleDeliveryPolicy;
   membershipId?: string | null;
   policy?: ReturnType<typeof serializeWorkspaceRetentionPolicy>;
@@ -1080,6 +1126,15 @@ async function recordWorkspaceAuditLog(input: {
               input.policy.minimumDecommissionRetentionDays,
             requireDecommissionReason:
               input.policy.requireDecommissionReason
+          }
+        : {}),
+      ...(input.automationPolicy
+        ? {
+            automateDecommissionNotices:
+              input.automationPolicy.automateDecommissionNotices,
+            automateInvitationReminders:
+              input.automationPolicy.automateInvitationReminders,
+            lifecycleAutomationEnabled: input.automationPolicy.enabled
           }
         : {}),
       ...(input.lifecycleDeliveryPolicy
@@ -1269,6 +1324,12 @@ export function createStudioSettingsService(
             defaultWorkspaceDecommissionRetentionDays,
           decommissionRetentionDaysMinimum:
             defaultWorkspaceMinimumDecommissionRetentionDays,
+          lifecycleAutomationDecommissionNoticesEnabled:
+            defaultWorkspaceLifecycleDecommissionAutomationEnabled,
+          lifecycleAutomationEnabled:
+            defaultWorkspaceLifecycleAutomationEnabled,
+          lifecycleAutomationInvitationRemindersEnabled:
+            defaultWorkspaceLifecycleInvitationAutomationEnabled,
           lifecycleWebhookDeliverDecommissionNotifications: true,
           lifecycleWebhookDeliverInvitationReminders: true,
           lifecycleWebhookEnabled: false,
@@ -1340,6 +1401,11 @@ export function createStudioSettingsService(
             decommissionRetentionDaysMinimum:
               workspace.decommissionRetentionDaysMinimum,
             id: workspace.id,
+            lifecycleAutomationDecommissionNoticesEnabled:
+              workspace.lifecycleAutomationDecommissionNoticesEnabled,
+            lifecycleAutomationEnabled: workspace.lifecycleAutomationEnabled,
+            lifecycleAutomationInvitationRemindersEnabled:
+              workspace.lifecycleAutomationInvitationRemindersEnabled,
             lifecycleWebhookDeliverDecommissionNotifications:
               workspace.lifecycleWebhookDeliverDecommissionNotifications,
             lifecycleWebhookDeliverInvitationReminders:
@@ -1476,6 +1542,7 @@ export function createStudioSettingsService(
       storyHeadline?: string | null;
       themePreset: "editorial_warm" | "gallery_mono" | "midnight_launch";
       lifecycleDeliveryPolicy?: WorkspaceLifecycleDeliveryPolicy | null;
+      lifecycleAutomationPolicy?: WorkspaceLifecycleAutomationPolicy | null;
       retentionPolicy?: {
         defaultDecommissionRetentionDays: number;
         minimumDecommissionRetentionDays: number;
@@ -1504,6 +1571,7 @@ export function createStudioSettingsService(
         storyHeadline: input.storyHeadline,
         themePreset: input.themePreset,
         wordmark: input.wordmark,
+        lifecycleAutomationPolicy: input.lifecycleAutomationPolicy,
         lifecycleDeliveryPolicy: input.lifecycleDeliveryPolicy,
         retentionPolicy: input.retentionPolicy,
         workspaceName: input.workspaceName,
@@ -1585,6 +1653,19 @@ export function createStudioSettingsService(
                     webhookEnabled: false
                   })
           );
+        const nextLifecycleAutomationPolicy =
+          workspaceLifecycleAutomationPolicySchema.parse(
+            parsedInput.lifecycleAutomationPolicy ??
+              (existingWorkspace
+                ? serializeWorkspaceLifecycleAutomationPolicy(existingWorkspace)
+                : {
+                    automateDecommissionNotices:
+                      defaultWorkspaceLifecycleDecommissionAutomationEnabled,
+                    automateInvitationReminders:
+                      defaultWorkspaceLifecycleInvitationAutomationEnabled,
+                    enabled: defaultWorkspaceLifecycleAutomationEnabled
+                  })
+          );
 
         if (
           existingBrand &&
@@ -1605,6 +1686,11 @@ export function createStudioSettingsService(
               nextRetentionPolicy.defaultDecommissionRetentionDays,
             decommissionRetentionDaysMinimum:
               nextRetentionPolicy.minimumDecommissionRetentionDays,
+            lifecycleAutomationDecommissionNoticesEnabled:
+              nextLifecycleAutomationPolicy.automateDecommissionNotices,
+            lifecycleAutomationEnabled: nextLifecycleAutomationPolicy.enabled,
+            lifecycleAutomationInvitationRemindersEnabled:
+              nextLifecycleAutomationPolicy.automateInvitationReminders,
             lifecycleWebhookDeliverDecommissionNotifications:
               nextLifecycleDeliveryPolicy.deliverDecommissionNotifications,
             lifecycleWebhookDeliverInvitationReminders:
@@ -1627,6 +1713,11 @@ export function createStudioSettingsService(
             decommissionRetentionDaysMinimum:
               nextRetentionPolicy.minimumDecommissionRetentionDays,
             id: existingWorkspace.id,
+            lifecycleAutomationDecommissionNoticesEnabled:
+              nextLifecycleAutomationPolicy.automateDecommissionNotices,
+            lifecycleAutomationEnabled: nextLifecycleAutomationPolicy.enabled,
+            lifecycleAutomationInvitationRemindersEnabled:
+              nextLifecycleAutomationPolicy.automateInvitationReminders,
             lifecycleWebhookDeliverDecommissionNotifications:
               nextLifecycleDeliveryPolicy.deliverDecommissionNotifications,
             lifecycleWebhookDeliverInvitationReminders:
@@ -1706,6 +1797,35 @@ export function createStudioSettingsService(
         if (
           existingWorkspace &&
           persistedWorkspace &&
+          !lifecycleAutomationPoliciesEqual({
+            next: nextLifecycleAutomationPolicy,
+            workspace: existingWorkspace
+          })
+        ) {
+          const owner = await repositories.userRepository.findById(
+            input.ownerUserId
+          );
+
+          if (!owner) {
+            throw new StudioSettingsServiceError(
+              "WORKSPACE_REQUIRED",
+              "Workspace ownership could not be resolved.",
+              409
+            );
+          }
+
+          await recordWorkspaceAuditLog({
+            action: "workspace_lifecycle_automation_policy_updated",
+            actor: owner,
+            automationPolicy: nextLifecycleAutomationPolicy,
+            repositories,
+            workspaceId: existingWorkspace.id
+          });
+        }
+
+        if (
+          existingWorkspace &&
+          persistedWorkspace &&
           !workspaceRetentionPoliciesEqual({
             next: nextRetentionPolicy,
             workspace: existingWorkspace
@@ -1769,6 +1889,75 @@ export function createStudioSettingsService(
           repositories,
           role: "owner",
           workspaceId: workspace.id
+        });
+      });
+    },
+
+    async updateWorkspaceLifecycleAutomationPolicy(input: {
+      lifecycleAutomationPolicy: WorkspaceLifecycleAutomationPolicy;
+      ownerUserId: string;
+      role?: StudioWorkspaceRole;
+      workspaceId: string;
+    }) {
+      assertOwnerRole(input.role ?? "owner");
+
+      const nextLifecycleAutomationPolicy =
+        workspaceLifecycleAutomationPolicySchema.parse(
+          input.lifecycleAutomationPolicy
+        );
+
+      return dependencies.runTransaction(async (repositories) => {
+        const { owner, workspace } = await requireOwnerWorkspace({
+          ownerUserId: input.ownerUserId,
+          repositories,
+          workspaceId: input.workspaceId
+        });
+
+        if (
+          lifecycleAutomationPoliciesEqual({
+            next: nextLifecycleAutomationPolicy,
+            workspace
+          })
+        ) {
+          return studioWorkspaceLifecycleAutomationPolicyResponseSchema.parse({
+            policy: serializeWorkspaceLifecycleAutomationPolicy(workspace)
+          });
+        }
+
+        const updatedWorkspace =
+          await repositories.workspaceRepository.updateByIdForOwner({
+            decommissionRetentionDaysDefault:
+              workspace.decommissionRetentionDaysDefault,
+            decommissionRetentionDaysMinimum:
+              workspace.decommissionRetentionDaysMinimum,
+            id: workspace.id,
+            lifecycleAutomationDecommissionNoticesEnabled:
+              nextLifecycleAutomationPolicy.automateDecommissionNotices,
+            lifecycleAutomationEnabled: nextLifecycleAutomationPolicy.enabled,
+            lifecycleAutomationInvitationRemindersEnabled:
+              nextLifecycleAutomationPolicy.automateInvitationReminders,
+            lifecycleWebhookDeliverDecommissionNotifications:
+              workspace.lifecycleWebhookDeliverDecommissionNotifications,
+            lifecycleWebhookDeliverInvitationReminders:
+              workspace.lifecycleWebhookDeliverInvitationReminders,
+            lifecycleWebhookEnabled: workspace.lifecycleWebhookEnabled,
+            name: workspace.name,
+            ownerUserId: input.ownerUserId,
+            requireDecommissionReason: workspace.requireDecommissionReason,
+            slug: workspace.slug,
+            status: workspace.status
+          });
+
+        await recordWorkspaceAuditLog({
+          action: "workspace_lifecycle_automation_policy_updated",
+          actor: owner,
+          automationPolicy: nextLifecycleAutomationPolicy,
+          repositories,
+          workspaceId: updatedWorkspace.id
+        });
+
+        return studioWorkspaceLifecycleAutomationPolicyResponseSchema.parse({
+          policy: serializeWorkspaceLifecycleAutomationPolicy(updatedWorkspace)
         });
       });
     },
