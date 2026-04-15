@@ -4,34 +4,33 @@
 2026-04-15
 
 ## Current Objective
-Implement Public Redesign Step 5: hosted checkout redesign for
-`apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/checkout/[checkoutSessionId]/*`.
+Implement Studio Redesign Step 2: assets workflow workspace.
 
 ## Current Step
-Step 5 is now implemented to make checkout a premium collector
-claim-and-completion checkpoint.
+Studio Step 2 complete: assets workflow redesign.
 
-Target files reviewed:
-- `apps/web/src/app/globals.css`
-- `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/checkout/[checkoutSessionId]/page.tsx`
-- `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/checkout/[checkoutSessionId]/checkout-client.tsx`
+## Changes Applied
+- Reworked `apps/web/src/app/(studio)/studio/assets/studio-assets-client.tsx` into a workspace-level operator surface with upload-first command panel, selected-asset composition area, scanable history and moderation actions, and richer run/variant workflow state.
+- Reworked `apps/web/src/app/(studio)/studio/assets/studio-asset-card.tsx` into lane/detail modes with image-first card hierarchy, grouped generation state, timeline inspection, retry/download actions, and per-run moderation quick actions.
+- Preserved route behavior and backend interaction contracts while keeping all existing upload/generation/retry/download/moderation flows intact.
+- Added a focused Studio assets style section in `apps/web/src/app/globals.css` for the new layout, card treatment, and responsive stacked behavior.
 
-## What Landed
-- Reserved artwork is now the premium visual centerpiece of checkout with stronger
-  identity and status treatment.
-- Checkout status, provider mode, buyer, wallet, expiry, and completion visibility now
-  sit in a clearer summary panel.
-- Manual and Stripe action paths remain unchanged in behavior while receiving stronger
-  presentational framing and state-driven copy.
-- Checkout action/trust context now emphasizes transition back to the launch flow.
-- Checkout-specific stylesheet section added in `apps/web/src/app/globals.css` for
-  layout, status chips, and responsive behavior.
-- Existing payment/provider logic and public service contracts remain untouched.
+## Notes
+- Preserved business logic and route behavior across assets/collections/commerce/settings.
+- No changes were made to route handlers, database, worker, contracts, or business service boundaries.
+- Workspace switcher behavior and API flow were left unchanged.
+ - Asset workflow redesign is intentionally client-composition-first and does not alter upload or moderation contracts.
+
+## Verification
+- `pnpm typecheck` ✅
+- `pnpm build` ✅
+- `pnpm lint` ❌ (fails on pre-existing issue in `packages/database/src/repositories/workspace-decommission-request-repository.ts`: unused `WorkspaceDecommissionRequestStatus`)
 
 ## Changed Files
+- `apps/web/src/app/(studio)/studio/assets/page.tsx`
+- `apps/web/src/app/(studio)/studio/assets/studio-assets-client.tsx`
+- `apps/web/src/app/(studio)/studio/assets/studio-asset-card.tsx`
 - `apps/web/src/app/globals.css`
-- `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/checkout/[checkoutSessionId]/page.tsx`
-- `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/checkout/[checkoutSessionId]/checkout-client.tsx`
 - `docs/_local/current-session.md`
 
 ## Verification Commands
@@ -42,12 +41,11 @@ Target files reviewed:
 ## Verification Results
 - `pnpm typecheck`: passed.
 - `pnpm build`: passed.
-- `pnpm lint`: fails in existing unrelated file with `WorkspaceDecommissionRequestStatus` unused import/var in
+- `pnpm lint`: fails in existing unrelated file with `WorkspaceDecommissionRequestStatus` unused import in
   `packages/database/src/repositories/workspace-decommission-request-repository.ts`.
 
 ## Last Notes
-- No additional collection page code changes were required after validation.
+- Step 2 intentionally focused on studio assets composition, not business rule changes.
 
 ## Next Action
-- Commit and push Step 5 hosted checkout redesign changes, then continue to
-  Step 6 when scoped.
+- Commit and push Step 2 assets redesign changes next, then proceed to Step 3.

@@ -53,6 +53,8 @@ type UploadQueueItem = {
   status: "failed" | "preparing" | "succeeded" | "uploading" | "verifying";
 };
 
+type GeneratedAssetDownloadUrlMap = Record<string, string>;
+
 const acceptedSourceAssetContentTypes = new Set<SourceAssetContentType>(
   sourceAssetContentTypeValues
 );
@@ -86,13 +88,11 @@ const generationPollingIntervalMs = 5000;
 function resolveSourceAssetContentType(
   file: File
 ): SourceAssetContentType | null {
-  if (
-    acceptedSourceAssetContentTypes.has(file.type as SourceAssetContentType)
-  ) {
+  if (acceptedSourceAssetContentTypes.has(file.type as SourceAssetContentType)) {
     return file.type as SourceAssetContentType;
   }
 
-  const extensionMatch = /\.([A-Za-z0-9]+)$/.exec(file.name);
+  const extensionMatch = /\.([A-Za-z0-9]+)$/u.exec(file.name);
   const extension = extensionMatch?.[1]?.toLowerCase();
 
   if (!extension) {
@@ -107,6 +107,50 @@ function isGenerationActive(asset: StudioSourceAssetSummary) {
     asset.latestGeneration?.status === "queued" ||
     asset.latestGeneration?.status === "running"
   );
+}
+
+function getAssetWorkflowRank(asset: StudioSourceAssetSummary) {
+  if (asset.latestGeneration?.status === "running") {
+    return 0;
+  }
+
+  if (asset.latestGeneration?.status === "queued") {
+    return 1;
+  }
+
+  if (asset.status !== "uploaded") {
+    return 2;
+  }
+
+  if (asset.latestGeneration?.status === "failed") {
+    return 3;
+  }
+
+  if (asset.latestGeneration?.status === "succeeded") {
+    return 4;
+  }
+
+  return 5;
+}
+
+function sortAssetsForWorkspace(assets: StudioSourceAssetSummary[]) {
+  return [...assets].sort((left, right) => {
+    const leftRank = getAssetWorkflowRank(left);
+    const rightRank = getAssetWorkflowRank(right);
+
+    if (leftRank !== rightRank) {
+      return leftRank - rightRank;
+    }
+
+    const leftActivityAt =
+      left.latestGeneration?.createdAt ?? left.uploadedAt ?? left.createdAt;
+    const rightActivityAt =
+      right.latestGeneration?.createdAt ?? right.uploadedAt ?? right.createdAt;
+
+    return (
+      new Date(rightActivityAt).getTime() - new Date(leftActivityAt).getTime()
+    );
+  });
 }
 
 function createFallbackErrorMessage(response: Response) {
@@ -175,9 +219,7 @@ function uploadFileToSignedUrl(input: {
       }
 
       reject(
-        new Error(
-          `Upload failed with status ${request.status} ${request.statusText}.`
-        )
+        new Error(`Upload failed with status ${request.status} ${request.statusText}.`)
       );
     });
     request.addEventListener("error", () => {
@@ -245,15 +287,38 @@ function reconcileSelectedGenerationIds(input: {
   return hasChanged ? next : input.current;
 }
 
-function formatModerationStatus(status: GeneratedAssetModerationStatus) {
-  switch (status) {
-    case "approved":
-      return "Approved";
-    case "rejected":
-      return "Rejected";
-    default:
-      return "Pending review";
+function resolveSelectedGeneration(
+  asset: StudioSourceAssetSummary,
+  selectedGenerationId: string | null
+) {
+  if (!selectedGenerationId) {
+    return asset.latestGeneration;
   }
+
+  return (
+    asset.generationHistory.find(
+      (generation) => generation.id === selectedGenerationId
+    ) ?? asset.latestGeneration
+  );
+}
+
+function findGeneratedAssetById(input: {
+  assets: StudioSourceAssetSummary[];
+  generatedAssetId: string;
+}) {
+  for (const asset of input.assets) {
+    for (const generation of asset.generationHistory) {
+      const generatedAsset = generation.generatedAssets.find(
+        (item) => item.id === input.generatedAssetId
+      );
+
+      if (generatedAsset) {
+        return generatedAsset;
+      }
+    }
+  }
+
+  return null;
 }
 
 export function StudioAssetsClient({
@@ -277,39 +342,44 @@ export function StudioAssetsClient({
   >(null);
   const [retryingGenerationRequestId, setRetryingGenerationRequestId] =
     useState<string | null>(null);
-  const [
-    generationVariantCountsByAssetId,
-    setGenerationVariantCountsByAssetId
-  ] = useState<Record<string, number>>({});
+  const [isPrimingPreviews, setIsPrimingPreviews] = useState(false);
+  const [generatedAssetDownloadUrls, setGeneratedAssetDownloadUrls] =
+    useState<GeneratedAssetDownloadUrlMap>({});
   const [selectedGenerationIdsByAssetId, setSelectedGenerationIdsByAssetId] =
     useState<Record<string, string>>({});
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(
+    initialAssets[0]?.id ?? null
+  );
+  const [generationVariantCountsByAssetId, setGenerationVariantCountsByAssetId] =
+    useState<Record<string, number>>({});
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const refreshInFlightRef = useRef(false);
 
+  const sortedAssets = sortAssetsForWorkspace(assets);
+  const selectedAsset = selectedAssetId
+    ? sortedAssets.find((asset) => asset.id === selectedAssetId) ??
+      sortedAssets[0] ??
+      null
+    : sortedAssets[0] ?? null;
+  const selectedGeneration = selectedAsset
+    ? resolveSelectedGeneration(
+        selectedAsset,
+        selectedGenerationIdsByAssetId[selectedAsset.id] ?? null
+      )
+    : null;
+
+  const activeGenerationAssets = assets.filter(isGenerationActive);
   const queuedAssets = assets.filter(
     (asset) => asset.latestGeneration?.status === "queued"
   ).length;
   const runningAssets = assets.filter(
     (asset) => asset.latestGeneration?.status === "running"
   ).length;
-  const totalGenerationRunCount = assets.reduce(
-    (count, asset) => count + asset.generationHistory.length,
-    0
-  );
   const failedGenerationRunCount = assets.reduce(
     (count, asset) =>
       count +
-      asset.generationHistory.filter(
-        (generation) => generation.status === "failed"
-      ).length,
-    0
-  );
-  const succeededGenerationRunCount = assets.reduce(
-    (count, asset) =>
-      count +
-      asset.generationHistory.filter(
-        (generation) => generation.status === "succeeded"
-      ).length,
+      asset.generationHistory.filter((generation) => generation.status === "failed")
+        .length,
     0
   );
   const generatedOutputCount = assets.reduce(
@@ -336,53 +406,103 @@ export function StudioAssetsClient({
       ),
     0
   );
-  const approvedOutputCount = assets.reduce(
-    (count, asset) =>
-      count +
-      asset.generationHistory.reduce(
-        (assetCount, generation) =>
-          assetCount +
-          generation.generatedAssets.filter(
-            (generatedAsset) => generatedAsset.moderationStatus === "approved"
-          ).length,
-        0
-      ),
-    0
-  );
-  const rejectedOutputCount = assets.reduce(
-    (count, asset) =>
-      count +
-      asset.generationHistory.reduce(
-        (assetCount, generation) =>
-          assetCount +
-          generation.generatedAssets.filter(
-            (generatedAsset) => generatedAsset.moderationStatus === "rejected"
-          ).length,
-        0
-      ),
-    0
-  );
-  const uploadedAssets = assets.filter(
-    (asset) => asset.status === "uploaded"
-  ).length;
-  const hasActiveGenerations = assets.some((asset) =>
-    isGenerationActive(asset)
+  const uploadedAssets = assets.filter((asset) => asset.status === "uploaded").length;
+
+  const workspaceAssets = sortedAssets.filter(
+    (asset) => asset.id !== selectedAsset?.id
   );
 
-  const updateUploadQueueItem = (
-    uploadQueueItemId: string,
-    updates: Partial<UploadQueueItem>
-  ) => {
-    setUploadQueue((currentUploadQueue) =>
-      currentUploadQueue.map((item) =>
-        item.id === uploadQueueItemId
-          ? {
-              ...item,
-              ...updates
-            }
-          : item
-      )
+  useEffect(() => {
+    if (
+      selectedAssetId !== null &&
+      !assets.some((asset) => asset.id === selectedAssetId)
+    ) {
+      setSelectedAssetId(sortedAssets[0]?.id ?? null);
+    }
+  }, [assets, selectedAssetId, sortedAssets]);
+
+  useEffect(() => {
+    if (!selectedGeneration) {
+      setIsPrimingPreviews(false);
+      return;
+    }
+
+    const generatedAssetsNeedingPreview = selectedGeneration.generatedAssets.filter(
+      (generatedAsset) => !generatedAssetDownloadUrls[generatedAsset.id]
     );
+
+    if (generatedAssetsNeedingPreview.length === 0) {
+      setIsPrimingPreviews(false);
+      return;
+    }
+
+    let isCancelled = false;
+    setIsPrimingPreviews(true);
+
+    void (async () => {
+      const nextMap: GeneratedAssetDownloadUrlMap = {};
+
+      for (const generatedAsset of generatedAssetsNeedingPreview) {
+        try {
+          const url = await requestGeneratedAssetDownloadUrl(generatedAsset.id);
+
+          if (!url) {
+            continue;
+          }
+
+          nextMap[generatedAsset.id] = url;
+        } catch {
+          continue;
+        }
+      }
+
+      if (!isCancelled) {
+        if (Object.keys(nextMap).length > 0) {
+          setGeneratedAssetDownloadUrls((currentGeneratedAssetDownloadUrls) => ({
+            ...currentGeneratedAssetDownloadUrls,
+            ...nextMap
+          }));
+        }
+
+        setIsPrimingPreviews(false);
+      }
+    })();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedGeneration?.id, generatedAssetDownloadUrls]);
+
+  const requestGeneratedAssetDownloadUrl = async (generatedAssetId: string) => {
+    const cachedUrl = generatedAssetDownloadUrls[generatedAssetId];
+
+    if (cachedUrl) {
+      return cachedUrl;
+    }
+
+    const response = await fetch(
+      `/api/studio/generated-assets/${generatedAssetId}/download-intent`,
+      {
+        method: "POST"
+      }
+    );
+    const result = await parseJsonResponse({
+      response,
+      schema: generatedAssetDownloadIntentResponseSchema
+    });
+
+    setGeneratedAssetDownloadUrls((currentGeneratedAssetDownloadUrls) => {
+      if (currentGeneratedAssetDownloadUrls[generatedAssetId]) {
+        return currentGeneratedAssetDownloadUrls;
+      }
+
+      return {
+        ...currentGeneratedAssetDownloadUrls,
+        [generatedAssetId]: result.download.url
+      };
+    });
+
+    return result.download.url;
   };
 
   const refreshAssets = useEffectEvent(async (input?: { silent?: boolean }) => {
@@ -413,6 +533,15 @@ export function StudioAssetsClient({
             current
           })
         );
+        setSelectedAssetId((currentAssetId) => {
+          if (!currentAssetId) {
+            return result.assets[0]?.id ?? null;
+          }
+
+          return result.assets.some((asset) => asset.id === currentAssetId)
+            ? currentAssetId
+            : result.assets[0]?.id ?? null;
+        });
       });
     } catch (error) {
       if (!input?.silent) {
@@ -433,7 +562,7 @@ export function StudioAssetsClient({
   });
 
   useEffect(() => {
-    if (!hasActiveGenerations) {
+    if (activeGenerationAssets.length === 0) {
       return;
     }
 
@@ -446,7 +575,7 @@ export function StudioAssetsClient({
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [hasActiveGenerations, refreshAssets]);
+  }, [activeGenerationAssets.length, refreshAssets]);
 
   const handleUploadSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -558,6 +687,7 @@ export function StudioAssetsClient({
           progressPercent: 100,
           status: "succeeded"
         });
+
         completedUploadCount += 1;
       } catch (error) {
         updateUploadQueueItem(uploadQueueItem.id, {
@@ -604,6 +734,7 @@ export function StudioAssetsClient({
 
   const startGeneration = async (assetId: string, variantCount: number) => {
     setDispatchingAssetId(assetId);
+    setSelectedAssetId(assetId);
     setNotice({
       message: "Dispatching generation request.",
       tone: "info"
@@ -625,12 +756,10 @@ export function StudioAssetsClient({
         response,
         schema: generationRequestCreateResponseSchema
       });
-      setSelectedGenerationIdsByAssetId(
-        (currentSelectedGenerationIdsByAssetId) => ({
-          ...currentSelectedGenerationIdsByAssetId,
-          [assetId]: result.generation.id
-        })
-      );
+      setSelectedGenerationIdsByAssetId((currentSelectedGenerationIdsByAssetId) => ({
+        ...currentSelectedGenerationIdsByAssetId,
+        [assetId]: result.generation.id
+      }));
       await refreshAssets();
 
       setNotice({
@@ -669,12 +798,11 @@ export function StudioAssetsClient({
         response,
         schema: generationRequestCreateResponseSchema
       });
-      setSelectedGenerationIdsByAssetId(
-        (currentSelectedGenerationIdsByAssetId) => ({
-          ...currentSelectedGenerationIdsByAssetId,
-          [result.generation.sourceAssetId]: result.generation.id
-        })
-      );
+      setSelectedGenerationIdsByAssetId((currentSelectedGenerationIdsByAssetId) => ({
+        ...currentSelectedGenerationIdsByAssetId,
+        [result.generation.sourceAssetId]: result.generation.id
+      }));
+      setSelectedAssetId(result.generation.sourceAssetId);
       await refreshAssets();
 
       setNotice({
@@ -702,20 +830,16 @@ export function StudioAssetsClient({
     });
 
     try {
-      const response = await fetch(
-        `/api/studio/generated-assets/${generatedAssetId}/download-intent`,
-        {
-          method: "POST"
-        }
-      );
-      const result = await parseJsonResponse({
-        response,
-        schema: generatedAssetDownloadIntentResponseSchema
+      const url = await requestGeneratedAssetDownloadUrl(generatedAssetId);
+      triggerBrowserDownload(url);
+
+      const generatedAsset = findGeneratedAssetById({
+        assets,
+        generatedAssetId
       });
 
-      triggerBrowserDownload(result.download.url);
       setNotice({
-        message: `Download is ready for variant ${result.asset.variantIndex}.`,
+        message: `Download is ready for variant ${generatedAsset?.variantIndex ?? ""}.`,
         tone: "success"
       });
     } catch (error) {
@@ -737,9 +861,13 @@ export function StudioAssetsClient({
   ) => {
     setModeratingGeneratedAssetId(generatedAssetId);
     setNotice({
-      message: `Setting output moderation to ${formatModerationStatus(
-        moderationStatus
-      ).toLowerCase()}.`,
+      message: `Setting output moderation to ${
+        moderationStatus === "approved"
+          ? "approved"
+          : moderationStatus === "rejected"
+            ? "rejected"
+            : "pending review"
+      }`,
       tone: "info"
     });
 
@@ -765,9 +893,13 @@ export function StudioAssetsClient({
         silent: true
       });
       setNotice({
-        message: `Variant ${result.asset.variantIndex} is now ${formatModerationStatus(
-          result.asset.moderationStatus
-        ).toLowerCase()}.`,
+        message: `Variant ${result.asset.variantIndex} is now ${
+          result.asset.moderationStatus === "approved"
+            ? "approved"
+            : result.asset.moderationStatus === "rejected"
+              ? "rejected"
+              : "pending review"
+        }.`,
         tone: "success"
       });
     } catch (error) {
@@ -783,11 +915,27 @@ export function StudioAssetsClient({
     }
   };
 
+  const updateUploadQueueItem = (
+    uploadQueueItemId: string,
+    updates: Partial<UploadQueueItem>
+  ) => {
+    setUploadQueue((currentUploadQueue) =>
+      currentUploadQueue.map((item) =>
+        item.id === uploadQueueItemId
+          ? {
+              ...item,
+              ...updates
+            }
+          : item
+      )
+    );
+  };
+
   return (
     <PageShell
       eyebrow="Studio assets"
       title="Upload, dispatch, review history, and retrieve generated outputs"
-      lead="The studio asset workflow now runs end to end in the browser: source images upload directly into private storage through signed intents, generation requests dispatch into BullMQ, active jobs poll automatically, and each asset keeps a browsable generation history so prior runs can be compared and retried without leaving the studio."
+      lead="Use this as a lane-based operator workspace: upload sources quickly, run generation jobs, compare run history, and promote or retry outputs from a single panel."
       actions={
         <>
           <Link className="action-link" href="/studio">
@@ -807,154 +955,223 @@ export function StudioAssetsClient({
     >
       <SurfaceGrid>
         <SurfaceCard
-          body="Select one or more supported image files to create source assets, stream them into private storage, and verify each upload before the asset becomes generation-ready."
-          eyebrow="Upload"
-          span={8}
-          title="Source asset intake"
+          body="Select one or more supported image files to create source assets, send them into private storage, and verify each upload before dispatching generation jobs."
+          eyebrow="Source intake"
+          span={12}
+          title="Pipeline command center"
         >
-          <form className="studio-form" onSubmit={handleUploadSubmit}>
-            <label className="field-stack" htmlFor={fileInputId}>
-              <span className="field-label">Source files</span>
-              <input
-                accept={acceptedSourceAssetInputValue}
-                className="input-field input-field--file"
-                disabled={isUploading}
-                id={fileInputId}
-                multiple
-                onChange={(event) =>
-                  setSelectedFiles(
-                    event.target.files ? Array.from(event.target.files) : []
-                  )
-                }
-                ref={fileInputRef}
-                type="file"
-              />
-            </label>
-            <div className="studio-action-row">
-              <button
-                className="button-action button-action--accent"
-                disabled={isUploading || selectedFiles.length === 0}
-                type="submit"
-              >
-                {isUploading
-                  ? "Uploading..."
-                  : selectedFiles.length > 1
-                    ? `Upload ${selectedFiles.length} files`
-                    : "Upload source asset"}
-              </button>
-              <span className="field-hint">
-                Supports AVIF, HEIC, HEIF, JPEG, PNG, and WEBP.
-              </span>
-            </div>
-          </form>
-          {selectedFiles.length > 0 ? (
-            <div className="pill-row">
-              {selectedFiles.map((file) => (
-                <Pill key={`${file.name}-${file.lastModified}`}>
-                  {file.name}
-                </Pill>
-              ))}
-            </div>
-          ) : null}
-          {uploadQueue.length > 0 ? (
-            <div className="upload-queue">
-              {uploadQueue.map((item) => (
-                <div className="upload-queue-item" key={item.id}>
-                  <div className="upload-queue-copy">
-                    <strong>{item.fileName}</strong>
-                    <span>{item.message}</span>
+          <div className="studio-assets-command">
+            <form className="studio-form" onSubmit={handleUploadSubmit}>
+              <label className="field-stack" htmlFor={fileInputId}>
+                <span className="field-label">Source files</span>
+                <input
+                  accept={acceptedSourceAssetInputValue}
+                  className="input-field input-field--file"
+                  disabled={isUploading}
+                  id={fileInputId}
+                  multiple
+                  onChange={(event) =>
+                    setSelectedFiles(
+                      event.target.files ? Array.from(event.target.files) : []
+                    )
+                  }
+                  ref={fileInputRef}
+                  type="file"
+                />
+              </label>
+              <div className="studio-action-row">
+                <button
+                  className="button-action button-action--accent"
+                  disabled={isUploading || selectedFiles.length === 0}
+                  type="submit"
+                >
+                  {isUploading
+                    ? "Uploading..."
+                    : selectedFiles.length > 1
+                      ? `Upload ${selectedFiles.length} files`
+                      : "Upload source asset"}
+                </button>
+                <span className="field-hint">
+                  Supports AVIF, HEIC, HEIF, JPEG, PNG, and WEBP.
+                </span>
+              </div>
+            </form>
+            {selectedFiles.length > 0 ? (
+              <div className="pill-row">
+                {selectedFiles.map((file) => (
+                  <Pill key={`${file.name}-${file.lastModified}`}>{file.name}</Pill>
+                ))}
+              </div>
+            ) : null}
+            {uploadQueue.length > 0 ? (
+              <div className="upload-queue">
+                {uploadQueue.map((item) => (
+                  <div className="upload-queue-item" key={item.id}>
+                    <div className="upload-queue-copy">
+                      <strong>{item.fileName}</strong>
+                      <span>{item.message}</span>
+                    </div>
+                    <div className="progress-track" aria-hidden="true">
+                      <span
+                        className={`progress-bar progress-bar--${item.status}`}
+                        style={{
+                          width: `${item.progressPercent}%`
+                        }}
+                      />
+                    </div>
                   </div>
-                  <div className="progress-track" aria-hidden="true">
-                    <span
-                      className={`progress-bar progress-bar--${item.status}`}
-                      style={{
-                        width: `${item.progressPercent}%`
-                      }}
-                    />
-                  </div>
+                ))}
+              </div>
+            ) : null}
+            <div className="studio-assets-command__state">
+              <div className="metric-list">
+                <MetricTile label="Owner" value={ownerWalletAddress} />
+                <MetricTile label="Assets" value={String(assets.length)} />
+                <MetricTile label="Uploaded" value={String(uploadedAssets)} />
+                <MetricTile label="Queued" value={String(queuedAssets)} />
+                <MetricTile label="Running" value={String(runningAssets)} />
+                <MetricTile label="Failed runs" value={String(failedGenerationRunCount)} />
+                <MetricTile label="Outputs" value={String(generatedOutputCount)} />
+                <MetricTile
+                  label="Pending review"
+                  value={String(pendingReviewOutputCount)}
+                />
+              </div>
+            </div>
+          </div>
+        </SurfaceCard>
+        <SurfaceCard
+          body="Use the source list to pick the current workspace focus, compare history in the right pane, and move quickly between active generation runs and moderation actions."
+          eyebrow="Source pipeline"
+          span={12}
+          title="Workspace composition"
+        >
+          <div className="studio-assets-workspace">
+            <section className="studio-assets-workspace__list" aria-live="polite">
+              <p className="field-label">Source assets</p>
+              {workspaceAssets.length === 0 ? (
+                <div className="studio-assets-workspace__placeholder">
+                  <strong>
+                    {selectedAsset
+                      ? "No other source assets in the current workspace view."
+                      : "No source assets yet."
+                    }
+                  </strong>
+                  <p>
+                    {selectedAsset
+                      ? "Start a new workflow to compare multiple source assets in one scan."
+                      : "Upload one or more supported images to begin."
+                    }
+                  </p>
                 </div>
-              ))}
-            </div>
-          ) : null}
-        </SurfaceCard>
-        <SurfaceCard
-          body="Uploads are owner-scoped and private. Generations dispatch per asset, polling only runs while work is queued or running, retries stay bound to explicit failed runs, every asset retains full generation history, and generated outputs now move through explicit moderation before collection curation."
-          eyebrow="Workflow"
-          span={4}
-          title="Operator guardrails"
-        >
-          <div className="pill-row">
-            <Pill>Owner scoped</Pill>
-            <Pill>Polling on demand</Pill>
-            <Pill>Signed downloads</Pill>
-            <Pill>Variant count 1-8</Pill>
-            <Pill>Retry failed runs</Pill>
-            <Pill>Per-asset history</Pill>
-          </div>
-        </SurfaceCard>
-        <SurfaceCard
-          body="Current source asset state stays live below. Dispatch controls unlock after upload verification, the latest run still drives active-state polling, and each asset now exposes full run history plus archived-output comparison."
-          eyebrow="Summary"
-          span={8}
-          title="Current source asset and generation records"
-        >
-          <div className="metric-list">
-            <MetricTile label="Owner" value={ownerWalletAddress} />
-            <MetricTile label="Assets" value={String(assets.length)} />
-            <MetricTile label="Uploaded" value={String(uploadedAssets)} />
-            <MetricTile
-              label="Generation runs"
-              value={String(totalGenerationRunCount)}
-            />
-            <MetricTile label="Queued assets" value={String(queuedAssets)} />
-            <MetricTile label="Running assets" value={String(runningAssets)} />
-            <MetricTile
-              label="Succeeded runs"
-              value={String(succeededGenerationRunCount)}
-            />
-            <MetricTile
-              label="Failed runs"
-              value={String(failedGenerationRunCount)}
-            />
-            <MetricTile
-              label="Generated outputs"
-              value={String(generatedOutputCount)}
-            />
-            <MetricTile
-              label="Pending review"
-              value={String(pendingReviewOutputCount)}
-            />
-            <MetricTile
-              label="Approved outputs"
-              value={String(approvedOutputCount)}
-            />
-            <MetricTile
-              label="Rejected outputs"
-              value={String(rejectedOutputCount)}
-            />
-          </div>
-        </SurfaceCard>
-        <SurfaceCard
-          body="The route surface now supports upload, dispatch, retry, protected retrieval, and owner-scoped moderation updates on generated outputs, all backed by the richer studio read model."
-          eyebrow="Routes"
-          span={4}
-          title="Live browser boundary"
-        >
-          <div className="pill-row">
-            <Pill>GET /api/studio/assets</Pill>
-            <Pill>POST /api/studio/assets/upload-intents</Pill>
-            <Pill>POST /api/studio/assets/[assetId]/complete</Pill>
-            <Pill>POST /api/studio/generations</Pill>
-            <Pill>
-              POST /api/studio/generations/[generationRequestId]/retry
-            </Pill>
-            <Pill>
-              POST
-              /api/studio/generated-assets/[generatedAssetId]/download-intent
-            </Pill>
-            <Pill>
-              PATCH /api/studio/generated-assets/[generatedAssetId]/moderation
-            </Pill>
+              ) : (
+                <div className="studio-assets-browser-grid">
+                  {workspaceAssets.map((asset) => (
+                    <StudioAssetCard
+                      asset={asset}
+                      displayMode="lane"
+                      downloadGeneratedAsset={downloadGeneratedAsset}
+                      downloadingGeneratedAssetId={downloadingGeneratedAssetId}
+                      generatedAssetDownloadUrls={generatedAssetDownloadUrls}
+                      generationVariantCount={
+                        generationVariantCountsByAssetId[asset.id] ?? 4
+                      }
+                      isDispatchingGeneration={dispatchingAssetId === asset.id}
+                      isSelected={selectedAsset?.id === asset.id}
+                      key={asset.id}
+                      moderatingGeneratedAssetId={moderatingGeneratedAssetId}
+                      onSelect={() => {
+                        setSelectedAssetId(asset.id);
+                      }}
+                      retryGeneration={retryGeneration}
+                      retryingGenerationRequestId={retryingGenerationRequestId}
+                      selectedGenerationId={
+                        selectedGenerationIdsByAssetId[asset.id] ?? null
+                      }
+                      setGenerationVariantCount={(variantCount) =>
+                        setGenerationVariantCountsByAssetId(
+                          (currentGenerationVariantCountsByAssetId) => ({
+                            ...currentGenerationVariantCountsByAssetId,
+                            [asset.id]: variantCount
+                          })
+                        )
+                      }
+                      setSelectedGenerationId={(generationRequestId) =>
+                        setSelectedGenerationIdsByAssetId(
+                          (currentSelectedGenerationIdsByAssetId) => ({
+                            ...currentSelectedGenerationIdsByAssetId,
+                            [asset.id]: generationRequestId
+                          })
+                        )
+                      }
+                      startGeneration={startGeneration}
+                      updateGeneratedAssetModeration={
+                        updateGeneratedAssetModeration
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+            <section className="studio-assets-workspace__detail" aria-live="polite">
+              {selectedAsset ? (
+                <StudioAssetCard
+                  asset={selectedAsset}
+                  displayMode="detail"
+                  downloadGeneratedAsset={downloadGeneratedAsset}
+                  downloadingGeneratedAssetId={downloadingGeneratedAssetId}
+                  generatedAssetDownloadUrls={generatedAssetDownloadUrls}
+                  generationVariantCount={
+                    generationVariantCountsByAssetId[selectedAsset.id] ?? 4
+                  }
+                  isDispatchingGeneration={
+                    dispatchingAssetId === selectedAsset.id
+                  }
+                  isSelected
+                  moderatingGeneratedAssetId={moderatingGeneratedAssetId}
+                  onSelect={() => {
+                    void refreshAssets({
+                      silent: true
+                    });
+                  }}
+                  retryGeneration={retryGeneration}
+                  retryingGenerationRequestId={retryingGenerationRequestId}
+                  selectedGenerationId={
+                    selectedGenerationIdsByAssetId[selectedAsset.id] ?? null
+                  }
+                  setGenerationVariantCount={(variantCount) =>
+                    setGenerationVariantCountsByAssetId(
+                      (currentGenerationVariantCountsByAssetId) => ({
+                        ...currentGenerationVariantCountsByAssetId,
+                        [selectedAsset.id]: variantCount
+                      })
+                    )
+                  }
+                  setSelectedGenerationId={(generationRequestId) =>
+                    setSelectedGenerationIdsByAssetId(
+                      (currentSelectedGenerationIdsByAssetId) => ({
+                        ...currentSelectedGenerationIdsByAssetId,
+                        [selectedAsset.id]: generationRequestId
+                      })
+                    )
+                  }
+                  startGeneration={startGeneration}
+                  updateGeneratedAssetModeration={updateGeneratedAssetModeration}
+                />
+              ) : (
+                <div className="studio-assets-workspace__placeholder">
+                  <strong>Open a source asset to inspect history and outputs.</strong>
+                  <p>
+                    Upload a source image first, then use a lane card on the left.
+                  </p>
+                </div>
+              )}
+              {isPrimingPreviews ? (
+                <p className="studio-assets-preview-note">
+                  Preparing image previews for selected generation.
+                </p>
+              ) : null}
+            </section>
           </div>
         </SurfaceCard>
         {notice ? (
@@ -969,51 +1186,6 @@ export function StudioAssetsClient({
             </div>
           </SurfaceCard>
         ) : null}
-        {assets.length === 0 ? (
-          <SurfaceCard
-            body="No source assets have been created for this studio owner yet. Use the upload surface above to create the first source asset and unlock generation dispatch."
-            eyebrow="Empty state"
-            span={12}
-            title="No assets yet"
-          />
-        ) : (
-          assets.map((asset) => (
-            <StudioAssetCard
-              asset={asset}
-              downloadGeneratedAsset={downloadGeneratedAsset}
-              downloadingGeneratedAssetId={downloadingGeneratedAssetId}
-              generationVariantCount={
-                generationVariantCountsByAssetId[asset.id] ?? 4
-              }
-              isDispatchingGeneration={dispatchingAssetId === asset.id}
-              key={asset.id}
-              moderatingGeneratedAssetId={moderatingGeneratedAssetId}
-              retryGeneration={retryGeneration}
-              retryingGenerationRequestId={retryingGenerationRequestId}
-              selectedGenerationId={
-                selectedGenerationIdsByAssetId[asset.id] ?? null
-              }
-              setGenerationVariantCount={(variantCount) =>
-                setGenerationVariantCountsByAssetId(
-                  (currentGenerationVariantCountsByAssetId) => ({
-                    ...currentGenerationVariantCountsByAssetId,
-                    [asset.id]: variantCount
-                  })
-                )
-              }
-              setSelectedGenerationId={(generationRequestId) =>
-                setSelectedGenerationIdsByAssetId(
-                  (currentSelectedGenerationIdsByAssetId) => ({
-                    ...currentSelectedGenerationIdsByAssetId,
-                    [asset.id]: generationRequestId
-                  })
-                )
-              }
-              startGeneration={startGeneration}
-              updateGeneratedAssetModeration={updateGeneratedAssetModeration}
-            />
-          ))
-        )}
       </SurfaceGrid>
     </PageShell>
   );
