@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import { AppProviders } from "../components/app-providers";
+import { SiteShell } from "../components/site-shell";
 import { SiteFooter } from "../components/site-footer";
 import { SiteHeader } from "../components/site-header";
 
@@ -22,11 +23,11 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <html lang="en">
       <body>
         <AppProviders>
-          <div className="site-root">
+          <SiteShell>
             <SiteHeader />
             <main className="site-main">{children}</main>
             <SiteFooter />
-          </div>
+          </SiteShell>
         </AppProviders>
       </body>
     </html>
