@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+import {
+  optionalTrimmedStringSchema,
+  optionalUrlSchema
+} from "./optional-environment-value.js";
 import { workerLogLevels } from "./worker-env.js";
 
 export const generationBackendProviderKinds = [
@@ -9,10 +13,10 @@ export const generationBackendProviderKinds = [
 
 export const generationBackendEnvSchema = z
   .object({
-    COMFYUI_API_BEARER_TOKEN: z.string().trim().min(1).optional(),
-    COMFYUI_BASE_URL: z.string().url().optional(),
+    COMFYUI_API_BEARER_TOKEN: optionalTrimmedStringSchema,
+    COMFYUI_BASE_URL: optionalUrlSchema,
     COMFYUI_CFG_SCALE: z.coerce.number().positive().default(7),
-    COMFYUI_CHECKPOINT_NAME: z.string().trim().min(1).optional(),
+    COMFYUI_CHECKPOINT_NAME: optionalTrimmedStringSchema,
     COMFYUI_DENOISE: z.coerce.number().positive().max(1).default(0.42),
     COMFYUI_NEGATIVE_PROMPT: z
       .string()
@@ -43,8 +47,8 @@ export const generationBackendEnvSchema = z
       .positive()
       .max(900_000)
       .default(180_000),
-    COMFYUI_WORKFLOW_PATH: z.string().trim().min(1).optional(),
-    GENERATION_BACKEND_AUTH_TOKEN: z.string().trim().min(1).optional(),
+    COMFYUI_WORKFLOW_PATH: optionalTrimmedStringSchema,
+    GENERATION_BACKEND_AUTH_TOKEN: optionalTrimmedStringSchema,
     GENERATION_BACKEND_BIND_HOST: z.string().trim().min(1).default("0.0.0.0"),
     GENERATION_BACKEND_PORT: z.coerce
       .number()

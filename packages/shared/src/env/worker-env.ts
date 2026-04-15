@@ -1,6 +1,10 @@
 import { z } from "zod";
 
 import { booleanEnvironmentValueSchema } from "./boolean-environment-value.js";
+import {
+  optionalTrimmedStringSchema,
+  optionalUrlSchema
+} from "./optional-environment-value.js";
 import { workspaceLifecycleNotificationProviderLabels } from "../workspace-lifecycle.js";
 
 export const workerLogLevels = ["debug", "info", "warn", "error"] as const;
@@ -8,26 +12,6 @@ export const generationAdapterKinds = ["storage_copy", "http_backend"] as const;
 
 export type WorkerLogLevel = (typeof workerLogLevels)[number];
 export type GenerationAdapterKind = (typeof generationAdapterKinds)[number];
-
-const optionalTrimmedStringSchema = z.preprocess((value) => {
-  if (typeof value !== "string") {
-    return value;
-  }
-
-  const normalizedValue = value.trim();
-
-  return normalizedValue === "" ? undefined : normalizedValue;
-}, z.string().trim().min(1).optional());
-
-const optionalUrlSchema = z.preprocess((value) => {
-  if (typeof value !== "string") {
-    return value;
-  }
-
-  const normalizedValue = value.trim();
-
-  return normalizedValue === "" ? undefined : normalizedValue;
-}, z.string().url().optional());
 
 export const workerEnvSchema = z
   .object({

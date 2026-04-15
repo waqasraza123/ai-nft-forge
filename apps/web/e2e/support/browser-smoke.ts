@@ -259,6 +259,14 @@ export async function seedBrowserSmokeData(input: {
   const runningAssetFilename = "portrait-running.png";
 
   try {
+    const workspace = await databaseClient.workspace.create({
+      data: {
+        name: "Browser Smoke Workspace",
+        ownerUserId: input.userId,
+        slug: `browser-smoke-${crypto.randomUUID().slice(0, 8)}`,
+        status: "active"
+      }
+    });
     const mainSourceObject = await storePrivateObject({
       contentType: sourceAssetContentType,
       key: `${prefix}/source/main.png`
@@ -285,7 +293,8 @@ export async function seedBrowserSmokeData(input: {
         status: "uploaded",
         storageBucket: mainSourceObject.bucket,
         storageObjectKey: mainSourceObject.key,
-        uploadedAt: new Date(now - 75 * 60 * 1000)
+        uploadedAt: new Date(now - 75 * 60 * 1000),
+        workspaceId: workspace.id
       }
     });
     const failedAlertOneAsset = await databaseClient.sourceAsset.create({
@@ -298,7 +307,8 @@ export async function seedBrowserSmokeData(input: {
         status: "uploaded",
         storageBucket: failedOneSourceObject.bucket,
         storageObjectKey: failedOneSourceObject.key,
-        uploadedAt: new Date(now - 35 * 60 * 1000)
+        uploadedAt: new Date(now - 35 * 60 * 1000),
+        workspaceId: workspace.id
       }
     });
     const failedAlertTwoAsset = await databaseClient.sourceAsset.create({
@@ -311,7 +321,8 @@ export async function seedBrowserSmokeData(input: {
         status: "uploaded",
         storageBucket: failedTwoSourceObject.bucket,
         storageObjectKey: failedTwoSourceObject.key,
-        uploadedAt: new Date(now - 25 * 60 * 1000)
+        uploadedAt: new Date(now - 25 * 60 * 1000),
+        workspaceId: workspace.id
       }
     });
     const runningAsset = await databaseClient.sourceAsset.create({
@@ -324,7 +335,8 @@ export async function seedBrowserSmokeData(input: {
         status: "uploaded",
         storageBucket: runningSourceObject.bucket,
         storageObjectKey: runningSourceObject.key,
-        uploadedAt: new Date(now - 40 * 60 * 1000)
+        uploadedAt: new Date(now - 40 * 60 * 1000),
+        workspaceId: workspace.id
       }
     });
     const mainSucceededGeneration =
@@ -343,7 +355,8 @@ export async function seedBrowserSmokeData(input: {
           },
           sourceAssetId: mainAsset.id,
           startedAt: new Date(now - 49 * 60 * 1000),
-          status: "succeeded"
+          status: "succeeded",
+          workspaceId: workspace.id
         }
       });
     const generatedVariantOneObject = await storePrivateObject({
@@ -365,7 +378,8 @@ export async function seedBrowserSmokeData(input: {
           sourceAssetId: mainAsset.id,
           storageBucket: generatedVariantOneObject.bucket,
           storageObjectKey: generatedVariantOneObject.key,
-          variantIndex: 1
+          variantIndex: 1,
+          workspaceId: workspace.id
         },
         {
           byteSize: generatedVariantTwoObject.byteSize,
@@ -375,7 +389,8 @@ export async function seedBrowserSmokeData(input: {
           sourceAssetId: mainAsset.id,
           storageBucket: generatedVariantTwoObject.bucket,
           storageObjectKey: generatedVariantTwoObject.key,
-          variantIndex: 2
+          variantIndex: 2,
+          workspaceId: workspace.id
         }
       ]
     });
@@ -393,7 +408,8 @@ export async function seedBrowserSmokeData(input: {
         status: "uploaded",
         storageBucket: invalidSourceObject.bucket,
         storageObjectKey: invalidSourceObject.key,
-        uploadedAt: new Date(now - 55 * 60 * 1000)
+        uploadedAt: new Date(now - 55 * 60 * 1000),
+        workspaceId: workspace.id
       }
     });
     const invalidGeneration = await databaseClient.generationRequest.create({
@@ -406,11 +422,13 @@ export async function seedBrowserSmokeData(input: {
         requestedVariantCount: 1,
         resultJson: {
           generatedVariantCount: 1,
+          outputGroupKey: `${prefix}/generated/invalid`,
           storedAssetCount: 1
         },
         sourceAssetId: invalidSourceAsset.id,
         startedAt: new Date(now - 53 * 60 * 1000),
-        status: "succeeded"
+        status: "succeeded",
+        workspaceId: workspace.id
       }
     });
     const invalidGeneratedObject = await storePrivateObject({
@@ -428,15 +446,8 @@ export async function seedBrowserSmokeData(input: {
         sourceAssetId: invalidSourceAsset.id,
         storageBucket: invalidGeneratedObject.bucket,
         storageObjectKey: invalidGeneratedObject.key,
-        variantIndex: 1
-      }
-    });
-    const workspace = await databaseClient.workspace.create({
-      data: {
-        name: "Browser Smoke Workspace",
-        ownerUserId: input.userId,
-        slug: `browser-smoke-${crypto.randomUUID().slice(0, 8)}`,
-        status: "active"
+        variantIndex: 1,
+        workspaceId: workspace.id
       }
     });
     const brand = await databaseClient.brand.create({
@@ -461,7 +472,8 @@ export async function seedBrowserSmokeData(input: {
         ownerUserId: input.userId,
         slug: "broken-launch-draft",
         status: "review_ready",
-        title: invalidDraftTitle
+        title: invalidDraftTitle,
+        workspaceId: workspace.id
       }
     });
 
@@ -488,7 +500,8 @@ export async function seedBrowserSmokeData(input: {
           soldCount: 0,
           sourceCollectionDraftId: invalidDraft.id,
           storefrontStatus: "live",
-          title: invalidDraft.title
+          title: invalidDraft.title,
+          workspaceId: workspace.id
         }
       });
 
@@ -514,7 +527,8 @@ export async function seedBrowserSmokeData(input: {
         requestedVariantCount: 4,
         sourceAssetId: mainAsset.id,
         startedAt: new Date(now - 13 * 60 * 1000),
-        status: "failed"
+        status: "failed",
+        workspaceId: workspace.id
       }
     });
 
@@ -531,7 +545,8 @@ export async function seedBrowserSmokeData(input: {
           requestedVariantCount: 4,
           sourceAssetId: failedAlertOneAsset.id,
           startedAt: new Date(now - 10 * 60 * 1000),
-          status: "failed"
+          status: "failed",
+          workspaceId: workspace.id
         },
         {
           createdAt: new Date(now - 7 * 60 * 1000),
@@ -544,7 +559,8 @@ export async function seedBrowserSmokeData(input: {
           requestedVariantCount: 3,
           sourceAssetId: failedAlertTwoAsset.id,
           startedAt: new Date(now - 7 * 60 * 1000),
-          status: "failed"
+          status: "failed",
+          workspaceId: workspace.id
         },
         {
           createdAt: new Date(now - 21 * 60 * 1000),
@@ -554,7 +570,8 @@ export async function seedBrowserSmokeData(input: {
           requestedVariantCount: 2,
           sourceAssetId: runningAsset.id,
           startedAt: new Date(now - 20 * 60 * 1000),
-          status: "running"
+          status: "running",
+          workspaceId: workspace.id
         }
       ]
     });
@@ -581,9 +598,31 @@ export async function seedPublicStorefrontData(input: {
   const collectionSlug = "midnight-portraits";
 
   try {
+    const workspace = await databaseClient.workspace.create({
+      data: {
+        name: "Demo Launch Workspace",
+        ownerUserId: input.userId,
+        slug: "demo-launch-workspace",
+        status: "active"
+      }
+    });
     const sourceAsset = await storePrivateObject({
       contentType,
       key: `${prefix}/storefront/source/portrait-main.png`
+    });
+    const storefrontSourceAsset = await databaseClient.sourceAsset.create({
+      data: {
+        byteSize: sourceAsset.byteSize,
+        contentType,
+        createdAt: new Date(now - 66 * 60 * 1000),
+        originalFilename: "storefront-source.png",
+        ownerUserId: input.userId,
+        status: "uploaded",
+        storageBucket: sourceAsset.bucket,
+        storageObjectKey: sourceAsset.key,
+        uploadedAt: new Date(now - 66 * 60 * 1000),
+        workspaceId: workspace.id
+      }
     });
     const generation = await databaseClient.generationRequest.create({
       data: {
@@ -597,21 +636,10 @@ export async function seedPublicStorefrontData(input: {
           generatedVariantCount: 2,
           storedAssetCount: 2
         },
-        sourceAsset: {
-          create: {
-            byteSize: sourceAsset.byteSize,
-            contentType,
-            createdAt: new Date(now - 66 * 60 * 1000),
-            originalFilename: "storefront-source.png",
-            ownerUserId: input.userId,
-            status: "uploaded",
-            storageBucket: sourceAsset.bucket,
-            storageObjectKey: sourceAsset.key,
-            uploadedAt: new Date(now - 66 * 60 * 1000)
-          }
-        },
+        sourceAssetId: storefrontSourceAsset.id,
         startedAt: new Date(now - 64 * 60 * 1000),
-        status: "succeeded"
+        status: "succeeded",
+        workspaceId: workspace.id
       },
       include: {
         sourceAsset: true
@@ -643,7 +671,8 @@ export async function seedPublicStorefrontData(input: {
           sourceAssetId: generation.sourceAssetId,
           storageBucket: privateVariantOne.bucket,
           storageObjectKey: privateVariantOne.key,
-          variantIndex: 1
+          variantIndex: 1,
+          workspaceId: workspace.id
         }
       }),
       databaseClient.generatedAsset.create({
@@ -655,18 +684,11 @@ export async function seedPublicStorefrontData(input: {
           sourceAssetId: generation.sourceAssetId,
           storageBucket: privateVariantTwo.bucket,
           storageObjectKey: privateVariantTwo.key,
-          variantIndex: 2
+          variantIndex: 2,
+          workspaceId: workspace.id
         }
       })
     ]);
-    const workspace = await databaseClient.workspace.create({
-      data: {
-        name: "Demo Launch Workspace",
-        ownerUserId: input.userId,
-        slug: "demo-launch-workspace",
-        status: "active"
-      }
-    });
     const brand = await databaseClient.brand.create({
       data: {
         customDomain: null,
@@ -696,7 +718,8 @@ export async function seedPublicStorefrontData(input: {
         ownerUserId: input.userId,
         slug: collectionSlug,
         status: "review_ready",
-        title: "Midnight Portraits"
+        title: "Midnight Portraits",
+        workspaceId: workspace.id
       }
     });
 
@@ -732,7 +755,8 @@ export async function seedPublicStorefrontData(input: {
         storefrontHeadline: "Midnight Portraits",
         storefrontStatus: "live",
         title: draft.title,
-        totalSupply: 8
+        totalSupply: 8,
+        workspaceId: workspace.id
       }
     });
 

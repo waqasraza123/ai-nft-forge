@@ -44,6 +44,11 @@ test.describe("studio assets browser smoke", () => {
         name: "portrait-main.png"
       })
     });
+    const workflowStatusCard = page.locator("article.surface-card", {
+      has: page.getByRole("heading", {
+        name: "Workflow status"
+      })
+    });
 
     try {
       await page.goto("/studio/assets");
@@ -66,11 +71,9 @@ test.describe("studio assets browser smoke", () => {
       await mainAssetCard
         .getByRole("button", { name: "Retry failed run" })
         .click();
-      await expect(
-        page.getByText(
-          "Failed generation request re-queued for worker processing."
-        )
-      ).toBeVisible();
+      await expect(workflowStatusCard).toContainText(
+        "Failed generation request re-queued for worker processing."
+      );
       await expect(mainAssetCard).toContainText("3 generation runs");
       await expect(mainAssetCard).toContainText("Generation queued");
     } finally {

@@ -75,4 +75,22 @@ describe("parseGenerationBackendEnv", () => {
       "COMFYUI_BASE_URL is required when GENERATION_BACKEND_PROVIDER_KIND=comfyui."
     );
   });
+
+  it("treats blank optional ComfyUI values as unset for deterministic mode", () => {
+    expect(
+      parseGenerationBackendEnv({
+        COMFYUI_API_BEARER_TOKEN: "   ",
+        COMFYUI_BASE_URL: "   ",
+        COMFYUI_CHECKPOINT_NAME: "",
+        COMFYUI_WORKFLOW_PATH: " ",
+        GENERATION_BACKEND_PROVIDER_KIND: "deterministic_transform"
+      })
+    ).toMatchObject({
+      COMFYUI_API_BEARER_TOKEN: undefined,
+      COMFYUI_BASE_URL: undefined,
+      COMFYUI_CHECKPOINT_NAME: undefined,
+      COMFYUI_WORKFLOW_PATH: undefined,
+      GENERATION_BACKEND_PROVIDER_KIND: "deterministic_transform"
+    });
+  });
 });

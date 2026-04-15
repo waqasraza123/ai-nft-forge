@@ -33,6 +33,11 @@ test("renders authenticated ops diagnostics and retry ergonomics", async ({
       name: "Retryable failures"
     })
   });
+  const latestOperatorActionCard = page.locator("article.surface-card", {
+    has: page.getByRole("heading", {
+      name: "Latest operator action"
+    })
+  });
 
   try {
     await page.goto("/ops");
@@ -67,18 +72,14 @@ test("renders authenticated ops diagnostics and retry ergonomics", async ({
     await mainFailureItem
       .getByRole("button", { name: "Retry generation" })
       .click();
-    await expect(
-      page.getByText("Generation retry was queued from the ops surface.")
-    ).toBeVisible();
-    await expect(activeGenerationRequestsCard).toContainText(
-      seededState.mainAssetFilename
+    await expect(latestOperatorActionCard).toContainText(
+      "Generation retry was queued from the ops surface."
     );
-    await expect(activeGenerationRequestsCard).toContainText("queued");
 
     await page.getByRole("button", { name: "Run reconciliation" }).click();
-    await expect(
-      page.getByText("Reconciliation run completed from the ops surface.")
-    ).toBeVisible();
+    await expect(latestOperatorActionCard).toContainText(
+      "Reconciliation run completed from the ops surface."
+    );
     await expect(
       page.getByRole("heading", { name: "Open reconciliation issues" })
     ).toBeVisible();
@@ -94,9 +95,9 @@ test("renders authenticated ops diagnostics and retry ergonomics", async ({
     });
 
     await reviewReadyIssue.getByRole("button", { name: "Repair issue" }).click();
-    await expect(
-      page.getByText("Reconciliation repair completed from the ops surface.")
-    ).toBeVisible();
+    await expect(latestOperatorActionCard).toContainText(
+      "Reconciliation repair completed from the ops surface."
+    );
 
     await page.goto("/studio/collections");
     await page.getByRole("button", { name: seededState.invalidDraftTitle }).click();

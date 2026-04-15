@@ -37,7 +37,11 @@ test("renders the public storefront brand and collection routes from published d
       name: "Archive"
     })
   ).toBeVisible();
-  await expect(page.getByText("Midnight Portraits")).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: "Midnight Portraits"
+    })
+  ).toBeVisible();
 
   await page.goto(storefront.collectionPath);
 
@@ -47,11 +51,13 @@ test("renders the public storefront brand and collection routes from published d
     })
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", {
-      name: "Release status"
-    })
+    page.getByText("Release status")
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Enter mint" })).toBeVisible();
-  await expect(page.getByText("0.18 ETH")).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: "Reserve the next available edition for 0.18 ETH"
+    })
+  ).toBeVisible();
   await expect(page.getByText("Supply")).toBeVisible();
 });

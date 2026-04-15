@@ -1,33 +1,30 @@
 import { z } from "zod";
 
+import {
+  optionalTrimmedStringSchema,
+  optionalUrlSchema
+} from "./optional-environment-value.js";
+
 export const commerceEnvSchema = z.object({
   COMMERCE_CHECKOUT_PROVIDER_MODE: z
     .enum(["disabled", "manual", "stripe"])
     .default("manual"),
-  COMMERCE_FULFILLMENT_CALLBACK_BEARER_TOKEN: z
-    .string()
-    .trim()
-    .min(1)
-    .optional(),
-  COMMERCE_FULFILLMENT_CALLBACK_BASE_URL: z.string().trim().url().optional(),
+  COMMERCE_FULFILLMENT_CALLBACK_BEARER_TOKEN: optionalTrimmedStringSchema,
+  COMMERCE_FULFILLMENT_CALLBACK_BASE_URL: optionalUrlSchema,
   COMMERCE_FULFILLMENT_PROVIDER_MODE: z
     .enum(["manual", "webhook"])
     .default("manual"),
-  COMMERCE_FULFILLMENT_WEBHOOK_BEARER_TOKEN: z
-    .string()
-    .trim()
-    .min(1)
-    .optional(),
+  COMMERCE_FULFILLMENT_WEBHOOK_BEARER_TOKEN: optionalTrimmedStringSchema,
   COMMERCE_FULFILLMENT_WEBHOOK_TIMEOUT_MS: z.coerce
     .number()
     .int()
     .positive()
     .max(30000)
     .default(5000),
-  COMMERCE_FULFILLMENT_WEBHOOK_URL: z.string().trim().url().optional(),
-  COMMERCE_STRIPE_PUBLISHABLE_KEY: z.string().trim().min(1).optional(),
-  COMMERCE_STRIPE_SECRET_KEY: z.string().trim().min(1).optional(),
-  COMMERCE_STRIPE_WEBHOOK_SECRET: z.string().trim().min(1).optional(),
+  COMMERCE_FULFILLMENT_WEBHOOK_URL: optionalUrlSchema,
+  COMMERCE_STRIPE_PUBLISHABLE_KEY: optionalTrimmedStringSchema,
+  COMMERCE_STRIPE_SECRET_KEY: optionalTrimmedStringSchema,
+  COMMERCE_STRIPE_WEBHOOK_SECRET: optionalTrimmedStringSchema,
   COMMERCE_RESERVATION_TTL_SECONDS: z.coerce
     .number()
     .int()

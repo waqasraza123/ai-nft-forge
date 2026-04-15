@@ -49,6 +49,7 @@ export function resolveBrowserSmokeEnvironment() {
   const redisUrl = new URL(baseEnvironment.REDIS_URL);
 
   databaseUrl.searchParams.set("schema", browserSmokeSchema);
+  databaseUrl.searchParams.set("connection_limit", "1");
   redisUrl.pathname = `/${browserSmokeRedisDatabase}`;
 
   const generationBackendUrl = new URL(

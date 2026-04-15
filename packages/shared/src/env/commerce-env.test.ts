@@ -40,6 +40,32 @@ describe("parseCommerceEnv", () => {
     });
   });
 
+  it("treats blank optional commerce values as unset", () => {
+    expect(
+      parseCommerceEnv({
+        COMMERCE_FULFILLMENT_CALLBACK_BEARER_TOKEN: " ",
+        COMMERCE_FULFILLMENT_CALLBACK_BASE_URL: "",
+        COMMERCE_FULFILLMENT_WEBHOOK_BEARER_TOKEN: "   ",
+        COMMERCE_FULFILLMENT_WEBHOOK_URL: "",
+        COMMERCE_STRIPE_PUBLISHABLE_KEY: "",
+        COMMERCE_STRIPE_SECRET_KEY: " ",
+        COMMERCE_STRIPE_WEBHOOK_SECRET: "   "
+      })
+    ).toEqual({
+      COMMERCE_CHECKOUT_PROVIDER_MODE: "manual",
+      COMMERCE_FULFILLMENT_CALLBACK_BEARER_TOKEN: undefined,
+      COMMERCE_FULFILLMENT_CALLBACK_BASE_URL: undefined,
+      COMMERCE_FULFILLMENT_PROVIDER_MODE: "manual",
+      COMMERCE_FULFILLMENT_WEBHOOK_BEARER_TOKEN: undefined,
+      COMMERCE_FULFILLMENT_WEBHOOK_TIMEOUT_MS: 5000,
+      COMMERCE_FULFILLMENT_WEBHOOK_URL: undefined,
+      COMMERCE_STRIPE_PUBLISHABLE_KEY: undefined,
+      COMMERCE_STRIPE_SECRET_KEY: undefined,
+      COMMERCE_STRIPE_WEBHOOK_SECRET: undefined,
+      COMMERCE_RESERVATION_TTL_SECONDS: 900
+    });
+  });
+
   it("requires Stripe credentials when stripe mode is enabled", () => {
     expect(() =>
       parseCommerceEnv({
