@@ -4,30 +4,34 @@
 2026-04-15
 
 ## Current Objective
-Implement Public Redesign Step 4: premium public collection page redesign for
-`apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/page.tsx`.
+Implement Public Redesign Step 5: hosted checkout redesign for
+`apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/checkout/[checkoutSessionId]/*`.
 
 ## Current Step
-Step 4 scope was validated against the current codebase and the collection page is now in a premium collection launch composition with:
-- Campaign hero and proof-led storytelling.
-- Reserve-first module with existing `PurchasePanel` retained.
-- Curated gallery and technical proof rail.
-- Related releases section with campaign-style cards.
+Step 5 is now implemented to make checkout a premium collector
+claim-and-completion checkpoint.
 
 Target files reviewed:
-- `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/page.tsx`
 - `apps/web/src/app/globals.css`
-- `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/purchase-panel.tsx`
+- `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/checkout/[checkoutSessionId]/page.tsx`
+- `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/checkout/[checkoutSessionId]/checkout-client.tsx`
 
 ## What Landed
-Validated and kept in place:
-- Campaign hero + launch story + collector proof + reserve zone + gallery wall + technical proof + related release rail composition.
-- Collection-focused `storefront-collection-*` styling in `apps/web/src/app/globals.css`.
-- Existing purchase flow and public service contracts untouched.
+- Reserved artwork is now the premium visual centerpiece of checkout with stronger
+  identity and status treatment.
+- Checkout status, provider mode, buyer, wallet, expiry, and completion visibility now
+  sit in a clearer summary panel.
+- Manual and Stripe action paths remain unchanged in behavior while receiving stronger
+  presentational framing and state-driven copy.
+- Checkout action/trust context now emphasizes transition back to the launch flow.
+- Checkout-specific stylesheet section added in `apps/web/src/app/globals.css` for
+  layout, status chips, and responsive behavior.
+- Existing payment/provider logic and public service contracts remain untouched.
 
 ## Changed Files
-- `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/page.tsx`
 - `apps/web/src/app/globals.css`
+- `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/checkout/[checkoutSessionId]/page.tsx`
+- `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/checkout/[checkoutSessionId]/checkout-client.tsx`
 - `docs/_local/current-session.md`
 
 ## Verification Commands
@@ -45,4 +49,5 @@ Validated and kept in place:
 - No additional collection page code changes were required after validation.
 
 ## Next Action
-- Commit and push this Step 4 set, then continue to Step 5 once scoped tasks allow.
+- Commit and push Step 5 hosted checkout redesign changes, then continue to
+  Step 6 when scoped.

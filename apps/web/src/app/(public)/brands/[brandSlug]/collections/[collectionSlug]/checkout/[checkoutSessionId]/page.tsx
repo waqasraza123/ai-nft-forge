@@ -15,6 +15,68 @@ type CheckoutPageProps = {
   }>;
 };
 
+type CheckoutActionMode = "manual" | "stripe";
+
+type CheckoutStatus = "open" | "completed" | "expired" | "canceled";
+
+type CheckoutStatusCopy = {
+  heroLead: string;
+  actionTitle: string;
+  actionSubtext: string;
+  stateTone: "open" | "positive" | "expired" | "canceled";
+};
+
+const checkoutStatusCopy: Record<CheckoutStatus, CheckoutStatusCopy> = {
+  open: {
+    heroLead:
+      "This item is reserved and awaiting finalization. Reserve ownership is active and can still be claimed.",
+    actionTitle: "Complete your claim now",
+    actionSubtext: "Press forward to finish the checkout flow and mint this edition.",
+    stateTone: "open"
+  },
+  completed: {
+    heroLead:
+      "This reservation is complete. Your claim has been finalized and the edition is marked as fulfilled in the hosted reservation flow.",
+    actionTitle: "Checkout completed",
+    actionSubtext:
+      "This checkout has already been completed. No additional action is required.",
+    stateTone: "positive"
+  },
+  expired: {
+    heroLead:
+      "This reservation window has elapsed. Availability moved on and this slot is no longer held.",
+    actionTitle: "Reservation expired",
+    actionSubtext:
+      "This slot can no longer be completed. Start a new reservation from the collection page if still available.",
+    stateTone: "expired"
+  },
+  canceled: {
+    heroLead:
+      "This reservation was canceled and release of control has been recorded in the checkout session.",
+    actionTitle: "Reservation canceled",
+    actionSubtext:
+      "This session is no longer active and can be closed from here only by historical review.",
+    stateTone: "canceled"
+  }
+};
+
+const providerModeCopy: Record<
+  CheckoutActionMode,
+  {
+    title: string;
+    shortTitle: string;
+  }
+> = {
+  manual: {
+    title: "Manual settlement",
+    shortTitle: "Manual"
+  },
+  stripe: {
+    title: "Stripe settlement",
+    shortTitle: "Stripe"
+  }
+};
+
 function createStorefrontThemeStyle(theme: {
   accentColor: string;
   themePreset: "editorial_warm" | "gallery_mono" | "midnight_launch";
@@ -69,7 +131,7 @@ function formatTimestamp(value: string | null) {
   }).format(new Date(value));
 }
 
-function formatCheckoutStatus(status: "open" | "completed" | "expired" | "canceled") {
+function formatCheckoutStatus(status: CheckoutStatus) {
   switch (status) {
     case "completed":
       return "Completed";
@@ -81,6 +143,59 @@ function formatCheckoutStatus(status: "open" | "completed" | "expired" | "cancel
     default:
       return "Awaiting payment";
   }
+}
+
+function formatWalletAddress(value: string | null) {
+  if (!value) {
+    return "Not provided";
+  }
+
+  return value;
+}
+
+function buildActionCopy(input: {
+  status: CheckoutStatus;
+  isStripeOpen: boolean;
+  providerMode: CheckoutActionMode;
+}) {
+  if (input.providerMode === "manual") {
+    return {
+      providerLead:
+        input.status === "completed"
+          ? "Manual settlement was recorded for this reservation."
+          : "Use the manual controls to claim or release this reservation.",
+      buttonLabel: "Continue manual settlement",
+      secondaryLabel: "Back to collection"
+    };
+  }
+
+  if (input.isStripeOpen) {
+    return {
+      providerLead:
+        "Stripe is handling this payment step. Continue to the hosted checkout to finalize.",
+      buttonLabel: "Continue to secure payment",
+      secondaryLabel: "Refresh payment status"
+    };
+  }
+
+  return {
+    providerLead: "Stripe checkout is no longer active for this reservation.",
+    buttonLabel: "Payment complete",
+    secondaryLabel: "Back to collection"
+  };
+}
+
+function buildCheckoutStatusClass(status: CheckoutStatus) {
+  return checkoutStatusCopy[status].stateTone;
+}
+
+function buildStatusChip(status: CheckoutStatus) {
+  return {
+    label: formatCheckoutStatus(status),
+    className: `storefront-checkout-status-pill storefront-checkout-status-pill--${buildCheckoutStatusClass(
+      status
+    )}`
+  };
 }
 
 export default async function CheckoutPage({ params }: CheckoutPageProps) {
@@ -110,6 +225,8 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
     collection.collection.items.find(
       (item) => item.position === checkout.checkout.reservation.editionNumber
     ) ?? null;
+  const editionIdentity = `Edition #${checkout.checkout.reservation.editionNumber.toString()}`;
+  const releasePath = `/brands/${brandSlug}/collections/${collectionSlug}`;
   const canComplete =
     checkout.checkout.providerKind === "manual" &&
     checkout.checkout.status === "open";
@@ -117,61 +234,137 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
     checkout.checkout.providerKind === "manual" &&
     (checkout.checkout.status === "open" ||
       checkout.checkout.status === "expired");
-  const stripeCheckoutOpen =
+  const isStripeOpen =
     checkout.checkout.providerKind === "stripe" &&
     checkout.checkout.status === "open";
+  const statusCopy = checkoutStatusCopy[checkout.checkout.status];
+  const statusChip = buildStatusChip(checkout.checkout.status);
+  const statusProviderCopy = providerModeCopy[checkout.checkout.providerKind];
+  const actionCopy = buildActionCopy({
+    isStripeOpen,
+    providerMode: checkout.checkout.providerKind,
+    status: checkout.checkout.status
+  });
   const checkoutLead =
-    checkout.checkout.providerKind === "stripe"
-      ? checkout.checkout.status === "completed"
-        ? "Payment was confirmed through Stripe Checkout. This reservation has been converted into a completed sale."
-        : checkout.checkout.status === "open"
-          ? "Payment is being handled through Stripe Checkout. If the redirect already closed, reopen the Stripe session below or refresh this page after payment confirmation."
-          : "This Stripe Checkout session is no longer open."
-      : "This deployment is using the manual commerce provider. The reservation is real and time-bound, but payment completion is simulated from this hosted checkout page.";
+    statusCopy.heroLead;
 
   return (
     <div
       className={`storefront-shell storefront-shell--${collection.collection.brandTheme.themePreset}`}
       style={createStorefrontThemeStyle(collection.collection.brandTheme)}
     >
-      <section className="storefront-collection-grid">
-        <article className="storefront-panel storefront-checkout-panel">
+      <section className="storefront-checkout-layout">
+        <article className="storefront-panel storefront-checkout-hero">
+          <div className="storefront-checkout-status-row">
+            <span className={statusChip.className}>{statusChip.label}</span>
+            <span className="storefront-checkout-provider-pill">
+              {statusProviderCopy.title}
+            </span>
+          </div>
           <span className="storefront-section-kicker">Hosted checkout</span>
-          <h1>{checkout.checkout.title}</h1>
-          <div className="storefront-commerce-meta">
-            <span className="storefront-chip storefront-chip--accent">
-              {formatCheckoutStatus(checkout.checkout.status)}
-            </span>
-            <span className="storefront-chip">
-              Edition #{checkout.checkout.reservation.editionNumber}
-            </span>
+          <h1 className="storefront-checkout-hero__title">
+            {checkout.checkout.title}
+          </h1>
+          <p className="storefront-checkout-hero__edition">{editionIdentity}</p>
+          <div className="storefront-checkout-hero__media">
+            {reservedItem ? (
+              <img
+                alt={`${checkout.checkout.title} ${editionIdentity}`}
+                className="storefront-checkout-artwork-image"
+                src={reservedItem.imageUrl}
+              />
+            ) : (
+              <div className="storefront-checkout-artwork-placeholder">
+                Reserved artwork preview is unavailable.
+              </div>
+            )}
+          </div>
+          <p className="storefront-hero__lead">{checkoutLead}</p>
+          <div className="storefront-checkout-hero__meta">
             {checkout.checkout.priceLabel ? (
-              <span className="storefront-chip">{checkout.checkout.priceLabel}</span>
+              <span className="storefront-chip storefront-chip--accent">
+                {checkout.checkout.priceLabel}
+              </span>
             ) : null}
+            <span>{statusProviderCopy.shortTitle} provider</span>
+            <span>Launch checkpoint in public storefront</span>
           </div>
-          <p className="storefront-hero__lead">
-            {checkoutLead}
-          </p>
-          <div className="storefront-checkout-detail-grid">
+        </article>
+
+        <article className="storefront-panel storefront-checkout-summary">
+          <span className="storefront-section-kicker">Reservation summary</span>
+          <h2>Collector checkpoint</h2>
+          <div className="storefront-checkout-summary-grid">
             <div className="storefront-stat">
-              <strong>{checkout.checkout.reservation.buyerEmail}</strong>
-              <span>Buyer email</span>
+              <span>Checkout status</span>
+              <strong>{formatCheckoutStatus(checkout.checkout.status)}</strong>
             </div>
             <div className="storefront-stat">
-              <strong>{formatTimestamp(checkout.checkout.expiresAt)}</strong>
-              <span>Reservation expires</span>
-            </div>
-            <div className="storefront-stat">
+              <span>Reserved edition</span>
               <strong>
-                {checkout.checkout.reservation.buyerWalletAddress ?? "Not provided"}
+                {reservedItem?.sourceAssetOriginalFilename
+                  ? `${reservedItem.sourceAssetOriginalFilename} · v${reservedItem.variantIndex}`
+                  : editionIdentity}
               </strong>
-              <span>Wallet</span>
             </div>
             <div className="storefront-stat">
-              <strong>{formatTimestamp(checkout.checkout.completedAt)}</strong>
+              <span>Buyer email</span>
+              <strong>{checkout.checkout.reservation.buyerEmail}</strong>
+            </div>
+            <div className="storefront-stat">
+              <span>Wallet</span>
+              <strong>{formatWalletAddress(checkout.checkout.reservation.buyerWalletAddress)}</strong>
+            </div>
+            <div className="storefront-stat">
+              <span>Reservation expires</span>
+              <strong>{formatTimestamp(checkout.checkout.expiresAt)}</strong>
+            </div>
+            <div className="storefront-stat">
               <span>Completed at</span>
+              <strong>{formatTimestamp(checkout.checkout.completedAt)}</strong>
+            </div>
+            <div className="storefront-stat">
+              <span>Provider session</span>
+              <strong>{checkout.checkout.providerSessionId ?? "N/A"}</strong>
+            </div>
+            <div className="storefront-stat">
+              <span>Reservation status</span>
+              <strong>{checkout.checkout.reservation.status}</strong>
             </div>
           </div>
+        </article>
+
+        <article className="storefront-panel storefront-checkout-trust">
+          <span className="storefront-section-kicker">Release continuity</span>
+          <h2>Claim context</h2>
+          <p className="storefront-hero__lead">
+            This checkpoint is part of the active collectible launch flow for{" "}
+            <strong>{checkout.checkout.title}</strong> and remains tied to that release
+            context.
+          </p>
+          <p className="storefront-checkout-trust-list">
+            Use the route below to review the release details, remaining inventory,
+            and related campaign information.
+          </p>
+          <Link
+            className="storefront-button storefront-button--secondary"
+            href={releasePath}
+          >
+            Back to release page
+          </Link>
+          <Link
+            className="storefront-button storefront-button--ghost"
+            href={`/brands/${brandSlug}`}
+          >
+            Back to brand landing
+          </Link>
+        </article>
+
+        <article className="storefront-panel storefront-checkout-actions-panel">
+          <span className="storefront-section-kicker">Collector action</span>
+          <h2>{statusCopy.actionTitle}</h2>
+          <p className="storefront-hero__lead">{statusCopy.actionSubtext}</p>
+          <p className="storefront-checkout-action-copy">{actionCopy.providerLead}</p>
           {checkout.checkout.providerKind === "manual" ? (
             <CheckoutClient
               brandSlug={brandSlug}
@@ -180,52 +373,30 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
               checkoutSessionId={checkoutSessionId}
               collectionSlug={collectionSlug}
             />
-          ) : stripeCheckoutOpen ? (
+          ) : isStripeOpen ? (
             <div className="storefront-checkout-actions">
               <Link
                 className="storefront-button storefront-button--primary"
                 href={checkout.checkout.checkoutUrl}
+                rel="noopener noreferrer"
+                target="_blank"
               >
-                Open Stripe Checkout
+                {actionCopy.buttonLabel}
               </Link>
               <Link
                 className="storefront-button storefront-button--ghost"
                 href={`/brands/${brandSlug}/collections/${collectionSlug}/checkout/${checkoutSessionId}`}
               >
-                Refresh payment status
+                {actionCopy.secondaryLabel}
               </Link>
             </div>
-          ) : null}
-          <Link
-            className="storefront-button storefront-button--ghost"
-            href={`/brands/${brandSlug}/collections/${collectionSlug}`}
-          >
-            Back to release page
-          </Link>
-        </article>
-
-        <article className="storefront-panel storefront-checkout-artwork">
-          <span className="storefront-section-kicker">Reserved artwork</span>
-          {reservedItem ? (
-            <>
-              <img
-                alt={`${checkout.checkout.title} edition ${reservedItem.position}`}
-                className="storefront-gallery-card__image"
-                src={reservedItem.imageUrl}
-              />
-              <div className="storefront-gallery-card__copy">
-                <strong>
-                  {reservedItem.sourceAssetOriginalFilename} · variant{" "}
-                  {reservedItem.variantIndex}
-                </strong>
-                <span>{reservedItem.pipelineKey}</span>
-                <span>Edition {reservedItem.position}</span>
-              </div>
-            </>
           ) : (
-            <div className="storefront-empty-state">
-              Reserved artwork preview is unavailable.
-            </div>
+            <Link
+              className="storefront-button storefront-button--secondary"
+              href={releasePath}
+            >
+              Start a fresh checkout
+            </Link>
           )}
         </article>
       </section>

@@ -54,7 +54,10 @@ export function CheckoutClient(props: CheckoutClientProps) {
   }
 
   return (
-    <div className="storefront-checkout-actions">
+    <div
+      className="storefront-checkout-actions storefront-checkout-manual-actions"
+      role="group"
+    >
       {error ? <div className="storefront-commerce-error">{error}</div> : null}
       {props.canComplete ? (
         <button
@@ -64,8 +67,8 @@ export function CheckoutClient(props: CheckoutClientProps) {
           type="button"
         >
           {busyAction === "complete"
-            ? "Completing checkout..."
-            : "Complete manual checkout"}
+            ? "Confirming claim..."
+            : "Confirm claim"}
         </button>
       ) : null}
       {props.canCancel ? (
@@ -75,7 +78,9 @@ export function CheckoutClient(props: CheckoutClientProps) {
           onClick={() => void runAction("cancel")}
           type="button"
         >
-          {busyAction === "cancel" ? "Canceling..." : "Release reservation"}
+          {busyAction === "cancel"
+            ? "Releasing reservation..."
+            : "Release reservation"}
         </button>
       ) : null}
     </div>
