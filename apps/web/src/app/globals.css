@@ -939,6 +939,467 @@ select {
   gap: 10px;
 }
 
+.public-brand-page {
+  display: grid;
+  gap: clamp(1rem, 2.3vw, 2rem);
+}
+
+.public-brand-kicker {
+  margin: 0;
+  color: var(--storefront-accent);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.public-brand-wordmark {
+  display: grid;
+  gap: 4px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.public-brand-wordmark__path {
+  color: var(--storefront-muted);
+  font-size: 0.84rem;
+}
+
+.public-brand-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.public-brand-hero__campaign,
+.public-brand-featured-card__copy,
+.public-brand-manifesto__copy {
+  display: grid;
+  gap: 14px;
+}
+
+.public-brand-hero__campaign,
+.public-brand-featured-card,
+.public-brand-manifesto,
+.public-brand-release-section,
+.public-brand-release-card {
+  border: 1px solid var(--storefront-border);
+  border-radius: 28px;
+  background: var(--storefront-panel);
+  box-shadow: 0 24px 80px rgba(16, 22, 34, 0.08);
+  backdrop-filter: blur(16px);
+}
+
+.public-brand-hero__campaign,
+.public-brand-featured-card,
+.public-brand-manifesto {
+  padding: 24px;
+}
+
+.public-brand-hero__title {
+  margin: 0;
+  max-width: 16ch;
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 5.4vw, 4.3rem);
+  line-height: 0.94;
+  letter-spacing: -0.025em;
+}
+
+.public-brand-hero__description {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--storefront-muted);
+  line-height: 1.72;
+}
+
+.public-brand-hero__actions,
+.public-brand-hero-stats,
+.public-brand-hero-composition__meta,
+.public-brand-release-card__chips,
+.public-brand-release-card__meta,
+.public-brand-featured-card__meta,
+.public-brand-featured-card__actions,
+.public-brand-manifesto-grid,
+.public-brand-release-card__actions,
+.public-brand-release-section__subtitle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.public-brand-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.public-brand-stat {
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  border: 1px solid var(--storefront-border);
+  border-radius: 16px;
+  background: var(--storefront-panel-strong);
+}
+
+.public-brand-stat strong {
+  font-size: 1.15rem;
+  line-height: 1.1;
+  color: var(--storefront-text);
+}
+
+.public-brand-stat span,
+.public-brand-release-card__meta span,
+.public-brand-featured-card__meta li,
+.public-brand-manifesto__copy p {
+  color: var(--storefront-muted);
+  line-height: 1.6;
+}
+
+.public-brand-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 11px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--storefront-border);
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.public-brand-button--primary {
+  border-color: color-mix(in srgb, var(--storefront-accent) 32%, transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--storefront-accent) 24%, white),
+    color-mix(in srgb, var(--storefront-accent) 42%, white)
+  );
+  color: #101521;
+  font-weight: 700;
+}
+
+.public-brand-button--ghost {
+  background: var(--storefront-panel-strong);
+  color: var(--storefront-text);
+}
+
+.public-brand-button:hover {
+  transform: translateY(-1px);
+}
+
+.public-brand-chip,
+.public-brand-featured-card__timeline {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--storefront-border);
+  font-size: 0.86rem;
+  color: var(--storefront-muted);
+}
+
+.public-brand-chip--accent {
+  border-color: color-mix(in srgb, var(--storefront-accent) 26%, transparent);
+  background: color-mix(in srgb, var(--storefront-accent) 18%, transparent);
+  color: var(--storefront-accent);
+}
+
+.public-brand-hero-composition {
+  position: relative;
+  min-height: 460px;
+  padding: 14px;
+  border: 1px solid var(--storefront-border);
+  border-radius: 28px;
+  background:
+    linear-gradient(
+      150deg,
+      color-mix(in srgb, var(--storefront-accent) 22%, var(--storefront-panel-strong)),
+      color-mix(in srgb, var(--storefront-panel) 86%, transparent)
+    );
+  box-shadow: 0 20px 70px rgba(8, 10, 18, 0.18);
+  overflow: hidden;
+}
+
+.public-brand-hero-composition__glow {
+  position: absolute;
+  inset: -18% auto auto -18%;
+  width: 45%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--public-brand-accent, var(--storefront-accent)) 25%, transparent),
+    transparent
+  );
+  filter: blur(4px);
+  pointer-events: none;
+}
+
+.public-brand-hero-composition__frame {
+  position: relative;
+  min-height: 300px;
+  border: 1px solid var(--storefront-border);
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+.public-brand-hero-media,
+.public-brand-hero-media__image {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.public-brand-hero-media {
+  aspect-ratio: 4 / 3;
+  min-height: 300px;
+  display: grid;
+  place-items: center;
+}
+
+.public-brand-hero-media--empty {
+  padding: 18px;
+  color: var(--storefront-muted);
+  text-align: center;
+}
+
+.public-brand-hero-composition__hud {
+  position: absolute;
+  inset: auto 14px 14px;
+  z-index: 1;
+  display: grid;
+  gap: 10px;
+}
+
+.public-brand-hero-composition__meta {
+  position: absolute;
+  inset: 14px 14px auto;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.public-brand-hero-composition__hud .public-brand-kicker,
+.public-brand-hero-composition__kicker {
+  margin: 0;
+  color: var(--storefront-muted);
+}
+
+.public-brand-featured {
+  display: grid;
+  gap: 12px;
+}
+
+.public-brand-section__heading {
+  display: grid;
+  gap: 4px;
+}
+
+.public-brand-section__heading h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  line-height: 1.04;
+}
+
+.public-brand-featured-card,
+.public-brand-manifesto {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  gap: 16px;
+  align-items: stretch;
+  padding: 18px;
+}
+
+.public-brand-featured-card--empty {
+  min-height: 220px;
+  align-content: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.public-brand-featured-card__media,
+.public-brand-release-card__media {
+  overflow: hidden;
+  min-height: 220px;
+  border-radius: 20px;
+  border: 1px solid var(--storefront-border);
+  background: var(--storefront-panel-strong);
+}
+
+.public-brand-featured-card__media {
+  min-height: 360px;
+}
+
+.public-brand-featured-card__copy {
+  padding: 6px 2px;
+}
+
+.public-brand-featured-card__placeholder,
+.public-brand-release-card__placeholder {
+  width: 100%;
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  color: var(--storefront-muted);
+  padding: 24px;
+  text-align: center;
+}
+
+.public-brand-release-card__image,
+.public-brand-hero-media__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.public-brand-featured-card__title,
+.public-brand-manifesto h2,
+.public-brand-release-card__title {
+  margin: 0;
+  font-family: var(--font-display);
+  line-height: 1.05;
+}
+
+.public-brand-featured-card__title {
+  font-size: clamp(1.8rem, 3.4vw, 3rem);
+}
+
+.public-brand-release-card__title {
+  font-size: 1.5rem;
+}
+
+.public-brand-featured-card__body,
+.public-brand-release-card__body {
+  margin: 0;
+}
+
+.public-brand-featured-card__timeline {
+  border: 1px dashed var(--storefront-border);
+  background: color-mix(in srgb, var(--storefront-panel-strong) 80%, transparent);
+}
+
+.public-brand-featured-card__meta,
+.public-brand-release-card__meta {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 7px;
+}
+
+.public-brand-manifesto {
+  grid-template-columns: minmax(0, 1.3fr) minmax(240px, 0.7fr);
+  align-items: stretch;
+}
+
+.public-brand-manifesto-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.public-brand-manifesto-stat {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid var(--storefront-border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--storefront-panel-strong) 82%, transparent);
+}
+
+.public-brand-manifesto-stat strong {
+  font-size: 1.26rem;
+}
+
+.public-brand-manifesto-stat span {
+  color: var(--storefront-muted);
+}
+
+.public-brand-release-section--live,
+.public-brand-release-section--upcoming,
+.public-brand-release-section--archive {
+  display: grid;
+  gap: 12px;
+}
+
+.public-brand-release-rail {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.public-brand-release-rail--live .public-brand-release-card:first-child,
+.public-brand-release-rail--archive .public-brand-release-card:first-child,
+.public-brand-release-rail--upcoming .public-brand-release-card:first-child {
+  grid-column: span 2;
+}
+
+.public-brand-release-card {
+  display: grid;
+  overflow: hidden;
+  border-radius: 24px;
+}
+
+.public-brand-release-card__copy {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+
+.public-brand-release-card__body {
+  color: var(--storefront-muted);
+}
+
+.public-brand-release-card__meta li {
+  color: var(--storefront-muted);
+}
+
+.public-brand-release-card--live {
+  box-shadow: 0 18px 58px rgba(0, 0, 0, 0.08);
+}
+
+.public-brand-release-card--live .public-brand-release-card__media {
+  border-color: color-mix(in srgb, var(--storefront-accent) 32%, var(--storefront-border));
+}
+
+.public-brand-release-card--upcoming {
+  background: color-mix(in srgb, var(--storefront-panel) 80%, transparent);
+}
+
+.public-brand-release-card--upcoming .public-brand-chip--accent {
+  border-color: color-mix(in srgb, var(--storefront-accent) 40%, transparent);
+  color: var(--storefront-accent);
+}
+
+.public-brand-release-card--archive {
+  opacity: 0.96;
+}
+
+.public-brand-release-card--archive .public-brand-chip--accent {
+  color: var(--storefront-muted);
+}
+
+.public-brand-empty-state {
+  padding: 16px;
+  border: 1px dashed var(--storefront-border);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--storefront-panel) 74%, transparent);
+  color: var(--storefront-muted);
+}
+
+.public-brand-release-section__subtitle {
+  margin: 4px 0 0;
+  color: var(--storefront-muted);
+}
+
 .surface-grid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -2013,8 +2474,33 @@ select {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .public-brand-hero,
+  .public-brand-featured-card,
+  .public-brand-manifesto {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .public-brand-hero-composition,
+  .public-brand-featured-card__media,
+  .public-brand-release-card__media {
+    min-height: 300px;
+  }
+
   .marketing-process-list {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .public-brand-release-rail,
+  .public-brand-release-rail--live,
+  .public-brand-release-rail--upcoming,
+  .public-brand-release-rail--archive {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .public-brand-release-rail--live .public-brand-release-card:first-child,
+  .public-brand-release-rail--upcoming .public-brand-release-card:first-child,
+  .public-brand-release-rail--archive .public-brand-release-card:first-child {
+    grid-column: auto;
   }
 }
 
@@ -2078,6 +2564,11 @@ select {
     justify-content: center;
   }
 
+  .public-brand-hero-stats,
+  .public-brand-manifesto-grid {
+    grid-template-columns: 1fr;
+  }
+
   .color-input-row {
     grid-template-columns: 1fr;
   }
@@ -2099,5 +2590,12 @@ select {
 
   .storefront-collection-hero__media {
     min-height: 360px;
+  }
+
+  .public-brand-release-rail,
+  .public-brand-release-rail--live,
+  .public-brand-release-rail--upcoming,
+  .public-brand-release-rail--archive {
+    grid-template-columns: 1fr;
   }
 }
