@@ -2321,12 +2321,193 @@ select {
 }
 
 .storefront-collection-hero__media {
+  position: relative;
   min-height: 620px;
   overflow: hidden;
   border-radius: 32px;
   border: 1px solid var(--storefront-border);
   background: var(--storefront-panel-strong);
   box-shadow: 0 24px 80px rgba(16, 22, 34, 0.08);
+}
+
+.storefront-collection-hero__status-stack {
+  position: absolute;
+  inset: 14px auto auto 14px;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.storefront-collection-hero__kicker {
+  margin: 0;
+  color: var(--storefront-accent);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.storefront-collection-hero__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.storefront-collection-hero__fallback {
+  display: grid;
+  place-items: center;
+  min-height: 100%;
+  padding: 28px;
+  color: var(--storefront-muted);
+  text-align: center;
+}
+
+.storefront-collection-story,
+.storefront-collection-trust-card {
+  display: grid;
+  gap: 16px;
+}
+
+.storefront-collection-story {
+  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+}
+
+.storefront-collection-story__proof {
+  padding: 22px;
+  border: 1px solid var(--storefront-border);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--storefront-panel-strong) 86%, transparent);
+}
+
+.storefront-proof-card {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--storefront-border);
+  border-radius: 18px;
+  background: var(--storefront-panel);
+}
+
+.storefront-proof-card strong,
+.storefront-proof-card h3 {
+  margin: 0;
+}
+
+.storefront-proof-card span {
+  color: var(--storefront-muted);
+}
+
+.storefront-proof-card__statset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.storefront-collection-proof-grid,
+.storefront-technical-proof-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.storefront-collection-trust-copy {
+  margin: 0;
+  color: var(--storefront-muted);
+  line-height: 1.6;
+}
+
+.storefront-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.storefront-collection-reserve-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.storefront-collection-trust-list {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+  color: var(--storefront-muted);
+  line-height: 1.58;
+}
+
+.storefront-collection-trust-list li {
+  line-height: 1.45;
+}
+
+.storefront-collection-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.storefront-collection-gallery-card,
+.storefront-proof-card--technical {
+  border: 1px solid var(--storefront-border);
+  border-radius: 22px;
+  background: var(--storefront-panel);
+}
+
+.storefront-collection-gallery-card {
+  overflow: hidden;
+}
+
+.storefront-collection-gallery-card__copy {
+  padding: 14px 16px 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.storefront-collection-gallery-card__copy strong {
+  font-size: 0.96rem;
+  line-height: 1.35;
+}
+
+.storefront-collection-gallery-card__copy span {
+  color: var(--storefront-muted);
+}
+
+.storefront-collection-gallery-card__image {
+  aspect-ratio: 1 / 1;
+}
+
+.storefront-proof-card--technical {
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.storefront-proof-card--technical h3 {
+  font-size: 1.28rem;
+  line-height: 1.15;
+}
+
+.storefront-proof-card--technical p {
+  margin: 0;
+}
+
+.storefront-technical-proof-list {
+  display: grid;
+  gap: 8px;
+  color: var(--storefront-muted);
+}
+
+.storefront-technical-proof-copy {
+  margin: 0;
+  color: var(--storefront-muted);
+  line-height: 1.55;
+}
+
+.storefront-related-grid--collection {
+  align-items: stretch;
 }
 
 .storefront-collection-grid {
@@ -2449,6 +2630,11 @@ select {
   .storefront-release-rail,
   .storefront-archive-grid,
   .storefront-gallery-grid,
+  .storefront-collection-proof-grid,
+  .storefront-technical-proof-grid,
+  .storefront-collection-gallery-grid,
+  .storefront-collection-reserve-grid,
+  .storefront-collection-story,
   .storefront-related-grid,
   .storefront-checkout-detail-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2581,6 +2767,10 @@ select {
   .storefront-release-rail,
   .storefront-archive-grid,
   .storefront-gallery-grid,
+  .storefront-collection-proof-grid,
+  .storefront-technical-proof-grid,
+  .storefront-collection-gallery-grid,
+  .storefront-collection-reserve-grid,
   .storefront-related-grid,
   .storefront-checkout-detail-grid,
   .storefront-story__stats,
