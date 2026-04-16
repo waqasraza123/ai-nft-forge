@@ -39,9 +39,7 @@ function formatTimestamp(value: string | null) {
   }).format(new Date(value));
 }
 
-function formatWorkspaceStatus(
-  status: "active" | "archived" | "suspended"
-) {
+function formatWorkspaceStatus(status: "active" | "archived" | "suspended") {
   return status.replaceAll("_", " ");
 }
 
@@ -111,10 +109,86 @@ function compareWorkspacesByPressure(
     return right.ops.criticalAlertCount - left.ops.criticalAlertCount;
   }
 
-  if (right.ops.openReconciliationIssueCount !== left.ops.openReconciliationIssueCount) {
+  if (
+    right.ops.openReconciliationIssueCount !==
+    left.ops.openReconciliationIssueCount
+  ) {
     return (
       right.ops.openReconciliationIssueCount -
       left.ops.openReconciliationIssueCount
+    );
+  }
+
+  const leftLastActivity = left.directory.lastActivityAt
+    ? new Date(left.directory.lastActivityAt).getTime()
+    : 0;
+  const rightLastActivity = right.directory.lastActivityAt
+    ? new Date(right.directory.lastActivityAt).getTime()
+    : 0;
+
+  if (leftLastActivity !== rightLastActivity) {
+    return leftLastActivity - rightLastActivity;
+  }
+
+  return left.workspace.name.localeCompare(right.workspace.name);
+}
+
+function compareWorkspacesByAlertPressure(
+  left: WorkspaceFleetWorkspaceSummary,
+  right: WorkspaceFleetWorkspaceSummary
+) {
+  const alertDifference =
+    right.ops.activeAlertCount - left.ops.activeAlertCount;
+
+  if (alertDifference !== 0) {
+    return alertDifference;
+  }
+
+  if (right.ops.criticalAlertCount !== left.ops.criticalAlertCount) {
+    return right.ops.criticalAlertCount - left.ops.criticalAlertCount;
+  }
+
+  if (right.ops.warningAlertCount !== left.ops.warningAlertCount) {
+    return right.ops.warningAlertCount - left.ops.warningAlertCount;
+  }
+
+  const leftLastActivity = left.directory.lastActivityAt
+    ? new Date(left.directory.lastActivityAt).getTime()
+    : 0;
+  const rightLastActivity = right.directory.lastActivityAt
+    ? new Date(right.directory.lastActivityAt).getTime()
+    : 0;
+
+  if (leftLastActivity !== rightLastActivity) {
+    return leftLastActivity - rightLastActivity;
+  }
+
+  return left.workspace.name.localeCompare(right.workspace.name);
+}
+
+function compareWorkspacesByReconciliationPressure(
+  left: WorkspaceFleetWorkspaceSummary,
+  right: WorkspaceFleetWorkspaceSummary
+) {
+  const issueDifference =
+    right.ops.openReconciliationIssueCount -
+    left.ops.openReconciliationIssueCount;
+
+  if (issueDifference !== 0) {
+    return issueDifference;
+  }
+
+  if (right.ops.criticalAlertCount !== left.ops.criticalAlertCount) {
+    return right.ops.criticalAlertCount - left.ops.criticalAlertCount;
+  }
+
+  if (
+    right.commerce.automationFailedCheckoutCount !==
+    left.commerce.automationFailedCheckoutCount
+  ) {
+    return (
+      right.commerce.automationFailedCheckoutCount -
+      left.commerce.automationFailedCheckoutCount
     );
   }
 
@@ -199,8 +273,21 @@ export function OpsFleetClient({
     }
   }
 
-  const rankedWorkspaces = [...fleet.workspaces].sort(compareWorkspacesByPressure);
+  const rankedWorkspaces = [...fleet.workspaces].sort(
+    compareWorkspacesByPressure
+  );
   const attentionWorkspaces = rankedWorkspaces.slice(0, 3);
+  const alertPressureWorkspaces = [...fleet.workspaces]
+    .filter((workspace) => workspace.ops.activeAlertCount > 0)
+    .sort(compareWorkspacesByAlertPressure);
+  const reconciliationPressureWorkspaces = [...fleet.workspaces]
+    .filter((workspace) => workspace.ops.openReconciliationIssueCount > 0)
+    .sort(compareWorkspacesByReconciliationPressure);
+  const alertPressureLeaders = alertPressureWorkspaces.slice(0, 4);
+  const reconciliationPressureLeaders = reconciliationPressureWorkspaces.slice(
+    0,
+    4
+  );
   const reconciliationWorkspaces = rankedWorkspaces.filter(
     (workspace) => workspace.ops.openReconciliationIssueCount > 0
   );
@@ -223,17 +310,27 @@ export function OpsFleetClient({
         title="Cross-workspace risk map"
       >
         <div className="ops-fleet-hero">
+          <p className="ops-fleet-hero__detail">
+            The current workspace stays explicit, but the comparison stays
+            estate-wide so pressure is visible before it becomes a workflow
+            blocker.
+          </p>
           <div className="pill-row">
-            <Pill>{currentWorkspace?.workspace.slug ?? "no active workspace"}</Pill>
+            <Pill>
+              {currentWorkspace?.workspace.slug ?? "no active workspace"}
+            </Pill>
             <Pill>{currentWorkspace?.workspace.role ?? "owner"}</Pill>
             <Pill>{workspaces.length} accessible</Pill>
+            <Pill>{pressuredWorkspaceCount} pressured</Pill>
             <Pill>{formatTimestamp(fleet.summary.generatedAt)}</Pill>
           </div>
           <div className="ops-fleet-hero__notice">
             <div className="pill-row">
               <Pill>{pressuredWorkspaceCount} pressured</Pill>
               <Pill>{alertPressureWorkspaceCount} with alerts</Pill>
-              <Pill>{reconciliationPressureWorkspaceCount} with recon issues</Pill>
+              <Pill>
+                {reconciliationPressureWorkspaceCount} with recon issues
+              </Pill>
             </div>
             <div className="ops-fleet-hero__refresh-row">
               <button
@@ -313,6 +410,14 @@ export function OpsFleetClient({
             value={fleet.summary.unfulfilledCheckoutCount.toString()}
           />
         </div>
+        <div className="pill-row ops-fleet-signal-band__context">
+          <Pill>{pressuredWorkspaceCount} pressured workspaces</Pill>
+          <Pill>{alertPressureWorkspaceCount} alert-bearing workspaces</Pill>
+          <Pill>
+            {reconciliationPressureWorkspaceCount} reconciliation-bearing
+            workspaces
+          </Pill>
+        </div>
       </SurfaceCard>
       <SurfaceCard
         body="The most pressured workspaces float to the top using a derived pressure score based on alerts, reconciliation issues, and checkout friction."
@@ -360,11 +465,54 @@ export function OpsFleetClient({
         </div>
       </SurfaceCard>
       <SurfaceCard
-        body="Alert pressure remains actionable by workspace, but the list is ordered to surface the highest-severity items first."
+        body="Compare which workspaces are carrying the most alert load, then use the queue below to act on the individual alert states."
         eyebrow="Alert pressure"
         span={6}
-        title="Cross-workspace alert queue"
+        title="Alert concentration"
       >
+        <div className="ops-fleet-pressure-summary">
+          {alertPressureLeaders.length ? (
+            alertPressureLeaders.map((workspace, index) => (
+              <article
+                className="ops-fleet-pressure-summary__row"
+                key={workspace.workspace.id}
+              >
+                <div className="ops-fleet-pressure-summary__copy">
+                  <span className="ops-fleet-pressure-summary__rank">
+                    {index + 1}
+                  </span>
+                  <strong>{workspace.workspace.name}</strong>
+                  <span>
+                    /{workspace.workspace.slug} · {workspace.workspace.role} ·{" "}
+                    {formatWorkspaceStatus(workspace.workspace.status)}
+                    {workspace.directory.current ? " · current" : ""}
+                  </span>
+                  <span>
+                    {workspace.ops.activeAlertCount} active alerts ·{" "}
+                    {workspace.ops.criticalAlertCount} critical ·{" "}
+                    {workspace.ops.warningAlertCount} warning
+                  </span>
+                </div>
+                <div className="ops-fleet-pressure-summary__metrics">
+                  <Pill>
+                    {workspace.ops.openReconciliationIssueCount} recon
+                  </Pill>
+                  <Pill>
+                    {workspace.commerce.openCheckoutCount} open checkouts
+                  </Pill>
+                  <Pill>
+                    {workspace.publications.livePublicationCount} live pubs
+                  </Pill>
+                </div>
+              </article>
+            ))
+          ) : (
+            <div className="ops-fleet-empty-state">
+              No workspace is carrying active alerts across the accessible
+              fleet.
+            </div>
+          )}
+        </div>
         <div className="ops-fleet-alert-list">
           {fleet.alertQueue.length ? (
             fleet.alertQueue.map((alert) => {
@@ -382,8 +530,8 @@ export function OpsFleetClient({
                       {alert.title} · {alert.workspace.name}
                     </strong>
                     <span>
-                      {alert.severity} · {alert.code} · /{alert.workspace.slug} ·{" "}
-                      {formatWorkspaceStatus(alert.workspace.status)}
+                      {alert.severity} · {alert.code} · /{alert.workspace.slug}{" "}
+                      · {formatWorkspaceStatus(alert.workspace.status)}
                     </span>
                     <span>{alert.message}</span>
                     <span>
@@ -395,8 +543,7 @@ export function OpsFleetClient({
                     <button
                       className="button-action button-action--secondary"
                       disabled={
-                        !workspaceIsActive ||
-                        busyKey === acknowledgeBusyKey
+                        !workspaceIsActive || busyKey === acknowledgeBusyKey
                       }
                       onClick={() => {
                         void runAction({
@@ -478,18 +625,55 @@ export function OpsFleetClient({
             })
           ) : (
             <div className="ops-fleet-empty-state">
-              No active alerts are queued across the accessible workspace
-              fleet.
+              No active alerts are queued across the accessible workspace fleet.
             </div>
           )}
         </div>
       </SurfaceCard>
       <SurfaceCard
-        body="Workspaces with reconciliation backlog stay separate from the alert queue so operators can move directly to the repair path."
+        body="Workspaces with open reconciliation issues stay separate from the alert queue so operators can move directly to the repair path."
         eyebrow="Reconciliation pressure"
         span={6}
-        title="Workspaces needing a run"
+        title="Reconciliation backlog"
       >
+        <div className="ops-fleet-pressure-summary">
+          {reconciliationPressureLeaders.length ? (
+            reconciliationPressureLeaders.map((workspace, index) => (
+              <article
+                className="ops-fleet-pressure-summary__row"
+                key={workspace.workspace.id}
+              >
+                <div className="ops-fleet-pressure-summary__copy">
+                  <span className="ops-fleet-pressure-summary__rank">
+                    {index + 1}
+                  </span>
+                  <strong>{workspace.workspace.name}</strong>
+                  <span>
+                    /{workspace.workspace.slug} · {workspace.workspace.role} ·{" "}
+                    {formatWorkspaceStatus(workspace.workspace.status)}
+                    {workspace.directory.current ? " · current" : ""}
+                  </span>
+                  <span>
+                    {workspace.ops.openReconciliationIssueCount} open issues ·{" "}
+                    {workspace.commerce.automationFailedCheckoutCount} failed
+                    checkouts
+                  </span>
+                </div>
+                <div className="ops-fleet-pressure-summary__metrics">
+                  <Pill>{workspace.ops.criticalAlertCount} critical</Pill>
+                  <Pill>{workspace.ops.activeAlertCount} alerts</Pill>
+                  <Pill>
+                    {formatTimestamp(workspace.directory.lastActivityAt)}
+                  </Pill>
+                </div>
+              </article>
+            ))
+          ) : (
+            <div className="ops-fleet-empty-state">
+              No workspace currently has an open reconciliation issue.
+            </div>
+          )}
+        </div>
         <div className="ops-fleet-pressure-list">
           {reconciliationWorkspaces.length ? (
             reconciliationWorkspaces.map((workspace, index) => (
@@ -552,7 +736,14 @@ export function OpsFleetClient({
             const workspaceIsActive = workspace.workspace.status === "active";
 
             return (
-              <div className="ops-fleet-board__row" key={workspace.workspace.id}>
+              <div
+                className={`ops-fleet-board__row ${
+                  workspace.directory.current
+                    ? "ops-fleet-board__row--current"
+                    : ""
+                }`}
+                key={workspace.workspace.id}
+              >
                 <div className="ops-fleet-board__workspace">
                   <strong>
                     {index + 1}. {workspace.workspace.name}
@@ -574,9 +765,7 @@ export function OpsFleetClient({
                   <span>{workspace.ops.warningAlertCount} warning</span>
                 </div>
                 <div className="ops-fleet-board__stats">
-                  <span className="ops-fleet-board__label">
-                    Reconciliation
-                  </span>
+                  <span className="ops-fleet-board__label">Reconciliation</span>
                   <span>{workspace.ops.openReconciliationIssueCount} open</span>
                   <span>
                     {workspace.commerce.automationFailedCheckoutCount} failed
@@ -591,8 +780,12 @@ export function OpsFleetClient({
                 </div>
                 <div className="ops-fleet-board__stats">
                   <span className="ops-fleet-board__label">Publications</span>
-                  <span>{workspace.publications.livePublicationCount} live</span>
-                  <span>{workspace.publications.totalPublicationCount} total</span>
+                  <span>
+                    {workspace.publications.livePublicationCount} live
+                  </span>
+                  <span>
+                    {workspace.publications.totalPublicationCount} total
+                  </span>
                 </div>
                 <div className="ops-fleet-board__activity">
                   <span>Last activity</span>
@@ -604,8 +797,7 @@ export function OpsFleetClient({
                   <button
                     className="button-action button-action--secondary"
                     disabled={
-                      !workspaceIsActive ||
-                      busyKey === reconciliationBusyKey
+                      !workspaceIsActive || busyKey === reconciliationBusyKey
                     }
                     onClick={() => {
                       void runAction({

@@ -170,6 +170,8 @@ describe("startOpsObservabilityCaptureScheduler", () => {
     expect(redisConnection.set).toHaveBeenCalledTimes(1);
 
     await scheduler.close();
-    expect(logger.info).toHaveBeenCalledWith("ops reconciliation scheduler stopped");
+    expect(logger.info).toHaveBeenCalledWith(
+      "ops reconciliation scheduler stopped"
+    );
   });
 });

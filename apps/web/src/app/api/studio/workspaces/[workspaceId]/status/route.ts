@@ -35,14 +35,13 @@ export async function PUT(request: Request, context: RouteContext) {
     const body = studioWorkspaceStatusUpdateRequestSchema.parse(
       await parseJsonBody(request)
     );
-    const result = await createRuntimeStudioSettingsService().updateWorkspaceStatus(
-      {
+    const result =
+      await createRuntimeStudioSettingsService().updateWorkspaceStatus({
         ownerUserId: session.ownerUserId,
         role: session.role,
         status: body.status,
         workspaceId
-      }
-    );
+      });
     const response = NextResponse.json(
       studioWorkspaceStatusUpdateResponseSchema.parse(result)
     );

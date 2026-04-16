@@ -27,8 +27,9 @@ export async function loadWorkspaceLifecycleAutomationSnapshot(
       now: new Date(),
       rawEnvironment
     }),
-    recentLifecycleAutomationRuns: recentRuns.map((run: typeof recentRuns[number]) =>
-      serializeWorkspaceLifecycleAutomationRun(run)
+    recentLifecycleAutomationRuns: recentRuns.map(
+      (run: (typeof recentRuns)[number]) =>
+        serializeWorkspaceLifecycleAutomationRun(run)
     )
   };
 }

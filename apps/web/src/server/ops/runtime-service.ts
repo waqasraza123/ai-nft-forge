@@ -37,7 +37,8 @@ export function createRuntimeOpsService(
     now: () => new Date(),
     onchain: onchainInspector,
     repositories: {
-      collectionDraftRepository: createCollectionDraftRepository(databaseClient),
+      collectionDraftRepository:
+        createCollectionDraftRepository(databaseClient),
       generatedAssetRepository: createGeneratedAssetRepository(databaseClient),
       opsAlertEscalationPolicyRepository:
         createOpsAlertEscalationPolicyRepository(databaseClient),

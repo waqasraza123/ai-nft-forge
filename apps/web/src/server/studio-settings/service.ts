@@ -341,10 +341,7 @@ type StudioSettingsRepositorySet = {
       now: Date;
       workspaceId: string;
     }): Promise<WorkspaceInvitationRecord[]>;
-    touchReminderById(input: {
-      id: string;
-      lastRemindedAt: Date;
-    }): Promise<{
+    touchReminderById(input: { id: string; lastRemindedAt: Date }): Promise<{
       id: string;
       lastRemindedAt: Date | null;
       reminderCount: number;
@@ -365,7 +362,12 @@ type StudioSettingsRepositorySet = {
         decommissionNotificationId: string | null;
         deliveredAt: Date | null;
         deliveryChannel: "audit_log" | "webhook";
-        deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
+        deliveryState:
+          | "queued"
+          | "processing"
+          | "delivered"
+          | "failed"
+          | "skipped";
         eventKind: "invitation_reminder" | "decommission_notice";
         eventOccurredAt: Date;
         failedAt: Date | null;
@@ -715,8 +717,7 @@ function lifecycleSlaPoliciesEqual(input: {
     currentPolicy.automationMaxAgeMinutes ===
       input.next.automationMaxAgeMinutes &&
     currentPolicy.enabled === input.next.enabled &&
-    currentPolicy.webhookFailureThreshold ===
-      input.next.webhookFailureThreshold
+    currentPolicy.webhookFailureThreshold === input.next.webhookFailureThreshold
   );
 }
 
@@ -880,54 +881,55 @@ async function serializeStudioSettings(input: {
     lifecycleDeliveries,
     roleEscalationRequests,
     auditLogs
-  ] =
-    await Promise.all([
-      input.repositories.workspaceMembershipRepository.listByWorkspaceId(
-        input.workspace.id
-      ),
-      input.repositories.workspaceInvitationRepository.listByWorkspaceId({
+  ] = await Promise.all([
+    input.repositories.workspaceMembershipRepository.listByWorkspaceId(
+      input.workspace.id
+    ),
+    input.repositories.workspaceInvitationRepository.listByWorkspaceId({
+      workspaceId: input.workspace.id
+    }),
+    input.repositories.workspaceLifecycleNotificationDeliveryRepository.listRecentByWorkspaceId(
+      {
+        limit: 10,
         workspaceId: input.workspace.id
-      }),
-      input.repositories.workspaceLifecycleNotificationDeliveryRepository.listRecentByWorkspaceId(
-        {
-          limit: 10,
-          workspaceId: input.workspace.id
-        }
-      ),
-      input.repositories.workspaceRoleEscalationRequestRepository.listByWorkspaceId(
-        {
-          workspaceId: input.workspace.id
-        }
-      ),
-      input.repositories.auditLogRepository.listByEntity({
-        entityId: input.workspace.id,
-        entityType: "workspace",
-        limit: 25
-      })
-    ]);
+      }
+    ),
+    input.repositories.workspaceRoleEscalationRequestRepository.listByWorkspaceId(
+      {
+        workspaceId: input.workspace.id
+      }
+    ),
+    input.repositories.auditLogRepository.listByEntity({
+      entityId: input.workspace.id,
+      entityType: "workspace",
+      limit: 25
+    })
+  ]);
   const auditEntries = auditLogs.flatMap((auditLog) => {
     const serializedAuditEntry = serializeWorkspaceAuditEntry(auditLog);
 
     return serializedAuditEntry ? [serializedAuditEntry] : [];
   });
-  const lifecycleAutomationPolicy =
-    serializeWorkspaceLifecycleAutomationPolicy(input.workspace);
-  const lifecycleAutomationHealth =
-    input.lifecycleAutomationSnapshot?.lifecycleAutomationHealth ?? {
-      enabled: false,
-      intervalSeconds: null,
-      jitterSeconds: null,
-      lastRunAgeSeconds: null,
-      lastRunAt: null,
-      latestRun: null,
-      lockTtlSeconds: null,
-      message:
-        "Lifecycle automation health is not available on this service instance.",
-      runOnStart: null,
-      status: "unreachable" as const
-    };
-  const lifecycleDeliveryPolicy =
-    serializeWorkspaceLifecycleDeliveryPolicy(input.workspace);
+  const lifecycleAutomationPolicy = serializeWorkspaceLifecycleAutomationPolicy(
+    input.workspace
+  );
+  const lifecycleAutomationHealth = input.lifecycleAutomationSnapshot
+    ?.lifecycleAutomationHealth ?? {
+    enabled: false,
+    intervalSeconds: null,
+    jitterSeconds: null,
+    lastRunAgeSeconds: null,
+    lastRunAt: null,
+    latestRun: null,
+    lockTtlSeconds: null,
+    message:
+      "Lifecycle automation health is not available on this service instance.",
+    runOnStart: null,
+    status: "unreachable" as const
+  };
+  const lifecycleDeliveryPolicy = serializeWorkspaceLifecycleDeliveryPolicy(
+    input.workspace
+  );
   const lifecycleDeliveryOverview = createWorkspaceLifecycleDeliveryOverview({
     deliveries: lifecycleDeliveries,
     providers: input.lifecycleDeliveryService?.getTransportProviders() ?? []
@@ -1015,10 +1017,9 @@ async function loadOwnerStudioSettings(input: {
     });
   }
 
-  const lifecycleAutomationSnapshot =
-    input.lifecycleAutomationSnapshotLoader
-      ? await input.lifecycleAutomationSnapshotLoader()
-      : null;
+  const lifecycleAutomationSnapshot = input.lifecycleAutomationSnapshotLoader
+    ? await input.lifecycleAutomationSnapshotLoader()
+    : null;
 
   return serializeStudioSettings({
     brands,
@@ -1181,8 +1182,7 @@ async function recordWorkspaceAuditLog(input: {
               input.policy.defaultDecommissionRetentionDays,
             minimumDecommissionRetentionDays:
               input.policy.minimumDecommissionRetentionDays,
-            requireDecommissionReason:
-              input.policy.requireDecommissionReason
+            requireDecommissionReason: input.policy.requireDecommissionReason
           }
         : {}),
       ...(input.automationPolicy
@@ -1401,8 +1401,7 @@ export function createStudioSettingsService(
           lifecycleWebhookEnabled: false,
           name: parsedInput.workspaceName,
           ownerUserId: input.ownerUserId,
-          requireDecommissionReason:
-            defaultWorkspaceRequireDecommissionReason,
+          requireDecommissionReason: defaultWorkspaceRequireDecommissionReason,
           slug: parsedInput.workspaceSlug,
           status: "active"
         });
@@ -1785,8 +1784,7 @@ export function createStudioSettingsService(
               nextLifecycleDeliveryPolicy.deliverDecommissionNotifications,
             lifecycleWebhookDeliverInvitationReminders:
               nextLifecycleDeliveryPolicy.deliverInvitationReminders,
-            lifecycleWebhookEnabled:
-              nextLifecycleDeliveryPolicy.webhookEnabled,
+            lifecycleWebhookEnabled: nextLifecycleDeliveryPolicy.webhookEnabled,
             name: parsedInput.workspaceName,
             ownerUserId: input.ownerUserId,
             requireDecommissionReason:
@@ -1817,8 +1815,7 @@ export function createStudioSettingsService(
               nextLifecycleDeliveryPolicy.deliverDecommissionNotifications,
             lifecycleWebhookDeliverInvitationReminders:
               nextLifecycleDeliveryPolicy.deliverInvitationReminders,
-            lifecycleWebhookEnabled:
-              nextLifecycleDeliveryPolicy.webhookEnabled,
+            lifecycleWebhookEnabled: nextLifecycleDeliveryPolicy.webhookEnabled,
             name: parsedInput.workspaceName,
             ownerUserId: input.ownerUserId,
             requireDecommissionReason:
@@ -2121,14 +2118,13 @@ export function createStudioSettingsService(
             summary: createWorkspaceLifecycleSlaSummary({
               lifecycleAutomationHealth:
                 dependencies.lifecycleAutomationSnapshotLoader
-                  ? (
-                      await dependencies.lifecycleAutomationSnapshotLoader()
-                    ).lifecycleAutomationHealth
+                  ? (await dependencies.lifecycleAutomationSnapshotLoader())
+                      .lifecycleAutomationHealth
                   : null,
               lifecycleAutomationPolicy:
                 serializeWorkspaceLifecycleAutomationPolicy(workspace),
-              lifecycleDeliveryOverview: createWorkspaceLifecycleDeliveryOverview(
-                {
+              lifecycleDeliveryOverview:
+                createWorkspaceLifecycleDeliveryOverview({
                   deliveries:
                     await repositories.workspaceLifecycleNotificationDeliveryRepository.listRecentByWorkspaceId(
                       {
@@ -2139,8 +2135,7 @@ export function createStudioSettingsService(
                   providers:
                     dependencies.lifecycleDeliveryService?.getTransportProviders() ??
                     []
-                }
-              ),
+                }),
               lifecycleDeliveryPolicy:
                 serializeWorkspaceLifecycleDeliveryPolicy(workspace),
               policy: currentLifecycleSlaPolicy(workspace)
@@ -2207,12 +2202,14 @@ export function createStudioSettingsService(
               lifecycleAutomationSnapshot?.lifecycleAutomationHealth ?? null,
             lifecycleAutomationPolicy:
               serializeWorkspaceLifecycleAutomationPolicy(updatedWorkspace),
-            lifecycleDeliveryOverview: createWorkspaceLifecycleDeliveryOverview({
-              deliveries: lifecycleDeliveries,
-              providers:
-                dependencies.lifecycleDeliveryService?.getTransportProviders() ??
-                []
-            }),
+            lifecycleDeliveryOverview: createWorkspaceLifecycleDeliveryOverview(
+              {
+                deliveries: lifecycleDeliveries,
+                providers:
+                  dependencies.lifecycleDeliveryService?.getTransportProviders() ??
+                  []
+              }
+            ),
             lifecycleDeliveryPolicy,
             policy: currentLifecycleSlaPolicy(updatedWorkspace)
           })
@@ -2573,91 +2570,93 @@ export function createStudioSettingsService(
     }) {
       assertOwnerRole(input.role ?? "owner");
 
-      const reminderResult = await dependencies.runTransaction(async (repositories) => {
-        const now = new Date();
-        const { owner, workspace } = await requireOwnerWorkspace({
-          ownerUserId: input.ownerUserId,
-          repositories,
-          workspaceId: input.workspaceId
-        });
-        const invitation =
-          await repositories.workspaceInvitationRepository.findByIdWithWorkspace(
-            {
-              id: input.invitationId
-            }
-          );
+      const reminderResult = await dependencies.runTransaction(
+        async (repositories) => {
+          const now = new Date();
+          const { owner, workspace } = await requireOwnerWorkspace({
+            ownerUserId: input.ownerUserId,
+            repositories,
+            workspaceId: input.workspaceId
+          });
+          const invitation =
+            await repositories.workspaceInvitationRepository.findByIdWithWorkspace(
+              {
+                id: input.invitationId
+              }
+            );
 
-        if (
-          !invitation ||
-          invitation.workspace.id !== workspace.id ||
-          invitation.workspace.ownerUserId !== input.ownerUserId
-        ) {
-          throw new StudioSettingsServiceError(
-            "INVITATION_NOT_FOUND",
-            "The requested workspace invitation was not found.",
-            404
-          );
-        }
+          if (
+            !invitation ||
+            invitation.workspace.id !== workspace.id ||
+            invitation.workspace.ownerUserId !== input.ownerUserId
+          ) {
+            throw new StudioSettingsServiceError(
+              "INVITATION_NOT_FOUND",
+              "The requested workspace invitation was not found.",
+              404
+            );
+          }
 
-        const invitationStatus = getWorkspaceInvitationStatus({
-          expiresAt: invitation.expiresAt,
-          now
-        });
-
-        if (invitationStatus === "expired") {
-          throw new StudioSettingsServiceError(
-            "INVITATION_EXPIRED",
-            "This workspace invitation has already expired.",
-            409
-          );
-        }
-
-        if (
-          !canSendWorkspaceInvitationReminder({
+          const invitationStatus = getWorkspaceInvitationStatus({
             expiresAt: invitation.expiresAt,
-            lastRemindedAt: invitation.lastRemindedAt,
             now
-          })
-        ) {
-          const reminderReadyAt = getWorkspaceInvitationReminderReadyAt({
-            lastRemindedAt: invitation.lastRemindedAt
           });
 
-          throw new StudioSettingsServiceError(
-            "INVITATION_REMINDER_NOT_READY",
-            reminderReadyAt
-              ? `The next reminder can be recorded after ${reminderReadyAt.toISOString()}.`
-              : "This workspace invitation cannot be reminded yet.",
-            409
-          );
+          if (invitationStatus === "expired") {
+            throw new StudioSettingsServiceError(
+              "INVITATION_EXPIRED",
+              "This workspace invitation has already expired.",
+              409
+            );
+          }
+
+          if (
+            !canSendWorkspaceInvitationReminder({
+              expiresAt: invitation.expiresAt,
+              lastRemindedAt: invitation.lastRemindedAt,
+              now
+            })
+          ) {
+            const reminderReadyAt = getWorkspaceInvitationReminderReadyAt({
+              lastRemindedAt: invitation.lastRemindedAt
+            });
+
+            throw new StudioSettingsServiceError(
+              "INVITATION_REMINDER_NOT_READY",
+              reminderReadyAt
+                ? `The next reminder can be recorded after ${reminderReadyAt.toISOString()}.`
+                : "This workspace invitation cannot be reminded yet.",
+              409
+            );
+          }
+
+          const updatedInvitation =
+            await repositories.workspaceInvitationRepository.touchReminderById({
+              id: invitation.id,
+              lastRemindedAt: now
+            });
+
+          await recordWorkspaceAuditLog({
+            action: "workspace_invitation_reminder_sent",
+            actor: owner,
+            repositories,
+            role: invitation.role,
+            targetWalletAddress: invitation.walletAddress,
+            workspaceId: workspace.id
+          });
+
+          return {
+            invitation: {
+              ...invitation,
+              lastRemindedAt: updatedInvitation.lastRemindedAt,
+              reminderCount: updatedInvitation.reminderCount
+            },
+            owner,
+            occurredAt: now,
+            workspace
+          };
         }
-
-        const updatedInvitation =
-          await repositories.workspaceInvitationRepository.touchReminderById({
-            id: invitation.id,
-            lastRemindedAt: now
-          });
-
-        await recordWorkspaceAuditLog({
-          action: "workspace_invitation_reminder_sent",
-          actor: owner,
-          repositories,
-          role: invitation.role,
-          targetWalletAddress: invitation.walletAddress,
-          workspaceId: workspace.id
-        });
-
-        return {
-          invitation: {
-            ...invitation,
-            lastRemindedAt: updatedInvitation.lastRemindedAt,
-            reminderCount: updatedInvitation.reminderCount
-          },
-          owner,
-          occurredAt: now,
-          workspace
-        };
-      });
+      );
       const deliveries = dependencies.lifecycleDeliveryService
         ? await dependencies.lifecycleDeliveryService.recordInvitationReminderDelivery(
             {

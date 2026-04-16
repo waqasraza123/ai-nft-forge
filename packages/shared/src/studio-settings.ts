@@ -448,7 +448,8 @@ export const studioSettingsErrorResponseSchema = z.object({
 export type StudioBrandSummary = z.infer<typeof studioBrandSummarySchema>;
 export type StudioBrandTheme = z.infer<typeof studioBrandThemeSchema>;
 export type StudioBrandResponse = z.infer<typeof studioBrandResponseSchema>;
-export const studioWorkspaceRetentionPolicySchema = workspaceRetentionPolicySchema;
+export const studioWorkspaceRetentionPolicySchema =
+  workspaceRetentionPolicySchema;
 export const studioWorkspaceLifecycleDeliveryPolicySchema =
   workspaceLifecycleDeliveryPolicySchema;
 export type StudioWorkspaceRetentionPolicy = z.infer<
@@ -555,9 +556,7 @@ export type StudioWorkspaceRoleEscalationSummary = z.infer<
 export type StudioWorkspaceAuditAction = z.infer<
   typeof studioWorkspaceAuditActionSchema
 >;
-export type StudioWorkspaceStatus = z.infer<
-  typeof studioWorkspaceStatusSchema
->;
+export type StudioWorkspaceStatus = z.infer<typeof studioWorkspaceStatusSchema>;
 export type StudioWorkspaceCreateRequest = z.infer<
   typeof studioWorkspaceCreateRequestSchema
 >;

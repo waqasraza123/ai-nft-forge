@@ -24,7 +24,8 @@ function createCommerceRepositories(database: DatabaseExecutor) {
     brandRepository: createBrandRepository(database),
     commerceCheckoutSessionRepository:
       createCommerceCheckoutSessionRepository(database),
-    publishedCollectionRepository: createPublishedCollectionRepository(database),
+    publishedCollectionRepository:
+      createPublishedCollectionRepository(database),
     publishedCollectionReservationRepository:
       createPublishedCollectionReservationRepository(database)
   };
@@ -79,10 +80,7 @@ export function createRuntimeCollectionCommerceService(
   return {
     ...service,
     async handleStripeWebhook(input: { payload: string; signature: string }) {
-      if (
-        commerceEnv.COMMERCE_CHECKOUT_PROVIDER_MODE !== "stripe" ||
-        !stripe
-      ) {
+      if (commerceEnv.COMMERCE_CHECKOUT_PROVIDER_MODE !== "stripe" || !stripe) {
         throw new Error("Stripe checkout mode is not enabled.");
       }
 

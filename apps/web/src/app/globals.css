@@ -3802,6 +3802,13 @@ select {
   gap: 14px;
 }
 
+.ops-fleet-hero__detail {
+  margin: 0;
+  max-width: 72ch;
+  color: #5a6f7d;
+  line-height: 1.6;
+}
+
 .ops-fleet-hero__notice {
   display: grid;
   gap: 14px;
@@ -3820,10 +3827,56 @@ select {
   gap: 12px;
 }
 
+.ops-fleet-signal-band__context {
+  margin-top: 12px;
+}
+
 .ops-fleet-attention-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
+}
+
+.ops-fleet-pressure-summary {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.ops-fleet-pressure-summary__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 14px 16px;
+  border: 1px solid rgba(70, 92, 108, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.ops-fleet-pressure-summary__copy {
+  display: grid;
+  gap: 4px;
+}
+
+.ops-fleet-pressure-summary__rank {
+  color: #486171;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.ops-fleet-pressure-summary__copy span {
+  color: #5a6f7d;
+  line-height: 1.5;
+}
+
+.ops-fleet-pressure-summary__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .ops-fleet-pressure-list,
@@ -3924,22 +3977,46 @@ select {
 .ops-fleet-workspace-card--critical {
   border-color: rgba(153, 68, 59, 0.18);
   background:
-    radial-gradient(circle at top right, rgba(195, 104, 92, 0.12), transparent 38%),
-    linear-gradient(180deg, rgba(255, 244, 242, 0.94), rgba(255, 255, 255, 0.92));
+    radial-gradient(
+      circle at top right,
+      rgba(195, 104, 92, 0.12),
+      transparent 38%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 244, 242, 0.94),
+      rgba(255, 255, 255, 0.92)
+    );
 }
 
 .ops-fleet-workspace-card--warning {
   border-color: rgba(170, 130, 56, 0.18);
   background:
-    radial-gradient(circle at top right, rgba(210, 167, 84, 0.12), transparent 38%),
-    linear-gradient(180deg, rgba(255, 249, 236, 0.94), rgba(255, 255, 255, 0.92));
+    radial-gradient(
+      circle at top right,
+      rgba(210, 167, 84, 0.12),
+      transparent 38%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 249, 236, 0.94),
+      rgba(255, 255, 255, 0.92)
+    );
 }
 
 .ops-fleet-workspace-card--healthy {
   border-color: rgba(53, 111, 83, 0.18);
   background:
-    radial-gradient(circle at top right, rgba(74, 154, 112, 0.12), transparent 38%),
-    linear-gradient(180deg, rgba(239, 249, 244, 0.94), rgba(255, 255, 255, 0.92));
+    radial-gradient(
+      circle at top right,
+      rgba(74, 154, 112, 0.12),
+      transparent 38%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(239, 249, 244, 0.94),
+      rgba(255, 255, 255, 0.92)
+    );
 }
 
 .ops-fleet-alert-item {
@@ -3958,15 +4035,31 @@ select {
 .ops-fleet-alert-item--critical {
   border-color: rgba(153, 68, 59, 0.18);
   background:
-    radial-gradient(circle at top right, rgba(195, 104, 92, 0.12), transparent 38%),
-    linear-gradient(180deg, rgba(255, 244, 242, 0.94), rgba(255, 255, 255, 0.92));
+    radial-gradient(
+      circle at top right,
+      rgba(195, 104, 92, 0.12),
+      transparent 38%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 244, 242, 0.94),
+      rgba(255, 255, 255, 0.92)
+    );
 }
 
 .ops-fleet-alert-item--warning {
   border-color: rgba(170, 130, 56, 0.18);
   background:
-    radial-gradient(circle at top right, rgba(210, 167, 84, 0.12), transparent 38%),
-    linear-gradient(180deg, rgba(255, 249, 236, 0.94), rgba(255, 255, 255, 0.92));
+    radial-gradient(
+      circle at top right,
+      rgba(210, 167, 84, 0.12),
+      transparent 38%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 249, 236, 0.94),
+      rgba(255, 255, 255, 0.92)
+    );
 }
 
 .ops-fleet-alert-item__copy {
@@ -4021,6 +4114,17 @@ select {
   border: 1px solid rgba(70, 92, 108, 0.14);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.6);
+}
+
+.ops-fleet-board__row--current {
+  border-color: rgba(139, 94, 52, 0.28);
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(139, 94, 52, 0.08),
+      transparent 38%
+    ),
+    rgba(255, 255, 255, 0.76);
 }
 
 .ops-fleet-board__workspace,
@@ -5052,6 +5156,14 @@ select {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .ops-fleet-pressure-summary__row {
+    grid-template-columns: 1fr;
+  }
+
+  .ops-fleet-pressure-summary__metrics {
+    justify-content: flex-start;
+  }
+
   .ops-fleet-board__header,
   .ops-fleet-board__row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5115,6 +5227,14 @@ select {
   .ops-fleet-signal-band,
   .ops-fleet-attention-grid {
     grid-template-columns: 1fr;
+  }
+
+  .ops-fleet-pressure-summary__row {
+    grid-template-columns: 1fr;
+  }
+
+  .ops-fleet-pressure-summary__metrics {
+    justify-content: flex-start;
   }
 
   .ops-fleet-workspace-card__header {

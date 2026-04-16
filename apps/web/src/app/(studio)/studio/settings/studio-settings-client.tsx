@@ -274,7 +274,8 @@ function createInitialEditorState(settings: StudioSettingsSummary | null) {
     brandSlug: brand?.slug ?? "",
     customDomain: brand?.customDomain ?? "",
     deliverDecommissionNotifications:
-      settings?.lifecycleDeliveryPolicy.deliverDecommissionNotifications ?? true,
+      settings?.lifecycleDeliveryPolicy.deliverDecommissionNotifications ??
+      true,
     deliverInvitationReminders:
       settings?.lifecycleDeliveryPolicy.deliverInvitationReminders ?? true,
     defaultDecommissionRetentionDays:
@@ -381,12 +382,10 @@ function createInitialMemberState(): MemberState {
   };
 }
 
-function createInitialWorkspaceDecommissionFormState(
-  input: {
-    retentionPolicy: StudioWorkspaceRetentionPolicy;
-    workspaceSlug: string | null;
-  }
-): WorkspaceDecommissionFormState {
+function createInitialWorkspaceDecommissionFormState(input: {
+  retentionPolicy: StudioWorkspaceRetentionPolicy;
+  workspaceSlug: string | null;
+}): WorkspaceDecommissionFormState {
   return {
     confirmWorkspaceSlug: input.workspaceSlug ?? "",
     executeConfirmWorkspaceSlug: input.workspaceSlug ?? "",
@@ -485,7 +484,9 @@ function summarizeLifecycleDeliveries(
       return `${label} ${formatLifecycleDeliveryState(delivery.deliveryState)}`;
     })
     .join(" · ");
-  const tone = deliveries.some((delivery) => delivery.deliveryState === "failed")
+  const tone = deliveries.some(
+    (delivery) => delivery.deliveryState === "failed"
+  )
     ? ("error" as const)
     : ("success" as const);
 
@@ -563,10 +564,14 @@ export function StudioSettingsClient({
 }: StudioSettingsClientProps) {
   const router = useRouter();
   const [settings, setSettings] = useState(initialSettings);
-  const [currentWorkspaceOffboardingState, setCurrentWorkspaceOffboardingState] =
-    useState(currentWorkspaceOffboarding);
-  const [workspaceOffboardingEntriesState, setWorkspaceOffboardingEntriesState] =
-    useState(workspaceOffboardingEntries);
+  const [
+    currentWorkspaceOffboardingState,
+    setCurrentWorkspaceOffboardingState
+  ] = useState(currentWorkspaceOffboarding);
+  const [
+    workspaceOffboardingEntriesState,
+    setWorkspaceOffboardingEntriesState
+  ] = useState(workspaceOffboardingEntries);
   const [selectedBrandId, setSelectedBrandId] = useState<string | null>(
     initialSettings?.brands[0]?.id ?? initialSettings?.brand.id ?? null
   );
@@ -583,18 +588,18 @@ export function StudioSettingsClient({
   );
   const [workspaceDecommissionFormState, setWorkspaceDecommissionFormState] =
     useState<WorkspaceDecommissionFormState>(() =>
-      createInitialWorkspaceDecommissionFormState(
-        {
-          retentionPolicy: resolveWorkspaceRetentionPolicy(initialSettings),
-          workspaceSlug: initialSettings?.workspace.slug ?? null
-        }
-      )
+      createInitialWorkspaceDecommissionFormState({
+        retentionPolicy: resolveWorkspaceRetentionPolicy(initialSettings),
+        workspaceSlug: initialSettings?.workspace.slug ?? null
+      })
     );
   const [notice, setNotice] = useState<NoticeState>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isSavingLifecycleAutomationPolicy, setIsSavingLifecycleAutomationPolicy] =
-    useState(false);
+  const [
+    isSavingLifecycleAutomationPolicy,
+    setIsSavingLifecycleAutomationPolicy
+  ] = useState(false);
   const [isSavingLifecycleSlaPolicy, setIsSavingLifecycleSlaPolicy] =
     useState(false);
   const [isCreatingBrand, setIsCreatingBrand] = useState(false);
@@ -604,8 +609,10 @@ export function StudioSettingsClient({
     useState(false);
   const [isCancelingDecommission, setIsCancelingDecommission] = useState(false);
   const [isExecutingDecommission, setIsExecutingDecommission] = useState(false);
-  const [recordingDecommissionNotificationKind, setRecordingDecommissionNotificationKind] =
-    useState<WorkspaceDecommissionNotificationKind | null>(null);
+  const [
+    recordingDecommissionNotificationKind,
+    setRecordingDecommissionNotificationKind
+  ] = useState<WorkspaceDecommissionNotificationKind | null>(null);
   const [roleEscalationJustification, setRoleEscalationJustification] =
     useState("");
   const [isRequestingRoleEscalation, setIsRequestingRoleEscalation] =
@@ -687,11 +694,13 @@ export function StudioSettingsClient({
         delivery.deliveryState === "processing")
   ).length;
   const pendingInvitationCount =
-    settings?.invitations.filter((invitation) => invitation.status !== "expired")
-      .length ?? 0;
+    settings?.invitations.filter(
+      (invitation) => invitation.status !== "expired"
+    ).length ?? 0;
   const expiringInvitationCount =
-    settings?.invitations.filter((invitation) => invitation.status === "expiring")
-      .length ?? 0;
+    settings?.invitations.filter(
+      (invitation) => invitation.status === "expiring"
+    ).length ?? 0;
   const pendingRoleEscalationCount =
     settings?.roleEscalationRequests.filter(
       (request) => request.status === "pending"
@@ -699,12 +708,14 @@ export function StudioSettingsClient({
   const accessibleReadyWorkspaceCount = workspaceOffboardingEntriesState.filter(
     (entry) => entry.summary.readiness === "ready"
   ).length;
-  const accessibleReviewWorkspaceCount = workspaceOffboardingEntriesState.filter(
-    (entry) => entry.summary.readiness === "review_required"
-  ).length;
-  const accessibleBlockedWorkspaceCount = workspaceOffboardingEntriesState.filter(
-    (entry) => entry.summary.readiness === "blocked"
-  ).length;
+  const accessibleReviewWorkspaceCount =
+    workspaceOffboardingEntriesState.filter(
+      (entry) => entry.summary.readiness === "review_required"
+    ).length;
+  const accessibleBlockedWorkspaceCount =
+    workspaceOffboardingEntriesState.filter(
+      (entry) => entry.summary.readiness === "blocked"
+    ).length;
   const scheduledDecommissionCount = workspaceOffboardingEntriesState.filter(
     (entry) => entry.decommission !== null
   ).length;
@@ -728,14 +739,15 @@ export function StudioSettingsClient({
         request.targetWalletAddress.toLowerCase() ===
           currentWalletAddress.toLowerCase()
     ) ?? null;
-  const offboardingSummary =
-    currentWorkspaceOffboardingState?.summary ?? null;
+  const offboardingSummary = currentWorkspaceOffboardingState?.summary ?? null;
   const scheduledDecommission =
     currentWorkspaceOffboardingState?.decommission ?? null;
   const decommissionWorkflow =
     currentWorkspaceOffboardingState?.decommissionWorkflow ?? null;
   const exportWorkspaceId =
-    currentWorkspaceOffboardingState?.workspace.id ?? settings?.workspace.id ?? null;
+    currentWorkspaceOffboardingState?.workspace.id ??
+    settings?.workspace.id ??
+    null;
   const scheduledDecommissionReadyForExecution = scheduledDecommission
     ? new Date(scheduledDecommission.executeAfter).getTime() <= Date.now()
     : false;
@@ -894,7 +906,9 @@ export function StudioSettingsClient({
         startTransition(() => {
           setSettings(result.settings);
           setCurrentWorkspaceOffboardingState(nextCurrentWorkspaceOffboarding);
-          setWorkspaceOffboardingEntriesState(offboardingResult.overview.workspaces);
+          setWorkspaceOffboardingEntriesState(
+            offboardingResult.overview.workspaces
+          );
           setSelectedBrandId((currentBrandId) =>
             resolveSelectedBrandId({
               currentBrandId,
@@ -961,8 +975,7 @@ export function StudioSettingsClient({
           lifecycleDeliveryPolicy: {
             deliverDecommissionNotifications:
               editorState.deliverDecommissionNotifications,
-            deliverInvitationReminders:
-              editorState.deliverInvitationReminders,
+            deliverInvitationReminders: editorState.deliverInvitationReminders,
             webhookEnabled: editorState.webhookEnabled
           },
           retentionPolicy: {
@@ -1012,10 +1025,9 @@ export function StudioSettingsClient({
   async function handleSaveLifecycleAutomationPolicy() {
     if (!settings?.workspace.id || !canManageLifecycleAutomation) {
       setNotice({
-        message:
-          settings?.workspace.id
-            ? "Only workspace owners can change lifecycle automation."
-            : "Choose a workspace before changing lifecycle automation.",
+        message: settings?.workspace.id
+          ? "Only workspace owners can change lifecycle automation."
+          : "Choose a workspace before changing lifecycle automation.",
         tone: "error"
       });
       return;
@@ -1070,10 +1082,9 @@ export function StudioSettingsClient({
   async function handleSaveLifecycleSlaPolicy() {
     if (!settings?.workspace.id || !canManageLifecycleAutomation) {
       setNotice({
-        message:
-          settings?.workspace.id
-            ? "Only workspace owners can change lifecycle SLA policy."
-            : "Choose a workspace before changing lifecycle SLA policy.",
+        message: settings?.workspace.id
+          ? "Only workspace owners can change lifecycle SLA policy."
+          : "Choose a workspace before changing lifecycle SLA policy.",
         tone: "error"
       });
       return;
@@ -1131,8 +1142,7 @@ export function StudioSettingsClient({
     if (!canEditCurrentWorkspace) {
       setNotice({
         message:
-          inactiveWorkspaceMessage ??
-          "Only workspace owners can add brands.",
+          inactiveWorkspaceMessage ?? "Only workspace owners can add brands.",
         tone: "error"
       });
       return;
@@ -1763,8 +1773,7 @@ export function StudioSettingsClient({
             : `${formatLifecycleEventKind(payload.delivery.eventKind)} delivery is ${formatLifecycleDeliveryState(
                 payload.delivery.deliveryState
               )}.`,
-        tone:
-          payload.delivery.deliveryState === "failed" ? "error" : "success"
+        tone: payload.delivery.deliveryState === "failed" ? "error" : "success"
       });
       await refreshSettings({
         silent: true
@@ -2138,9 +2147,9 @@ export function StudioSettingsClient({
                 </span>
                 <strong>{workspaceAttentionCount}</strong>
                 <span>
-                  {pendingInvitationCount} invites · {pendingRoleEscalationCount}{" "}
-                  ownership requests · {recentWebhookFailedCount} failed
-                  deliveries
+                  {pendingInvitationCount} invites ·{" "}
+                  {pendingRoleEscalationCount} ownership requests ·{" "}
+                  {recentWebhookFailedCount} failed deliveries
                 </span>
               </article>
               <article
@@ -2193,7 +2202,9 @@ export function StudioSettingsClient({
             </div>
             <div className="pill-row">
               <Pill>/studio/settings</Pill>
-              <Pill>{selectedBrand?.publicBrandPath ?? "/brands/[brandSlug]"}</Pill>
+              <Pill>
+                {selectedBrand?.publicBrandPath ?? "/brands/[brandSlug]"}
+              </Pill>
               <Pill>
                 {selectedBrand?.customDomain ?? "No custom domain configured"}
               </Pill>
@@ -2206,7 +2217,9 @@ export function StudioSettingsClient({
             </div>
             {inactiveWorkspaceMessage && settings?.workspace ? (
               <div className="status-banner status-banner--info">
-                <strong>{formatWorkspaceStatus(settings.workspace.status)}</strong>
+                <strong>
+                  {formatWorkspaceStatus(settings.workspace.status)}
+                </strong>
                 <span>{inactiveWorkspaceMessage}</span>
               </div>
             ) : null}
@@ -2256,8 +2269,8 @@ export function StudioSettingsClient({
                   </h2>
                   <p className="studio-settings-section__lead">
                     Keep workspace naming, retention defaults, delivery policy,
-                    lifecycle controls, and archive-readiness visible together so
-                    operators know exactly what they are administering.
+                    lifecycle controls, and archive-readiness visible together
+                    so operators know exactly what they are administering.
                   </p>
                 </div>
               </header>
@@ -2358,7 +2371,9 @@ export function StudioSettingsClient({
                               }}
                               required
                               type="number"
-                              value={editorState.defaultDecommissionRetentionDays}
+                              value={
+                                editorState.defaultDecommissionRetentionDays
+                              }
                             />
                           </label>
                           <label className="field-stack">
@@ -2383,7 +2398,9 @@ export function StudioSettingsClient({
                               }}
                               required
                               type="number"
-                              value={editorState.minimumDecommissionRetentionDays}
+                              value={
+                                editorState.minimumDecommissionRetentionDays
+                              }
                             />
                           </label>
                           <label className="field-stack">
@@ -2551,7 +2568,9 @@ export function StudioSettingsClient({
                   {settings?.workspace ? (
                     <>
                       <div className="pill-row">
-                        <Pill>{formatWorkspaceStatus(settings.workspace.status)}</Pill>
+                        <Pill>
+                          {formatWorkspaceStatus(settings.workspace.status)}
+                        </Pill>
                         <Pill>/{settings.workspace.slug}</Pill>
                         <Pill>{access.role}</Pill>
                       </div>
@@ -2746,7 +2765,11 @@ export function StudioSettingsClient({
                   body="Brand configuration still uses the same studio settings contract and publication target rules. The form is now organized as one brand brief rather than a generic settings dump."
                   eyebrow="Brand profile"
                   span={8}
-                  title={settings ? "Selected brand public presence" : "Create brand profile"}
+                  title={
+                    settings
+                      ? "Selected brand public presence"
+                      : "Create brand profile"
+                  }
                 >
                   {!canManageWorkspace ? (
                     <div className="status-banner status-banner--info">
@@ -2780,7 +2803,9 @@ export function StudioSettingsClient({
                               <select
                                 className="input-field"
                                 onChange={(event) => {
-                                  setSelectedBrandId(event.target.value || null);
+                                  setSelectedBrandId(
+                                    event.target.value || null
+                                  );
                                 }}
                                 value={selectedBrand?.id ?? ""}
                               >
@@ -2858,9 +2883,7 @@ export function StudioSettingsClient({
                               <option value="editorial_warm">
                                 Editorial warm
                               </option>
-                              <option value="gallery_mono">
-                                Gallery mono
-                              </option>
+                              <option value="gallery_mono">Gallery mono</option>
                               <option value="midnight_launch">
                                 Midnight launch
                               </option>
@@ -2905,7 +2928,9 @@ export function StudioSettingsClient({
                             </p>
                           </div>
                           <label className="field-stack">
-                            <span className="field-label">Landing headline</span>
+                            <span className="field-label">
+                              Landing headline
+                            </span>
                             <input
                               className="input-field"
                               maxLength={120}
@@ -3068,7 +3093,9 @@ export function StudioSettingsClient({
                               {editorState.customDomain ||
                                 "No custom domain configured"}
                             </Pill>
-                            <Pill>{editorState.themePreset.replaceAll("_", " ")}</Pill>
+                            <Pill>
+                              {editorState.themePreset.replaceAll("_", " ")}
+                            </Pill>
                           </div>
                         </section>
                       </div>
@@ -3101,10 +3128,14 @@ export function StudioSettingsClient({
                     />
                     <div className="settings-preview-card__copy">
                       <strong>
-                        {editorState.wordmark || editorState.brandName || "Wordmark"}
+                        {editorState.wordmark ||
+                          editorState.brandName ||
+                          "Wordmark"}
                       </strong>
                       <span>{editorState.heroKicker || "Hero kicker"}</span>
-                      <span>{editorState.themePreset.replaceAll("_", " ")}</span>
+                      <span>
+                        {editorState.themePreset.replaceAll("_", " ")}
+                      </span>
                     </div>
                     <div className="settings-preview-card__copy">
                       <strong>
@@ -3120,7 +3151,9 @@ export function StudioSettingsClient({
                       <strong>
                         {editorState.storyHeadline || "Story headline"}
                       </strong>
-                      <span>{editorState.storyBody || "Story body preview"}</span>
+                      <span>
+                        {editorState.storyBody || "Story body preview"}
+                      </span>
                       <span>
                         {editorState.primaryCtaLabel || "Primary CTA"} /{" "}
                         {editorState.secondaryCtaLabel || "Secondary CTA"}
@@ -3179,7 +3212,9 @@ export function StudioSettingsClient({
                     </div>
                   ) : null}
                   <form className="studio-form" onSubmit={handleCreateBrand}>
-                    <fieldset disabled={!canEditCurrentWorkspace || isCreatingBrand}>
+                    <fieldset
+                      disabled={!canEditCurrentWorkspace || isCreatingBrand}
+                    >
                       <div className="studio-settings-form-cluster">
                         <label className="field-stack">
                           <span className="field-label">Brand name</span>
@@ -3279,7 +3314,9 @@ export function StudioSettingsClient({
                             ? `/brands/${newBrandState.brandSlug}`
                             : "/brands/[brandSlug]"}
                         </Pill>
-                        <Pill>{newBrandState.themePreset.replaceAll("_", " ")}</Pill>
+                        <Pill>
+                          {newBrandState.themePreset.replaceAll("_", " ")}
+                        </Pill>
                       </div>
                       <div className="studio-action-row">
                         <button
@@ -3308,9 +3345,9 @@ export function StudioSettingsClient({
                     Member access and invitation queue
                   </h2>
                   <p className="studio-settings-section__lead">
-                    Separate the current operator roster from pending invitations
-                    so owners can quickly see who already has access and what
-                    still needs action.
+                    Separate the current operator roster from pending
+                    invitations so owners can quickly see who already has access
+                    and what still needs action.
                   </p>
                 </div>
               </header>
@@ -3328,9 +3365,7 @@ export function StudioSettingsClient({
                   {!canManageMembers ? (
                     <div className="status-banner status-banner--info">
                       <strong>Operator read-only</strong>
-                      <span>
-                        Only workspace owners can remove members.
-                      </span>
+                      <span>Only workspace owners can remove members.</span>
                     </div>
                   ) : null}
                   {inactiveWorkspaceMessage && settings?.workspace ? (
@@ -3418,7 +3453,10 @@ export function StudioSettingsClient({
                   <div className="collection-item-list">
                     {settings?.invitations.length ? (
                       settings.invitations.map((invitation) => (
-                        <div className="collection-item-card" key={invitation.id}>
+                        <div
+                          className="collection-item-card"
+                          key={invitation.id}
+                        >
                           <div className="collection-item-card__copy">
                             <strong>{invitation.walletAddress}</strong>
                             <span>
@@ -3485,8 +3523,13 @@ export function StudioSettingsClient({
                       </div>
                     )}
                   </div>
-                  <form className="studio-form" onSubmit={handleCreateInvitation}>
-                    <fieldset disabled={!canMutateMembers || isCreatingInvitation}>
+                  <form
+                    className="studio-form"
+                    onSubmit={handleCreateInvitation}
+                  >
+                    <fieldset
+                      disabled={!canMutateMembers || isCreatingInvitation}
+                    >
                       <label className="field-stack">
                         <span className="field-label">
                           Invite operator wallet
@@ -3509,7 +3552,9 @@ export function StudioSettingsClient({
                           disabled={!canMutateMembers || isCreatingInvitation}
                           type="submit"
                         >
-                          {isCreatingInvitation ? "Inviting…" : "Send invitation"}
+                          {isCreatingInvitation
+                            ? "Inviting…"
+                            : "Send invitation"}
                         </button>
                       </div>
                     </fieldset>
@@ -3566,12 +3611,12 @@ export function StudioSettingsClient({
                     actorRoleEscalationRequest ? (
                       <div className="collection-item-card">
                         <div className="collection-item-card__copy">
-                          <strong>
-                            Ownership transfer request submitted
-                          </strong>
+                          <strong>Ownership transfer request submitted</strong>
                           <span>
                             Submitted{" "}
-                            {formatTimestamp(actorRoleEscalationRequest.createdAt)}
+                            {formatTimestamp(
+                              actorRoleEscalationRequest.createdAt
+                            )}
                           </span>
                           <span>
                             {actorRoleEscalationRequest.justification ||
@@ -3696,7 +3741,8 @@ export function StudioSettingsClient({
                                     }}
                                     type="button"
                                   >
-                                    {actingRoleEscalationRequestId === request.id
+                                    {actingRoleEscalationRequestId ===
+                                    request.id
                                       ? "Working…"
                                       : "Approve"}
                                   </button>
@@ -3712,7 +3758,8 @@ export function StudioSettingsClient({
                                     }}
                                     type="button"
                                   >
-                                    {actingRoleEscalationRequestId === request.id
+                                    {actingRoleEscalationRequestId ===
+                                    request.id
                                       ? "Working…"
                                       : "Reject"}
                                   </button>
@@ -3993,7 +4040,9 @@ export function StudioSettingsClient({
                             }}
                             step={1}
                             type="number"
-                            value={editorState.lifecycleSlaAutomationMaxAgeMinutes}
+                            value={
+                              editorState.lifecycleSlaAutomationMaxAgeMinutes
+                            }
                           />
                         </label>
                         <label className="field-stack">
@@ -4016,7 +4065,9 @@ export function StudioSettingsClient({
                             }}
                             step={1}
                             type="number"
-                            value={editorState.lifecycleSlaWebhookFailureThreshold}
+                            value={
+                              editorState.lifecycleSlaWebhookFailureThreshold
+                            }
                           />
                         </label>
                         <div
@@ -4035,10 +4086,13 @@ export function StudioSettingsClient({
                         <div className="pill-row">
                           <Pill>
                             Current{" "}
-                            {lifecycleSlaPolicy.enabled ? "enabled" : "disabled"}
+                            {lifecycleSlaPolicy.enabled
+                              ? "enabled"
+                              : "disabled"}
                           </Pill>
                           <Pill>
-                            Max age {lifecycleSlaPolicy.automationMaxAgeMinutes}m
+                            Max age {lifecycleSlaPolicy.automationMaxAgeMinutes}
+                            m
                           </Pill>
                           <Pill>
                             Failure threshold{" "}
@@ -4057,11 +4111,13 @@ export function StudioSettingsClient({
                         </div>
                         {lifecycleSlaSummary?.reasonCodes.length ? (
                           <div className="pill-row">
-                            {lifecycleSlaSummary.reasonCodes.map((reasonCode) => (
-                              <Pill key={reasonCode}>
-                                {formatStatus(reasonCode)}
-                              </Pill>
-                            ))}
+                            {lifecycleSlaSummary.reasonCodes.map(
+                              (reasonCode) => (
+                                <Pill key={reasonCode}>
+                                  {formatStatus(reasonCode)}
+                                </Pill>
+                              )
+                            )}
                           </div>
                         ) : null}
                         <button className="button-action" type="submit">
@@ -4091,7 +4147,8 @@ export function StudioSettingsClient({
                             ? "success"
                             : lifecycleAutomationHealth.status === "warning" ||
                                 lifecycleAutomationHealth.status === "stale" ||
-                                lifecycleAutomationHealth.status === "unreachable"
+                                lifecycleAutomationHealth.status ===
+                                  "unreachable"
                               ? "error"
                               : "info"
                         }`}
@@ -4138,7 +4195,8 @@ export function StudioSettingsClient({
                             <div className="collection-item-card" key={run.id}>
                               <div className="collection-item-card__copy">
                                 <strong>
-                                  {formatStatus(run.status)} · {run.triggerSource}
+                                  {formatStatus(run.status)} ·{" "}
+                                  {run.triggerSource}
                                 </strong>
                                 <span>
                                   Started{" "}
@@ -4154,8 +4212,10 @@ export function StudioSettingsClient({
                                   {run.workspaceCount} workspace
                                   {run.workspaceCount === 1 ? "" : "s"} ·{" "}
                                   {run.invitationReminderCount} invite reminder
-                                  {run.invitationReminderCount === 1 ? "" : "s"} ·{" "}
-                                  {run.decommissionNoticeCount} decommission
+                                  {run.invitationReminderCount === 1
+                                    ? ""
+                                    : "s"}{" "}
+                                  · {run.decommissionNoticeCount} decommission
                                   notice
                                   {run.decommissionNoticeCount === 1 ? "" : "s"}
                                 </span>
@@ -4232,7 +4292,10 @@ export function StudioSettingsClient({
                       <div className="collection-item-list">
                         {recentLifecycleDeliveries.length ? (
                           recentLifecycleDeliveries.map((delivery) => (
-                            <div className="collection-item-card" key={delivery.id}>
+                            <div
+                              className="collection-item-card"
+                              key={delivery.id}
+                            >
                               <div className="collection-item-card__copy">
                                 <strong>
                                   {formatLifecycleEventKind(delivery.eventKind)}
@@ -4278,7 +4341,8 @@ export function StudioSettingsClient({
                                   disabled={
                                     !canManageWorkspace ||
                                     delivery.deliveryChannel !== "webhook" ||
-                                    retryingLifecycleDeliveryId === delivery.id ||
+                                    retryingLifecycleDeliveryId ===
+                                      delivery.id ||
                                     (delivery.deliveryState !== "failed" &&
                                       delivery.deliveryState !== "skipped")
                                   }
@@ -4391,7 +4455,10 @@ export function StudioSettingsClient({
                       ) : null}
                       <div className="pill-row">
                         <Pill>
-                          {currentWorkspaceOffboardingState.lifecycleDelivery.failedCount}{" "}
+                          {
+                            currentWorkspaceOffboardingState.lifecycleDelivery
+                              .failedCount
+                          }{" "}
                           failed lifecycle deliveries
                         </Pill>
                         <Pill>
@@ -4441,11 +4508,13 @@ export function StudioSettingsClient({
                       ) : null}
                       <div className="pill-row">
                         <Pill>
-                          Default {retentionPolicy.defaultDecommissionRetentionDays}{" "}
+                          Default{" "}
+                          {retentionPolicy.defaultDecommissionRetentionDays}{" "}
                           days
                         </Pill>
                         <Pill>
-                          Minimum {retentionPolicy.minimumDecommissionRetentionDays}{" "}
+                          Minimum{" "}
+                          {retentionPolicy.minimumDecommissionRetentionDays}{" "}
                           days
                         </Pill>
                         <Pill>
@@ -4515,7 +4584,9 @@ export function StudioSettingsClient({
                             <button
                               className="button-action button-action--secondary"
                               disabled={
-                                Boolean(recordingDecommissionNotificationKind) ||
+                                Boolean(
+                                  recordingDecommissionNotificationKind
+                                ) ||
                                 isCancelingDecommission ||
                                 isExecutingDecommission
                               }
@@ -4650,7 +4721,9 @@ export function StudioSettingsClient({
                             className="text-input"
                             id="decommission-retention"
                             max={365}
-                            min={retentionPolicy.minimumDecommissionRetentionDays}
+                            min={
+                              retentionPolicy.minimumDecommissionRetentionDays
+                            }
                             onChange={(event) => {
                               const value = Number(event.target.value);
 
@@ -4672,7 +4745,10 @@ export function StudioSettingsClient({
                             {retentionPolicy.minimumDecommissionRetentionDays}{" "}
                             day(s).
                           </p>
-                          <label className="field-label" htmlFor="decommission-slug">
+                          <label
+                            className="field-label"
+                            htmlFor="decommission-slug"
+                          >
                             Confirm workspace slug
                           </label>
                           <input
@@ -4739,7 +4815,9 @@ export function StudioSettingsClient({
             <section className="studio-settings-section" id="estate">
               <header className="studio-settings-section__header">
                 <div className="studio-settings-section__copy">
-                  <span className="studio-settings-section__eyebrow">Estate</span>
+                  <span className="studio-settings-section__eyebrow">
+                    Estate
+                  </span>
                   <h2 className="studio-settings-section__title">
                     Workspace directory and administrative estate review
                   </h2>
@@ -4773,8 +4851,13 @@ export function StudioSettingsClient({
                       </span>
                     </div>
                   ) : null}
-                  <form className="studio-form" onSubmit={handleCreateWorkspace}>
-                    <fieldset disabled={!canManageWorkspace || isCreatingWorkspace}>
+                  <form
+                    className="studio-form"
+                    onSubmit={handleCreateWorkspace}
+                  >
+                    <fieldset
+                      disabled={!canManageWorkspace || isCreatingWorkspace}
+                    >
                       <label className="field-stack">
                         <span className="field-label">Workspace name</span>
                         <input
@@ -4881,7 +4964,10 @@ export function StudioSettingsClient({
                             ? "Provisioning…"
                             : "Create workspace"}
                         </button>
-                        <Link className="inline-link" href="/studio/commerce/fleet">
+                        <Link
+                          className="inline-link"
+                          href="/studio/commerce/fleet"
+                        >
                           Open commerce fleet
                         </Link>
                       </div>
@@ -4901,14 +4987,16 @@ export function StudioSettingsClient({
             <section className="studio-settings-section" id="audit">
               <header className="studio-settings-section__header">
                 <div className="studio-settings-section__copy">
-                  <span className="studio-settings-section__eyebrow">Audit</span>
+                  <span className="studio-settings-section__eyebrow">
+                    Audit
+                  </span>
                   <h2 className="studio-settings-section__title">
                     Recent member lifecycle history
                   </h2>
                   <p className="studio-settings-section__lead">
                     Keep invitation, membership, ownership, and decommission
-                    actions visible without letting the audit stream dominate the
-                    page.
+                    actions visible without letting the audit stream dominate
+                    the page.
                   </p>
                 </div>
               </header>
@@ -4920,7 +5008,9 @@ export function StudioSettingsClient({
                   title="Member lifecycle history"
                 >
                   <div className="pill-row">
-                    <Pill>{settings?.auditEntries.length ?? 0} recent events</Pill>
+                    <Pill>
+                      {settings?.auditEntries.length ?? 0} recent events
+                    </Pill>
                     <Pill>workspace audit</Pill>
                     <Link className="inline-link" href="/ops/audit">
                       Open full audit
@@ -4966,8 +5056,9 @@ export function StudioSettingsClient({
               </h3>
               <p className="studio-settings-rail-card__body">
                 {settings?.workspace.name ?? "No workspace selected"} is running
-                in {access.role} view with {availableWorkspaces.length} accessible
-                workspace{availableWorkspaces.length === 1 ? "" : "s"}.
+                in {access.role} view with {availableWorkspaces.length}{" "}
+                accessible workspace
+                {availableWorkspaces.length === 1 ? "" : "s"}.
               </p>
               <div className="pill-row">
                 <Pill>
@@ -5017,7 +5108,9 @@ export function StudioSettingsClient({
                 />
                 <MetricTile
                   label="Archive blockers"
-                  value={(offboardingSummary?.blockerCodes.length ?? 0).toString()}
+                  value={(
+                    offboardingSummary?.blockerCodes.length ?? 0
+                  ).toString()}
                 />
               </div>
               {offboardingSummary?.blockerCodes.length ? (
@@ -5043,7 +5136,9 @@ export function StudioSettingsClient({
                   "Automation health is unavailable."}
               </p>
               <div className="pill-row">
-                <Pill>{lifecycleAutomationHealth?.status ?? "unreachable"}</Pill>
+                <Pill>
+                  {lifecycleAutomationHealth?.status ?? "unreachable"}
+                </Pill>
                 <Pill>{lifecycleSlaSummary?.status ?? "unreachable"}</Pill>
                 <Pill>Failed webhooks {recentWebhookFailedCount}</Pill>
               </div>
@@ -5093,8 +5188,8 @@ export function StudioSettingsClient({
                 Selected brand target
               </h3>
               <p className="studio-settings-rail-card__body">
-                {(selectedBrand?.name ?? editorState.brandName) || "Brand"} routes
-                to{" "}
+                {(selectedBrand?.name ?? editorState.brandName) || "Brand"}{" "}
+                routes to{" "}
                 {selectedBrand?.publicBrandPath ??
                   `/brands/${editorState.brandSlug || "[brandSlug]"}`}
                 {selectedBrand?.customDomain

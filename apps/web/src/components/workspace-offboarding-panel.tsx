@@ -26,7 +26,9 @@ function formatCode(value: string) {
   return value.replaceAll("_", " ");
 }
 
-function getSlaTone(status: WorkspaceOffboardingEntry["lifecycleSlaSummary"]["status"]) {
+function getSlaTone(
+  status: WorkspaceOffboardingEntry["lifecycleSlaSummary"]["status"]
+) {
   if (status === "healthy") {
     return "success";
   }
@@ -86,13 +88,24 @@ export function WorkspaceOffboardingPanel({
                   {entry.summary.unfulfilledCheckoutCount} unfulfilled
                 </Pill>
                 <Pill>{entry.summary.livePublicationCount} live releases</Pill>
-                <Pill>{entry.directory.pendingInvitationCount} pending invites</Pill>
-                <Pill>{entry.directory.expiringInvitationCount} expiring invites</Pill>
-                <Pill>{entry.directory.expiredInvitationCount} expired invites</Pill>
-                <Pill>{entry.lifecycleDelivery.failedCount} lifecycle failed</Pill>
-                <Pill>{entry.lifecycleDelivery.deliveredCount} lifecycle delivered</Pill>
                 <Pill>
-                  automation {entry.lifecycleAutomationPolicy.enabled ? "on" : "off"}
+                  {entry.directory.pendingInvitationCount} pending invites
+                </Pill>
+                <Pill>
+                  {entry.directory.expiringInvitationCount} expiring invites
+                </Pill>
+                <Pill>
+                  {entry.directory.expiredInvitationCount} expired invites
+                </Pill>
+                <Pill>
+                  {entry.lifecycleDelivery.failedCount} lifecycle failed
+                </Pill>
+                <Pill>
+                  {entry.lifecycleDelivery.deliveredCount} lifecycle delivered
+                </Pill>
+                <Pill>
+                  automation{" "}
+                  {entry.lifecycleAutomationPolicy.enabled ? "on" : "off"}
                 </Pill>
                 <Pill>SLA {formatCode(entry.lifecycleSlaSummary.status)}</Pill>
                 {entry.decommission ? (
@@ -111,8 +124,9 @@ export function WorkspaceOffboardingPanel({
                 <div className="status-banner status-banner--error">
                   <strong>Archive blocked</strong>
                   <span>
-                    Resolve {entry.summary.blockerCodes.map(formatCode).join(", ")}
-                    {" "}before offboarding this workspace.
+                    Resolve{" "}
+                    {entry.summary.blockerCodes.map(formatCode).join(", ")}{" "}
+                    before offboarding this workspace.
                   </span>
                 </div>
               ) : null}
@@ -121,8 +135,9 @@ export function WorkspaceOffboardingPanel({
                 <div className="status-banner status-banner--info">
                   <strong>Review before archive</strong>
                   <span>
-                    Check {entry.summary.cautionCodes.map(formatCode).join(", ")}
-                    {" "}before final offboarding.
+                    Check{" "}
+                    {entry.summary.cautionCodes.map(formatCode).join(", ")}{" "}
+                    before final offboarding.
                   </span>
                 </div>
               ) : null}
@@ -174,11 +189,10 @@ export function WorkspaceOffboardingPanel({
                     Policy webhook{" "}
                     {entry.lifecycleDeliveryPolicy.webhookEnabled
                       ? "enabled"
-                      : "disabled"}
-                    {" "}· audit-log delivered{" "}
-                    {entry.lifecycleDelivery.auditLog.deliveredCount}
-                    {" "}· webhook failed{" "}
-                    {entry.lifecycleDelivery.webhook.failedCount}
+                      : "disabled"}{" "}
+                    · audit-log delivered{" "}
+                    {entry.lifecycleDelivery.auditLog.deliveredCount} · webhook
+                    failed {entry.lifecycleDelivery.webhook.failedCount}
                     {entry.lifecycleDelivery.providers.length
                       ? ` · providers ${entry.lifecycleDelivery.providers
                           .map(
@@ -186,8 +200,8 @@ export function WorkspaceOffboardingPanel({
                               `${provider.label} ${provider.deliveredCount}/${provider.failedCount}/${provider.queuedCount}`
                           )
                           .join(", ")}`
-                      : ""}
-                    {" "}· latest{" "}
+                      : ""}{" "}
+                    · latest{" "}
                     {formatCode(
                       entry.lifecycleDelivery.latestDelivery.eventKind
                     )}{" "}
@@ -207,12 +221,15 @@ export function WorkspaceOffboardingPanel({
               <div className="status-banner status-banner--info">
                 <strong>Lifecycle automation</strong>
                 <span>
-                  Scheduler {entry.lifecycleAutomationPolicy.enabled ? "enabled" : "disabled"}
-                  {" "}· invitation reminders{" "}
+                  Scheduler{" "}
+                  {entry.lifecycleAutomationPolicy.enabled
+                    ? "enabled"
+                    : "disabled"}{" "}
+                  · invitation reminders{" "}
                   {entry.lifecycleAutomationPolicy.automateInvitationReminders
                     ? "enabled"
-                    : "disabled"}
-                  {" "}· decommission notices{" "}
+                    : "disabled"}{" "}
+                  · decommission notices{" "}
                   {entry.lifecycleAutomationPolicy.automateDecommissionNotices
                     ? "enabled"
                     : "disabled"}
@@ -228,8 +245,8 @@ export function WorkspaceOffboardingPanel({
                 <span>
                   {entry.lifecycleSlaSummary.message} Policy max age{" "}
                   {entry.lifecycleSlaPolicy.automationMaxAgeMinutes}m · webhook
-                  threshold {entry.lifecycleSlaPolicy.webhookFailureThreshold}
-                  {" "}· failed webhooks {entry.lifecycleSlaSummary.failedWebhookCount}
+                  threshold {entry.lifecycleSlaPolicy.webhookFailureThreshold} ·
+                  failed webhooks {entry.lifecycleSlaSummary.failedWebhookCount}
                   {entry.lifecycleSlaSummary.reasonCodes.length
                     ? ` · reasons ${entry.lifecycleSlaSummary.reasonCodes
                         .map(formatCode)

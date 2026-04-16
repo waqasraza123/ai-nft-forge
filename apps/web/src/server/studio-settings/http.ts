@@ -85,7 +85,9 @@ export async function requireStudioActiveOwnerApiSession() {
   return session;
 }
 
-export function createStudioSettingsErrorResponse(error: unknown): NextResponse {
+export function createStudioSettingsErrorResponse(
+  error: unknown
+): NextResponse {
   if (error instanceof StudioSettingsServiceError) {
     return NextResponse.json(
       studioSettingsErrorResponseSchema.parse({

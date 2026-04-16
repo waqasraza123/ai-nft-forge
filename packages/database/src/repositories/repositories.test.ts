@@ -450,7 +450,9 @@ describe("database repositories", () => {
         workspaceId: "workspace_1"
       }
     });
-    expect(database.workspaceDecommissionRequest.findFirst).toHaveBeenCalledWith({
+    expect(
+      database.workspaceDecommissionRequest.findFirst
+    ).toHaveBeenCalledWith({
       include: {
         canceledByUser: {
           select: {
@@ -490,74 +492,74 @@ describe("database repositories", () => {
         workspaceId: "workspace_1"
       }
     });
-    expect(database.workspaceDecommissionRequest.findMany).toHaveBeenCalledWith({
-      include: {
-        canceledByUser: {
-          select: {
-            avatarUrl: true,
-            displayName: true,
-            id: true,
-            walletAddress: true
+    expect(database.workspaceDecommissionRequest.findMany).toHaveBeenCalledWith(
+      {
+        include: {
+          canceledByUser: {
+            select: {
+              avatarUrl: true,
+              displayName: true,
+              id: true,
+              walletAddress: true
+            }
+          },
+          executedByUser: {
+            select: {
+              avatarUrl: true,
+              displayName: true,
+              id: true,
+              walletAddress: true
+            }
+          },
+          requestedByUser: {
+            select: {
+              avatarUrl: true,
+              displayName: true,
+              id: true,
+              walletAddress: true
+            }
           }
         },
-        executedByUser: {
-          select: {
-            avatarUrl: true,
-            displayName: true,
-            id: true,
-            walletAddress: true
+        orderBy: [
+          {
+            createdAt: "desc"
+          },
+          {
+            id: "desc"
           }
-        },
-        requestedByUser: {
-          select: {
-            avatarUrl: true,
-            displayName: true,
-            id: true,
-            walletAddress: true
+        ],
+        where: {
+          status: "scheduled",
+          workspaceId: {
+            in: ["workspace_1"]
           }
         }
+      }
+    );
+    expect(
+      database.workspaceDecommissionRequest.update
+    ).toHaveBeenNthCalledWith(1, {
+      data: {
+        canceledAt: now,
+        canceledByUserId: "user_1",
+        status: "canceled"
       },
-      orderBy: [
-        {
-          createdAt: "desc"
-        },
-        {
-          id: "desc"
-        }
-      ],
       where: {
-        status: "scheduled",
-        workspaceId: {
-          in: ["workspace_1"]
-        }
+        id: "request_1"
       }
     });
-    expect(database.workspaceDecommissionRequest.update).toHaveBeenNthCalledWith(
-      1,
-      {
-        data: {
-          canceledAt: now,
-          canceledByUserId: "user_1",
-          status: "canceled"
-        },
-        where: {
-          id: "request_1"
-        }
+    expect(
+      database.workspaceDecommissionRequest.update
+    ).toHaveBeenNthCalledWith(2, {
+      data: {
+        executedAt: now,
+        executedByUserId: "user_1",
+        status: "executed"
+      },
+      where: {
+        id: "request_1"
       }
-    );
-    expect(database.workspaceDecommissionRequest.update).toHaveBeenNthCalledWith(
-      2,
-      {
-        data: {
-          executedAt: now,
-          executedByUserId: "user_1",
-          status: "executed"
-        },
-        where: {
-          id: "request_1"
-        }
-      }
-    );
+    });
     expect(createdRequest.id).toBe("request_1");
     expect(scheduledRequest?.id).toBe("request_1");
     expect(scheduledRequests).toHaveLength(1);
@@ -623,7 +625,9 @@ describe("database repositories", () => {
       "request_1"
     ]);
 
-    expect(database.workspaceDecommissionNotification.create).toHaveBeenCalledWith({
+    expect(
+      database.workspaceDecommissionNotification.create
+    ).toHaveBeenCalledWith({
       data: {
         kind: "scheduled",
         requestId: "request_1",
@@ -631,60 +635,58 @@ describe("database repositories", () => {
         sentByUserId: "user_1"
       }
     });
-    expect(database.workspaceDecommissionNotification.findMany).toHaveBeenNthCalledWith(
-      1,
-      {
-        include: {
-          sentByUser: {
-            select: {
-              avatarUrl: true,
-              displayName: true,
-              id: true,
-              walletAddress: true
-            }
-          }
-        },
-        orderBy: [
-          {
-            sentAt: "desc"
-          },
-          {
-            id: "desc"
-          }
-        ],
-        where: {
-          requestId: "request_1"
-        }
-      }
-    );
-    expect(database.workspaceDecommissionNotification.findMany).toHaveBeenNthCalledWith(
-      2,
-      {
-        include: {
-          sentByUser: {
-            select: {
-              avatarUrl: true,
-              displayName: true,
-              id: true,
-              walletAddress: true
-            }
-          }
-        },
-        orderBy: [
-          {
-            sentAt: "desc"
-          },
-          {
-            id: "desc"
-          }
-        ],
-        where: {
-          requestId: {
-            in: ["request_1"]
+    expect(
+      database.workspaceDecommissionNotification.findMany
+    ).toHaveBeenNthCalledWith(1, {
+      include: {
+        sentByUser: {
+          select: {
+            avatarUrl: true,
+            displayName: true,
+            id: true,
+            walletAddress: true
           }
         }
+      },
+      orderBy: [
+        {
+          sentAt: "desc"
+        },
+        {
+          id: "desc"
+        }
+      ],
+      where: {
+        requestId: "request_1"
       }
-    );
+    });
+    expect(
+      database.workspaceDecommissionNotification.findMany
+    ).toHaveBeenNthCalledWith(2, {
+      include: {
+        sentByUser: {
+          select: {
+            avatarUrl: true,
+            displayName: true,
+            id: true,
+            walletAddress: true
+          }
+        }
+      },
+      orderBy: [
+        {
+          sentAt: "desc"
+        },
+        {
+          id: "desc"
+        }
+      ],
+      where: {
+        requestId: {
+          in: ["request_1"]
+        }
+      }
+    });
     expect(createdNotification.id).toBe("notification_1");
     expect(requestNotifications[0]?.id).toBe("notification_1");
     expect(requestNotificationsByIds[0]?.sentByUser.walletAddress).toBe(

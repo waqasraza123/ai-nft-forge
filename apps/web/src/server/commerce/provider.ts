@@ -1,4 +1,7 @@
-import type { CommerceCheckoutProviderKind, CommerceCheckoutProviderMode } from "@ai-nft-forge/shared";
+import type {
+  CommerceCheckoutProviderKind,
+  CommerceCheckoutProviderMode
+} from "@ai-nft-forge/shared";
 import Stripe from "stripe";
 
 export const minimumStripeCheckoutTtlSeconds = 1800;
@@ -102,7 +105,9 @@ export function createStripePaymentBoundary(input: { stripe: Stripe }) {
       });
 
       if (!stripeSession.url) {
-        throw new Error("Stripe checkout session did not include a redirect URL.");
+        throw new Error(
+          "Stripe checkout session did not include a redirect URL."
+        );
       }
 
       return {

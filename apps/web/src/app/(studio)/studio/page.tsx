@@ -55,14 +55,19 @@ export default async function StudioPage() {
     <section className="studio-dashboard">
       <header className="studio-dashboard__hero">
         <p className="studio-dashboard__eyebrow">Operational foundation</p>
-        <h1 className="studio-dashboard__title">Creator launch operating room</h1>
+        <h1 className="studio-dashboard__title">
+          Creator launch operating room
+        </h1>
         <p className="studio-dashboard__lead">
-          Keep one workspace in focus while moving from source capture to collection
-          release, and then to owner-side commerce supervision. This is your
-          operator command surface for the next safe action.
+          Keep one workspace in focus while moving from source capture to
+          collection release, and then to owner-side commerce supervision. This
+          is your operator command surface for the next safe action.
         </p>
         <div className="studio-dashboard__actions">
-          <Link className="button-action button-action--accent" href={primaryDestination}>
+          <Link
+            className="button-action button-action--accent"
+            href={primaryDestination}
+          >
             {nextActionLabel}
           </Link>
           <Link className="action-link" href="/studio/collections">
@@ -75,7 +80,9 @@ export default async function StudioPage() {
       </header>
       <section className="studio-dashboard__context">
         <article className="studio-dashboard__panel">
-          <h2 className="studio-dashboard__panel-title">Current workspace context</h2>
+          <h2 className="studio-dashboard__panel-title">
+            Current workspace context
+          </h2>
           <dl className="studio-dashboard__meta">
             <div>
               <dt>Workspace</dt>
@@ -102,8 +109,9 @@ export default async function StudioPage() {
         <article className="studio-dashboard__panel">
           <h2 className="studio-dashboard__panel-title">Operational rhythm</h2>
           <p>
-            Work with this sequence: capture source assets, curate collections, run
-            storefront release preparation, then monitor fulfillment and delivery.
+            Work with this sequence: capture source assets, curate collections,
+            run storefront release preparation, then monitor fulfillment and
+            delivery.
           </p>
           <ol className="studio-dashboard__path">
             <li>Capture and process source material.</li>
@@ -112,12 +120,15 @@ export default async function StudioPage() {
             <li>Close the loop with checkout and fulfillment health.</li>
           </ol>
           <p className="studio-dashboard__focus">
-            All actions are scoped to the selected workspace and remain protected by
-            auth boundaries.
+            All actions are scoped to the selected workspace and remain
+            protected by auth boundaries.
           </p>
         </article>
       </section>
-      <section className="studio-dashboard__modules" aria-label="Primary studio areas">
+      <section
+        className="studio-dashboard__modules"
+        aria-label="Primary studio areas"
+      >
         {studioModules.map((module, index) => (
           <article className="studio-dashboard__module" key={module.title}>
             <span className="studio-dashboard__module-index">0{index + 1}</span>

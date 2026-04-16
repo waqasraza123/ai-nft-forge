@@ -5,7 +5,11 @@ export function resolvePreferredAccessibleWorkspace<
     status: WorkspaceStatus;
   }
 >(workspaces: T[]) {
-  return workspaces.find((workspace) => workspace.status === "active") ?? workspaces[0] ?? null;
+  return (
+    workspaces.find((workspace) => workspace.status === "active") ??
+    workspaces[0] ??
+    null
+  );
 }
 
 export function createInactiveWorkspaceMessage(status: WorkspaceStatus) {

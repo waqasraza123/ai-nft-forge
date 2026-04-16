@@ -85,7 +85,8 @@ export function createWorkspaceLifecycleAutomationHealth(input: {
     if (!latestRun || !lastRunAt || lastRunAgeSeconds === null) {
       return workspaceLifecycleAutomationHealthSchema.parse({
         enabled: true,
-        intervalSeconds: workerEnv.WORKSPACE_LIFECYCLE_AUTOMATION_INTERVAL_SECONDS,
+        intervalSeconds:
+          workerEnv.WORKSPACE_LIFECYCLE_AUTOMATION_INTERVAL_SECONDS,
         jitterSeconds: workerEnv.WORKSPACE_LIFECYCLE_AUTOMATION_JITTER_SECONDS,
         lastRunAgeSeconds: null,
         lastRunAt: null,
@@ -112,7 +113,8 @@ export function createWorkspaceLifecycleAutomationHealth(input: {
     if (latestRun.status === "running") {
       return workspaceLifecycleAutomationHealthSchema.parse({
         enabled: true,
-        intervalSeconds: workerEnv.WORKSPACE_LIFECYCLE_AUTOMATION_INTERVAL_SECONDS,
+        intervalSeconds:
+          workerEnv.WORKSPACE_LIFECYCLE_AUTOMATION_INTERVAL_SECONDS,
         jitterSeconds: workerEnv.WORKSPACE_LIFECYCLE_AUTOMATION_JITTER_SECONDS,
         lastRunAgeSeconds,
         lastRunAt,
@@ -136,7 +138,8 @@ export function createWorkspaceLifecycleAutomationHealth(input: {
     if (latestRun.status === "failed") {
       return workspaceLifecycleAutomationHealthSchema.parse({
         enabled: true,
-        intervalSeconds: workerEnv.WORKSPACE_LIFECYCLE_AUTOMATION_INTERVAL_SECONDS,
+        intervalSeconds:
+          workerEnv.WORKSPACE_LIFECYCLE_AUTOMATION_INTERVAL_SECONDS,
         jitterSeconds: workerEnv.WORKSPACE_LIFECYCLE_AUTOMATION_JITTER_SECONDS,
         lastRunAgeSeconds,
         lastRunAt,
@@ -154,7 +157,8 @@ export function createWorkspaceLifecycleAutomationHealth(input: {
     if (lastRunAgeSeconds > staleThresholdSeconds) {
       return workspaceLifecycleAutomationHealthSchema.parse({
         enabled: true,
-        intervalSeconds: workerEnv.WORKSPACE_LIFECYCLE_AUTOMATION_INTERVAL_SECONDS,
+        intervalSeconds:
+          workerEnv.WORKSPACE_LIFECYCLE_AUTOMATION_INTERVAL_SECONDS,
         jitterSeconds: workerEnv.WORKSPACE_LIFECYCLE_AUTOMATION_JITTER_SECONDS,
         lastRunAgeSeconds,
         lastRunAt,
@@ -169,7 +173,8 @@ export function createWorkspaceLifecycleAutomationHealth(input: {
 
     return workspaceLifecycleAutomationHealthSchema.parse({
       enabled: true,
-      intervalSeconds: workerEnv.WORKSPACE_LIFECYCLE_AUTOMATION_INTERVAL_SECONDS,
+      intervalSeconds:
+        workerEnv.WORKSPACE_LIFECYCLE_AUTOMATION_INTERVAL_SECONDS,
       jitterSeconds: workerEnv.WORKSPACE_LIFECYCLE_AUTOMATION_JITTER_SECONDS,
       lastRunAgeSeconds,
       lastRunAt,

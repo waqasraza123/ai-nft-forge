@@ -50,9 +50,7 @@ test("renders the public storefront brand and collection routes from published d
       name: "Midnight Portraits"
     })
   ).toBeVisible();
-  await expect(
-    page.getByText("Release status")
-  ).toBeVisible();
+  await expect(page.getByText("Release status")).toBeVisible();
   await expect(page.getByRole("link", { name: "Enter mint" })).toBeVisible();
   await expect(
     page.getByRole("heading", {

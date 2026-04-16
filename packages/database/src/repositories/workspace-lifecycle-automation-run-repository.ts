@@ -58,7 +58,9 @@ export function createWorkspaceLifecycleAutomationRunRepository(
       });
     },
 
-    listRecent(input: { limit: number }): Promise<WorkspaceLifecycleAutomationRun[]> {
+    listRecent(input: {
+      limit: number;
+    }): Promise<WorkspaceLifecycleAutomationRun[]> {
       return database.workspaceLifecycleAutomationRun.findMany({
         orderBy: [
           {

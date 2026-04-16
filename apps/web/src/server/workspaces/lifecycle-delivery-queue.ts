@@ -65,9 +65,8 @@ export async function enqueueWorkspaceLifecycleNotificationJob(
   payload: WorkspaceLifecycleNotificationJobPayload,
   rawEnvironment: NodeJS.ProcessEnv = process.env
 ) {
-  const parsedPayload = workspaceLifecycleNotificationJobPayloadSchema.parse(
-    payload
-  );
+  const parsedPayload =
+    workspaceLifecycleNotificationJobPayloadSchema.parse(payload);
   const queue = getWorkspaceLifecycleNotificationQueue(rawEnvironment);
   const job = await queue.add(
     workspaceLifecycleJobNames.processNotificationDelivery,

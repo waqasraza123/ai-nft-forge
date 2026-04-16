@@ -17,8 +17,7 @@ function createWorkspaceOffboardingHarness() {
               workspace.id === "workspace_review" ? 1 : 0,
             lastActivityAt: "2026-04-12T04:00:00.000Z",
             memberCount: 2,
-            pendingInvitationCount:
-              workspace.id === "workspace_review" ? 1 : 0,
+            pendingInvitationCount: workspace.id === "workspace_review" ? 1 : 0,
             pendingRoleEscalationCount:
               workspace.id === "workspace_review" ? 1 : 0,
             workspace
@@ -129,9 +128,7 @@ function createWorkspaceOffboardingHarness() {
         },
         async listDetailedByWorkspaceIds(workspaceIds: string[]) {
           const checkouts: Array<{
-            fulfillmentAutomationStatus:
-              | "failed"
-              | "idle";
+            fulfillmentAutomationStatus: "failed" | "idle";
             fulfillmentStatus: "unfulfilled";
             id: string;
             publishedCollection: {
@@ -164,7 +161,6 @@ function createWorkspaceOffboardingHarness() {
                 status: "completed"
               });
             }
-
           }
 
           return checkouts;
@@ -277,9 +273,7 @@ function createWorkspaceOffboardingHarness() {
         }
       },
       workspaceInvitationRepository: {
-        async listByWorkspaceId(input: {
-          workspaceId: string;
-        }) {
+        async listByWorkspaceId(input: { workspaceId: string }) {
           return input.workspaceId === "workspace_review"
             ? [
                 {
@@ -309,8 +303,7 @@ function createWorkspaceOffboardingHarness() {
                   requestId: input.requestId,
                   sentAt: new Date("2026-04-12T02:00:00.000Z"),
                   sentByUser: {
-                    walletAddress:
-                      "0x1111111111111111111111111111111111111111"
+                    walletAddress: "0x1111111111111111111111111111111111111111"
                   },
                   sentByUserId: "user_owner"
                 }
@@ -326,8 +319,7 @@ function createWorkspaceOffboardingHarness() {
                   requestId: "decommission_ready",
                   sentAt: new Date("2026-04-12T02:00:00.000Z"),
                   sentByUser: {
-                    walletAddress:
-                      "0x1111111111111111111111111111111111111111"
+                    walletAddress: "0x1111111111111111111111111111111111111111"
                   },
                   sentByUserId: "user_owner"
                 }
@@ -358,8 +350,7 @@ function createWorkspaceOffboardingHarness() {
                 id: "delivery_1",
                 invitation: {
                   id: "invitation_1",
-                  walletAddress:
-                    "0x2222222222222222222222222222222222222222"
+                  walletAddress: "0x2222222222222222222222222222222222222222"
                 },
                 invitationId: "invitation_1",
                 lastAttemptedAt: new Date("2026-04-12T03:00:00.000Z"),
@@ -505,7 +496,10 @@ function createWorkspaceOffboardingHarness() {
         async countPendingByWorkspaceId(workspaceId: string) {
           return workspaceId === "workspace_review" ? 1 : 0;
         },
-        async listByWorkspaceId(input: { limit?: number; workspaceId: string }) {
+        async listByWorkspaceId(input: {
+          limit?: number;
+          workspaceId: string;
+        }) {
           return input.workspaceId === "workspace_review"
             ? [
                 {

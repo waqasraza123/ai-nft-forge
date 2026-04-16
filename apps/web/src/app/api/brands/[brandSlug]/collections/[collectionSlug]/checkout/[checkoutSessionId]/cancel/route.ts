@@ -13,7 +13,8 @@ type RouteContext = {
 
 export async function POST(_: Request, context: RouteContext) {
   try {
-    const { brandSlug, checkoutSessionId, collectionSlug } = await context.params;
+    const { brandSlug, checkoutSessionId, collectionSlug } =
+      await context.params;
     const result =
       await createRuntimeCollectionCommerceService().cancelCheckoutSession({
         brandSlug,

@@ -86,21 +86,23 @@ test("renders authenticated ops diagnostics and retry ergonomics", async ({
     await expect(
       page.getByText("Published public asset missing")
     ).toBeVisible();
-    await expect(
-      page.getByText("Review-ready draft is invalid")
-    ).toBeVisible();
+    await expect(page.getByText("Review-ready draft is invalid")).toBeVisible();
 
     const reviewReadyIssue = page.locator(".ops-activity-item", {
       hasText: "Review-ready draft is invalid"
     });
 
-    await reviewReadyIssue.getByRole("button", { name: "Repair issue" }).click();
+    await reviewReadyIssue
+      .getByRole("button", { name: "Repair issue" })
+      .click();
     await expect(latestOperatorActionCard).toContainText(
       "Reconciliation repair completed from the ops surface."
     );
 
     await page.goto("/studio/collections");
-    await page.getByRole("button", { name: seededState.invalidDraftTitle }).click();
+    await page
+      .getByRole("button", { name: seededState.invalidDraftTitle })
+      .click();
     await expect(
       page.getByText("Review-ready draft is no longer valid")
     ).toBeVisible();

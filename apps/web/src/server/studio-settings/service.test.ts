@@ -1015,7 +1015,8 @@ function createStudioSettingsHarness() {
                   input.lifecycleSlaWebhookFailureThreshold
               }
             : {}),
-          ...(input.lifecycleWebhookDeliverDecommissionNotifications !== undefined
+          ...(input.lifecycleWebhookDeliverDecommissionNotifications !==
+          undefined
             ? {
                 lifecycleWebhookDeliverDecommissionNotifications:
                   input.lifecycleWebhookDeliverDecommissionNotifications

@@ -113,7 +113,12 @@ type WorkspaceAutomationServiceDependencies = {
         workspaceId: string;
       }): Promise<WorkspaceAutomationDeliveryRecord>;
       updateById(input: {
-        deliveryState?: "queued" | "processing" | "delivered" | "failed" | "skipped";
+        deliveryState?:
+          | "queued"
+          | "processing"
+          | "delivered"
+          | "failed"
+          | "skipped";
         failedAt?: Date | null;
         failureMessage?: string | null;
         id: string;
@@ -128,7 +133,9 @@ type WorkspaceAutomationServiceDependencies = {
     };
   };
   runInTransaction: <T>(
-    callback: (repositories: WorkspaceAutomationTransactionalRepositories) => Promise<T>
+    callback: (
+      repositories: WorkspaceAutomationTransactionalRepositories
+    ) => Promise<T>
   ) => Promise<T>;
   transport: {
     availableProviderKeys: WorkspaceLifecycleNotificationProviderKey[];
@@ -155,10 +162,7 @@ type WorkspaceAutomationTransactionalRepositories = {
     }): Promise<WorkspaceAutomationDecommissionNotificationRecord>;
   };
   workspaceInvitationRepository: {
-    touchReminderById(input: {
-      id: string;
-      lastRemindedAt: Date;
-    }): Promise<{
+    touchReminderById(input: { id: string; lastRemindedAt: Date }): Promise<{
       id: string;
       lastRemindedAt: Date | null;
       reminderCount: number;
@@ -372,18 +376,20 @@ export function createWorkspaceLifecycleAutomationService(
             workspace.lifecycleAutomationDecommissionNoticesEnabled
         )
         .map((workspace) => workspace.id);
-      const [dueInvitations, scheduledDecommissionRequests] = await Promise.all([
-        dependencies.repositories.workspaceInvitationRepository.listReminderReadyByWorkspaceIds(
-          {
-            now,
-            reminderReadyBefore,
-            workspaceIds: invitationWorkspaceIds
-          }
-        ),
-        dependencies.repositories.workspaceDecommissionRequestRepository.listScheduledByWorkspaceIds(
-          decommissionWorkspaceIds
-        )
-      ]);
+      const [dueInvitations, scheduledDecommissionRequests] = await Promise.all(
+        [
+          dependencies.repositories.workspaceInvitationRepository.listReminderReadyByWorkspaceIds(
+            {
+              now,
+              reminderReadyBefore,
+              workspaceIds: invitationWorkspaceIds
+            }
+          ),
+          dependencies.repositories.workspaceDecommissionRequestRepository.listScheduledByWorkspaceIds(
+            decommissionWorkspaceIds
+          )
+        ]
+      );
       const existingNotifications =
         await dependencies.repositories.workspaceDecommissionNotificationRepository.listByRequestIds(
           scheduledDecommissionRequests.map((request) => request.id)
@@ -398,7 +404,10 @@ export function createWorkspaceLifecycleAutomationService(
           notificationsByRequestId.get(notification.requestId) ?? [];
 
         requestNotifications.push(notification);
-        notificationsByRequestId.set(notification.requestId, requestNotifications);
+        notificationsByRequestId.set(
+          notification.requestId,
+          requestNotifications
+        );
       }
 
       let invitationReminderCount = 0;
@@ -434,10 +443,12 @@ export function createWorkspaceLifecycleAutomationService(
           const updatedInvitation = await dependencies.runInTransaction(
             async (repositories) => {
               const touchedInvitation =
-                await repositories.workspaceInvitationRepository.touchReminderById({
-                  id: invitation.id,
-                  lastRemindedAt: now
-                });
+                await repositories.workspaceInvitationRepository.touchReminderById(
+                  {
+                    id: invitation.id,
+                    lastRemindedAt: now
+                  }
+                );
 
               await repositories.auditLogRepository.create({
                 action: "workspace_invitation_reminder_sent",
@@ -636,7 +647,10 @@ export function createWorkspaceLifecycleAutomationService(
         workspaceCount: eligibleWorkspaces.length
       };
 
-      dependencies.logger.info("Workspace lifecycle automation completed", summary);
+      dependencies.logger.info(
+        "Workspace lifecycle automation completed",
+        summary
+      );
 
       return summary;
     }

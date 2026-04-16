@@ -92,9 +92,9 @@ export function createPublishedCollectionOnchainInspector(
   const publicClients = new Map<CollectionContractChainKey, unknown>();
 
   function getPublicClient(chainKey: CollectionContractChainKey) {
-    const cachedClient = publicClients.get(
-      chainKey
-    ) as ReturnType<typeof createPublicClient> | undefined;
+    const cachedClient = publicClients.get(chainKey) as
+      | ReturnType<typeof createPublicClient>
+      | undefined;
 
     if (cachedClient) {
       return cachedClient;
@@ -144,7 +144,8 @@ export function createPublishedCollectionOnchainInspector(
         return issues;
       }
 
-      const chainKey = publication.contractChainKey as CollectionContractChainKey;
+      const chainKey =
+        publication.contractChainKey as CollectionContractChainKey;
       const publicClient = supportedViemChains[chainKey]
         ? getPublicClient(chainKey)
         : null;
@@ -330,31 +331,35 @@ export function createPublishedCollectionOnchainInspector(
         return issues;
       }
 
-      const [recordedOwner, recordedName, recordedSymbol, recordedBaseTokenUri] =
-        await Promise.all([
-          publicClient.readContract({
-            abi: contractAbi,
-            address: expectedContractAddress,
-            functionName: "owner"
-          }),
-          publicClient.readContract({
-            abi: contractAbi,
-            address: expectedContractAddress,
-            functionName: "name"
-          }),
-          publicClient.readContract({
-            abi: contractAbi,
-            address: expectedContractAddress,
-            functionName: "symbol"
-          }),
-          publication.contractTokenUriBaseUrl
-            ? publicClient.readContract({
-                abi: contractAbi,
-                address: expectedContractAddress,
-                functionName: "baseTokenUri"
-              })
-            : Promise.resolve(null)
-        ]);
+      const [
+        recordedOwner,
+        recordedName,
+        recordedSymbol,
+        recordedBaseTokenUri
+      ] = await Promise.all([
+        publicClient.readContract({
+          abi: contractAbi,
+          address: expectedContractAddress,
+          functionName: "owner"
+        }),
+        publicClient.readContract({
+          abi: contractAbi,
+          address: expectedContractAddress,
+          functionName: "name"
+        }),
+        publicClient.readContract({
+          abi: contractAbi,
+          address: expectedContractAddress,
+          functionName: "symbol"
+        }),
+        publication.contractTokenUriBaseUrl
+          ? publicClient.readContract({
+              abi: contractAbi,
+              address: expectedContractAddress,
+              functionName: "baseTokenUri"
+            })
+          : Promise.resolve(null)
+      ]);
 
       if (
         !isAddressEqual(
@@ -434,7 +439,9 @@ export function createPublishedCollectionOnchainInspector(
               expectedValue: publication.contractTokenUriBaseUrl,
               field: "baseTokenUri",
               observedValue:
-                recordedBaseTokenUri === null ? null : String(recordedBaseTokenUri),
+                recordedBaseTokenUri === null
+                  ? null
+                  : String(recordedBaseTokenUri),
               publishedCollectionId: publication.id,
               publishedCollectionSlug: publication.slug
             },
@@ -568,7 +575,8 @@ export function createPublishedCollectionOnchainInspector(
               detail: {
                 contractAddress: expectedContractAddress,
                 contractChainKey: chainKey,
-                expectedRecipientWalletAddress: normalizedRecipientWalletAddress,
+                expectedRecipientWalletAddress:
+                  normalizedRecipientWalletAddress,
                 mintId: mint.id,
                 observedOwnerWalletAddress: recordedTokenOwner
                   ? getAddress(recordedTokenOwner as `0x${string}`)

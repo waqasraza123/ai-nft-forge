@@ -22,13 +22,14 @@ function formatTimestamp(value: string | null) {
   }).format(new Date(value));
 }
 
-function formatWorkspaceStatus(
-  status: "active" | "archived" | "suspended"
-) {
+function formatWorkspaceStatus(status: "active" | "archived" | "suspended") {
   return status.replaceAll("_", " ");
 }
 
-function resolvePressureTone(pressureScore: number, workspace: WorkspaceFleetWorkspaceSummary) {
+function resolvePressureTone(
+  pressureScore: number,
+  workspace: WorkspaceFleetWorkspaceSummary
+) {
   if (
     workspace.ops.criticalAlertCount > 0 ||
     workspace.ops.openReconciliationIssueCount > 0
@@ -104,9 +105,7 @@ export function OpsFleetWorkspaceCard({
         <div className="studio-action-row">
           <button
             className="button-action button-action--secondary"
-            disabled={
-              !workspaceIsActive || busyKey === reconciliationBusyKey
-            }
+            disabled={!workspaceIsActive || busyKey === reconciliationBusyKey}
             onClick={() => {
               onRunReconciliation(workspace);
             }}

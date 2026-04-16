@@ -76,7 +76,9 @@ export default async function OpsWorkspacesPage() {
         />
         <WorkspaceDirectoryPanel
           body="Use the shared switcher to move the live studio and ops context after reviewing the accessible workspace estate."
-          entries={workspaceDirectory.workspaces.filter((entry) => entry.current)}
+          entries={workspaceDirectory.workspaces.filter(
+            (entry) => entry.current
+          )}
           eyebrow="Selection"
           span={4}
           title="Current workspace"

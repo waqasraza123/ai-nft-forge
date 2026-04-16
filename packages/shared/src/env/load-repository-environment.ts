@@ -11,9 +11,7 @@ function findRepositoryRootDirectory(startDirectory: string): string | null {
   let currentDirectory = startDirectory;
 
   while (true) {
-    if (
-      existsSync(resolve(currentDirectory, repositoryRootMarkerFileName))
-    ) {
+    if (existsSync(resolve(currentDirectory, repositoryRootMarkerFileName))) {
       return currentDirectory;
     }
 
@@ -31,8 +29,9 @@ export function loadRepositoryEnvironment(
   rawEnvironment: NodeJS.ProcessEnv = process.env
 ): void {
   const currentModuleDirectory = dirname(fileURLToPath(import.meta.url));
-  const repositoryRootDirectory =
-    findRepositoryRootDirectory(currentModuleDirectory);
+  const repositoryRootDirectory = findRepositoryRootDirectory(
+    currentModuleDirectory
+  );
 
   if (!repositoryRootDirectory) {
     return;

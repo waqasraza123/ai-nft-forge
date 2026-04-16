@@ -65,8 +65,9 @@ export default async function StudioLayout({ children }: StudioLayoutProps) {
           <p className="studio-shell__kicker">Workspace control plane</p>
           <h1 className="studio-shell__title">Studio operations</h1>
           <p className="studio-shell__lead">
-            All protected studio routes inherit one workspace-scoped operator rhythm:
-            intake, curation, publication controls, and commerce administration.
+            All protected studio routes inherit one workspace-scoped operator
+            rhythm: intake, curation, publication controls, and commerce
+            administration.
           </p>
           <div className="studio-shell__workspace">
             <span className="studio-shell__meta-label">Current workspace</span>
@@ -80,9 +81,7 @@ export default async function StudioLayout({ children }: StudioLayoutProps) {
           </div>
         </div>
         <div className="studio-shell__scope">
-          <h2 className="studio-shell__section-title">
-            Accessible workspace
-          </h2>
+          <h2 className="studio-shell__section-title">Accessible workspace</h2>
           <WorkspaceScopeSwitcher
             currentWorkspaceSlug={workspace?.slug ?? null}
             workspaces={access?.availableWorkspaces ?? []}
@@ -91,7 +90,11 @@ export default async function StudioLayout({ children }: StudioLayoutProps) {
       </header>
       <nav className="studio-shell__nav" aria-label="Studio routes">
         {studioNavigationItems.map((item) => (
-          <Link className="studio-shell__nav-link" href={item.href} key={item.href}>
+          <Link
+            className="studio-shell__nav-link"
+            href={item.href}
+            key={item.href}
+          >
             <span>{item.label}</span>
             <small>{item.description}</small>
           </Link>

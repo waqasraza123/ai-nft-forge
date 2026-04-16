@@ -109,7 +109,8 @@ export const workspaceLifecycleNotificationProviderSummarySchema = z.object({
   failedCount: z.number().int().min(0),
   key: workspaceLifecycleNotificationProviderKeySchema,
   label: z.string().min(1),
-  latestDelivery: workspaceLifecycleNotificationDeliverySummarySchema.nullable(),
+  latestDelivery:
+    workspaceLifecycleNotificationDeliverySummarySchema.nullable(),
   queuedCount: z.number().int().min(0),
   skippedCount: z.number().int().min(0)
 });
@@ -118,7 +119,8 @@ export const workspaceLifecycleNotificationDeliveryChannelOverviewSchema =
   z.object({
     deliveredCount: z.number().int().min(0),
     failedCount: z.number().int().min(0),
-    latestDelivery: workspaceLifecycleNotificationDeliverySummarySchema.nullable(),
+    latestDelivery:
+      workspaceLifecycleNotificationDeliverySummarySchema.nullable(),
     queuedCount: z.number().int().min(0),
     skippedCount: z.number().int().min(0)
   });
@@ -127,7 +129,8 @@ export const workspaceLifecycleNotificationDeliveryOverviewSchema = z.object({
   auditLog: workspaceLifecycleNotificationDeliveryChannelOverviewSchema,
   deliveredCount: z.number().int().min(0),
   failedCount: z.number().int().min(0),
-  latestDelivery: workspaceLifecycleNotificationDeliverySummarySchema.nullable(),
+  latestDelivery:
+    workspaceLifecycleNotificationDeliverySummarySchema.nullable(),
   providers: z.array(workspaceLifecycleNotificationProviderSummarySchema),
   queuedCount: z.number().int().min(0),
   skippedCount: z.number().int().min(0),
@@ -219,7 +222,10 @@ export function getWorkspaceInvitationStatus(input: {
     return "expired";
   }
 
-  if (expiresAtTime - nowTime <= workspaceInvitationExpiringWindowMilliseconds) {
+  if (
+    expiresAtTime - nowTime <=
+    workspaceInvitationExpiringWindowMilliseconds
+  ) {
     return "expiring";
   }
 

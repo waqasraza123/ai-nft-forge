@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import {
   createStudioSettingsErrorResponse,
-  requireStudioActiveOwnerApiSession,
+  requireStudioActiveOwnerApiSession
 } from "../../../../../../server/studio-settings/http";
 import { createRuntimeStudioSettingsService } from "../../../../../../server/studio-settings/runtime";
 

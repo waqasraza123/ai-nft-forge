@@ -217,8 +217,9 @@ function createInMemoryAuthHarness() {
 
       async findByWalletAddress(walletAddress: string) {
         return (
-          [...users.values()].find((user) => user.walletAddress === walletAddress) ??
-          null
+          [...users.values()].find(
+            (user) => user.walletAddress === walletAddress
+          ) ?? null
         );
       },
 

@@ -36,8 +36,7 @@ export default defineConfig({
         datasource: {
           ...(prismaDatabaseConfiguration.shadowDatabaseUrl
             ? {
-                shadowDatabaseUrl:
-                  prismaDatabaseConfiguration.shadowDatabaseUrl
+                shadowDatabaseUrl: prismaDatabaseConfiguration.shadowDatabaseUrl
               }
             : {}),
           url: prismaDatabaseConfiguration.datasourceUrl

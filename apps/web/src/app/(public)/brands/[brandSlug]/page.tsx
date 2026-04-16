@@ -105,7 +105,7 @@ function formatAvailabilityLabel(input: {
   }
 
   return rows;
-};
+}
 
 function createStorefrontThemeStyle(theme: CollectionPublicBrandTheme) {
   const presetTokens: Record<
@@ -174,7 +174,9 @@ function dedupeByPublicPath(
     return collections;
   }
 
-  return collections.filter((release) => release.publicPath !== featured.publicPath);
+  return collections.filter(
+    (release) => release.publicPath !== featured.publicPath
+  );
 }
 
 function BrandHeroVisual(input: {
@@ -210,7 +212,9 @@ function BrandHeroVisual(input: {
       </div>
       <div className="public-brand-hero-composition__hud">
         <p className="public-brand-kicker">
-          {input.release ? formatStatusLabel(input.release.storefrontStatus) : "Campaign"}
+          {input.release
+            ? formatStatusLabel(input.release.storefrontStatus)
+            : "Campaign"}
         </p>
         <p className="public-brand-hero-composition__kicker">
           {input.release
@@ -222,8 +226,16 @@ function BrandHeroVisual(input: {
         </p>
       </div>
       <div className="public-brand-hero-composition__meta">
-        <span>{input.release ? `${input.release.itemCount} works` : "No active release"}</span>
-        <span>{input.release ? input.release.availabilityLabel : "Awaiting campaign"}</span>
+        <span>
+          {input.release
+            ? `${input.release.itemCount} works`
+            : "No active release"}
+        </span>
+        <span>
+          {input.release
+            ? input.release.availabilityLabel
+            : "Awaiting campaign"}
+        </span>
       </div>
     </section>
   );
@@ -252,7 +264,9 @@ function BrandHeroSection(input: {
         </div>
         <p className="public-brand-kicker">{input.heroKicker}</p>
         <h1 className="public-brand-hero__title">{input.heroHeadline}</h1>
-        <p className="public-brand-hero__description">{input.heroDescription}</p>
+        <p className="public-brand-hero__description">
+          {input.heroDescription}
+        </p>
         <div className="public-brand-hero__actions">
           {input.primaryCtaHref ? (
             <Link
@@ -271,7 +285,10 @@ function BrandHeroSection(input: {
             </Link>
           ) : null}
         </div>
-        <div className="public-brand-hero-stats" aria-label="Brand campaign metrics">
+        <div
+          className="public-brand-hero-stats"
+          aria-label="Brand campaign metrics"
+        >
           {input.campaignMetrics.map((metric) => (
             <article className="public-brand-stat" key={metric.label}>
               <strong>{metric.value}</strong>
@@ -280,8 +297,11 @@ function BrandHeroSection(input: {
           ))}
         </div>
       </div>
-      <BrandHeroVisual accentColor={input.accentColor} release={input.release} />
-      </section>
+      <BrandHeroVisual
+        accentColor={input.accentColor}
+        release={input.release}
+      />
+    </section>
   );
 }
 
@@ -327,8 +347,8 @@ function BrandFeaturedReleaseCard(input: {
         <p className="public-brand-featured-card__body">
           {release.storefrontHeadline
             ? release.storefrontHeadline
-            : release.description ??
-              "Published collectible drops are surfaced from immutable snapshots and arranged by brand campaign rhythm."}
+            : (release.description ??
+              "Published collectible drops are surfaced from immutable snapshots and arranged by brand campaign rhythm.")}
         </p>
         <div className="public-brand-release-card__chips">
           <span className="public-brand-chip public-brand-chip--accent">
@@ -344,17 +364,24 @@ function BrandFeaturedReleaseCard(input: {
             })}
           </span>
         </div>
-        <ul className="public-brand-featured-card__meta" aria-label={`${release.title} metadata`}>
+        <ul
+          className="public-brand-featured-card__meta"
+          aria-label={`${release.title} metadata`}
+        >
           {metadataRows.map((metric) => (
             <li key={`${release.publicPath}-featured-${metric}`}>{metric}</li>
           ))}
         </ul>
         <div className="public-brand-release-card__actions">
-          <Link className="public-brand-button public-brand-button--primary" href={release.publicPath}>
+          <Link
+            className="public-brand-button public-brand-button--primary"
+            href={release.publicPath}
+          >
             Open launch campaign
           </Link>
           <span className="public-brand-featured-card__timeline">
-            Launch {formatTimestamp(release.launchAt)} · Ends {formatTimestamp(release.endAt)}
+            Launch {formatTimestamp(release.launchAt)} · Ends{" "}
+            {formatTimestamp(release.endAt)}
           </span>
         </div>
       </div>
@@ -374,7 +401,10 @@ function BrandStorySection(input: {
         <h2>{input.headline}</h2>
         <p>{input.body}</p>
       </div>
-      <div className="public-brand-manifesto-grid" aria-label="Brand campaign profile">
+      <div
+        className="public-brand-manifesto-grid"
+        aria-label="Brand campaign profile"
+      >
         {input.metrics.map((metric) => (
           <article className="public-brand-manifesto-stat" key={metric.label}>
             <strong>{metric.value}</strong>
@@ -393,11 +423,18 @@ function BrandReleaseCard(input: {
   const metadata = formatAvailabilityLabel({ release: input.release });
   const toneClass = `public-brand-release-card--${input.tone}`;
   const metaPrefix =
-    input.tone === "upcoming" ? "Anticipating" : input.tone === "archive" ? "Record" : "Live";
+    input.tone === "upcoming"
+      ? "Anticipating"
+      : input.tone === "archive"
+        ? "Record"
+        : "Live";
 
   return (
     <article className={`public-brand-release-card ${toneClass}`}>
-      <Link className="public-brand-release-card__media" href={input.release.publicPath}>
+      <Link
+        className="public-brand-release-card__media"
+        href={input.release.publicPath}
+      >
         {input.release.heroImageUrl ? (
           <img
             alt={`${input.release.title} release artwork`}
@@ -427,7 +464,10 @@ function BrandReleaseCard(input: {
             {input.release.availabilityLabel}
           </span>
         </div>
-        <ul className="public-brand-release-card__meta" aria-label={`${input.release.title} metadata`}>
+        <ul
+          className="public-brand-release-card__meta"
+          aria-label={`${input.release.title} metadata`}
+        >
           {metadata.map((metric) => (
             <li key={`${input.release.publicPath}-${metric}`}>{metric}</li>
           ))}
@@ -444,7 +484,10 @@ function BrandReleaseCard(input: {
 
 function BrandReleaseSection(input: BrandSection) {
   return (
-    <section className={`public-brand-release-section public-brand-release-section--${input.tone}`} id={input.id}>
+    <section
+      className={`public-brand-release-section public-brand-release-section--${input.tone}`}
+      id={input.id}
+    >
       <div className="public-brand-section__heading">
         <div>
           <p className="public-brand-kicker">
@@ -465,9 +508,15 @@ function BrandReleaseSection(input: BrandSection) {
               : "Archived campaigns are currently being recorded in this brand route."}
         </div>
       ) : (
-        <div className={`public-brand-release-rail public-brand-release-rail--${input.tone}`}>
+        <div
+          className={`public-brand-release-rail public-brand-release-rail--${input.tone}`}
+        >
           {input.collections.map((release) => (
-            <BrandReleaseCard key={release.publicPath} release={release} tone={input.tone} />
+            <BrandReleaseCard
+              key={release.publicPath}
+              release={release}
+              tone={input.tone}
+            />
           ))}
         </div>
       )}
@@ -496,7 +545,9 @@ export default async function BrandPage({ params }: BrandPageProps) {
     null;
 
   const primaryHref = featuredRelease?.publicPath ?? null;
-  const heroKicker = brand.theme.heroKicker ?? `${formatCount(brand.collectionCount)} campaign releases`;
+  const heroKicker =
+    brand.theme.heroKicker ??
+    `${formatCount(brand.collectionCount)} campaign releases`;
   const heroHeadline = brand.theme.landingHeadline;
   const heroDescription = brand.theme.landingDescription;
   const heroBrandLabel = brand.theme.wordmark ?? brand.brandName;
@@ -512,13 +563,14 @@ export default async function BrandPage({ params }: BrandPageProps) {
         preferredLabel: brand.theme.primaryCtaLabel
       })
     : null;
-  const secondaryCtaHref = brand.liveReleases.length > 0
-    ? "#live-releases"
-    : brand.upcomingReleases.length > 0
-      ? "#upcoming-releases"
-      : brand.archiveReleases.length > 0
-        ? "#archive-vault"
-        : null;
+  const secondaryCtaHref =
+    brand.liveReleases.length > 0
+      ? "#live-releases"
+      : brand.upcomingReleases.length > 0
+        ? "#upcoming-releases"
+        : brand.archiveReleases.length > 0
+          ? "#archive-vault"
+          : null;
   const secondaryCtaLabel =
     brand.theme.secondaryCtaLabel ??
     (secondaryCtaHref === "#archive-vault"
@@ -534,7 +586,8 @@ export default async function BrandPage({ params }: BrandPageProps) {
     },
     {
       label: "Launch state",
-      value: brand.collectionCount > 0 ? "Curated and active" : "Preparing launch"
+      value:
+        brand.collectionCount > 0 ? "Curated and active" : "Preparing launch"
     },
     {
       label: "Route home",
@@ -558,7 +611,10 @@ export default async function BrandPage({ params }: BrandPageProps) {
     brand.upcomingReleases,
     featuredRelease
   );
-  const archiveReleases = dedupeByPublicPath(brand.archiveReleases, featuredRelease);
+  const archiveReleases = dedupeByPublicPath(
+    brand.archiveReleases,
+    featuredRelease
+  );
 
   return (
     <div
@@ -590,7 +646,11 @@ export default async function BrandPage({ params }: BrandPageProps) {
         />
       </section>
 
-      <BrandStorySection headline={storyHeadline} body={storyBody} metrics={storyMetrics} />
+      <BrandStorySection
+        headline={storyHeadline}
+        body={storyBody}
+        metrics={storyMetrics}
+      />
 
       <BrandReleaseSection
         collections={liveReleases}

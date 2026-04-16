@@ -84,7 +84,9 @@ export function createWorkspaceLifecycleNotificationDeliveryRepository(
       });
     },
 
-    findById(id: string): Promise<WorkspaceLifecycleNotificationDeliveryWithRelations | null> {
+    findById(
+      id: string
+    ): Promise<WorkspaceLifecycleNotificationDeliveryWithRelations | null> {
       return database.workspaceLifecycleNotificationDelivery.findUnique({
         include: deliveryRelations,
         where: {

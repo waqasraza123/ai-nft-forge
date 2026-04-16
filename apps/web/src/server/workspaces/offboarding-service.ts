@@ -223,9 +223,7 @@ type WorkspaceOffboardingRepositorySet = {
     } | null>;
   };
   workspaceInvitationRepository: {
-    listByWorkspaceId(input: {
-      workspaceId: string;
-    }): Promise<
+    listByWorkspaceId(input: { workspaceId: string }): Promise<
       Array<{
         createdAt: Date;
         expiresAt: Date;
@@ -242,9 +240,7 @@ type WorkspaceOffboardingRepositorySet = {
     >;
   };
   workspaceDecommissionNotificationRepository: {
-    listByRequestId(input: {
-      requestId: string;
-    }): Promise<
+    listByRequestId(input: { requestId: string }): Promise<
       Array<{
         id: string;
         kind: "ready" | "scheduled" | "upcoming";
@@ -281,7 +277,12 @@ type WorkspaceOffboardingRepositorySet = {
         decommissionNotificationId: string | null;
         deliveredAt: Date | null;
         deliveryChannel: "audit_log" | "webhook";
-        deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
+        deliveryState:
+          | "queued"
+          | "processing"
+          | "delivered"
+          | "failed"
+          | "skipped";
         eventKind: "invitation_reminder" | "decommission_notice";
         eventOccurredAt: Date;
         failedAt: Date | null;
@@ -316,9 +317,7 @@ type WorkspaceOffboardingRepositorySet = {
     >;
   };
   workspaceDecommissionRequestRepository: {
-    findScheduledByWorkspaceId(input: {
-      workspaceId: string;
-    }): Promise<{
+    findScheduledByWorkspaceId(input: { workspaceId: string }): Promise<{
       canceledAt: Date | null;
       canceledByUser: {
         walletAddress: string;
@@ -342,9 +341,7 @@ type WorkspaceOffboardingRepositorySet = {
       status: "canceled" | "executed" | "scheduled";
       workspaceId: string;
     } | null>;
-    listScheduledByWorkspaceIds(
-      workspaceIds: string[]
-    ): Promise<
+    listScheduledByWorkspaceIds(workspaceIds: string[]): Promise<
       Array<{
         canceledAt: Date | null;
         canceledByUser: {
@@ -372,10 +369,7 @@ type WorkspaceOffboardingRepositorySet = {
     >;
   };
   workspaceRepository: {
-    findByIdForOwner(input: {
-      id: string;
-      ownerUserId: string;
-    }): Promise<{
+    findByIdForOwner(input: { id: string; ownerUserId: string }): Promise<{
       decommissionRetentionDaysDefault: number;
       decommissionRetentionDaysMinimum: number;
       id: string;
@@ -418,10 +412,7 @@ type WorkspaceOffboardingRepositorySet = {
   };
   workspaceRoleEscalationRequestRepository: {
     countPendingByWorkspaceId(workspaceId: string): Promise<number>;
-    listByWorkspaceId(input: {
-      limit?: number;
-      workspaceId: string;
-    }): Promise<
+    listByWorkspaceId(input: { limit?: number; workspaceId: string }): Promise<
       Array<{
         createdAt: Date;
         id: string;
@@ -487,7 +478,8 @@ function createWorkspaceOffboardingRepositories(database: DatabaseExecutor) {
     opsAlertStateRepository: createOpsAlertStateRepository(database),
     opsReconciliationIssueRepository:
       createOpsReconciliationIssueRepository(database),
-    publishedCollectionRepository: createPublishedCollectionRepository(database),
+    publishedCollectionRepository:
+      createPublishedCollectionRepository(database),
     userRepository: createUserRepository(database),
     workspaceDecommissionNotificationRepository:
       createWorkspaceDecommissionNotificationRepository(database),
@@ -948,27 +940,27 @@ export function createWorkspaceOffboardingService(
         workspaceRecords,
         lifecycleAutomationSnapshot
       ] = await Promise.all([
-          dependencies.repositories.publishedCollectionRepository.listByWorkspaceIds(
-            workspaceIds
-          ),
-          dependencies.repositories.commerceCheckoutSessionRepository.listDetailedByWorkspaceIds(
-            workspaceIds
-          ),
-          dependencies.repositories.opsAlertStateRepository.listActiveByWorkspaceIds(
-            workspaceIds
-          ),
-          dependencies.repositories.opsReconciliationIssueRepository.listOpenByWorkspaceIds(
-            workspaceIds
-          ),
-          dependencies.repositories.workspaceDecommissionRequestRepository.listScheduledByWorkspaceIds(
-            workspaceIds
-          ),
-          dependencies.repositories.workspaceLifecycleNotificationDeliveryRepository.listByWorkspaceIds(
-            workspaceIds
-          ),
-          dependencies.repositories.workspaceRepository.listByIds(workspaceIds),
-          loadLifecycleAutomationSnapshot()
-        ]);
+        dependencies.repositories.publishedCollectionRepository.listByWorkspaceIds(
+          workspaceIds
+        ),
+        dependencies.repositories.commerceCheckoutSessionRepository.listDetailedByWorkspaceIds(
+          workspaceIds
+        ),
+        dependencies.repositories.opsAlertStateRepository.listActiveByWorkspaceIds(
+          workspaceIds
+        ),
+        dependencies.repositories.opsReconciliationIssueRepository.listOpenByWorkspaceIds(
+          workspaceIds
+        ),
+        dependencies.repositories.workspaceDecommissionRequestRepository.listScheduledByWorkspaceIds(
+          workspaceIds
+        ),
+        dependencies.repositories.workspaceLifecycleNotificationDeliveryRepository.listByWorkspaceIds(
+          workspaceIds
+        ),
+        dependencies.repositories.workspaceRepository.listByIds(workspaceIds),
+        loadLifecycleAutomationSnapshot()
+      ]);
       const decommissionNotifications =
         await dependencies.repositories.workspaceDecommissionNotificationRepository.listByRequestIds(
           decommissions.map((decommission) => decommission.id)
@@ -981,7 +973,10 @@ export function createWorkspaceOffboardingService(
       const openCheckoutCountByWorkspaceId = new Map<string, number>();
       const unfulfilledCheckoutCountByWorkspaceId = new Map<string, number>();
       const activeAlertCountByWorkspaceId = new Map<string, number>();
-      const openReconciliationIssueCountByWorkspaceId = new Map<string, number>();
+      const openReconciliationIssueCountByWorkspaceId = new Map<
+        string,
+        number
+      >();
 
       for (const publication of publications) {
         if (publication.storefrontStatus === "live") {
@@ -1014,7 +1009,10 @@ export function createWorkspaceOffboardingService(
       }
 
       for (const alert of alerts) {
-        incrementCountByWorkspaceId(activeAlertCountByWorkspaceId, alert.workspaceId);
+        incrementCountByWorkspaceId(
+          activeAlertCountByWorkspaceId,
+          alert.workspaceId
+        );
       }
 
       for (const issue of reconciliationIssues) {
@@ -1031,7 +1029,8 @@ export function createWorkspaceOffboardingService(
 
       for (const notification of decommissionNotifications) {
         const currentNotifications =
-          decommissionNotificationsByRequestId.get(notification.requestId) ?? [];
+          decommissionNotificationsByRequestId.get(notification.requestId) ??
+          [];
         currentNotifications.push(notification);
         decommissionNotificationsByRequestId.set(
           notification.requestId,
@@ -1043,7 +1042,9 @@ export function createWorkspaceOffboardingService(
         string,
         {
           decommission: WorkspaceDecommissionSummary;
-          workflow: ReturnType<typeof createWorkspaceDecommissionWorkflowSummary>;
+          workflow: ReturnType<
+            typeof createWorkspaceDecommissionWorkflowSummary
+          >;
         }
       >(
         decommissions.map((decommission) => [
@@ -1078,13 +1079,16 @@ export function createWorkspaceOffboardingService(
         const scheduledDecommission =
           scheduledDecommissionByWorkspaceId.get(directoryEntry.workspace.id) ??
           null;
-        const workspaceRecord = workspaceById.get(directoryEntry.workspace.id) ?? {
+        const workspaceRecord = workspaceById.get(
+          directoryEntry.workspace.id
+        ) ?? {
           decommissionRetentionDaysDefault: 30,
           decommissionRetentionDaysMinimum: 7,
           id: directoryEntry.workspace.id,
           lifecycleAutomationDecommissionNoticesEnabled:
             defaultWorkspaceLifecycleDecommissionAutomationEnabled,
-          lifecycleAutomationEnabled: defaultWorkspaceLifecycleAutomationEnabled,
+          lifecycleAutomationEnabled:
+            defaultWorkspaceLifecycleAutomationEnabled,
           lifecycleAutomationInvitationRemindersEnabled:
             defaultWorkspaceLifecycleInvitationAutomationEnabled,
           lifecycleSlaAutomationMaxAgeMinutes:
@@ -1117,17 +1121,18 @@ export function createWorkspaceOffboardingService(
           activeAlertCount:
             activeAlertCountByWorkspaceId.get(directoryEntry.workspace.id) ?? 0,
           livePublicationCount:
-            livePublicationCountByWorkspaceId.get(directoryEntry.workspace.id) ??
-            0,
+            livePublicationCountByWorkspaceId.get(
+              directoryEntry.workspace.id
+            ) ?? 0,
           openCheckoutCount:
-            openCheckoutCountByWorkspaceId.get(directoryEntry.workspace.id) ?? 0,
+            openCheckoutCountByWorkspaceId.get(directoryEntry.workspace.id) ??
+            0,
           openReconciliationIssueCount:
             openReconciliationIssueCountByWorkspaceId.get(
               directoryEntry.workspace.id
             ) ?? 0,
           pendingInvitationCount: directoryEntry.pendingInvitationCount,
-          pendingRoleEscalationCount:
-            directoryEntry.pendingRoleEscalationCount,
+          pendingRoleEscalationCount: directoryEntry.pendingRoleEscalationCount,
           unfulfilledCheckoutCount:
             unfulfilledCheckoutCountByWorkspaceId.get(
               directoryEntry.workspace.id
@@ -1137,12 +1142,11 @@ export function createWorkspaceOffboardingService(
         return {
           current: directoryEntry.current,
           decommission: scheduledDecommission?.decommission ?? null,
-          decommissionWorkflow:
-            scheduledDecommission?.workflow ?? {
-              latestNotification: null,
-              nextDueKind: null,
-              notificationCount: 0
-            },
+          decommissionWorkflow: scheduledDecommission?.workflow ?? {
+            latestNotification: null,
+            nextDueKind: null,
+            notificationCount: 0
+          },
           directory: directoryEntry,
           lifecycleAutomationPolicy,
           lifecycleDelivery,
@@ -1241,7 +1245,9 @@ export function createWorkspaceOffboardingService(
         reconciliationIssues,
         lifecycleDeliveries
       ] = await Promise.all([
-        dependencies.repositories.brandRepository.listByWorkspaceId(workspace.id),
+        dependencies.repositories.brandRepository.listByWorkspaceId(
+          workspace.id
+        ),
         dependencies.repositories.workspaceMembershipRepository.listByWorkspaceId(
           workspace.id
         ),
@@ -1314,13 +1320,15 @@ export function createWorkspaceOffboardingService(
       });
       const lifecycleAutomationPolicy =
         serializeWorkspaceLifecycleAutomationPolicy(workspace);
-      const lifecycleDeliveryOverview = createWorkspaceLifecycleDeliveryOverview({
-        deliveries: lifecycleDeliveries,
-        providers: dependencies.transportProviders ?? []
-      });
+      const lifecycleDeliveryOverview =
+        createWorkspaceLifecycleDeliveryOverview({
+          deliveries: lifecycleDeliveries,
+          providers: dependencies.transportProviders ?? []
+        });
       const lifecycleDeliveryPolicy =
         serializeWorkspaceLifecycleDeliveryPolicy(workspace);
-      const lifecycleSlaPolicy = serializeWorkspaceLifecycleSlaPolicy(workspace);
+      const lifecycleSlaPolicy =
+        serializeWorkspaceLifecycleSlaPolicy(workspace);
 
       return workspaceExportResponseSchema.parse({
         export: {
@@ -1462,8 +1470,9 @@ export function createWorkspaceOffboardingService(
         row.brands.length,
         row.members.length,
         row.invitations.length,
-        row.roleEscalationRequests.filter((request) => request.status === "pending")
-          .length,
+        row.roleEscalationRequests.filter(
+          (request) => request.status === "pending"
+        ).length,
         row.publications.length,
         row.offboarding.livePublicationCount,
         row.checkouts.length,
@@ -1475,7 +1484,9 @@ export function createWorkspaceOffboardingService(
         row.retentionPolicy.minimumDecommissionRetentionDays,
         row.retentionPolicy.requireDecommissionReason ? "yes" : "no",
         row.lifecycleAutomationPolicy.enabled ? "yes" : "no",
-        row.lifecycleAutomationPolicy.automateInvitationReminders ? "yes" : "no",
+        row.lifecycleAutomationPolicy.automateInvitationReminders
+          ? "yes"
+          : "no",
         row.lifecycleAutomationPolicy.automateDecommissionNotices
           ? "yes"
           : "no",

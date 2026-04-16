@@ -16,9 +16,7 @@ type CommerceFulfillmentProcessorDependencies = {
   webhook: CheckoutFulfillmentWebhookBoundary;
   repositories: {
     commerceCheckoutSessionRepository: {
-      findByPublicId(
-        publicId: string
-      ): Promise<
+      findByPublicId(publicId: string): Promise<
         | (CheckoutFulfillmentWebhookSession & {
             id: string;
             fulfillmentAutomationAttemptCount: number;
@@ -66,7 +64,11 @@ function resolveTotalAttempts(job: CommerceFulfillmentJob) {
 function resolveNextRetryAt(job: CommerceFulfillmentJob, now: Date) {
   const backoff = job.opts.backoff;
 
-  if (!backoff || typeof backoff !== "object" || typeof backoff.delay !== "number") {
+  if (
+    !backoff ||
+    typeof backoff !== "object" ||
+    typeof backoff.delay !== "number"
+  ) {
     return null;
   }
 
@@ -78,7 +80,9 @@ function resolveNextRetryAt(job: CommerceFulfillmentJob, now: Date) {
 export function createCommerceFulfillmentProcessor(
   dependencies: CommerceFulfillmentProcessorDependencies
 ) {
-  return async (job: CommerceFulfillmentJob): Promise<CommerceFulfillmentJobResult> => {
+  return async (
+    job: CommerceFulfillmentJob
+  ): Promise<CommerceFulfillmentJobResult> => {
     const payload = commerceFulfillmentJobPayloadSchema.parse(job.data);
     const totalAttempts = resolveTotalAttempts(job);
     const isFinalAttempt = job.attemptsMade + 1 >= totalAttempts;
@@ -93,7 +97,10 @@ export function createCommerceFulfillmentProcessor(
       );
     }
 
-    if (session.status !== "completed" || session.fulfillmentStatus === "fulfilled") {
+    if (
+      session.status !== "completed" ||
+      session.fulfillmentStatus === "fulfilled"
+    ) {
       return {
         checkoutSessionId: payload.checkoutSessionId,
         queueName: job.queueName,
@@ -128,7 +135,8 @@ export function createCommerceFulfillmentProcessor(
           fulfillmentAutomationErrorCode: null,
           fulfillmentAutomationErrorMessage: null,
           fulfillmentAutomationExternalReference:
-            delivery.externalReference ?? session.fulfillmentAutomationExternalReference,
+            delivery.externalReference ??
+            session.fulfillmentAutomationExternalReference,
           fulfillmentAutomationLastSucceededAt: completedAt,
           fulfillmentAutomationNextRetryAt: null,
           fulfillmentAutomationQueuedAt: null,
@@ -155,7 +163,9 @@ export function createCommerceFulfillmentProcessor(
           fulfillmentAutomationNextRetryAt: isFinalAttempt
             ? null
             : resolveNextRetryAt(job, dependencies.now()),
-          fulfillmentAutomationQueuedAt: isFinalAttempt ? null : dependencies.now(),
+          fulfillmentAutomationQueuedAt: isFinalAttempt
+            ? null
+            : dependencies.now(),
           fulfillmentAutomationStatus: isFinalAttempt ? "failed" : "queued",
           id: session.id
         }

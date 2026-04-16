@@ -112,7 +112,8 @@ export function SignInClient({ initialSession }: SignInClientProps) {
   const browserWalletConnector =
     connectors.find((connector) => connector.id === "injected") ?? null;
   const availableConnectorCount =
-    Number(Boolean(baseAccountConnector)) + Number(Boolean(browserWalletConnector));
+    Number(Boolean(baseAccountConnector)) +
+    Number(Boolean(browserWalletConnector));
   const connectedWalletAddress = walletConnection.address ?? null;
   const connectedWalletChainLabel = getWalletChainLabel(
     walletConnection.chainId ?? null
@@ -157,7 +158,9 @@ export function SignInClient({ initialSession }: SignInClientProps) {
 
   async function connectWallet(connectorId: SupportedConnectorId) {
     const connector =
-      connectorId === "baseAccount" ? baseAccountConnector : browserWalletConnector;
+      connectorId === "baseAccount"
+        ? baseAccountConnector
+        : browserWalletConnector;
 
     if (!connector) {
       throw new Error(
@@ -178,10 +181,13 @@ export function SignInClient({ initialSession }: SignInClientProps) {
     const walletAddress = result.accounts[0];
 
     if (!walletAddress) {
-      throw new Error("The wallet did not return an address for this browser session.");
+      throw new Error(
+        "The wallet did not return an address for this browser session."
+      );
     }
 
-    const provider = (await connector.getProvider()) as BrowserEthereumProvider | null;
+    const provider =
+      (await connector.getProvider()) as BrowserEthereumProvider | null;
 
     if (!provider) {
       throw new Error("The connected wallet provider is unavailable.");
@@ -223,12 +229,20 @@ export function SignInClient({ initialSession }: SignInClientProps) {
       const account = authResult.accounts[0];
       const siweCapability = account?.capabilities?.signInWithEthereum;
 
-      if (!account?.address || !siweCapability?.message || !siweCapability.signature) {
-        throw new Error("Base Account did not return a SIWE message and signature.");
+      if (
+        !account?.address ||
+        !siweCapability?.message ||
+        !siweCapability.signature
+      ) {
+        throw new Error(
+          "Base Account did not return a SIWE message and signature."
+        );
       }
 
       if (getAddress(account.address) !== walletAddress) {
-        throw new Error("Base Account returned a different address than the connected wallet.");
+        throw new Error(
+          "Base Account returned a different address than the connected wallet."
+        );
       }
 
       const sessionResponse = await verifySession({
@@ -240,7 +254,8 @@ export function SignInClient({ initialSession }: SignInClientProps) {
 
       setSession(sessionResponse.session);
       setNotice({
-        message: "Signed in with Base Account. Redirecting to the requested route…",
+        message:
+          "Signed in with Base Account. Redirecting to the requested route…",
         tone: "success"
       });
       router.replace(nextPath);
@@ -248,7 +263,9 @@ export function SignInClient({ initialSession }: SignInClientProps) {
     } catch (error) {
       setNotice({
         message:
-          error instanceof Error ? error.message : "Base Account sign-in failed.",
+          error instanceof Error
+            ? error.message
+            : "Base Account sign-in failed.",
         tone: "error"
       });
     } finally {
@@ -291,7 +308,9 @@ export function SignInClient({ initialSession }: SignInClientProps) {
     } catch (error) {
       setNotice({
         message:
-          error instanceof Error ? error.message : "Browser wallet sign-in failed.",
+          error instanceof Error
+            ? error.message
+            : "Browser wallet sign-in failed.",
         tone: "error"
       });
     } finally {
@@ -320,7 +339,9 @@ export function SignInClient({ initialSession }: SignInClientProps) {
     } catch (error) {
       setNotice({
         message:
-          error instanceof Error ? error.message : "Logout could not be completed.",
+          error instanceof Error
+            ? error.message
+            : "Logout could not be completed.",
         tone: "error"
       });
     } finally {
@@ -355,7 +376,9 @@ export function SignInClient({ initialSession }: SignInClientProps) {
         <div className="pill-row">
           <Pill>{availableConnectorCount} wallet path(s) ready</Pill>
           <Pill>Next: {nextPath}</Pill>
-          {connectedWalletChainLabel ? <Pill>{connectedWalletChainLabel}</Pill> : null}
+          {connectedWalletChainLabel ? (
+            <Pill>{connectedWalletChainLabel}</Pill>
+          ) : null}
           {session?.user.walletAddress ? (
             <Pill>Owner {shortHex(session.user.walletAddress)}</Pill>
           ) : null}
@@ -374,7 +397,9 @@ export function SignInClient({ initialSession }: SignInClientProps) {
             }}
             type="button"
           >
-            {activeAction === "base" ? "Signing in…" : "Sign in with Base Account"}
+            {activeAction === "base"
+              ? "Signing in…"
+              : "Sign in with Base Account"}
           </button>
           <button
             className="button-action"

@@ -294,10 +294,15 @@ export const collectionPublicationMerchandisingRequestSchema = z
     heroGeneratedAssetId: z.string().min(1).nullable().optional(),
     isFeatured: z.boolean(),
     launchAt: z.string().datetime().nullable().optional(),
-    priceAmountMinor:
-      collectionStorefrontPriceAmountMinorSchema.nullable().optional(),
-    priceCurrency:
-      z.string().trim().regex(/^[a-zA-Z]{3}$/).nullable().optional(),
+    priceAmountMinor: collectionStorefrontPriceAmountMinorSchema
+      .nullable()
+      .optional(),
+    priceCurrency: z
+      .string()
+      .trim()
+      .regex(/^[a-zA-Z]{3}$/)
+      .nullable()
+      .optional(),
     priceLabel: collectionStorefrontPriceLabelSchema.nullable().optional(),
     primaryCtaHref: collectionStorefrontCtaHrefSchema.nullable().optional(),
     primaryCtaLabel: collectionStorefrontCtaLabelSchema.nullable().optional(),
@@ -361,15 +366,15 @@ export const collectionPublicationMerchandisingRequestSchema = z
     const pricingPair =
       (value.priceAmountMinor !== null && value.priceAmountMinor !== undefined
         ? 1
-        : 0) +
-      (value.priceCurrency ? 1 : 0);
+        : 0) + (value.priceCurrency ? 1 : 0);
 
     if (pricingPair === 1) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Price amount and currency must be provided together.",
         path:
-          value.priceAmountMinor !== null && value.priceAmountMinor !== undefined
+          value.priceAmountMinor !== null &&
+          value.priceAmountMinor !== undefined
             ? ["priceCurrency"]
             : ["priceAmountMinor"]
       });

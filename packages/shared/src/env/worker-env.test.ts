@@ -169,7 +169,9 @@ describe("parseWorkerEnv", () => {
     expect(env.OPS_ALERT_WEBHOOK_URL).toBeUndefined();
     expect(env.WORKSPACE_LIFECYCLE_WEBHOOK_BEARER_TOKEN).toBeUndefined();
     expect(env.WORKSPACE_LIFECYCLE_WEBHOOK_URL).toBeUndefined();
-    expect(env.WORKSPACE_LIFECYCLE_WEBHOOK_SECONDARY_BEARER_TOKEN).toBeUndefined();
+    expect(
+      env.WORKSPACE_LIFECYCLE_WEBHOOK_SECONDARY_BEARER_TOKEN
+    ).toBeUndefined();
     expect(env.WORKSPACE_LIFECYCLE_WEBHOOK_SECONDARY_URL).toBeUndefined();
   });
 

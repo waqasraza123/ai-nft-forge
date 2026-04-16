@@ -90,9 +90,9 @@ export function createCollectionOnchainRuntime(
   const publicClients = new Map<CollectionContractChainKey, unknown>();
 
   function getPublicClient(chainKey: CollectionContractChainKey) {
-    const cachedClient = publicClients.get(
-      chainKey
-    ) as ReturnType<typeof createPublicClient> | undefined;
+    const cachedClient = publicClients.get(chainKey) as
+      | ReturnType<typeof createPublicClient>
+      | undefined;
 
     if (cachedClient) {
       return cachedClient;
@@ -148,7 +148,10 @@ export function createCollectionOnchainRuntime(
       }
 
       if (
-        !isAddressEqual(transaction.from, getAddress(input.expectedOwnerWalletAddress))
+        !isAddressEqual(
+          transaction.from,
+          getAddress(input.expectedOwnerWalletAddress)
+        )
       ) {
         throw createOnchainError(
           "ONCHAIN_TRANSACTION_MISMATCH",
@@ -156,7 +159,10 @@ export function createCollectionOnchainRuntime(
         );
       }
 
-      if (transaction.to !== null || transaction.input !== input.expectedDeploymentData) {
+      if (
+        transaction.to !== null ||
+        transaction.input !== input.expectedDeploymentData
+      ) {
         throw createOnchainError(
           "ONCHAIN_TRANSACTION_MISMATCH",
           "The deployment transaction payload does not match the prepared collection deployment intent."

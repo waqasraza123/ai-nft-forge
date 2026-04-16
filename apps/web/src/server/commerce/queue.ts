@@ -32,7 +32,9 @@ function createCommerceFulfillmentQueueConnection(
 export function getCommerceFulfillmentQueue(
   rawEnvironment: NodeJS.ProcessEnv = process.env
 ) {
-  if (!commerceFulfillmentQueueGlobal.__aiNftForgeCommerceFulfillmentQueueRedis) {
+  if (
+    !commerceFulfillmentQueueGlobal.__aiNftForgeCommerceFulfillmentQueueRedis
+  ) {
     commerceFulfillmentQueueGlobal.__aiNftForgeCommerceFulfillmentQueueRedis =
       createCommerceFulfillmentQueueConnection(rawEnvironment);
   }

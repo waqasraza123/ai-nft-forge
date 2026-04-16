@@ -3,18 +3,15 @@ import { z } from "zod";
 export const databaseModes = ["local", "neon"] as const;
 export const databaseModeSchema = z.enum(databaseModes).default("local");
 
-const optionalConnectionStringSchema = z.preprocess(
-  (value) => {
-    if (typeof value !== "string") {
-      return value;
-    }
+const optionalConnectionStringSchema = z.preprocess((value) => {
+  if (typeof value !== "string") {
+    return value;
+  }
 
-    const trimmedValue = value.trim();
+  const trimmedValue = value.trim();
 
-    return trimmedValue.length > 0 ? trimmedValue : undefined;
-  },
-  z.string().min(1).optional()
-);
+  return trimmedValue.length > 0 ? trimmedValue : undefined;
+}, z.string().min(1).optional());
 
 const databaseModeEnvironmentSchema = z.object({
   DATABASE_MODE: databaseModeSchema,

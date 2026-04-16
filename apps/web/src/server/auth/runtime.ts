@@ -22,8 +22,10 @@ function createAuthRepositories(executor: DatabaseExecutor) {
     authNonceRepository: createAuthNonceRepository(executor),
     authSessionRepository: createAuthSessionRepository(executor),
     userRepository: createUserRepository(executor),
-    workspaceInvitationRepository: createWorkspaceInvitationRepository(executor),
-    workspaceMembershipRepository: createWorkspaceMembershipRepository(executor),
+    workspaceInvitationRepository:
+      createWorkspaceInvitationRepository(executor),
+    workspaceMembershipRepository:
+      createWorkspaceMembershipRepository(executor),
     workspaceRepository: createWorkspaceRepository(executor)
   };
 }

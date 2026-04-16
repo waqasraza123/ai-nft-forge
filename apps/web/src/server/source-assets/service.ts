@@ -240,10 +240,12 @@ export function createSourceAssetService(
 
     async completeUpload(input: { assetId: string; workspaceId: string }) {
       const asset =
-        await dependencies.repositories.sourceAssetRepository.findByIdForWorkspace({
-          id: input.assetId,
-          workspaceId: input.workspaceId
-        });
+        await dependencies.repositories.sourceAssetRepository.findByIdForWorkspace(
+          {
+            id: input.assetId,
+            workspaceId: input.workspaceId
+          }
+        );
 
       if (!asset) {
         throw new SourceAssetServiceError(

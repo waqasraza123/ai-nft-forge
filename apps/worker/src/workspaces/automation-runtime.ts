@@ -50,30 +50,29 @@ function createTransactionalRepositories(database: DatabaseExecutor) {
       createWorkspaceDecommissionRequestRepository(database),
     workspaceInvitationRepository:
       createWorkspaceInvitationRepository(database),
-    workspaceLifecycleNotificationDeliveryRepository:
-      {
-        create(input: {
-          decommissionNotificationId?: string | null;
-          deliveredAt?: Date | null;
-          deliveryChannel?: "audit_log" | "webhook";
-          deliveryState: "queued" | "delivered";
-          eventKind: "invitation_reminder" | "decommission_notice";
-          eventOccurredAt: Date;
-          failureMessage?: string | null;
-          invitationId?: string | null;
-          ownerUserId: string;
-          payloadJson: unknown;
-          providerKey?: "primary" | "secondary" | null;
-          queuedAt?: Date | null;
-          workspaceId: string;
-        }) {
-          return workspaceLifecycleNotificationDeliveryRepository.create({
-            ...input,
-            payloadJson: input.payloadJson as never
-          });
-        },
-        updateById: workspaceLifecycleNotificationDeliveryRepository.updateById
+    workspaceLifecycleNotificationDeliveryRepository: {
+      create(input: {
+        decommissionNotificationId?: string | null;
+        deliveredAt?: Date | null;
+        deliveryChannel?: "audit_log" | "webhook";
+        deliveryState: "queued" | "delivered";
+        eventKind: "invitation_reminder" | "decommission_notice";
+        eventOccurredAt: Date;
+        failureMessage?: string | null;
+        invitationId?: string | null;
+        ownerUserId: string;
+        payloadJson: unknown;
+        providerKey?: "primary" | "secondary" | null;
+        queuedAt?: Date | null;
+        workspaceId: string;
+      }) {
+        return workspaceLifecycleNotificationDeliveryRepository.create({
+          ...input,
+          payloadJson: input.payloadJson as never
+        });
       },
+      updateById: workspaceLifecycleNotificationDeliveryRepository.updateById
+    },
     workspaceRepository: createWorkspaceRepository(database)
   };
 }
@@ -110,7 +109,9 @@ export async function runWorkspaceLifecycleAutomationWithDependencies({
         );
 
         return {
-          jobId: job.id ?? `${workspaceLifecycleQueueNames.notificationDispatch}:${input.deliveryId}`
+          jobId:
+            job.id ??
+            `${workspaceLifecycleQueueNames.notificationDispatch}:${input.deliveryId}`
         };
       }
     },

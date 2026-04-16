@@ -41,8 +41,9 @@ export function getSupportedCollectionContractChainByKey(
   key: AiNftForgeCollectionContractChain["key"]
 ) {
   return (
-    aiNftForgeSupportedCollectionContractChains.find((chain) => chain.key === key) ??
-    null
+    aiNftForgeSupportedCollectionContractChains.find(
+      (chain) => chain.key === key
+    ) ?? null
   );
 }
 

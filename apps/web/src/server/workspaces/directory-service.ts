@@ -45,8 +45,10 @@ function createWorkspaceDirectoryRepositories(database: DatabaseExecutor) {
   return {
     auditLogRepository: createAuditLogRepository(database),
     brandRepository: createBrandRepository(database),
-    workspaceInvitationRepository: createWorkspaceInvitationRepository(database),
-    workspaceMembershipRepository: createWorkspaceMembershipRepository(database),
+    workspaceInvitationRepository:
+      createWorkspaceInvitationRepository(database),
+    workspaceMembershipRepository:
+      createWorkspaceMembershipRepository(database),
     workspaceRoleEscalationRequestRepository:
       createWorkspaceRoleEscalationRequestRepository(database)
   };
@@ -63,26 +65,29 @@ export function createWorkspaceDirectoryService(
       const now = new Date();
       const entries = await Promise.all(
         input.workspaces.map(async (workspace) => {
-          const [brands, memberships, invitations, pendingRoleEscalationCount, latestAuditLog] =
-            await Promise.all([
-              repositories.brandRepository.listByWorkspaceId(workspace.id),
-              repositories.workspaceMembershipRepository.listByWorkspaceId(
-                workspace.id
-              ),
-              repositories.workspaceInvitationRepository.listByWorkspaceId(
-                {
-                  workspaceId: workspace.id
-                }
-              ),
-              repositories.workspaceRoleEscalationRequestRepository.countPendingByWorkspaceId(
-                workspace.id
-              ),
-              repositories.auditLogRepository.listByEntity({
-                entityId: workspace.id,
-                entityType: "workspace",
-                limit: 1
-              })
-            ]);
+          const [
+            brands,
+            memberships,
+            invitations,
+            pendingRoleEscalationCount,
+            latestAuditLog
+          ] = await Promise.all([
+            repositories.brandRepository.listByWorkspaceId(workspace.id),
+            repositories.workspaceMembershipRepository.listByWorkspaceId(
+              workspace.id
+            ),
+            repositories.workspaceInvitationRepository.listByWorkspaceId({
+              workspaceId: workspace.id
+            }),
+            repositories.workspaceRoleEscalationRequestRepository.countPendingByWorkspaceId(
+              workspace.id
+            ),
+            repositories.auditLogRepository.listByEntity({
+              entityId: workspace.id,
+              entityType: "workspace",
+              limit: 1
+            })
+          ]);
 
           const invitationStatusCounts = invitations.reduce(
             (counts, invitation) => {

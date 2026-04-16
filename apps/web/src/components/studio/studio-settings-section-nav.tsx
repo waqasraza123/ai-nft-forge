@@ -33,7 +33,9 @@ export function StudioSettingsSectionNav({
           href={item.href}
           key={item.href}
         >
-          <span className="studio-settings-section-nav__label">{item.label}</span>
+          <span className="studio-settings-section-nav__label">
+            {item.label}
+          </span>
           <span className="studio-settings-section-nav__meta">{item.meta}</span>
         </a>
       ))}

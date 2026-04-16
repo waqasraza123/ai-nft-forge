@@ -37,14 +37,14 @@ type WorkspaceRetentionServiceDependencies = {
     }): Promise<{
       overview: {
         generatedAt: string;
-            summary: {
-              blockedWorkspaceCount: number;
-              decommissionNoticeDueWorkspaceCount: number;
-              reasonRequiredWorkspaceCount: number;
-              readyWorkspaceCount: number;
-              reviewRequiredWorkspaceCount: number;
-              scheduledDecommissionCount: number;
-              totalWorkspaceCount: number;
+        summary: {
+          blockedWorkspaceCount: number;
+          decommissionNoticeDueWorkspaceCount: number;
+          reasonRequiredWorkspaceCount: number;
+          readyWorkspaceCount: number;
+          reviewRequiredWorkspaceCount: number;
+          scheduledDecommissionCount: number;
+          totalWorkspaceCount: number;
         };
         workspaces: WorkspaceOffboardingEntry[];
       };
@@ -109,7 +109,9 @@ export function createWorkspaceRetentionService(
 
     exportAccessibleWorkspaceRetentionReportCsv(input: {
       format: WorkspaceExportFormat;
-      reportData: ReturnType<typeof workspaceRetentionFleetReportResponseSchema.parse>;
+      reportData: ReturnType<
+        typeof workspaceRetentionFleetReportResponseSchema.parse
+      >;
     }) {
       if (workspaceExportFormatSchema.parse(input.format) !== "csv") {
         throw new Error("CSV export was requested with a non-CSV format.");
@@ -308,13 +310,15 @@ export function createWorkspaceRetentionService(
       return workspaceRetentionBulkCancelResponseSchema.parse({
         results,
         summary: {
-          canceledCount: results.filter((result) => result.status === "canceled")
-            .length,
+          canceledCount: results.filter(
+            (result) => result.status === "canceled"
+          ).length,
           forbiddenCount: results.filter(
             (result) => result.status === "forbidden"
           ).length,
-          notFoundCount: results.filter((result) => result.status === "not_found")
-            .length,
+          notFoundCount: results.filter(
+            (result) => result.status === "not_found"
+          ).length,
           notScheduledCount: results.filter(
             (result) => result.status === "not_scheduled"
           ).length,
@@ -339,10 +343,9 @@ export function createWorkspaceRetentionService(
           }
         );
       const accessibleWorkspaceById = new Map(
-        accessibleWorkspaceOverview.overview.workspaces.map((workspace) => [
-          workspace.workspace.id,
-          workspace
-        ] as const)
+        accessibleWorkspaceOverview.overview.workspaces.map(
+          (workspace) => [workspace.workspace.id, workspace] as const
+        )
       );
       const results: Array<{
         status: "forbidden" | "not_found" | "updated";
@@ -431,13 +434,13 @@ export function createRuntimeWorkspaceRetentionService(
   rawEnvironment: NodeJS.ProcessEnv = process.env
 ) {
   return createWorkspaceRetentionService({
-    decommissionService: createRuntimeWorkspaceDecommissionService(
-      rawEnvironment
-    ),
+    decommissionService:
+      createRuntimeWorkspaceDecommissionService(rawEnvironment),
     lifecycleAutomationSnapshotLoader: () =>
       loadWorkspaceLifecycleAutomationSnapshot(rawEnvironment),
     now: () => new Date(),
-    offboardingService: createRuntimeWorkspaceOffboardingService(rawEnvironment),
+    offboardingService:
+      createRuntimeWorkspaceOffboardingService(rawEnvironment),
     studioSettingsService: createRuntimeStudioSettingsService(rawEnvironment)
   });
 }

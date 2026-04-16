@@ -14,7 +14,12 @@ type WorkspaceLifecycleNotificationProcessorDependencies = {
         attemptCount: number;
         deliveryChannel: "audit_log" | "webhook";
         deliveredAt: Date | null;
-        deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
+        deliveryState:
+          | "queued"
+          | "processing"
+          | "delivered"
+          | "failed"
+          | "skipped";
         id: string;
         payloadJson: unknown;
         providerKey: WorkspaceLifecycleNotificationProviderKey | null;
@@ -22,7 +27,12 @@ type WorkspaceLifecycleNotificationProcessorDependencies = {
       updateById(input: {
         attemptCount?: number;
         deliveredAt?: Date | null;
-        deliveryState?: "queued" | "processing" | "delivered" | "failed" | "skipped";
+        deliveryState?:
+          | "queued"
+          | "processing"
+          | "delivered"
+          | "failed"
+          | "skipped";
         failedAt?: Date | null;
         failureMessage?: string | null;
         id: string;
@@ -33,9 +43,7 @@ type WorkspaceLifecycleNotificationProcessorDependencies = {
     };
   };
   transportRegistry: {
-    resolveProvider(
-      key: WorkspaceLifecycleNotificationProviderKey | null
-    ): {
+    resolveProvider(key: WorkspaceLifecycleNotificationProviderKey | null): {
       deliver(input: { deliveryId: string; payload: unknown }): Promise<void>;
       label: string;
     } | null;
@@ -59,11 +67,13 @@ export function createWorkspaceLifecycleNotificationProcessor(
   return async (
     job: WorkspaceLifecycleNotificationJob
   ): Promise<WorkspaceLifecycleNotificationJobResult> => {
-    const payload = workspaceLifecycleNotificationJobPayloadSchema.parse(job.data);
+    const payload = workspaceLifecycleNotificationJobPayloadSchema.parse(
+      job.data
+    );
     const delivery =
       await dependencies.repositories.workspaceLifecycleNotificationDeliveryRepository.findById(
         payload.deliveryId
-    );
+      );
 
     if (!delivery) {
       throw new Error(

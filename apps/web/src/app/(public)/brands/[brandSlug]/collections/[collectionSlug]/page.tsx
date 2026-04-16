@@ -151,10 +151,9 @@ function computeProofStats(input: {
     },
     {
       label: "Chain proof",
-      value:
-        input.activeDeployment
-          ? `${input.activeDeployment.chain.label} · ${formatAddressShort(input.activeDeployment.contractAddress)}`
-          : "Not deployed"
+      value: input.activeDeployment
+        ? `${input.activeDeployment.chain.label} · ${formatAddressShort(input.activeDeployment.contractAddress)}`
+        : "Not deployed"
     }
   ];
 }
@@ -269,16 +268,18 @@ function CollectionHeroSection(input: {
           </div>
         )}
         <div className="storefront-collection-hero__status-stack">
-          <span className="storefront-chip storefront-chip--accent">{formatStatusLabel(input.storefrontStatus)}</span>
+          <span className="storefront-chip storefront-chip--accent">
+            {formatStatusLabel(input.storefrontStatus)}
+          </span>
           <span className="storefront-chip">{input.availabilityLabel}</span>
         </div>
       </div>
       <div className="storefront-collection-hero__copy">
         <div>
-          <p className="storefront-collection-hero__kicker">{input.featuredMessage}</p>
-          <p className="storefront-wordmark">
-            {input.brandThemeWordmark}
+          <p className="storefront-collection-hero__kicker">
+            {input.featuredMessage}
           </p>
+          <p className="storefront-wordmark">{input.brandThemeWordmark}</p>
           <p className="storefront-wordmark__path">{input.brandPath}</p>
         </div>
         <h1 className="storefront-hero__title">{input.title}</h1>
@@ -308,18 +309,27 @@ function CollectionHeroSection(input: {
             Back to brand release floor
           </Link>
         </div>
-        <div className="storefront-collection-hero__meta" aria-label="Collection status">
-          <article className="storefront-chip storefront-chip--accent">Launch mode</article>
+        <div
+          className="storefront-collection-hero__meta"
+          aria-label="Collection status"
+        >
+          <article className="storefront-chip storefront-chip--accent">
+            Launch mode
+          </article>
           <article className="storefront-chip">
             {launchLabel(input.launchAt, input.storefrontStatus)}
           </article>
           {input.totalSupply ? (
-            <article className="storefront-chip">{formatCount(input.totalSupply)} artworks</article>
+            <article className="storefront-chip">
+              {formatCount(input.totalSupply)} artworks
+            </article>
           ) : null}
           {input.priceLabel ? (
             <article className="storefront-chip">{input.priceLabel}</article>
           ) : null}
-          <article className="storefront-chip">{formatCount(input.claimedCount)} claimed</article>
+          <article className="storefront-chip">
+            {formatCount(input.claimedCount)} claimed
+          </article>
         </div>
       </div>
     </section>
@@ -347,7 +357,9 @@ function CollectionLaunchStory(input: {
           <span className="storefront-chip storefront-chip--accent">
             {input.availabilityLabel}
           </span>
-          <span className="storefront-chip">{formatCount(input.mintedTokenCount)} minted proofs</span>
+          <span className="storefront-chip">
+            {formatCount(input.mintedTokenCount)} minted proofs
+          </span>
         </div>
       </div>
     </section>
@@ -456,9 +468,15 @@ function CollectionReserveZone(input: {
           <h3>Trust before checkout</h3>
           <ul className="storefront-collection-trust-list">
             <li>Reservation is time-bound and consumed at checkout.</li>
-            <li>Availability is sourced from immutable published snapshot state.</li>
-            <li>Provider state and launch timing remain explicit in this route.</li>
-            <li>Onchain deployment status is presented as transparent proof.</li>
+            <li>
+              Availability is sourced from immutable published snapshot state.
+            </li>
+            <li>
+              Provider state and launch timing remain explicit in this route.
+            </li>
+            <li>
+              Onchain deployment status is presented as transparent proof.
+            </li>
           </ul>
         </article>
       </div>
@@ -484,7 +502,9 @@ function CollectionGallery(input: {
           <p className="storefront-section-kicker">Gallery wall</p>
           <h2>{`Gallery is waiting for published variants for ${input.title}`}</h2>
         </div>
-        <div className="storefront-empty-state">No artwork has been published for this release yet.</div>
+        <div className="storefront-empty-state">
+          No artwork has been published for this release yet.
+        </div>
       </section>
     );
   }
@@ -497,7 +517,10 @@ function CollectionGallery(input: {
       </div>
       <div className="storefront-collection-gallery-grid">
         {input.items.map((item) => (
-          <article className="storefront-collection-gallery-card" key={item.generatedAssetId}>
+          <article
+            className="storefront-collection-gallery-card"
+            key={item.generatedAssetId}
+          >
             <img
               alt={`${input.title} edition ${item.position}`}
               className="storefront-collection-gallery-card__image"
@@ -507,7 +530,9 @@ function CollectionGallery(input: {
               <strong>
                 {item.sourceAssetOriginalFilename} · Edition {item.position}
               </strong>
-              <span>Variant {item.variantIndex} from {item.pipelineKey}</span>
+              <span>
+                Variant {item.variantIndex} from {item.pipelineKey}
+              </span>
             </div>
           </article>
         ))}
@@ -541,8 +566,12 @@ function CollectionTechnicalSection(input: {
           {input.activeDeployment ? (
             <div className="storefront-technical-proof-list">
               <span>Chain {input.activeDeployment.chain.label}</span>
-              <span>{formatAddressShort(input.activeDeployment.contractAddress)}</span>
-              <span>{formatAddressShort(input.activeDeployment.deployTxHash)}</span>
+              <span>
+                {formatAddressShort(input.activeDeployment.contractAddress)}
+              </span>
+              <span>
+                {formatAddressShort(input.activeDeployment.deployTxHash)}
+              </span>
               <span>{formatTimestamp(input.activeDeployment.deployedAt)}</span>
             </div>
           ) : null}
@@ -557,10 +586,18 @@ function CollectionTechnicalSection(input: {
           <p>Publication manifest</p>
           <h3>Public metadata</h3>
           <div className="storefront-tech-links storefront-tech-links--stacked">
-            <Link className="inline-link" href={input.metadataPath} target="_blank">
+            <Link
+              className="inline-link"
+              href={input.metadataPath}
+              target="_blank"
+            >
               Collection metadata JSON
             </Link>
-            <Link className="inline-link" href={input.contractPath} target="_blank">
+            <Link
+              className="inline-link"
+              href={input.contractPath}
+              target="_blank"
+            >
               Contract manifest
             </Link>
           </div>
@@ -663,8 +700,7 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
   });
   const firstEdition = collection.items[0] ?? null;
   const heroHeadline =
-    collection.storefrontHeadline ??
-    `${collection.title} drop release`;
+    collection.storefrontHeadline ?? `${collection.title} drop release`;
   const launchStory =
     collection.storefrontBody ??
     collection.description ??
@@ -734,10 +770,7 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
         availabilityLabel={collection.availabilityLabel}
       />
 
-      <CollectionGallery
-        items={collection.items}
-        title={collection.title}
-      />
+      <CollectionGallery items={collection.items} title={collection.title} />
 
       <CollectionTechnicalSection
         activeDeployment={collection.activeDeployment}
@@ -748,7 +781,9 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
         firstEdition={firstEdition}
       />
 
-      <CollectionRelatedSection relatedCollections={collection.relatedCollections} />
+      <CollectionRelatedSection
+        relatedCollections={collection.relatedCollections}
+      />
     </div>
   );
 }

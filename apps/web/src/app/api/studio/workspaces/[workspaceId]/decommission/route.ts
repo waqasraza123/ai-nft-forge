@@ -33,9 +33,7 @@ export async function POST(request: Request, context: RouteContext) {
         }
       );
 
-    return NextResponse.json(
-      workspaceDecommissionResponseSchema.parse(result)
-    );
+    return NextResponse.json(workspaceDecommissionResponseSchema.parse(result));
   } catch (error) {
     return createStudioSettingsErrorResponse(error);
   }
@@ -53,9 +51,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
         }
       );
 
-    return NextResponse.json(
-      workspaceDecommissionResponseSchema.parse(result)
-    );
+    return NextResponse.json(workspaceDecommissionResponseSchema.parse(result));
   } catch (error) {
     return createStudioSettingsErrorResponse(error);
   }

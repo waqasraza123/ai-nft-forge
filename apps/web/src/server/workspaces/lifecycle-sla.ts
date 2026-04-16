@@ -41,8 +41,7 @@ export function serializeWorkspaceLifecycleSlaPolicy(
     automationMaxAgeMinutes:
       input.lifecycleSlaAutomationMaxAgeMinutes ??
       defaultWorkspaceLifecycleSlaAutomationMaxAgeMinutes,
-    enabled:
-      input.lifecycleSlaEnabled ?? defaultWorkspaceLifecycleSlaEnabled,
+    enabled: input.lifecycleSlaEnabled ?? defaultWorkspaceLifecycleSlaEnabled,
     webhookFailureThreshold:
       input.lifecycleSlaWebhookFailureThreshold ??
       defaultWorkspaceLifecycleSlaWebhookFailureThreshold
@@ -60,7 +59,7 @@ export function createWorkspaceLifecycleSlaSummary(input: {
     ? input.lifecycleDeliveryOverview.webhook.failedCount
     : 0;
   const lastAutomationRunAt = input.lifecycleAutomationPolicy.enabled
-    ? input.lifecycleAutomationHealth?.lastRunAt ?? null
+    ? (input.lifecycleAutomationHealth?.lastRunAt ?? null)
     : null;
   const reasonCodes: WorkspaceLifecycleSlaReasonCode[] = [];
 
@@ -107,9 +106,11 @@ export function createWorkspaceLifecycleSlaSummary(input: {
   }
 
   const breached = reasonCodes.some((reasonCode) =>
-    ["automation_unreachable", "automation_stale", "webhook_failure_threshold_exceeded"].includes(
-      reasonCode
-    )
+    [
+      "automation_unreachable",
+      "automation_stale",
+      "webhook_failure_threshold_exceeded"
+    ].includes(reasonCode)
   );
   const warning = !breached && reasonCodes.length > 0;
 

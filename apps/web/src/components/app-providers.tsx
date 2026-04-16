@@ -16,9 +16,7 @@ export function AppProviders({ children }: AppProvidersProps) {
 
   return (
     <WagmiProvider config={walletConfig}>
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </WagmiProvider>
   );
 }

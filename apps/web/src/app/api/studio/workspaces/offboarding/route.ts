@@ -26,7 +26,9 @@ export async function GET() {
         }
       );
 
-    return NextResponse.json(workspaceOffboardingOverviewResponseSchema.parse(result));
+    return NextResponse.json(
+      workspaceOffboardingOverviewResponseSchema.parse(result)
+    );
   } catch (error) {
     return createStudioSettingsErrorResponse(error);
   }

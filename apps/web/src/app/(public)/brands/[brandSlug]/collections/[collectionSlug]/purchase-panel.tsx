@@ -75,7 +75,7 @@ export function PurchasePanel(props: PurchasePanelProps) {
       if (!response.ok || !hasCheckoutUrl(payload) || !payload.checkout) {
         throw new Error(
           hasApiError(payload)
-            ? payload.error?.message ?? "Checkout could not be started."
+            ? (payload.error?.message ?? "Checkout could not be started.")
             : "Checkout could not be started."
         );
       }
@@ -157,7 +157,9 @@ export function PurchasePanel(props: PurchasePanelProps) {
               value={buyerWalletAddress}
             />
           </label>
-          {error ? <div className="storefront-commerce-error">{error}</div> : null}
+          {error ? (
+            <div className="storefront-commerce-error">{error}</div>
+          ) : null}
           <button
             className="storefront-button storefront-button--primary"
             disabled={busy}

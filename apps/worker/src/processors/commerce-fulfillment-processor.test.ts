@@ -4,7 +4,9 @@ import { createCommerceFulfillmentProcessor } from "./commerce-fulfillment-proce
 
 describe("createCommerceFulfillmentProcessor", () => {
   it("submits a completed checkout to the webhook boundary", async () => {
-    const updateFulfillmentAutomationById = vi.fn().mockResolvedValue(undefined);
+    const updateFulfillmentAutomationById = vi
+      .fn()
+      .mockResolvedValue(undefined);
     const processor = createCommerceFulfillmentProcessor({
       now: () => new Date("2026-04-11T06:00:00.000Z"),
       repositories: {
@@ -62,7 +64,9 @@ describe("createCommerceFulfillmentProcessor", () => {
       fulfillmentAutomationAttemptCount: 1,
       fulfillmentAutomationErrorCode: null,
       fulfillmentAutomationErrorMessage: null,
-      fulfillmentAutomationLastAttemptedAt: new Date("2026-04-11T06:00:00.000Z"),
+      fulfillmentAutomationLastAttemptedAt: new Date(
+        "2026-04-11T06:00:00.000Z"
+      ),
       fulfillmentAutomationNextRetryAt: null,
       fulfillmentAutomationStatus: "processing",
       fulfillmentProviderKind: "webhook",
@@ -72,7 +76,9 @@ describe("createCommerceFulfillmentProcessor", () => {
       fulfillmentAutomationErrorCode: null,
       fulfillmentAutomationErrorMessage: null,
       fulfillmentAutomationExternalReference: "ship_123",
-      fulfillmentAutomationLastSucceededAt: new Date("2026-04-11T06:00:00.000Z"),
+      fulfillmentAutomationLastSucceededAt: new Date(
+        "2026-04-11T06:00:00.000Z"
+      ),
       fulfillmentAutomationNextRetryAt: null,
       fulfillmentAutomationQueuedAt: null,
       fulfillmentAutomationStatus: "submitted",
@@ -86,7 +92,9 @@ describe("createCommerceFulfillmentProcessor", () => {
   });
 
   it("requeues the session when a non-final webhook delivery attempt fails", async () => {
-    const updateFulfillmentAutomationById = vi.fn().mockResolvedValue(undefined);
+    const updateFulfillmentAutomationById = vi
+      .fn()
+      .mockResolvedValue(undefined);
     const processor = createCommerceFulfillmentProcessor({
       now: () => new Date("2026-04-11T06:00:00.000Z"),
       repositories: {

@@ -30,7 +30,9 @@ export function createOpsReconciliationRunRepository(
       });
     },
 
-    findLatestByOwnerUserId(ownerUserId: string): Promise<OpsReconciliationRun | null> {
+    findLatestByOwnerUserId(
+      ownerUserId: string
+    ): Promise<OpsReconciliationRun | null> {
       return database.opsReconciliationRun.findFirst({
         orderBy: [
           {
@@ -46,7 +48,9 @@ export function createOpsReconciliationRunRepository(
       });
     },
 
-    findLatestByWorkspaceId(workspaceId: string): Promise<OpsReconciliationRun | null> {
+    findLatestByWorkspaceId(
+      workspaceId: string
+    ): Promise<OpsReconciliationRun | null> {
       return database.opsReconciliationRun.findFirst({
         orderBy: [
           {

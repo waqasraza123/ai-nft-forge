@@ -13,9 +13,8 @@ function createWorkspaceRetentionHarness() {
     decommissionService: {
       async cancelWorkspaceDecommission(input) {
         if (input.workspaceId === "workspace_not_scheduled") {
-          const { StudioSettingsServiceError } = await import(
-            "../studio-settings/error"
-          );
+          const { StudioSettingsServiceError } =
+            await import("../studio-settings/error");
 
           throw new StudioSettingsServiceError(
             "WORKSPACE_DECOMMISSION_NOT_SCHEDULED",
@@ -276,8 +275,7 @@ function createWorkspaceRetentionHarness() {
               lifecycleSlaSummary: {
                 automationMaxAgeMinutes:
                   workspace.id === "workspace_ready" ? 120 : 180,
-                failedWebhookCount:
-                  workspace.id === "workspace_review" ? 1 : 0,
+                failedWebhookCount: workspace.id === "workspace_review" ? 1 : 0,
                 lastAutomationRunAt: "2026-04-12T06:59:00.000Z",
                 message:
                   workspace.id === "workspace_review"
@@ -300,7 +298,8 @@ function createWorkspaceRetentionHarness() {
               },
               lifecycleDeliveryPolicy: {
                 deliverDecommissionNotifications: true,
-                deliverInvitationReminders: workspace.id !== "workspace_blocked",
+                deliverInvitationReminders:
+                  workspace.id !== "workspace_blocked",
                 webhookEnabled: workspace.id !== "workspace_blocked"
               },
               retentionPolicy: {
@@ -364,42 +363,38 @@ function createWorkspaceRetentionHarness() {
 describe("createWorkspaceRetentionService", () => {
   it("builds an accessible retention report and emits csv", async () => {
     const harness = createWorkspaceRetentionHarness();
-    const report =
-      await harness.service.getAccessibleWorkspaceRetentionReport({
-        currentWorkspaceId: "workspace_ready",
-        workspaces: [
-          {
-            id: "workspace_blocked",
-            name: "Blocked",
-            ownerUserId: "user_owner",
-            ownerWalletAddress:
-              "0x1111111111111111111111111111111111111111",
-            role: "owner",
-            slug: "blocked",
-            status: "active"
-          },
-          {
-            id: "workspace_review",
-            name: "Review",
-            ownerUserId: "user_owner",
-            ownerWalletAddress:
-              "0x1111111111111111111111111111111111111111",
-            role: "owner",
-            slug: "review",
-            status: "archived"
-          },
-          {
-            id: "workspace_ready",
-            name: "Ready",
-            ownerUserId: "user_owner",
-            ownerWalletAddress:
-              "0x1111111111111111111111111111111111111111",
-            role: "owner",
-            slug: "ready",
-            status: "archived"
-          }
-        ]
-      });
+    const report = await harness.service.getAccessibleWorkspaceRetentionReport({
+      currentWorkspaceId: "workspace_ready",
+      workspaces: [
+        {
+          id: "workspace_blocked",
+          name: "Blocked",
+          ownerUserId: "user_owner",
+          ownerWalletAddress: "0x1111111111111111111111111111111111111111",
+          role: "owner",
+          slug: "blocked",
+          status: "active"
+        },
+        {
+          id: "workspace_review",
+          name: "Review",
+          ownerUserId: "user_owner",
+          ownerWalletAddress: "0x1111111111111111111111111111111111111111",
+          role: "owner",
+          slug: "review",
+          status: "archived"
+        },
+        {
+          id: "workspace_ready",
+          name: "Ready",
+          ownerUserId: "user_owner",
+          ownerWalletAddress: "0x1111111111111111111111111111111111111111",
+          role: "owner",
+          slug: "ready",
+          status: "archived"
+        }
+      ]
+    });
     const csv = harness.service.exportAccessibleWorkspaceRetentionReportCsv({
       format: "csv",
       reportData: report
@@ -448,8 +443,7 @@ describe("createWorkspaceRetentionService", () => {
           id: "workspace_ready",
           name: "Ready",
           ownerUserId: "user_owner",
-          ownerWalletAddress:
-            "0x1111111111111111111111111111111111111111",
+          ownerWalletAddress: "0x1111111111111111111111111111111111111111",
           role: "owner",
           slug: "ready",
           status: "archived"
@@ -458,8 +452,7 @@ describe("createWorkspaceRetentionService", () => {
           id: "workspace_not_scheduled",
           name: "Not Scheduled",
           ownerUserId: "user_owner",
-          ownerWalletAddress:
-            "0x1111111111111111111111111111111111111111",
+          ownerWalletAddress: "0x1111111111111111111111111111111111111111",
           role: "owner",
           slug: "not-scheduled",
           status: "archived"
@@ -468,8 +461,7 @@ describe("createWorkspaceRetentionService", () => {
           id: "workspace_operator_only",
           name: "Operator Only",
           ownerUserId: "user_another_owner",
-          ownerWalletAddress:
-            "0x2222222222222222222222222222222222222222",
+          ownerWalletAddress: "0x2222222222222222222222222222222222222222",
           role: "operator",
           slug: "operator-only",
           status: "archived"
@@ -505,8 +497,7 @@ describe("createWorkspaceRetentionService", () => {
             id: "workspace_ready",
             name: "Ready",
             ownerUserId: "user_owner",
-            ownerWalletAddress:
-              "0x1111111111111111111111111111111111111111",
+            ownerWalletAddress: "0x1111111111111111111111111111111111111111",
             role: "owner",
             slug: "ready",
             status: "archived"
@@ -515,8 +506,7 @@ describe("createWorkspaceRetentionService", () => {
             id: "workspace_operator_only",
             name: "Operator Only",
             ownerUserId: "user_another_owner",
-            ownerWalletAddress:
-              "0x2222222222222222222222222222222222222222",
+            ownerWalletAddress: "0x2222222222222222222222222222222222222222",
             role: "operator",
             slug: "operator-only",
             status: "archived"

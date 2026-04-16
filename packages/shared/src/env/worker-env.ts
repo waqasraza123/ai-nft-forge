@@ -99,7 +99,11 @@ export const workerEnvSchema = z
     OPS_RECONCILIATION_SCHEDULE_ENABLED:
       booleanEnvironmentValueSchema.default(false),
     REDIS_URL: z.string().url().default("redis://127.0.0.1:56379"),
-    WORKER_SERVICE_NAME: z.string().trim().min(1).default("ai-nft-forge-worker"),
+    WORKER_SERVICE_NAME: z
+      .string()
+      .trim()
+      .min(1)
+      .default("ai-nft-forge-worker"),
     WORKSPACE_LIFECYCLE_AUTOMATION_INTERVAL_SECONDS: z.coerce
       .number()
       .int()

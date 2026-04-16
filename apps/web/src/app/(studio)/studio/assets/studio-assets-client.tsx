@@ -88,7 +88,9 @@ const generationPollingIntervalMs = 5000;
 function resolveSourceAssetContentType(
   file: File
 ): SourceAssetContentType | null {
-  if (acceptedSourceAssetContentTypes.has(file.type as SourceAssetContentType)) {
+  if (
+    acceptedSourceAssetContentTypes.has(file.type as SourceAssetContentType)
+  ) {
     return file.type as SourceAssetContentType;
   }
 
@@ -219,7 +221,9 @@ function uploadFileToSignedUrl(input: {
       }
 
       reject(
-        new Error(`Upload failed with status ${request.status} ${request.statusText}.`)
+        new Error(
+          `Upload failed with status ${request.status} ${request.statusText}.`
+        )
       );
     });
     request.addEventListener("error", () => {
@@ -350,17 +354,19 @@ export function StudioAssetsClient({
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(
     initialAssets[0]?.id ?? null
   );
-  const [generationVariantCountsByAssetId, setGenerationVariantCountsByAssetId] =
-    useState<Record<string, number>>({});
+  const [
+    generationVariantCountsByAssetId,
+    setGenerationVariantCountsByAssetId
+  ] = useState<Record<string, number>>({});
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const refreshInFlightRef = useRef(false);
 
   const sortedAssets = sortAssetsForWorkspace(assets);
   const selectedAsset = selectedAssetId
-    ? sortedAssets.find((asset) => asset.id === selectedAssetId) ??
+    ? (sortedAssets.find((asset) => asset.id === selectedAssetId) ??
       sortedAssets[0] ??
-      null
-    : sortedAssets[0] ?? null;
+      null)
+    : (sortedAssets[0] ?? null);
   const selectedGeneration = selectedAsset
     ? resolveSelectedGeneration(
         selectedAsset,
@@ -378,8 +384,9 @@ export function StudioAssetsClient({
   const failedGenerationRunCount = assets.reduce(
     (count, asset) =>
       count +
-      asset.generationHistory.filter((generation) => generation.status === "failed")
-        .length,
+      asset.generationHistory.filter(
+        (generation) => generation.status === "failed"
+      ).length,
     0
   );
   const generatedOutputCount = assets.reduce(
@@ -406,7 +413,9 @@ export function StudioAssetsClient({
       ),
     0
   );
-  const uploadedAssets = assets.filter((asset) => asset.status === "uploaded").length;
+  const uploadedAssets = assets.filter(
+    (asset) => asset.status === "uploaded"
+  ).length;
 
   const workspaceAssets = sortedAssets.filter(
     (asset) => asset.id !== selectedAsset?.id
@@ -427,9 +436,10 @@ export function StudioAssetsClient({
       return;
     }
 
-    const generatedAssetsNeedingPreview = selectedGeneration.generatedAssets.filter(
-      (generatedAsset) => !generatedAssetDownloadUrls[generatedAsset.id]
-    );
+    const generatedAssetsNeedingPreview =
+      selectedGeneration.generatedAssets.filter(
+        (generatedAsset) => !generatedAssetDownloadUrls[generatedAsset.id]
+      );
 
     if (generatedAssetsNeedingPreview.length === 0) {
       setIsPrimingPreviews(false);
@@ -458,10 +468,12 @@ export function StudioAssetsClient({
 
       if (!isCancelled) {
         if (Object.keys(nextMap).length > 0) {
-          setGeneratedAssetDownloadUrls((currentGeneratedAssetDownloadUrls) => ({
-            ...currentGeneratedAssetDownloadUrls,
-            ...nextMap
-          }));
+          setGeneratedAssetDownloadUrls(
+            (currentGeneratedAssetDownloadUrls) => ({
+              ...currentGeneratedAssetDownloadUrls,
+              ...nextMap
+            })
+          );
         }
 
         setIsPrimingPreviews(false);
@@ -540,7 +552,7 @@ export function StudioAssetsClient({
 
           return result.assets.some((asset) => asset.id === currentAssetId)
             ? currentAssetId
-            : result.assets[0]?.id ?? null;
+            : (result.assets[0]?.id ?? null);
         });
       });
     } catch (error) {
@@ -756,10 +768,12 @@ export function StudioAssetsClient({
         response,
         schema: generationRequestCreateResponseSchema
       });
-      setSelectedGenerationIdsByAssetId((currentSelectedGenerationIdsByAssetId) => ({
-        ...currentSelectedGenerationIdsByAssetId,
-        [assetId]: result.generation.id
-      }));
+      setSelectedGenerationIdsByAssetId(
+        (currentSelectedGenerationIdsByAssetId) => ({
+          ...currentSelectedGenerationIdsByAssetId,
+          [assetId]: result.generation.id
+        })
+      );
       await refreshAssets();
 
       setNotice({
@@ -798,10 +812,12 @@ export function StudioAssetsClient({
         response,
         schema: generationRequestCreateResponseSchema
       });
-      setSelectedGenerationIdsByAssetId((currentSelectedGenerationIdsByAssetId) => ({
-        ...currentSelectedGenerationIdsByAssetId,
-        [result.generation.sourceAssetId]: result.generation.id
-      }));
+      setSelectedGenerationIdsByAssetId(
+        (currentSelectedGenerationIdsByAssetId) => ({
+          ...currentSelectedGenerationIdsByAssetId,
+          [result.generation.sourceAssetId]: result.generation.id
+        })
+      );
       setSelectedAssetId(result.generation.sourceAssetId);
       await refreshAssets();
 
@@ -999,7 +1015,9 @@ export function StudioAssetsClient({
             {selectedFiles.length > 0 ? (
               <div className="pill-row">
                 {selectedFiles.map((file) => (
-                  <Pill key={`${file.name}-${file.lastModified}`}>{file.name}</Pill>
+                  <Pill key={`${file.name}-${file.lastModified}`}>
+                    {file.name}
+                  </Pill>
                 ))}
               </div>
             ) : null}
@@ -1030,8 +1048,14 @@ export function StudioAssetsClient({
                 <MetricTile label="Uploaded" value={String(uploadedAssets)} />
                 <MetricTile label="Queued" value={String(queuedAssets)} />
                 <MetricTile label="Running" value={String(runningAssets)} />
-                <MetricTile label="Failed runs" value={String(failedGenerationRunCount)} />
-                <MetricTile label="Outputs" value={String(generatedOutputCount)} />
+                <MetricTile
+                  label="Failed runs"
+                  value={String(failedGenerationRunCount)}
+                />
+                <MetricTile
+                  label="Outputs"
+                  value={String(generatedOutputCount)}
+                />
                 <MetricTile
                   label="Pending review"
                   value={String(pendingReviewOutputCount)}
@@ -1047,21 +1071,22 @@ export function StudioAssetsClient({
           title="Workspace composition"
         >
           <div className="studio-assets-workspace">
-            <section className="studio-assets-workspace__list" aria-live="polite">
+            <section
+              className="studio-assets-workspace__list"
+              aria-live="polite"
+            >
               <p className="field-label">Source assets</p>
               {workspaceAssets.length === 0 ? (
                 <div className="studio-assets-workspace__placeholder">
                   <strong>
                     {selectedAsset
                       ? "No other source assets in the current workspace view."
-                      : "No source assets yet."
-                    }
+                      : "No source assets yet."}
                   </strong>
                   <p>
                     {selectedAsset
                       ? "Start a new workflow to compare multiple source assets in one scan."
-                      : "Upload one or more supported images to begin."
-                    }
+                      : "Upload one or more supported images to begin."}
                   </p>
                 </div>
               ) : (
@@ -1113,7 +1138,10 @@ export function StudioAssetsClient({
                 </div>
               )}
             </section>
-            <section className="studio-assets-workspace__detail" aria-live="polite">
+            <section
+              className="studio-assets-workspace__detail"
+              aria-live="polite"
+            >
               {selectedAsset ? (
                 <StudioAssetCard
                   asset={selectedAsset}
@@ -1156,13 +1184,18 @@ export function StudioAssetsClient({
                     )
                   }
                   startGeneration={startGeneration}
-                  updateGeneratedAssetModeration={updateGeneratedAssetModeration}
+                  updateGeneratedAssetModeration={
+                    updateGeneratedAssetModeration
+                  }
                 />
               ) : (
                 <div className="studio-assets-workspace__placeholder">
-                  <strong>Open a source asset to inspect history and outputs.</strong>
+                  <strong>
+                    Open a source asset to inspect history and outputs.
+                  </strong>
                   <p>
-                    Upload a source image first, then use a lane card on the left.
+                    Upload a source image first, then use a lane card on the
+                    left.
                   </p>
                 </div>
               )}

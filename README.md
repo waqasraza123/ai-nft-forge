@@ -4,7 +4,13 @@
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D22.17.0-339933?logo=node.js&logoColor=white)](package.json)
 [![pnpm](https://img.shields.io/badge/pnpm-%3E%3D10.11.1-F69220?logo=pnpm&logoColor=white)](package.json)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5%2B-3178C6?logo=typescript&logoColor=white)](package.json)
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)](apps/web)
+[![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma&logoColor=white)](packages/database)
 [![Monorepo](https://img.shields.io/badge/repo-pnpm%20workspace-4B32C3)](package.json)
+[![Local DB](https://img.shields.io/badge/database-Docker%20Postgres-2496ED?logo=docker&logoColor=white)](infra/docker/docker-compose.yml)
+[![Neon Mode](https://img.shields.io/badge/database-Optional%20Neon-00E599)](docs/runbooks/local-development.md)
+[![Compose](https://img.shields.io/badge/orchestration-Docker%20Compose-2496ED?logo=docker&logoColor=white)](infra/docker)
 [![Deployment](https://img.shields.io/badge/deployment-self--hosted-0A7B83)](docs/deployment/self-host-docker-compose.md)
 
 AI NFT Forge is a self-hosted, white-label NFT launch platform for turning uploaded source media into curated AI artwork, publishing branded release pages, moderating generated outputs, and operating the system through authenticated studio and ops surfaces.

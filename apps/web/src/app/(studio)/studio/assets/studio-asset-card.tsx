@@ -155,7 +155,9 @@ function resolveImageMeta(
   generatedAssetDownloadUrls: GeneratedAssetDownloadUrlMap,
   fallbackAsset: { id: string; variantIndex: number } | null
 ): AssetImage {
-  const url = fallbackAsset ? generatedAssetDownloadUrls[fallbackAsset.id] : null;
+  const url = fallbackAsset
+    ? generatedAssetDownloadUrls[fallbackAsset.id]
+    : null;
 
   if (fallbackAsset === null) {
     return {
@@ -215,7 +217,9 @@ export function StudioAssetCard({
     0
   );
   const previewAsset =
-    asset.latestGeneratedAssets[0] ?? selectedGeneration?.generatedAssets[0] ?? null;
+    asset.latestGeneratedAssets[0] ??
+    selectedGeneration?.generatedAssets[0] ??
+    null;
   const primaryPreview = resolveImageMeta(
     generatedAssetDownloadUrls ?? {},
     previewAsset
@@ -238,7 +242,10 @@ export function StudioAssetCard({
         footer={
           <div className="studio-source-card__footer">
             <div className="studio-action-stack">
-              <label className="field-stack" htmlFor={`variant-count-${asset.id}`}>
+              <label
+                className="field-stack"
+                htmlFor={`variant-count-${asset.id}`}
+              >
                 <span className="field-label">Variant count</span>
                 <select
                   className="input-field"
@@ -262,7 +269,9 @@ export function StudioAssetCard({
                 <button
                   className="button-action button-action--accent"
                   disabled={isDispatchingGeneration}
-                  onClick={() => void startGeneration(asset.id, generationVariantCount)}
+                  onClick={() =>
+                    void startGeneration(asset.id, generationVariantCount)
+                  }
                   type="button"
                 >
                   {resolveGenerationActionLabel(asset)}
@@ -297,7 +306,9 @@ export function StudioAssetCard({
                 {asset.contentType}
               </div>
             )}
-            <span className="studio-source-card__media-state">{latestStatusLabel}</span>
+            <span className="studio-source-card__media-state">
+              {latestStatusLabel}
+            </span>
           </div>
           <div className="studio-source-card__copy">
             <p className="field-label">State</p>
@@ -338,7 +349,10 @@ export function StudioAssetCard({
       footer={
         canStartGeneration(asset) ? (
           <div className="studio-action-stack">
-            <label className="field-stack" htmlFor={`variant-count-${asset.id}`}>
+            <label
+              className="field-stack"
+              htmlFor={`variant-count-${asset.id}`}
+            >
               <span className="field-label">Variant count</span>
               <select
                 className="input-field"
@@ -361,7 +375,9 @@ export function StudioAssetCard({
             <button
               className="button-action button-action--accent"
               disabled={isDispatchingGeneration}
-              onClick={() => void startGeneration(asset.id, generationVariantCount)}
+              onClick={() =>
+                void startGeneration(asset.id, generationVariantCount)
+              }
               type="button"
             >
               {resolveGenerationActionLabel(asset)}
@@ -412,7 +428,9 @@ export function StudioAssetCard({
               </strong>
               <span>{succeededRunCount} succeeded</span>
               <span>{failedRunCount} failed</span>
-              <span>{totalStoredOutputCount} stored outputs across history</span>
+              <span>
+                {totalStoredOutputCount} stored outputs across history
+              </span>
             </div>
             <div className="generation-history-list">
               {asset.generationHistory.map((generation, index) => {
@@ -454,7 +472,9 @@ export function StudioAssetCard({
                         {generation.generatedAssets.length} stored output
                         {generation.generatedAssets.length === 1 ? "" : "s"}
                       </span>
-                      {generation.failureCode ? <span>{generation.failureCode}</span> : null}
+                      {generation.failureCode ? (
+                        <span>{generation.failureCode}</span>
+                      ) : null}
                     </div>
                   </div>
                 );
@@ -485,10 +505,12 @@ export function StudioAssetCard({
                   <div className="status-banner status-banner--success">
                     <strong>Generation completed.</strong>
                     <span>
-                      {selectedGeneration.result.generatedVariantCount} variants requested
+                      {selectedGeneration.result.generatedVariantCount} variants
+                      requested
                     </span>
                     <span>
-                      {selectedGeneration.result.storedAssetCount} stored outputs
+                      {selectedGeneration.result.storedAssetCount} stored
+                      outputs
                     </span>
                     <span className="asset-output-key">
                       {selectedGeneration.result.outputGroupKey}
@@ -505,7 +527,9 @@ export function StudioAssetCard({
                     {canRetrySelectedGeneration ? (
                       <button
                         className="button-action"
-                        disabled={retryingGenerationRequestId === selectedGeneration.id}
+                        disabled={
+                          retryingGenerationRequestId === selectedGeneration.id
+                        }
                         onClick={() =>
                           void retryGeneration(selectedGeneration.id)
                         }
@@ -520,125 +544,133 @@ export function StudioAssetCard({
                 ) : null}
                 {selectedGeneration.generatedAssets.length > 0 ? (
                   <div className="asset-output-list">
-                    {selectedGeneration.generatedAssets.map((generatedAsset) => {
-                      const isDownloading =
-                        downloadingGeneratedAssetId === generatedAsset.id;
-                      const isModerating =
-                        moderatingGeneratedAssetId === generatedAsset.id;
-                      const generatedAssetImage = resolveImageMeta(
-                        generatedAssetDownloadUrls ?? {},
-                        {
-                          id: generatedAsset.id,
-                          variantIndex: generatedAsset.variantIndex
-                        }
-                      );
+                    {selectedGeneration.generatedAssets.map(
+                      (generatedAsset) => {
+                        const isDownloading =
+                          downloadingGeneratedAssetId === generatedAsset.id;
+                        const isModerating =
+                          moderatingGeneratedAssetId === generatedAsset.id;
+                        const generatedAssetImage = resolveImageMeta(
+                          generatedAssetDownloadUrls ?? {},
+                          {
+                            id: generatedAsset.id,
+                            variantIndex: generatedAsset.variantIndex
+                          }
+                        );
 
-                      return (
-                        <div className="asset-output-item" key={generatedAsset.id}>
-                          <div className="studio-generated-preview">
-                            {generatedAssetImage.url ? (
-                              <img
-                                alt={`Variant ${generatedAssetImage.variantIndex} output`}
-                                className="studio-generated-preview__image"
-                                loading="lazy"
-                                src={generatedAssetImage.url}
-                              />
-                            ) : (
-                              <div className="studio-generated-preview__placeholder">
-                                {generatedAssetImage.label}
-                              </div>
-                            )}
-                          </div>
-                          <div className="asset-output-copy">
-                            <strong>
-                              Variant {generatedAsset.variantIndex}
-                            </strong>
-                            <span>
-                              {formatAssetByteSize(generatedAsset.byteSize)}
-                            </span>
-                            <span>
-                              {formatModerationStatus(
-                                generatedAsset.moderationStatus
+                        return (
+                          <div
+                            className="asset-output-item"
+                            key={generatedAsset.id}
+                          >
+                            <div className="studio-generated-preview">
+                              {generatedAssetImage.url ? (
+                                <img
+                                  alt={`Variant ${generatedAssetImage.variantIndex} output`}
+                                  className="studio-generated-preview__image"
+                                  loading="lazy"
+                                  src={generatedAssetImage.url}
+                                />
+                              ) : (
+                                <div className="studio-generated-preview__placeholder">
+                                  {generatedAssetImage.label}
+                                </div>
                               )}
-                            </span>
-                            {generatedAsset.moderatedAt ? (
+                            </div>
+                            <div className="asset-output-copy">
+                              <strong>
+                                Variant {generatedAsset.variantIndex}
+                              </strong>
                               <span>
-                                Reviewed {formatIsoDateTime(generatedAsset.moderatedAt)}
+                                {formatAssetByteSize(generatedAsset.byteSize)}
                               </span>
-                            ) : null}
-                            <span className="asset-output-key">
-                              {generatedAsset.storageObjectKey}
-                            </span>
-                          </div>
-                          <div className="candidate-card__actions">
-                            <Pill>
-                              {formatModerationStatus(
-                                generatedAsset.moderationStatus
-                              )}
-                            </Pill>
-                            <button
-                              className="button-action"
-                              disabled={isModerating}
-                              onClick={() =>
-                                void updateGeneratedAssetModeration(
-                                  generatedAsset.id,
-                                  "approved"
-                                )
-                              }
-                              type="button"
-                            >
-                              {isModerating &&
-                              generatedAsset.moderationStatus !== "approved"
-                                ? "Saving..."
-                                : "Approve"}
-                            </button>
-                            <button
-                              className="button-action"
-                              disabled={isModerating}
-                              onClick={() =>
-                                void updateGeneratedAssetModeration(
-                                  generatedAsset.id,
-                                  "rejected"
-                                )
-                              }
-                              type="button"
-                            >
-                              {isModerating &&
-                              generatedAsset.moderationStatus !== "rejected"
-                                ? "Saving..."
-                                : "Reject"}
-                            </button>
-                            <button
-                              className="button-action"
-                              disabled={isModerating}
-                              onClick={() =>
-                                void updateGeneratedAssetModeration(
-                                  generatedAsset.id,
+                              <span>
+                                {formatModerationStatus(
+                                  generatedAsset.moderationStatus
+                                )}
+                              </span>
+                              {generatedAsset.moderatedAt ? (
+                                <span>
+                                  Reviewed{" "}
+                                  {formatIsoDateTime(
+                                    generatedAsset.moderatedAt
+                                  )}
+                                </span>
+                              ) : null}
+                              <span className="asset-output-key">
+                                {generatedAsset.storageObjectKey}
+                              </span>
+                            </div>
+                            <div className="candidate-card__actions">
+                              <Pill>
+                                {formatModerationStatus(
+                                  generatedAsset.moderationStatus
+                                )}
+                              </Pill>
+                              <button
+                                className="button-action"
+                                disabled={isModerating}
+                                onClick={() =>
+                                  void updateGeneratedAssetModeration(
+                                    generatedAsset.id,
+                                    "approved"
+                                  )
+                                }
+                                type="button"
+                              >
+                                {isModerating &&
+                                generatedAsset.moderationStatus !== "approved"
+                                  ? "Saving..."
+                                  : "Approve"}
+                              </button>
+                              <button
+                                className="button-action"
+                                disabled={isModerating}
+                                onClick={() =>
+                                  void updateGeneratedAssetModeration(
+                                    generatedAsset.id,
+                                    "rejected"
+                                  )
+                                }
+                                type="button"
+                              >
+                                {isModerating &&
+                                generatedAsset.moderationStatus !== "rejected"
+                                  ? "Saving..."
+                                  : "Reject"}
+                              </button>
+                              <button
+                                className="button-action"
+                                disabled={isModerating}
+                                onClick={() =>
+                                  void updateGeneratedAssetModeration(
+                                    generatedAsset.id,
+                                    "pending_review"
+                                  )
+                                }
+                                type="button"
+                              >
+                                {isModerating &&
+                                generatedAsset.moderationStatus !==
                                   "pending_review"
-                                )
-                              }
-                              type="button"
-                            >
-                              {isModerating &&
-                              generatedAsset.moderationStatus !==
-                                "pending_review"
-                                ? "Saving..."
-                                : "Reset"}
-                            </button>
-                            <button
-                              className="button-action"
-                              disabled={isDownloading}
-                              onClick={() =>
-                                void downloadGeneratedAsset(generatedAsset.id)
-                              }
-                              type="button"
-                            >
-                              {isDownloading ? "Preparing..." : "Download"}
-                            </button>
+                                  ? "Saving..."
+                                  : "Reset"}
+                              </button>
+                              <button
+                                className="button-action"
+                                disabled={isDownloading}
+                                onClick={() =>
+                                  void downloadGeneratedAsset(generatedAsset.id)
+                                }
+                                type="button"
+                              >
+                                {isDownloading ? "Preparing..." : "Download"}
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      }
+                    )}
                   </div>
                 ) : (
                   <div className="asset-placeholder">
@@ -650,7 +682,8 @@ export function StudioAssetCard({
           </div>
         ) : (
           <div className="asset-placeholder">
-            Stored generated outputs will appear here after worker processing succeeds.
+            Stored generated outputs will appear here after worker processing
+            succeeds.
           </div>
         )}
       </div>

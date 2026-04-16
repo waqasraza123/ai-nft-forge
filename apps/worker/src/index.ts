@@ -1,4 +1,4 @@
-import { loadRepositoryEnvironment } from "@ai-nft-forge/shared";
+import { loadRepositoryEnvironment } from "@ai-nft-forge/shared/server";
 
 import { bootstrapWorkerApplication } from "./bootstrap/application.js";
 import { registerWorkerSignalHandlers } from "./bootstrap/signals.js";
@@ -34,7 +34,9 @@ async function runWorkerCommand(argv: string[]) {
   }
 
   if (command === "run-lifecycle-automation") {
-    const automationSummary = await runWorkspaceLifecycleAutomation(process.env);
+    const automationSummary = await runWorkspaceLifecycleAutomation(
+      process.env
+    );
 
     process.stdout.write(`${JSON.stringify(automationSummary)}\n`);
     return;

@@ -20,26 +20,27 @@ type CreateWorkspaceDecommissionRequestInput = {
   workspaceId: string;
 };
 
-type WorkspaceDecommissionRequestWithRelations = WorkspaceDecommissionRequest & {
-  canceledByUser: {
-    avatarUrl: string | null;
-    displayName: string | null;
-    id: string;
-    walletAddress: string;
-  } | null;
-  executedByUser: {
-    avatarUrl: string | null;
-    displayName: string | null;
-    id: string;
-    walletAddress: string;
-  } | null;
-  requestedByUser: {
-    avatarUrl: string | null;
-    displayName: string | null;
-    id: string;
-    walletAddress: string;
+type WorkspaceDecommissionRequestWithRelations =
+  WorkspaceDecommissionRequest & {
+    canceledByUser: {
+      avatarUrl: string | null;
+      displayName: string | null;
+      id: string;
+      walletAddress: string;
+    } | null;
+    executedByUser: {
+      avatarUrl: string | null;
+      displayName: string | null;
+      id: string;
+      walletAddress: string;
+    } | null;
+    requestedByUser: {
+      avatarUrl: string | null;
+      displayName: string | null;
+      id: string;
+      walletAddress: string;
+    };
   };
-};
 
 const userSelect = {
   avatarUrl: true,
@@ -99,7 +100,9 @@ export function createWorkspaceDecommissionRequestRepository(
 
     listScheduledByWorkspaceIds(workspaceIds: string[]) {
       if (workspaceIds.length === 0) {
-        return Promise.resolve([] as WorkspaceDecommissionRequestWithRelations[]);
+        return Promise.resolve(
+          [] as WorkspaceDecommissionRequestWithRelations[]
+        );
       }
 
       return database.workspaceDecommissionRequest.findMany({

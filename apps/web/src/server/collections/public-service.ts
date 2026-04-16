@@ -929,8 +929,9 @@ export function createPublicCollectionService(
           }),
           mintedTokenCount: publication.mints?.length ?? 0,
           mintedTokenIds:
-            publication.mints?.map((mint) => mint.tokenId).sort((left, right) => left - right) ??
-            [],
+            publication.mints
+              ?.map((mint) => mint.tokenId)
+              .sort((left, right) => left - right) ?? [],
           name: createCollectionContractName({
             brandName: publication.brandName,
             collectionTitle: publication.title

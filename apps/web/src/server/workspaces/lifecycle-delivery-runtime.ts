@@ -56,7 +56,12 @@ export function createWorkspaceLifecycleNotificationDeliveryBoundary(
     updateById(input: {
       attemptCount?: number;
       deliveredAt?: Date | null;
-      deliveryState?: "queued" | "processing" | "delivered" | "failed" | "skipped";
+      deliveryState?:
+        | "queued"
+        | "processing"
+        | "delivered"
+        | "failed"
+        | "skipped";
       failedAt?: Date | null;
       failureMessage?: string | null;
       id: string;

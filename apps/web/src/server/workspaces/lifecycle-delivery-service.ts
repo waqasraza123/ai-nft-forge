@@ -127,7 +127,12 @@ type WorkspaceLifecycleDeliveryServiceDependencies = {
       updateById(input: {
         attemptCount?: number;
         deliveredAt?: Date | null;
-        deliveryState?: "queued" | "processing" | "delivered" | "failed" | "skipped";
+        deliveryState?:
+          | "queued"
+          | "processing"
+          | "delivered"
+          | "failed"
+          | "skipped";
         failedAt?: Date | null;
         failureMessage?: string | null;
         id: string;
@@ -252,7 +257,8 @@ export function serializeWorkspaceLifecycleNotificationDelivery(
     attemptCount: delivery.attemptCount,
     createdAt: delivery.createdAt.toISOString(),
     decommissionNotificationId: delivery.decommissionNotificationId,
-    decommissionNotificationKind: delivery.decommissionNotification?.kind ?? null,
+    decommissionNotificationKind:
+      delivery.decommissionNotification?.kind ?? null,
     deliveredAt: delivery.deliveredAt?.toISOString() ?? null,
     deliveryChannel: delivery.deliveryChannel,
     deliveryState: delivery.deliveryState,
@@ -517,7 +523,9 @@ export function createWorkspaceLifecycleDeliveryService(
             }
           );
 
-        return [serializeWorkspaceLifecycleNotificationDelivery(skippedDelivery)];
+        return [
+          serializeWorkspaceLifecycleNotificationDelivery(skippedDelivery)
+        ];
       }
 
       const deliveries: WorkspaceLifecycleNotificationDeliverySummary[] = [];
@@ -588,7 +596,9 @@ export function createWorkspaceLifecycleDeliveryService(
             }
           );
 
-        return [serializeWorkspaceLifecycleNotificationDelivery(skippedDelivery)];
+        return [
+          serializeWorkspaceLifecycleNotificationDelivery(skippedDelivery)
+        ];
       }
 
       const deliveries: WorkspaceLifecycleNotificationDeliverySummary[] = [];
@@ -716,7 +726,8 @@ export function createWorkspaceLifecycleDeliveryService(
             failedAt: null,
             failureMessage: null,
             id: delivery.id,
-            providerKey: delivery.providerKey ?? decision.providerKeys[0] ?? null,
+            providerKey:
+              delivery.providerKey ?? decision.providerKeys[0] ?? null,
             queuedAt: dependencies.now()
           }
         );

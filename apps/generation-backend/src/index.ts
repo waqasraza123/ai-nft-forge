@@ -1,4 +1,4 @@
-import { loadRepositoryEnvironment } from "@ai-nft-forge/shared";
+import { loadRepositoryEnvironment } from "@ai-nft-forge/shared/server";
 
 import {
   bootstrapGenerationBackendApplication,

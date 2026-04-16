@@ -159,10 +159,12 @@ export function createGenerationService(
     }) {
       const parsedInput = generationRequestCreateRequestSchema.parse(input);
       const sourceAsset =
-        await dependencies.repositories.sourceAssetRepository.findByIdForWorkspace({
-          id: parsedInput.sourceAssetId,
-          workspaceId: input.workspaceId
-        });
+        await dependencies.repositories.sourceAssetRepository.findByIdForWorkspace(
+          {
+            id: parsedInput.sourceAssetId,
+            workspaceId: input.workspaceId
+          }
+        );
 
       if (!sourceAsset) {
         throw new GenerationServiceError(
@@ -240,10 +242,12 @@ export function createGenerationService(
       }
 
       const sourceAsset =
-        await dependencies.repositories.sourceAssetRepository.findByIdForWorkspace({
-          id: existingGeneration.sourceAssetId,
-          workspaceId: input.workspaceId
-        });
+        await dependencies.repositories.sourceAssetRepository.findByIdForWorkspace(
+          {
+            id: existingGeneration.sourceAssetId,
+            workspaceId: input.workspaceId
+          }
+        );
 
       if (!sourceAsset) {
         throw new GenerationServiceError(

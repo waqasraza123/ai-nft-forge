@@ -57,9 +57,7 @@ type WorkspaceDecommissionRepositorySet = {
       sentAt: Date;
       sentByUserId: string;
     }>;
-    listByRequestId(input: {
-      requestId: string;
-    }): Promise<
+    listByRequestId(input: { requestId: string }): Promise<
       Array<{
         id: string;
         kind: WorkspaceDecommissionNotificationKind;
@@ -81,9 +79,7 @@ type WorkspaceDecommissionRepositorySet = {
       retentionDays: number;
       workspaceId: string;
     }): Promise<{ id: string }>;
-    findScheduledByWorkspaceId(input: {
-      workspaceId: string;
-    }): Promise<{
+    findScheduledByWorkspaceId(input: { workspaceId: string }): Promise<{
       canceledAt: Date | null;
       canceledByUser: {
         walletAddress: string;
@@ -140,7 +136,12 @@ type WorkspaceDecommissionRepositorySet = {
       decommissionNotificationId: string | null;
       deliveredAt: Date | null;
       deliveryChannel: "audit_log" | "webhook";
-      deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
+      deliveryState:
+        | "queued"
+        | "processing"
+        | "delivered"
+        | "failed"
+        | "skipped";
       eventKind: "invitation_reminder" | "decommission_notice";
       eventOccurredAt: Date;
       failedAt: Date | null;
@@ -167,7 +168,12 @@ type WorkspaceDecommissionRepositorySet = {
       decommissionNotificationId: string | null;
       deliveredAt: Date | null;
       deliveryChannel: "audit_log" | "webhook";
-      deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
+      deliveryState:
+        | "queued"
+        | "processing"
+        | "delivered"
+        | "failed"
+        | "skipped";
       eventKind: "invitation_reminder" | "decommission_notice";
       eventOccurredAt: Date;
       failedAt: Date | null;
@@ -187,7 +193,12 @@ type WorkspaceDecommissionRepositorySet = {
     updateById(input: {
       attemptCount?: number;
       deliveredAt?: Date | null;
-      deliveryState?: "queued" | "processing" | "delivered" | "failed" | "skipped";
+      deliveryState?:
+        | "queued"
+        | "processing"
+        | "delivered"
+        | "failed"
+        | "skipped";
       failedAt?: Date | null;
       failureMessage?: string | null;
       id: string;
@@ -203,7 +214,12 @@ type WorkspaceDecommissionRepositorySet = {
       decommissionNotificationId: string | null;
       deliveredAt: Date | null;
       deliveryChannel: "audit_log" | "webhook";
-      deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
+      deliveryState:
+        | "queued"
+        | "processing"
+        | "delivered"
+        | "failed"
+        | "skipped";
       eventKind: "invitation_reminder" | "decommission_notice";
       eventOccurredAt: Date;
       failedAt: Date | null;
@@ -226,14 +242,14 @@ type WorkspaceDecommissionRepositorySet = {
       id: string;
       ownerUserId: string;
     }): Promise<{ count: number }>;
-    findByIdForOwner(input: {
-      id: string;
-      ownerUserId: string;
-    }): Promise<WorkspaceLifecyclePolicyWorkspaceRecord & {
-      decommissionRetentionDaysDefault: number;
-      decommissionRetentionDaysMinimum: number;
-      requireDecommissionReason: boolean;
-    } | null>;
+    findByIdForOwner(input: { id: string; ownerUserId: string }): Promise<
+      | (WorkspaceLifecyclePolicyWorkspaceRecord & {
+          decommissionRetentionDaysDefault: number;
+          decommissionRetentionDaysMinimum: number;
+          requireDecommissionReason: boolean;
+        })
+      | null
+    >;
   };
 };
 
@@ -466,9 +482,7 @@ function assertWorkspaceRetentionPolicy(input: {
     requireDecommissionReason: boolean;
   };
 }) {
-  if (
-    input.retentionDays < input.workspace.decommissionRetentionDaysMinimum
-  ) {
+  if (input.retentionDays < input.workspace.decommissionRetentionDaysMinimum) {
     throw new StudioSettingsServiceError(
       "WORKSPACE_DECOMMISSION_RETENTION_POLICY_VIOLATION",
       `Retention window must be at least ${input.workspace.decommissionRetentionDaysMinimum} day(s) for this workspace.`,
@@ -761,12 +775,14 @@ export function createWorkspaceDecommissionService(
 
       const { recordedNotification, recordedNotifications } =
         await dependencies.runInTransaction(async (repositories) => {
-          await repositories.workspaceDecommissionNotificationRepository.create({
-            kind: input.kind,
-            requestId: scheduledRequest.id,
-            sentAt: now,
-            sentByUserId: owner.id
-          });
+          await repositories.workspaceDecommissionNotificationRepository.create(
+            {
+              kind: input.kind,
+              requestId: scheduledRequest.id,
+              sentAt: now,
+              sentByUserId: owner.id
+            }
+          );
 
           await recordWorkspaceDecommissionAuditLog({
             action: "workspace_decommission_notification_recorded",
@@ -945,12 +961,11 @@ export function createWorkspaceDecommissionService(
             id: currentRequest.id
           }
         );
-        const deletedWorkspace = await repositories.workspaceRepository.deleteByIdForOwner(
-          {
+        const deletedWorkspace =
+          await repositories.workspaceRepository.deleteByIdForOwner({
             id: workspace.id,
             ownerUserId: input.ownerUserId
-          }
-        );
+          });
 
         if (deletedWorkspace.count !== 1) {
           throw new StudioSettingsServiceError(
@@ -984,7 +999,8 @@ export function createRuntimeWorkspaceDecommissionService(
     lifecycleDeliveryService:
       createRuntimeWorkspaceLifecycleDeliveryService(rawEnvironment),
     now: () => new Date(),
-    offboardingService: createRuntimeWorkspaceOffboardingService(rawEnvironment),
+    offboardingService:
+      createRuntimeWorkspaceOffboardingService(rawEnvironment),
     repositories: createWorkspaceDecommissionRepositories(database),
     runInTransaction: async (callback) =>
       database.$transaction(async (transaction) =>

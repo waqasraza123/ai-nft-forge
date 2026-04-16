@@ -457,7 +457,9 @@ function serializeAlertEscalationPolicy(
   } as const;
 }
 
-function serializeAlertSchedulePolicy(policy: AlertSchedulePolicyRecord | null) {
+function serializeAlertSchedulePolicy(
+  policy: AlertSchedulePolicyRecord | null
+) {
   return {
     activeDays: policy
       ? parseOpsAlertScheduleDayMask(policy.activeDaysMask)
@@ -767,8 +769,7 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
           {
             firstReminderDelayMinutes: input.firstReminderDelayMinutes,
             ownerUserId: input.ownerUserId,
-            repeatReminderIntervalMinutes:
-              input.repeatReminderIntervalMinutes,
+            repeatReminderIntervalMinutes: input.repeatReminderIntervalMinutes,
             workspaceId: input.workspaceId
           }
         );
@@ -802,14 +803,16 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
       workspaceId: string;
     }) {
       const policy =
-        await dependencies.repositories.opsAlertSchedulePolicyRepository.upsert({
-          activeDaysMask: createOpsAlertScheduleDayMask(input.activeDays),
-          endMinuteOfDay: input.endMinuteOfDay,
-          ownerUserId: input.ownerUserId,
-          startMinuteOfDay: input.startMinuteOfDay,
-          timezone: input.timezone,
-          workspaceId: input.workspaceId
-        });
+        await dependencies.repositories.opsAlertSchedulePolicyRepository.upsert(
+          {
+            activeDaysMask: createOpsAlertScheduleDayMask(input.activeDays),
+            endMinuteOfDay: input.endMinuteOfDay,
+            ownerUserId: input.ownerUserId,
+            startMinuteOfDay: input.startMinuteOfDay,
+            timezone: input.timezone,
+            workspaceId: input.workspaceId
+          }
+        );
 
       return opsAlertSchedulePolicyResponseSchema.parse({
         policy: serializeAlertSchedulePolicy(policy)
@@ -831,7 +834,10 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
       });
     },
 
-    async runReconciliation(input: { ownerUserId: string; workspaceId: string }) {
+    async runReconciliation(input: {
+      ownerUserId: string;
+      workspaceId: string;
+    }) {
       return getReconciliationService().run({
         ownerUserId: input.ownerUserId,
         workspaceId: input.workspaceId
@@ -854,14 +860,14 @@ export function createOpsService(dependencies: OpsServiceDependencies) {
           error instanceof Error ? error.message : "Unexpected repair error.";
 
         if (message.includes("not found")) {
-          throw new OpsServiceError("RECONCILIATION_ISSUE_NOT_FOUND", message, 404);
+          throw new OpsServiceError(
+            "RECONCILIATION_ISSUE_NOT_FOUND",
+            message,
+            404
+          );
         }
 
-        throw new OpsServiceError(
-          "RECONCILIATION_REPAIR_FAILED",
-          message,
-          409
-        );
+        throw new OpsServiceError("RECONCILIATION_REPAIR_FAILED", message, 409);
       }
     },
 

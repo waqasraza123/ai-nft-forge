@@ -380,7 +380,9 @@ function resolveSelectedPublicationTargetId(input: {
 }) {
   if (
     input.currentTargetId &&
-    input.publicationTargets.some((target) => target.brandId === input.currentTargetId)
+    input.publicationTargets.some(
+      (target) => target.brandId === input.currentTargetId
+    )
   ) {
     return input.currentTargetId;
   }
@@ -391,7 +393,11 @@ function resolveSelectedPublicationTargetId(input: {
       )
     : null;
 
-  return publicationBrandTarget?.brandId ?? input.publicationTargets[0]?.brandId ?? null;
+  return (
+    publicationBrandTarget?.brandId ??
+    input.publicationTargets[0]?.brandId ??
+    null
+  );
 }
 
 type CollectionDraftBrowserCardProps = {
@@ -446,7 +452,8 @@ function CollectionDraftBrowserCard({
         </div>
         <strong>{draft.title}</strong>
         <p>
-          {draft.description?.trim() || "No internal release framing has been saved yet."}
+          {draft.description?.trim() ||
+            "No internal release framing has been saved yet."}
         </p>
         <div className="studio-collections-draft-card__meta">
           <span>{draft.itemCount} curated items</span>
@@ -529,7 +536,9 @@ export function StudioCollectionsClient({
   );
   const [selectedPublicationTargetId, setSelectedPublicationTargetId] =
     useState<string | null>(
-      initialPublicationTarget?.brandId ?? initialPublicationTargets[0]?.brandId ?? null
+      initialPublicationTarget?.brandId ??
+        initialPublicationTargets[0]?.brandId ??
+        null
     );
   const [selectedDraftId, setSelectedDraftId] = useState<string | null>(
     initialDrafts[0]?.id ?? null
@@ -574,12 +583,8 @@ export function StudioCollectionsClient({
   const [savingPublicationDraftId, setSavingPublicationDraftId] = useState<
     string | null
   >(null);
-  const [deployingDraftId, setDeployingDraftId] = useState<string | null>(
-    null
-  );
-  const [mintingDraftId, setMintingDraftId] = useState<
-    string | null
-  >(null);
+  const [deployingDraftId, setDeployingDraftId] = useState<string | null>(null);
+  const [mintingDraftId, setMintingDraftId] = useState<string | null>(null);
   const [unpublishingDraftId, setUnpublishingDraftId] = useState<string | null>(
     null
   );
@@ -627,7 +632,8 @@ export function StudioCollectionsClient({
     const assetIds = new Set<string>();
 
     for (const draft of drafts) {
-      const draftPreviewGeneratedAssetId = getDraftPreviewGeneratedAssetId(draft);
+      const draftPreviewGeneratedAssetId =
+        getDraftPreviewGeneratedAssetId(draft);
 
       if (draftPreviewGeneratedAssetId) {
         assetIds.add(draftPreviewGeneratedAssetId);
@@ -863,9 +869,8 @@ export function StudioCollectionsClient({
       (connectedWalletConnector.id === "baseAccount" ||
         connectedWalletConnector.id === "injected")
     ) {
-      const provider = (await connectedWalletConnector.getProvider()) as
-        | BrowserEthereumProvider
-        | null;
+      const provider =
+        (await connectedWalletConnector.getProvider()) as BrowserEthereumProvider | null;
 
       if (!provider) {
         throw new WalletFlowError(
@@ -898,7 +903,8 @@ export function StudioCollectionsClient({
       );
     }
 
-    const provider = (await connector.getProvider()) as BrowserEthereumProvider | null;
+    const provider =
+      (await connector.getProvider()) as BrowserEthereumProvider | null;
 
     if (!provider) {
       throw new WalletFlowError(
@@ -1555,8 +1561,7 @@ export function StudioCollectionsClient({
 
       setOnchainFlowState((current) => ({
         chainLabel:
-          current?.chainLabel ??
-          getWalletChainByKey(deploymentChainKey).name,
+          current?.chainLabel ?? getWalletChainByKey(deploymentChainKey).name,
         kind: "deployment",
         message,
         status: "failed",
@@ -1702,8 +1707,8 @@ export function StudioCollectionsClient({
       setOnchainFlowState((current) => ({
         chainLabel:
           current?.chainLabel ??
-          (selectedDraft.publication?.activeDeployment?.chain.label ??
-            getWalletChainByKey(deploymentChainKey).name),
+          selectedDraft.publication?.activeDeployment?.chain.label ??
+          getWalletChainByKey(deploymentChainKey).name,
         kind: "mint",
         message,
         status: "failed",
@@ -1758,7 +1763,9 @@ export function StudioCollectionsClient({
       });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Mint confirmation retry failed.";
+        error instanceof Error
+          ? error.message
+          : "Mint confirmation retry failed.";
 
       setOnchainFlowState({
         chainLabel:
@@ -1959,13 +1966,13 @@ export function StudioCollectionsClient({
     ? getDraftPreviewGeneratedAssetId(selectedDraft)
     : null;
   const selectedDraftPreviewUrl = selectedDraftPreviewGeneratedAssetId
-    ? generatedAssetPreviewUrls[selectedDraftPreviewGeneratedAssetId] ?? null
+    ? (generatedAssetPreviewUrls[selectedDraftPreviewGeneratedAssetId] ?? null)
     : null;
   const selectedDraftPublicPath = selectedDraft
-    ? selectedDraft.publication?.publicPath ??
+    ? (selectedDraft.publication?.publicPath ??
       (selectedPublicationTarget
         ? `${selectedPublicationTarget.publicBrandPath}/collections/${selectedDraft.slug}`
-        : "/brands/[brandSlug]/collections/[collectionSlug]")
+        : "/brands/[brandSlug]/collections/[collectionSlug]"))
     : null;
   const selectedDraftMetadataPath = selectedDraft?.publication
     ? buildPublishedCollectionMetadataPath(selectedDraft.publication.publicPath)
@@ -2017,7 +2024,10 @@ export function StudioCollectionsClient({
       });
     }
 
-    if (selectedDraft.publication && !selectedDraft.publication.activeDeployment) {
+    if (
+      selectedDraft.publication &&
+      !selectedDraft.publication.activeDeployment
+    ) {
       selectedDraftLaunchNotes.push({
         body: "The public release is live, but no verified contract deployment has been recorded yet.",
         title: "Onchain deployment pending",
@@ -2081,11 +2091,11 @@ export function StudioCollectionsClient({
                   label="Review ready"
                   value={reviewReadyCount.toString()}
                 />
-                <MetricTile label="Published" value={publishedCount.toString()} />
                 <MetricTile
-                  label="Deployed"
-                  value={deployedCount.toString()}
+                  label="Published"
+                  value={publishedCount.toString()}
                 />
+                <MetricTile label="Deployed" value={deployedCount.toString()} />
                 <MetricTile
                   label="Featured"
                   value={featuredPublishedCount.toString()}
@@ -2168,17 +2178,16 @@ export function StudioCollectionsClient({
                         setSelectedDraftId(draft.id);
                         setNotice(null);
                       }}
-                      previewUrl={
-                        (() => {
-                          const previewGeneratedAssetId =
-                            getDraftPreviewGeneratedAssetId(draft);
+                      previewUrl={(() => {
+                        const previewGeneratedAssetId =
+                          getDraftPreviewGeneratedAssetId(draft);
 
-                          return previewGeneratedAssetId
-                            ? generatedAssetPreviewUrls[previewGeneratedAssetId] ??
-                                null
-                            : null;
-                        })()
-                      }
+                        return previewGeneratedAssetId
+                          ? (generatedAssetPreviewUrls[
+                              previewGeneratedAssetId
+                            ] ?? null)
+                          : null;
+                      })()}
                     />
                   ))
                 )}
@@ -2207,7 +2216,9 @@ export function StudioCollectionsClient({
                       ) : (
                         <div className="studio-collections-focus__placeholder">
                           <strong>{selectedDraft.slug}</strong>
-                          <span>Curate art to give this release a visual center.</span>
+                          <span>
+                            Curate art to give this release a visual center.
+                          </span>
                         </div>
                       )}
                     </div>
@@ -2216,9 +2227,12 @@ export function StudioCollectionsClient({
                         <Pill>{formatDraftStatus(selectedDraft.status)}</Pill>
                         <Pill>{selectedDraft.itemCount} curated items</Pill>
                         <Pill>
-                          Updated {formatCandidateTimestamp(selectedDraft.updatedAt)}
+                          Updated{" "}
+                          {formatCandidateTimestamp(selectedDraft.updatedAt)}
                         </Pill>
-                        {selectedDraft.publication ? <Pill>Published</Pill> : null}
+                        {selectedDraft.publication ? (
+                          <Pill>Published</Pill>
+                        ) : null}
                         {selectedDraft.publication?.isFeatured ? (
                           <Pill>Featured release</Pill>
                         ) : null}
@@ -2255,7 +2269,8 @@ export function StudioCollectionsClient({
                           <span>Onchain</span>
                           <strong>
                             {selectedDraft.publication?.activeDeployment
-                              ? selectedDraft.publication.activeDeployment.chain.label
+                              ? selectedDraft.publication.activeDeployment.chain
+                                  .label
                               : "No deployment"}
                           </strong>
                         </div>
@@ -2302,7 +2317,8 @@ export function StudioCollectionsClient({
                           onChange={(event) => {
                             setEditorState((current) => ({
                               ...current,
-                              status: event.target.value as CollectionDraftStatus
+                              status: event.target
+                                .value as CollectionDraftStatus
                             }));
                           }}
                           value={editorState.status}
@@ -2405,9 +2421,14 @@ export function StudioCollectionsClient({
                         meta={
                           <>
                             <span>{item.generatedAsset.pipelineKey}</span>
-                            <span>Source {item.generatedAsset.sourceAssetId}</span>
                             <span>
-                              Added {formatCandidateTimestamp(item.generatedAsset.createdAt)}
+                              Source {item.generatedAsset.sourceAssetId}
+                            </span>
+                            <span>
+                              Added{" "}
+                              {formatCandidateTimestamp(
+                                item.generatedAsset.createdAt
+                              )}
                             </span>
                           </>
                         }
@@ -2488,18 +2509,23 @@ export function StudioCollectionsClient({
                                 {formatCandidateTimestamp(candidate.createdAt)}
                               </span>
                               <span>
-                                {formatModerationStatus(candidate.moderationStatus)}
+                                {formatModerationStatus(
+                                  candidate.moderationStatus
+                                )}
                               </span>
                             </>
                           }
                           previewUrl={
-                            generatedAssetPreviewUrls[candidate.generatedAssetId] ??
-                            null
+                            generatedAssetPreviewUrls[
+                              candidate.generatedAssetId
+                            ] ?? null
                           }
                           statusLabel={
                             isIncluded
                               ? "Included"
-                              : formatModerationStatus(candidate.moderationStatus)
+                              : formatModerationStatus(
+                                  candidate.moderationStatus
+                                )
                           }
                           statusTone={
                             isIncluded
@@ -2524,7 +2550,8 @@ export function StudioCollectionsClient({
               title="Choose a release draft"
             >
               <div className="collection-empty-state">
-                The launch workspace is ready, but no active release is selected yet.
+                The launch workspace is ready, but no active release is selected
+                yet.
               </div>
             </SurfaceCard>
           )}
@@ -2535,7 +2562,9 @@ export function StudioCollectionsClient({
             <SurfaceCard
               body={notice.message}
               eyebrow="Workflow status"
-              title={notice.tone === "error" ? "Action failed" : "Latest update"}
+              title={
+                notice.tone === "error" ? "Action failed" : "Latest update"
+              }
             >
               <div className={`status-banner status-banner--${notice.tone}`}>
                 <span>{notice.message}</span>
@@ -2547,7 +2576,9 @@ export function StudioCollectionsClient({
             body="Publication state, blockers, and release links stay in one control rail so operators can decide quickly whether this draft needs curation, publication, or onchain work."
             eyebrow="Launch rail"
             title={
-              selectedDraft?.publication ? "Published release control" : "Release control"
+              selectedDraft?.publication
+                ? "Published release control"
+                : "Release control"
             }
           >
             {selectedDraft ? (
@@ -2634,7 +2665,9 @@ export function StudioCollectionsClient({
                       className="input-field"
                       disabled={!canManagePublication}
                       onChange={(event) => {
-                        setSelectedPublicationTargetId(event.target.value || null);
+                        setSelectedPublicationTargetId(
+                          event.target.value || null
+                        );
                       }}
                       value={selectedPublicationTarget?.brandId ?? ""}
                     >
@@ -2655,7 +2688,8 @@ export function StudioCollectionsClient({
                     <strong>Republish will move the route</strong>
                     <span>
                       Republishing will move this release from{" "}
-                      {selectedDraft.publication.publicPath} to {selectedDraftPublicPath}.
+                      {selectedDraft.publication.publicPath} to{" "}
+                      {selectedDraftPublicPath}.
                     </span>
                   </div>
                 ) : null}
@@ -2668,13 +2702,13 @@ export function StudioCollectionsClient({
                   {selectedDraft.publication ? (
                     <Pill>
                       Published{" "}
-                      {formatCandidateTimestamp(selectedDraft.publication.publishedAt)}
+                      {formatCandidateTimestamp(
+                        selectedDraft.publication.publishedAt
+                      )}
                     </Pill>
                   ) : null}
                   {selectedDraft.publication ? (
-                    <Pill>
-                      Order {selectedDraft.publication.displayOrder}
-                    </Pill>
+                    <Pill>Order {selectedDraft.publication.displayOrder}</Pill>
                   ) : null}
                   {selectedDraft.publication?.isFeatured ? (
                     <Pill>Featured release</Pill>
@@ -2760,7 +2794,8 @@ export function StudioCollectionsClient({
                       className="inline-link"
                       href={createCollectionTokenUriPath({
                         brandSlug: selectedDraft.publication.brandSlug,
-                        collectionSlug: selectedDraft.publication.collectionSlug,
+                        collectionSlug:
+                          selectedDraft.publication.collectionSlug,
                         tokenId: selectedDraft.items[0].position
                       })}
                       target="_blank"
@@ -2967,7 +3002,9 @@ export function StudioCollectionsClient({
                             heroGeneratedAssetId: event.target.value
                           }));
                         }}
-                        value={publicationMerchandisingState.heroGeneratedAssetId}
+                        value={
+                          publicationMerchandisingState.heroGeneratedAssetId
+                        }
                       >
                         <option value="">Use first published item</option>
                         {selectedDraft.items.map((item) => (
@@ -3147,7 +3184,8 @@ export function StudioCollectionsClient({
                       </Pill>
                       <Pill>
                         {shortHex(
-                          selectedDraft.publication.activeDeployment.contractAddress
+                          selectedDraft.publication.activeDeployment
+                            .contractAddress
                         )}
                       </Pill>
                     </>
@@ -3156,7 +3194,9 @@ export function StudioCollectionsClient({
                   )}
                   <Pill>
                     {selectedDraft.publication.mintedTokenCount} recorded mint
-                    {selectedDraft.publication.mintedTokenCount === 1 ? "" : "s"}
+                    {selectedDraft.publication.mintedTokenCount === 1
+                      ? ""
+                      : "s"}
                   </Pill>
                 </div>
                 <fieldset
@@ -3275,7 +3315,9 @@ export function StudioCollectionsClient({
                   </div>
                   {deploymentIntentJson ? (
                     <label className="field-stack">
-                      <span className="field-label">Deployment intent JSON</span>
+                      <span className="field-label">
+                        Deployment intent JSON
+                      </span>
                       <textarea
                         className="input-field input-field--multiline"
                         readOnly
@@ -3359,7 +3401,10 @@ export function StudioCollectionsClient({
                 {selectedDraft.publication.mints.length > 0 ? (
                   <div className="studio-collections-mint-list">
                     {selectedDraft.publication.mints.map((mint) => (
-                      <div className="studio-collections-mint-card" key={mint.id}>
+                      <div
+                        className="studio-collections-mint-card"
+                        key={mint.id}
+                      >
                         <strong>Token #{mint.tokenId}</strong>
                         <span>{mint.recipientWalletAddress}</span>
                         <span>{formatCandidateTimestamp(mint.mintedAt)}</span>

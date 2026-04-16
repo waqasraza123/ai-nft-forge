@@ -19,6 +19,8 @@ Database mode support is implemented and verified as far as the local environmen
 - Expanded `README.md` with sequential startup and validation commands for both bundled PostgreSQL and Neon across local and self-host flows.
 - Updated local `.env` to `DATABASE_MODE=neon` with placeholder pooled/runtime and unpooled/direct Neon URLs; `DATABASE_NEON_SHADOW_URL` remains empty pending a separate shadow database URL if `prisma migrate dev` is needed.
 - Added a factual badge strip at the top of `README.md` for CI, license, Node, pnpm, monorepo workspace, and self-host deployment posture.
+- Expanded the README badge strip with Docker Postgres local-mode, optional Neon-mode, Docker Compose, Next.js, TypeScript, and Prisma badges.
+- Ran Prettier across the repo to resolve the CI `format-check` failure caused by repo-wide formatting drift, then verified `pnpm format-check` passes.
 
 ## Notes
 - Default behavior remains the existing Docker/local PostgreSQL path when `DATABASE_MODE` is unset or `local`.

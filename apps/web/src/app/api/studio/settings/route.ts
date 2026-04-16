@@ -5,7 +5,7 @@ import {
   createStudioSettingsErrorResponse,
   parseJsonBody,
   requireStudioActiveOwnerApiSession,
-  requireStudioApiSession,
+  requireStudioApiSession
 } from "../../../../server/studio-settings/http";
 import { createRuntimeStudioSettingsService } from "../../../../server/studio-settings/runtime";
 

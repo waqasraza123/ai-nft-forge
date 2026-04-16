@@ -22,17 +22,15 @@ export async function POST(request: Request, context: RouteContext) {
       await parseJsonBody(request)
     );
     const result =
-      await createRuntimeCollectionDraftService().recordCollectionContractMint(
-        {
-          collectionDraftId,
-          ownerUserId: session.ownerUserId,
-          ownerWalletAddress: session.owner.walletAddress,
-          recipientWalletAddress: body.recipientWalletAddress,
-          tokenId: body.tokenId,
-          txHash: body.txHash,
-          workspaceId: session.workspace.id
-        }
-      );
+      await createRuntimeCollectionDraftService().recordCollectionContractMint({
+        collectionDraftId,
+        ownerUserId: session.ownerUserId,
+        ownerWalletAddress: session.owner.walletAddress,
+        recipientWalletAddress: body.recipientWalletAddress,
+        tokenId: body.tokenId,
+        txHash: body.txHash,
+        workspaceId: session.workspace.id
+      });
 
     return NextResponse.json(result);
   } catch (error) {

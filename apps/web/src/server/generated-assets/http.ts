@@ -34,11 +34,7 @@ export async function requireStudioActiveApiSession() {
   const session = await requireStudioApiSession();
 
   assertWorkspaceIsActive(session.workspace, (message) => {
-    return new GeneratedAssetServiceError(
-      "WORKSPACE_NOT_ACTIVE",
-      message,
-      409
-    );
+    return new GeneratedAssetServiceError("WORKSPACE_NOT_ACTIVE", message, 409);
   });
 
   return session;

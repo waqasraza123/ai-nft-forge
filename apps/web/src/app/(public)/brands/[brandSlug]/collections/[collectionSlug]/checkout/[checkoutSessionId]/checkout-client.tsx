@@ -66,9 +66,7 @@ export function CheckoutClient(props: CheckoutClientProps) {
           onClick={() => void runAction("complete")}
           type="button"
         >
-          {busyAction === "complete"
-            ? "Confirming claim..."
-            : "Confirm claim"}
+          {busyAction === "complete" ? "Confirming claim..." : "Confirm claim"}
         </button>
       ) : null}
       {props.canCancel ? (

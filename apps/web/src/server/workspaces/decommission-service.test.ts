@@ -53,8 +53,7 @@ function createWorkspaceDecommissionHarness(input?: {
           canceledByUserId: null,
           createdAt: new Date("2026-04-12T01:00:00.000Z"),
           executeAfter:
-            input.scheduledExecuteAfter ??
-            new Date("2026-04-20T05:00:00.000Z"),
+            input.scheduledExecuteAfter ?? new Date("2026-04-20T05:00:00.000Z"),
           executedAt: null,
           executedByUser: null,
           executedByUserId: null,
@@ -304,18 +303,15 @@ function createWorkspaceDecommissionHarness(input?: {
         }
 
         return {
-          decommissionRetentionDaysDefault:
-            input?.retentionDaysDefault ?? 30,
-          decommissionRetentionDaysMinimum:
-            input?.retentionDaysMinimum ?? 7,
+          decommissionRetentionDaysDefault: input?.retentionDaysDefault ?? 30,
+          decommissionRetentionDaysMinimum: input?.retentionDaysMinimum ?? 7,
           id: "workspace_1",
           lifecycleWebhookDeliverDecommissionNotifications: true,
           lifecycleWebhookDeliverInvitationReminders: true,
           lifecycleWebhookEnabled: true,
           name: "Workspace One",
           ownerUserId: "user_owner",
-          requireDecommissionReason:
-            input?.requireDecommissionReason ?? false,
+          requireDecommissionReason: input?.requireDecommissionReason ?? false,
           slug: "workspace-one",
           status: input?.workspaceStatus ?? "archived"
         };
@@ -488,11 +484,12 @@ describe("createWorkspaceDecommissionService", () => {
       scheduledExecuteAfter: new Date("2026-04-20T05:00:00.000Z")
     });
 
-    const result = await harness.service.recordWorkspaceDecommissionNotification({
-      kind: "scheduled",
-      ownerUserId: "user_owner",
-      workspaceId: "workspace_1"
-    });
+    const result =
+      await harness.service.recordWorkspaceDecommissionNotification({
+        kind: "scheduled",
+        ownerUserId: "user_owner",
+        workspaceId: "workspace_1"
+      });
 
     expect(result.deliveries[0]?.deliveryState).toBe("queued");
     expect(result.notification.kind).toBe("scheduled");

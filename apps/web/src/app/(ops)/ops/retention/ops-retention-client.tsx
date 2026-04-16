@@ -86,9 +86,7 @@ async function parseJsonResponse<T>(input: {
   return input.schema.parse(payload);
 }
 
-export function OpsRetentionClient({
-  initialReport
-}: OpsRetentionClientProps) {
+export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
   const router = useRouter();
   const [report, setReport] = useState(initialReport);
   const [notice, setNotice] = useState<NoticeState>(null);
@@ -347,15 +345,21 @@ export function OpsRetentionClient({
           </Pill>
           <Pill>
             Interval{" "}
-            {formatDurationSeconds(report.lifecycleAutomationHealth.intervalSeconds)}
+            {formatDurationSeconds(
+              report.lifecycleAutomationHealth.intervalSeconds
+            )}
           </Pill>
           <Pill>
             Jitter{" "}
-            {formatDurationSeconds(report.lifecycleAutomationHealth.jitterSeconds)}
+            {formatDurationSeconds(
+              report.lifecycleAutomationHealth.jitterSeconds
+            )}
           </Pill>
           <Pill>
             Lock TTL{" "}
-            {formatDurationSeconds(report.lifecycleAutomationHealth.lockTtlSeconds)}
+            {formatDurationSeconds(
+              report.lifecycleAutomationHealth.lockTtlSeconds
+            )}
           </Pill>
           <Pill>
             Last run{" "}
@@ -390,7 +394,8 @@ export function OpsRetentionClient({
                   </span>
                   <span>
                     Audit-log {run.auditLogDeliveryCount} · webhook queued{" "}
-                    {run.webhookQueuedCount} · failures {run.failedWorkspaceCount}
+                    {run.webhookQueuedCount} · failures{" "}
+                    {run.failedWorkspaceCount}
                     {run.failureMessage ? ` · ${run.failureMessage}` : ""}
                   </span>
                 </div>
@@ -499,15 +504,22 @@ export function OpsRetentionClient({
                       reconciliation
                     </span>
                     <span>
-                      invites {workspace.directory.pendingInvitationCount} pending
-                      · {workspace.directory.expiringInvitationCount} expiring ·{" "}
-                      {workspace.directory.expiredInvitationCount} expired
+                      invites {workspace.directory.pendingInvitationCount}{" "}
+                      pending · {workspace.directory.expiringInvitationCount}{" "}
+                      expiring · {workspace.directory.expiredInvitationCount}{" "}
+                      expired
                     </span>
                     <span>
                       policy default{" "}
-                      {workspace.retentionPolicy.defaultDecommissionRetentionDays}
+                      {
+                        workspace.retentionPolicy
+                          .defaultDecommissionRetentionDays
+                      }
                       d · minimum{" "}
-                      {workspace.retentionPolicy.minimumDecommissionRetentionDays}
+                      {
+                        workspace.retentionPolicy
+                          .minimumDecommissionRetentionDays
+                      }
                       d · reason{" "}
                       {workspace.retentionPolicy.requireDecommissionReason
                         ? "required"
@@ -531,8 +543,9 @@ export function OpsRetentionClient({
                     </span>
                     <span>
                       SLA {formatStatus(workspace.lifecycleSlaSummary.status)} ·
-                      max age {workspace.lifecycleSlaPolicy.automationMaxAgeMinutes}
-                      m · failure threshold{" "}
+                      max age{" "}
+                      {workspace.lifecycleSlaPolicy.automationMaxAgeMinutes}m ·
+                      failure threshold{" "}
                       {workspace.lifecycleSlaPolicy.webhookFailureThreshold} ·
                       failed webhooks{" "}
                       {workspace.lifecycleSlaSummary.failedWebhookCount}
@@ -573,7 +586,8 @@ export function OpsRetentionClient({
                     </span>
                     {workspace.decommission ? (
                       <span>
-                        notices {workspace.decommissionWorkflow.notificationCount}
+                        notices{" "}
+                        {workspace.decommissionWorkflow.notificationCount}
                         {workspace.decommissionWorkflow.nextDueKind
                           ? ` · next due ${formatStatus(
                               workspace.decommissionWorkflow.nextDueKind
@@ -588,7 +602,8 @@ export function OpsRetentionClient({
                           workspace.lifecycleDelivery.latestDelivery.eventKind
                         )}{" "}
                         {formatStatus(
-                          workspace.lifecycleDelivery.latestDelivery.deliveryState
+                          workspace.lifecycleDelivery.latestDelivery
+                            .deliveryState
                         )}{" "}
                         {formatTimestamp(
                           workspace.lifecycleDelivery.latestDelivery.updatedAt
@@ -598,7 +613,10 @@ export function OpsRetentionClient({
                   </div>
                   <div className="studio-action-row">
                     {selectable ? (
-                      <label className="pill-row" htmlFor={workspace.workspace.id}>
+                      <label
+                        className="pill-row"
+                        htmlFor={workspace.workspace.id}
+                      >
                         <input
                           checked={selectedCancelableWorkspaceIds.includes(
                             workspace.workspace.id

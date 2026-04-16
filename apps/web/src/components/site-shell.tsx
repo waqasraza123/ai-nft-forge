@@ -24,7 +24,10 @@ export function SiteShell({ children }: SiteShellProps) {
   const shellMode = getShellMode(pathname);
 
   return (
-    <div className={`site-root site-root--${shellMode}`} data-shell-mode={shellMode}>
+    <div
+      className={`site-root site-root--${shellMode}`}
+      data-shell-mode={shellMode}
+    >
       {children}
     </div>
   );

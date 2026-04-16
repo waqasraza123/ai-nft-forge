@@ -39,11 +39,7 @@ describe("ops shared contracts", () => {
   });
 
   it("round-trips schedule day masks", () => {
-    const activeDaysMask = createOpsAlertScheduleDayMask([
-      "mon",
-      "wed",
-      "fri"
-    ]);
+    const activeDaysMask = createOpsAlertScheduleDayMask(["mon", "wed", "fri"]);
 
     expect(parseOpsAlertScheduleDayMask(activeDaysMask)).toEqual([
       "mon",
@@ -151,7 +147,8 @@ describe("ops shared contracts", () => {
         kind: "review_ready_draft_invalid",
         lastDetectedAt: "2026-04-10T12:00:00.000Z",
         latestRunId: "run_1",
-        message: "A review-ready draft contains generated assets that are no longer approved.",
+        message:
+          "A review-ready draft contains generated assets that are no longer approved.",
         repairMessage: "The draft was downgraded back to draft.",
         repairable: true,
         repairedAt: "2026-04-10T12:05:00.000Z",

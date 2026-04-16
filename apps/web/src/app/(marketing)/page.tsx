@@ -103,21 +103,33 @@ const releasePreviews: MarketingShowcaseRelease[] = [
     focus: "Collection launch",
     title: "Series One",
     trust: "Curated · White-label · Wallet verified",
-    metrics: ["Ready for public drop", "Chain metadata generated", "Public media snapshot"]
+    metrics: [
+      "Ready for public drop",
+      "Chain metadata generated",
+      "Public media snapshot"
+    ]
   },
   {
     cadence: "Collector program",
     focus: "Seasonal release",
     title: "Seasonal Capsule",
     trust: "Editioned · Checkout gated · Immutable view",
-    metrics: ["Live availability controls", "Inventory reservation", "Static storefront publish"]
+    metrics: [
+      "Live availability controls",
+      "Inventory reservation",
+      "Static storefront publish"
+    ]
   },
   {
     cadence: "Brand rollout",
     focus: "Multi-release floor",
     title: "Brand Pulse",
     trust: "Brand presets · Archive rails · Route-ready",
-    metrics: ["Brand storefront route", "Multiple release states", "Metadata endpoints"]
+    metrics: [
+      "Brand storefront route",
+      "Multiple release states",
+      "Metadata endpoints"
+    ]
   }
 ];
 
@@ -175,11 +187,14 @@ export default function MarketingPage() {
           </h1>
           <p className="marketing-lead">
             AI NFT Forge is a web3 product platform for teams that need reliable
-            creative pipelines, deterministic storefront publishing, and chain-aware
-            release controls in one self-hosted stack.
+            creative pipelines, deterministic storefront publishing, and
+            chain-aware release controls in one self-hosted stack.
           </p>
           <div className="marketing-hero__actions">
-            <Link className="marketing-cta marketing-cta--primary" href="/studio">
+            <Link
+              className="marketing-cta marketing-cta--primary"
+              href="/studio"
+            >
               Enter Studio
             </Link>
             <Link
@@ -190,8 +205,8 @@ export default function MarketingPage() {
             </Link>
           </div>
           <p className="marketing-hero__note">
-            Positioned between AI generation, branded storefront publishing, and onchain
-            settlement, with product boundaries kept explicit.
+            Positioned between AI generation, branded storefront publishing, and
+            onchain settlement, with product boundaries kept explicit.
           </p>
         </div>
         <div className="marketing-hero__visual" aria-hidden="true">
@@ -266,7 +281,9 @@ export default function MarketingPage() {
                   {release.focus}
                 </span>
               </div>
-              <h3 className="marketing-showcase-card__title">{release.title}</h3>
+              <h3 className="marketing-showcase-card__title">
+                {release.title}
+              </h3>
               <p className="marketing-showcase-card__trust">{release.trust}</p>
               <ul className="marketing-showcase-card__metrics">
                 {release.metrics.map((metric) => (

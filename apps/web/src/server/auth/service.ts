@@ -255,7 +255,9 @@ export function createAuthService(dependencies: AuthServiceDependencies) {
         });
 
         const existingOwnedWorkspace =
-          await repositories.workspaceRepository.findFirstByOwnerUserId(user.id);
+          await repositories.workspaceRepository.findFirstByOwnerUserId(
+            user.id
+          );
         const existingWorkspaceMembership =
           await repositories.workspaceMembershipRepository.findFirstByUserId(
             user.id

@@ -299,14 +299,15 @@ function serializeRun(run: PersistedRunRecord): OpsReconciliationRunSummary {
 }
 
 function parseIssueDetail(detailJson: unknown): OpsReconciliationIssueDetail {
-  const parsedDetail = opsReconciliationIssueSummarySchema.shape.detail.safeParse(
-    detailJson
-  );
+  const parsedDetail =
+    opsReconciliationIssueSummarySchema.shape.detail.safeParse(detailJson);
 
   return parsedDetail.success ? parsedDetail.data : {};
 }
 
-function serializeIssue(issue: PersistedIssueRecord): OpsReconciliationIssueSummary {
+function serializeIssue(
+  issue: PersistedIssueRecord
+): OpsReconciliationIssueSummary {
   return opsReconciliationIssueSummarySchema.parse({
     detail: parseIssueDetail(issue.detailJson),
     fingerprint: issue.fingerprint,
@@ -540,20 +541,22 @@ export function createOpsReconciliationService(
         ).length;
         const criticalIssueCount = issues.length - warningIssueCount;
         const persistedRun =
-          await dependencies.repositories.opsReconciliationRunRepository.create({
-            completedAt,
-            criticalIssueCount,
-            issueCount: issues.length,
-            message:
-              issues.length > 0
-                ? "Reconciliation recorded open issues."
-                : "Reconciliation completed without issues.",
-            ownerUserId: input.ownerUserId,
-            startedAt,
-            status: "succeeded",
-            warningIssueCount,
-            workspaceId: input.workspaceId
-          });
+          await dependencies.repositories.opsReconciliationRunRepository.create(
+            {
+              completedAt,
+              criticalIssueCount,
+              issueCount: issues.length,
+              message:
+                issues.length > 0
+                  ? "Reconciliation recorded open issues."
+                  : "Reconciliation completed without issues.",
+              ownerUserId: input.ownerUserId,
+              startedAt,
+              status: "succeeded",
+              warningIssueCount,
+              workspaceId: input.workspaceId
+            }
+          );
 
         await Promise.all(
           issues.map((issue) =>
@@ -584,17 +587,19 @@ export function createOpsReconciliationService(
             ? error.message
             : "Unknown reconciliation failure.";
         const persistedRun =
-          await dependencies.repositories.opsReconciliationRunRepository.create({
-            completedAt,
-            criticalIssueCount: 0,
-            issueCount: 0,
-            message,
-            ownerUserId: input.ownerUserId,
-            startedAt,
-            status: "failed",
-            warningIssueCount: 0,
-            workspaceId: input.workspaceId
-          });
+          await dependencies.repositories.opsReconciliationRunRepository.create(
+            {
+              completedAt,
+              criticalIssueCount: 0,
+              issueCount: 0,
+              message,
+              ownerUserId: input.ownerUserId,
+              startedAt,
+              status: "failed",
+              warningIssueCount: 0,
+              workspaceId: input.workspaceId
+            }
+          );
 
         return opsReconciliationRunResponseSchema.parse({
           run: serializeRun(persistedRun)
@@ -627,11 +632,15 @@ export function createOpsReconciliationService(
       const repairedAt = dependencies.now();
 
       if (issue.kind === "published_public_asset_missing") {
-        const publishedCollectionId = String(detail.publishedCollectionId ?? "");
+        const publishedCollectionId = String(
+          detail.publishedCollectionId ?? ""
+        );
         const generatedAssetId = String(detail.generatedAssetId ?? "");
 
         if (!publishedCollectionId || !generatedAssetId) {
-          throw new Error("The stored reconciliation issue is missing repair context.");
+          throw new Error(
+            "The stored reconciliation issue is missing repair context."
+          );
         }
 
         const [publication, generatedAsset] = await Promise.all([
@@ -641,14 +650,18 @@ export function createOpsReconciliationService(
               workspaceId: input.workspaceId
             }
           ),
-          dependencies.repositories.generatedAssetRepository.findByIdForWorkspace({
-            id: generatedAssetId,
-            workspaceId: input.workspaceId
-          })
+          dependencies.repositories.generatedAssetRepository.findByIdForWorkspace(
+            {
+              id: generatedAssetId,
+              workspaceId: input.workspaceId
+            }
+          )
         ]);
 
         if (!publication || !generatedAsset) {
-          throw new Error("The missing public asset no longer has a repair target.");
+          throw new Error(
+            "The missing public asset no longer has a repair target."
+          );
         }
 
         const publicationItem =
@@ -710,7 +723,9 @@ export function createOpsReconciliationService(
         const collectionDraftId = String(detail.collectionDraftId ?? "");
 
         if (!collectionDraftId) {
-          throw new Error("The stored reconciliation issue is missing draft context.");
+          throw new Error(
+            "The stored reconciliation issue is missing draft context."
+          );
         }
 
         const repairedDraft =
@@ -741,7 +756,9 @@ export function createOpsReconciliationService(
         );
 
       if (!repairedIssue) {
-        throw new Error("The reconciliation issue could not be marked repaired.");
+        throw new Error(
+          "The reconciliation issue could not be marked repaired."
+        );
       }
 
       return opsReconciliationIssueRepairResponseSchema.parse({

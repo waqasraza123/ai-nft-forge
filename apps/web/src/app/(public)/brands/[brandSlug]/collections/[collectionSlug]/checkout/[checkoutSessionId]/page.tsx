@@ -31,7 +31,8 @@ const checkoutStatusCopy: Record<CheckoutStatus, CheckoutStatusCopy> = {
     heroLead:
       "This item is reserved and awaiting finalization. Reserve ownership is active and can still be claimed.",
     actionTitle: "Complete your claim now",
-    actionSubtext: "Press forward to finish the checkout flow and mint this edition.",
+    actionSubtext:
+      "Press forward to finish the checkout flow and mint this edition.",
     stateTone: "open"
   },
   completed: {
@@ -245,8 +246,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
     providerMode: checkout.checkout.providerKind,
     status: checkout.checkout.status
   });
-  const checkoutLead =
-    statusCopy.heroLead;
+  const checkoutLead = statusCopy.heroLead;
 
   return (
     <div
@@ -313,7 +313,11 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
             </div>
             <div className="storefront-stat">
               <span>Wallet</span>
-              <strong>{formatWalletAddress(checkout.checkout.reservation.buyerWalletAddress)}</strong>
+              <strong>
+                {formatWalletAddress(
+                  checkout.checkout.reservation.buyerWalletAddress
+                )}
+              </strong>
             </div>
             <div className="storefront-stat">
               <span>Reservation expires</span>
@@ -339,12 +343,12 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
           <h2>Claim context</h2>
           <p className="storefront-hero__lead">
             This checkpoint is part of the active collectible launch flow for{" "}
-            <strong>{checkout.checkout.title}</strong> and remains tied to that release
-            context.
+            <strong>{checkout.checkout.title}</strong> and remains tied to that
+            release context.
           </p>
           <p className="storefront-checkout-trust-list">
-            Use the route below to review the release details, remaining inventory,
-            and related campaign information.
+            Use the route below to review the release details, remaining
+            inventory, and related campaign information.
           </p>
           <Link
             className="storefront-button storefront-button--secondary"
@@ -364,7 +368,9 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
           <span className="storefront-section-kicker">Collector action</span>
           <h2>{statusCopy.actionTitle}</h2>
           <p className="storefront-hero__lead">{statusCopy.actionSubtext}</p>
-          <p className="storefront-checkout-action-copy">{actionCopy.providerLead}</p>
+          <p className="storefront-checkout-action-copy">
+            {actionCopy.providerLead}
+          </p>
           {checkout.checkout.providerKind === "manual" ? (
             <CheckoutClient
               brandSlug={brandSlug}

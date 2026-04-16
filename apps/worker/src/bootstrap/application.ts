@@ -69,8 +69,7 @@ export async function bootstrapWorkerApplication(
     databaseClient,
     env,
     fulfillmentWebhook: createCheckoutFulfillmentWebhookBoundary({
-      callbackBaseUrl:
-        commerceEnv.COMMERCE_FULFILLMENT_CALLBACK_BASE_URL ?? "",
+      callbackBaseUrl: commerceEnv.COMMERCE_FULFILLMENT_CALLBACK_BASE_URL ?? "",
       callbackBearerToken:
         commerceEnv.COMMERCE_FULFILLMENT_CALLBACK_BEARER_TOKEN ?? "",
       timeoutMs: commerceEnv.COMMERCE_FULFILLMENT_WEBHOOK_TIMEOUT_MS,
@@ -96,9 +95,9 @@ export async function bootstrapWorkerApplication(
       commerceCheckoutSessionRepository: {
         findByPublicId: async (publicId) => {
           const session =
-            await createCommerceCheckoutSessionRepository(databaseClient).findByPublicId(
-              publicId
-            );
+            await createCommerceCheckoutSessionRepository(
+              databaseClient
+            ).findByPublicId(publicId);
 
           if (!session) {
             return null;
@@ -175,7 +174,7 @@ export async function bootstrapWorkerApplication(
         databaseClient,
         logger,
         rawEnvironment
-    }),
+      }),
     redisConnection
   });
   const workspaceLifecycleAutomationScheduler =

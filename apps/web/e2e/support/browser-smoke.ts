@@ -485,25 +485,24 @@ export async function seedBrowserSmokeData(input: {
       }
     });
 
-    const brokenPublication =
-      await databaseClient.publishedCollection.create({
-        data: {
-          brandName: brand.name,
-          brandSlug: brand.slug,
-          description: invalidDraft.description,
-          displayOrder: 0,
-          heroGeneratedAssetId: invalidGeneratedAsset.id,
-          isFeatured: false,
-          ownerUserId: input.userId,
-          publishedAt: new Date(now - 40 * 60 * 1000),
-          slug: invalidDraft.slug,
-          soldCount: 0,
-          sourceCollectionDraftId: invalidDraft.id,
-          storefrontStatus: "live",
-          title: invalidDraft.title,
-          workspaceId: workspace.id
-        }
-      });
+    const brokenPublication = await databaseClient.publishedCollection.create({
+      data: {
+        brandName: brand.name,
+        brandSlug: brand.slug,
+        description: invalidDraft.description,
+        displayOrder: 0,
+        heroGeneratedAssetId: invalidGeneratedAsset.id,
+        isFeatured: false,
+        ownerUserId: input.userId,
+        publishedAt: new Date(now - 40 * 60 * 1000),
+        slug: invalidDraft.slug,
+        soldCount: 0,
+        sourceCollectionDraftId: invalidDraft.id,
+        storefrontStatus: "live",
+        title: invalidDraft.title,
+        workspaceId: workspace.id
+      }
+    });
 
     await databaseClient.publishedCollectionItem.create({
       data: {

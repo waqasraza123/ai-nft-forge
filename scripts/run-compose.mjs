@@ -47,9 +47,7 @@ function parseEnvironmentFile(filePath) {
       continue;
     }
 
-    entries[key] = normalizeEnvironmentValue(
-      line.slice(separatorIndex + 1)
-    );
+    entries[key] = normalizeEnvironmentValue(line.slice(separatorIndex + 1));
   }
 
   return entries;

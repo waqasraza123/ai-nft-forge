@@ -120,7 +120,12 @@ type WorkerQueueRegistryOptions = {
         attemptCount: number;
         deliveryChannel: "audit_log" | "webhook";
         deliveredAt: Date | null;
-        deliveryState: "queued" | "processing" | "delivered" | "failed" | "skipped";
+        deliveryState:
+          | "queued"
+          | "processing"
+          | "delivered"
+          | "failed"
+          | "skipped";
         id: string;
         payloadJson: unknown;
         providerKey: WorkspaceLifecycleNotificationProviderKey | null;
@@ -128,7 +133,12 @@ type WorkerQueueRegistryOptions = {
       updateById(input: {
         attemptCount?: number;
         deliveredAt?: Date | null;
-        deliveryState?: "queued" | "processing" | "delivered" | "failed" | "skipped";
+        deliveryState?:
+          | "queued"
+          | "processing"
+          | "delivered"
+          | "failed"
+          | "skipped";
         failedAt?: Date | null;
         failureMessage?: string | null;
         id: string;

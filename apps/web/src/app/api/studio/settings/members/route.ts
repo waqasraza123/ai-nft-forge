@@ -14,14 +14,13 @@ export async function POST(request: Request) {
     const body = studioWorkspaceMemberCreateRequestSchema.parse(
       await parseJsonBody(request)
     );
-    const result = await createRuntimeStudioSettingsService().addWorkspaceMember(
-      {
+    const result =
+      await createRuntimeStudioSettingsService().addWorkspaceMember({
         ownerUserId: session.ownerUserId,
         role: session.role,
         workspaceId: session.workspace?.id ?? null,
         walletAddress: body.walletAddress
-      }
-    );
+      });
 
     return NextResponse.json(result, {
       status: 201

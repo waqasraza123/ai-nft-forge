@@ -15,7 +15,9 @@ describe("ops reconciliation service", () => {
       isOnchainReconciliationIssueKind("published_token_owner_mismatch")
     ).toBe(true);
     expect(
-      isRepairableOpsReconciliationIssueKind("published_contract_missing_onchain")
+      isRepairableOpsReconciliationIssueKind(
+        "published_contract_missing_onchain"
+      )
     ).toBe(false);
     expect(
       isRepairableOpsReconciliationIssueKind("published_public_asset_missing")
@@ -45,7 +47,8 @@ describe("ops reconciliation service", () => {
       kind: "published_contract_missing_onchain",
       lastDetectedAt: new Date("2026-04-10T12:00:30.000Z"),
       latestRunId: "run_1",
-      message: "The recorded contract address does not currently have deployed bytecode onchain.",
+      message:
+        "The recorded contract address does not currently have deployed bytecode onchain.",
       repairMessage: null,
       repairedAt: null,
       severity: "critical",

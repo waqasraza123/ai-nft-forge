@@ -8,7 +8,10 @@ export function SiteFooter() {
   ];
 
   const productLinks = [
-    { href: "/brands/demo-studio/collections/foundation", label: "Demo release" },
+    {
+      href: "/brands/demo-studio/collections/foundation",
+      label: "Demo release"
+    },
     { href: "/studio/collections", label: "Collections" },
     { href: "/studio/commerce", label: "Commerce" }
   ];
@@ -18,8 +21,8 @@ export function SiteFooter() {
       <section className="site-footer-brand">
         <span className="site-footer-brand-title">AI NFT Forge</span>
         <span className="site-footer-brand-copy">
-          Dark-mode public storefronts with premium workflow surfaces for creators,
-          operators, and studio teams.
+          Dark-mode public storefronts with premium workflow surfaces for
+          creators, operators, and studio teams.
         </span>
       </section>
       <section className="site-footer-links">

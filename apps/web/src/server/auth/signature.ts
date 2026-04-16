@@ -1,16 +1,14 @@
-import {
-  createPublicClient,
-  getAddress,
-  http,
-  verifyMessage
-} from "viem";
+import { createPublicClient, getAddress, http, verifyMessage } from "viem";
 import { parseSiweMessage } from "viem/siwe";
 import { base, baseSepolia, type Chain } from "viem/chains";
 
 import { AuthServiceError } from "./error";
 import { normalizeWalletAddress } from "./message";
 
-const authSupportedChains: Record<number, { chain: Chain; defaultRpcUrl: string }> = {
+const authSupportedChains: Record<
+  number,
+  { chain: Chain; defaultRpcUrl: string }
+> = {
   [base.id]: {
     chain: base,
     defaultRpcUrl: base.rpcUrls.default.http[0] ?? "https://mainnet.base.org"
@@ -53,7 +51,10 @@ function getSiweRpcUrl(chainId: number, rawEnvironment: NodeJS.ProcessEnv) {
 export function createAuthSignatureVerifier(
   rawEnvironment: NodeJS.ProcessEnv = process.env
 ) {
-  const publicClients = new Map<number, ReturnType<typeof createPublicClient>>();
+  const publicClients = new Map<
+    number,
+    ReturnType<typeof createPublicClient>
+  >();
 
   function getPublicClient(chainId: number) {
     const existingClient = publicClients.get(chainId);
@@ -132,13 +133,15 @@ export function createAuthSignatureVerifier(
       return true;
     }
 
-    return getPublicClient(parsedMessage.chainId).verifySiweMessage({
-      address: walletAddress,
-      ...(input.expectedDomain ? { domain: input.expectedDomain } : {}),
-      message: input.signedMessage,
-      nonce: input.nonce,
-      signature: input.signature,
-      time: new Date()
-    }).catch(() => false);
+    return getPublicClient(parsedMessage.chainId)
+      .verifySiweMessage({
+        address: walletAddress,
+        ...(input.expectedDomain ? { domain: input.expectedDomain } : {}),
+        message: input.signedMessage,
+        nonce: input.nonce,
+        signature: input.signature,
+        time: new Date()
+      })
+      .catch(() => false);
   };
 }
