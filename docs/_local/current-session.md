@@ -16,6 +16,9 @@ Database mode support is implemented and verified as far as the local environmen
 - Added `infra/docker/docker-compose.neon.yml` and `infra/docker/docker-compose.selfhost.neon.yml` so Neon mode omits PostgreSQL while keeping Redis and MinIO.
 - Pinned browser smoke to local mode in `scripts/browser-smoke-env.mjs`.
 - Updated `.env.example`, `README.md`, and the local/self-host/environment docs for the explicit `DATABASE_MODE` contract.
+- Expanded `README.md` with sequential startup and validation commands for both bundled PostgreSQL and Neon across local and self-host flows.
+- Updated local `.env` to `DATABASE_MODE=neon` with placeholder pooled/runtime and unpooled/direct Neon URLs; `DATABASE_NEON_SHADOW_URL` remains empty pending a separate shadow database URL if `prisma migrate dev` is needed.
+- Added a factual badge strip at the top of `README.md` for CI, license, Node, pnpm, monorepo workspace, and self-host deployment posture.
 
 ## Notes
 - Default behavior remains the existing Docker/local PostgreSQL path when `DATABASE_MODE` is unset or `local`.

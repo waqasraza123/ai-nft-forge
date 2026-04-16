@@ -1,5 +1,12 @@
 # AI NFT Forge
 
+[![CI](https://github.com/waqasraza123/ai-nft-forge/actions/workflows/ci.yml/badge.svg)](https://github.com/waqasraza123/ai-nft-forge/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D22.17.0-339933?logo=node.js&logoColor=white)](package.json)
+[![pnpm](https://img.shields.io/badge/pnpm-%3E%3D10.11.1-F69220?logo=pnpm&logoColor=white)](package.json)
+[![Monorepo](https://img.shields.io/badge/repo-pnpm%20workspace-4B32C3)](package.json)
+[![Deployment](https://img.shields.io/badge/deployment-self--hosted-0A7B83)](docs/deployment/self-host-docker-compose.md)
+
 AI NFT Forge is a self-hosted, white-label NFT launch platform for turning uploaded source media into curated AI artwork, publishing branded release pages, moderating generated outputs, and operating the system through authenticated studio and ops surfaces.
 
 The repository ships as a pnpm monorepo with a Next.js control plane, a BullMQ worker, a standalone generation backend, PostgreSQL, Redis, and S3-compatible object storage. It is licensed under Apache-2.0.
@@ -43,34 +50,86 @@ The repository ships as a pnpm monorepo with a Next.js control plane, a BullMQ w
 
 ## Quick Start
 
-### Local development
+### Database modes
+
+- `DATABASE_MODE=local`: default mode, uses the bundled Docker PostgreSQL service
+- `DATABASE_MODE=neon`: opt-in mode, uses Neon Postgres and does not start a Docker PostgreSQL service
+
+Use `.env.example` as the starting point. The local runbook is in [docs/runbooks/local-development.md](/Users/mc/development/blockchain/ethereum/ai-nft-forge/docs/runbooks/local-development.md), and the self-host guide is in [docs/deployment/self-host-docker-compose.md](/Users/mc/development/blockchain/ethereum/ai-nft-forge/docs/deployment/self-host-docker-compose.md).
+
+### Local development with bundled PostgreSQL
 
 ```bash
+cp .env.example .env
 pnpm install
+pnpm infra:config
 pnpm infra:up
 pnpm db:migrate:deploy
 pnpm --filter @ai-nft-forge/generation-backend build
 pnpm --filter @ai-nft-forge/worker build
-pnpm --filter @ai-nft-forge/web build
 pnpm --filter @ai-nft-forge/generation-backend start
 pnpm --filter @ai-nft-forge/worker start
 pnpm --filter @ai-nft-forge/web dev
 ```
 
-Use `.env.example` as the starting point. The local runbook is in [docs/runbooks/local-development.md](/Users/mc/development/blockchain/ethereum/ai-nft-forge/docs/runbooks/local-development.md).
-Leave `DATABASE_MODE=local` for the current Docker-first PostgreSQL path, or switch to `DATABASE_MODE=neon` for the optional Neon runtime path.
+Leave `DATABASE_MODE=local` or unset it. `pnpm infra:config` should show `postgres` in this mode.
 
-### Single-node self-host
+### Local development with Neon Postgres
 
 ```bash
 cp .env.example .env
 pnpm install
+pnpm infra:config
+pnpm infra:up
+pnpm prisma:validate
+pnpm db:migrate:status
+pnpm db:migrate:deploy
+pnpm --filter @ai-nft-forge/generation-backend build
+pnpm --filter @ai-nft-forge/worker build
+pnpm --filter @ai-nft-forge/generation-backend start
+pnpm --filter @ai-nft-forge/worker start
+pnpm --filter @ai-nft-forge/web dev
+```
+
+Set these in `.env` before boot:
+
+```env
+DATABASE_MODE=neon
+DATABASE_NEON_URL=postgresql://...
+DATABASE_NEON_DIRECT_URL=postgresql://...
+DATABASE_NEON_SHADOW_URL=postgresql://...
+```
+
+Notes:
+
+- `DATABASE_URL` can remain in `.env`, but it is ignored while `DATABASE_MODE=neon`.
+- Neon URLs should usually include `?sslmode=require`.
+- `pnpm infra:config` should not show `postgres` in this mode.
+- `DATABASE_NEON_SHADOW_URL` is only needed for `prisma migrate dev`.
+
+### Single-node self-host with bundled PostgreSQL
+
+```bash
+cp .env.example .env
+pnpm install
+pnpm infra:selfhost:config
 pnpm infra:selfhost:up
 pnpm infra:selfhost:ps
 ```
 
-The self-host deployment guide is in [docs/deployment/self-host-docker-compose.md](/Users/mc/development/blockchain/ethereum/ai-nft-forge/docs/deployment/self-host-docker-compose.md).
-Bundled PostgreSQL remains the default self-host mode; set `DATABASE_MODE=neon` only when you want the Neon-backed variant.
+Bundled PostgreSQL remains the default self-host mode. `pnpm infra:selfhost:config` should show `postgres`.
+
+### Single-node self-host with Neon Postgres
+
+```bash
+cp .env.example .env
+pnpm install
+pnpm infra:selfhost:config
+pnpm infra:selfhost:up
+pnpm infra:selfhost:ps
+```
+
+Set `DATABASE_MODE=neon` and the Neon URLs in `.env` first. In this mode the self-host stack omits the PostgreSQL container and routes Prisma and runtime access to Neon.
 
 ## Validation
 
@@ -95,11 +154,12 @@ docker build -f apps/generation-backend/Dockerfile .
 ## Detailed Commands
 
 ```
-1. Start the local app
+1. Local app with bundled PostgreSQL
 
 Open 4 terminals from the repo root.
 
 Terminal 1: backing services
+cp .env.example .env
 pnpm install
 pnpm infra:up
 pnpm db:migrate:deploy
@@ -116,7 +176,38 @@ pnpm --filter @ai-nft-forge/worker start
 Terminal 4: web
 pnpm --filter @ai-nft-forge/web dev
 
-2. Health checks after boot
+2. Local app with Neon Postgres
+
+Set this in .env first:
+
+DATABASE_MODE=neon
+DATABASE_NEON_URL=postgresql://...
+DATABASE_NEON_DIRECT_URL=postgresql://...
+DATABASE_NEON_SHADOW_URL=postgresql://...
+
+Then run:
+
+pnpm install
+pnpm infra:config
+pnpm infra:up
+pnpm prisma:validate
+pnpm db:migrate:status
+pnpm db:migrate:deploy
+pnpm --filter @ai-nft-forge/generation-backend build
+pnpm --filter @ai-nft-forge/generation-backend start
+pnpm --filter @ai-nft-forge/worker build
+pnpm --filter @ai-nft-forge/worker start
+pnpm --filter @ai-nft-forge/web dev
+
+Expected checks:
+
+pnpm infra:config            # no postgres service in Neon mode
+pnpm worker:health
+pnpm generation-backend:health
+pnpm generation-backend:ready
+curl http://127.0.0.1:3000/api/health
+
+3. Health checks after boot
 
 Run these from the repo root:
 pnpm worker:health
@@ -128,7 +219,7 @@ If you want production-style web instead of dev:
 
 pnpm --filter @ai-nft-forge/web build
 pnpm --filter @ai-nft-forge/web start
-3. Full repo verification
+4. Full repo verification
 
 Run this from the repo root:
 
@@ -142,7 +233,7 @@ pnpm build
 Or use the combined command:
 
 pnpm validate
-4. Browser smoke tests
+5. Browser smoke tests
 
 First make sure:
 
@@ -154,19 +245,28 @@ Then run:
 
 pnpm --filter @ai-nft-forge/web exec playwright install chromium
 node scripts/run-browser-smoke.mjs
-5. Docker and self-host validation
+6. Docker and self-host validation
 pnpm infra:config
 pnpm infra:selfhost:config
 docker build -f apps/web/Dockerfile .
 docker build -f apps/worker/Dockerfile .
 docker build -f apps/generation-backend/Dockerfile .
 
-If you want to boot the self-host stack:
+If you want bundled PostgreSQL self-host:
 
 pnpm infra:selfhost:up
 pnpm infra:selfhost:ps
 pnpm infra:selfhost:logs
-6. Clean shutdown
+
+If you want Neon self-host:
+
+Set DATABASE_MODE=neon in .env, then run:
+
+pnpm infra:selfhost:config
+pnpm infra:selfhost:up
+pnpm infra:selfhost:ps
+pnpm infra:selfhost:logs
+7. Clean shutdown
 
 Local dev stack:
 
@@ -175,9 +275,11 @@ pnpm infra:down
 Self-host stack:
 
 pnpm infra:selfhost:down
-7. Best practical sequence
+8. Best practical sequence
 
 If you want the shortest realistic “run + test everything” path, use this exact sequence:
+
+Bundled PostgreSQL path:
 
 pnpm install
 pnpm infra:up
@@ -193,6 +295,21 @@ pnpm generation-backend:health
 pnpm generation-backend:ready
 pnpm --filter @ai-nft-forge/web exec playwright install chromium
 node scripts/run-browser-smoke.mjs
+
+Neon path:
+
+pnpm install
+pnpm infra:config
+pnpm infra:up
+pnpm prisma:validate
+pnpm db:migrate:status
+pnpm db:migrate:deploy
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm worker:health
+pnpm generation-backend:health
+pnpm generation-backend:ready
 ```
 
 ## Documentation
