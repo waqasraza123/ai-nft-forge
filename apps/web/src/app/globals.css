@@ -3809,6 +3809,52 @@ select {
   line-height: 1.6;
 }
 
+.ops-fleet-hero__leaders {
+  display: grid;
+  gap: 8px;
+}
+
+.ops-fleet-hero__leaders-label {
+  color: #486171;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.ops-fleet-hero__leaders-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ops-fleet-hero__leader {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid rgba(70, 92, 108, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.ops-fleet-hero__leader-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.ops-fleet-hero__leader-copy span,
+.ops-fleet-hero__leader-meta {
+  color: #5a6f7d;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.ops-fleet-hero__leader-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .ops-fleet-hero__notice {
   display: grid;
   gap: 14px;
@@ -5156,6 +5202,10 @@ select {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .ops-fleet-hero__leaders-list {
+    grid-template-columns: 1fr;
+  }
+
   .ops-fleet-pressure-summary__row {
     grid-template-columns: 1fr;
   }
@@ -5226,6 +5276,10 @@ select {
 
   .ops-fleet-signal-band,
   .ops-fleet-attention-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ops-fleet-hero__leaders-list {
     grid-template-columns: 1fr;
   }
 

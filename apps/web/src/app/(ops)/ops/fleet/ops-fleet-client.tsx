@@ -324,6 +324,31 @@ export function OpsFleetClient({
             <Pill>{pressuredWorkspaceCount} pressured</Pill>
             <Pill>{formatTimestamp(fleet.summary.generatedAt)}</Pill>
           </div>
+          <div className="ops-fleet-hero__leaders">
+            <span className="ops-fleet-hero__leaders-label">
+              Top pressure
+            </span>
+            <div className="ops-fleet-hero__leaders-list">
+              {attentionWorkspaces.map((workspace, index) => (
+                <div className="ops-fleet-hero__leader" key={workspace.workspace.id}>
+                  <div className="ops-fleet-hero__leader-copy">
+                    <strong>
+                      {index + 1}. {workspace.workspace.name}
+                    </strong>
+                    <span>
+                      /{workspace.workspace.slug} ·{" "}
+                      {formatWorkspaceStatus(workspace.workspace.status)}
+                    </span>
+                  </div>
+                  <div className="ops-fleet-hero__leader-meta">
+                    <span>{getWorkspacePressureScore(workspace)} pressure</span>
+                    <span>{workspace.ops.activeAlertCount} alerts</span>
+                    <span>{workspace.ops.openReconciliationIssueCount} recon</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
           <div className="ops-fleet-hero__notice">
             <div className="pill-row">
               <Pill>{pressuredWorkspaceCount} pressured</Pill>
