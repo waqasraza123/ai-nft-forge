@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 import { config as loadEnv } from "dotenv";
 import { defineConfig } from "prisma/config";
 
+import { resolvePrismaDatabaseConfiguration } from "./src/database-mode.js";
+
 const prismaConfigDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRootDirectory = resolve(prismaConfigDirectory, "../..");
 const fallbackEnvFilePaths = [
@@ -12,38 +14,36 @@ const fallbackEnvFilePaths = [
   resolve(repositoryRootDirectory, ".env")
 ];
 
-function resolveDatasourceUrl(): string {
-  if (process.env.DATABASE_URL?.trim()) {
-    return process.env.DATABASE_URL;
+for (const envFilePath of fallbackEnvFilePaths) {
+  if (!existsSync(envFilePath)) {
+    continue;
   }
 
-  for (const envFilePath of fallbackEnvFilePaths) {
-    if (!existsSync(envFilePath)) {
-      continue;
-    }
-
-    loadEnv({
-      override: false,
-      path: envFilePath,
-      quiet: true
-    });
-
-    if (process.env.DATABASE_URL?.trim()) {
-      return process.env.DATABASE_URL;
-    }
-  }
-
-  throw new Error(
-    `DATABASE_URL is required for Prisma commands. Checked process.env and: ${fallbackEnvFilePaths.join(
-      ", "
-    )}`
-  );
+  loadEnv({
+    override: false,
+    path: envFilePath,
+    quiet: true
+  });
 }
 
+const prismaDatabaseConfiguration = resolvePrismaDatabaseConfiguration(
+  process.env
+);
+
 export default defineConfig({
-  datasource: {
-    url: resolveDatasourceUrl()
-  },
+  ...(prismaDatabaseConfiguration.datasourceUrl
+    ? {
+        datasource: {
+          ...(prismaDatabaseConfiguration.shadowDatabaseUrl
+            ? {
+                shadowDatabaseUrl:
+                  prismaDatabaseConfiguration.shadowDatabaseUrl
+              }
+            : {}),
+          url: prismaDatabaseConfiguration.datasourceUrl
+        }
+      }
+    : {}),
   migrations: {
     path: "prisma/migrations"
   },

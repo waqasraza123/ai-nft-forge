@@ -60,6 +60,7 @@ export function resolveBrowserSmokeEnvironment() {
     ...baseEnvironment,
     BROWSER_SMOKE_STORAGE_PREFIX:
       baseEnvironment.BROWSER_SMOKE_STORAGE_PREFIX ?? "browser-smoke",
+    DATABASE_MODE: "local",
     DATABASE_URL: databaseUrl.toString(),
     GENERATION_BACKEND_BIND_HOST: browserSmokeHost,
     GENERATION_BACKEND_PORT: browserSmokeBackendPort,

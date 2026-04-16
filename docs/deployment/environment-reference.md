@@ -2,9 +2,25 @@
 
 This document is the durable source of truth for runtime environment variables across local development and single-node self-host deployment.
 
+## Database mode
+
+- `DATABASE_MODE`
+  - `local` is the default and preserves the current Docker/local PostgreSQL workflow
+  - `neon` switches runtime and Prisma to Neon Postgres and makes the Neon Compose variants active for `infra:*` commands
+- `DATABASE_URL`
+  - required in `local` mode
+  - used by `web`, `worker`, and Prisma when the bundled/local PostgreSQL path is active
+- `DATABASE_NEON_URL`
+  - required in `neon` mode for runtime access used by `web` and `worker`
+- `DATABASE_NEON_DIRECT_URL`
+  - optional for `prisma validate`, `prisma generate`, `prisma migrate deploy`, and `prisma migrate status`
+  - recommended for all Neon Prisma usage
+  - required for `prisma migrate dev` in Neon mode
+- `DATABASE_NEON_SHADOW_URL`
+  - only required for `prisma migrate dev` in Neon mode
+
 ## Required everywhere
 
-- `DATABASE_URL`: PostgreSQL connection string used by `web`, `worker`, and migrations
 - `REDIS_URL`: Redis connection string used by `web` queue diagnostics and the worker
 - `S3_ENDPOINT`
 - `S3_FORCE_PATH_STYLE`
@@ -135,7 +151,7 @@ Only needed when `GENERATION_BACKEND_PROVIDER_KIND=comfyui`.
 
 ## Compose helper values
 
-These are used by `infra/docker/docker-compose.selfhost.yml` and are optional unless you want to change host port bindings.
+These are used by the bundled-Postgres Docker Compose variants and are optional unless you want to change host port bindings.
 
 - `POSTGRES_USER`
 - `POSTGRES_PASSWORD`
@@ -153,6 +169,9 @@ These are used by `infra/docker/docker-compose.selfhost.yml` and are optional un
 
 ## Local vs self-host guidance
 
+- Leave `DATABASE_MODE=local` to keep the current Docker-first PostgreSQL workflow unchanged.
+- Set `DATABASE_MODE=neon` only when you want runtime and Prisma to use Neon Postgres instead of the bundled PostgreSQL container.
+- Neon mode expects `DATABASE_NEON_URL`; use `DATABASE_NEON_DIRECT_URL` for Prisma and add `DATABASE_NEON_SHADOW_URL` when you need `prisma migrate dev`.
 - Local development can leave both automation schedulers disabled if you prefer manual actions.
 - Self-host deployment should enable both automation schedulers.
 - Local development can keep `COMFYUI_BASE_URL` pointed at `127.0.0.1`; containerized self-host should usually use `host.docker.internal` or an internal network host that your backend can reach.

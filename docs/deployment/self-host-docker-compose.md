@@ -1,10 +1,13 @@
 # Self-Host With Docker Compose
 
-This repository supports a single-node self-host deployment path through `infra/docker/docker-compose.selfhost.yml`.
+This repository supports a single-node self-host deployment path through Docker Compose in two explicit database modes:
+
+- bundled PostgreSQL via `infra/docker/docker-compose.selfhost.yml`
+- Neon-backed mode via `infra/docker/docker-compose.selfhost.neon.yml`
 
 ## What the stack includes
 
-- PostgreSQL
+- PostgreSQL in bundled/local mode only
 - Redis
 - MinIO
 - bucket bootstrap for private and public storage
@@ -22,10 +25,11 @@ This repository supports a single-node self-host deployment path through `infra/
 ## First boot
 
 1. Copy `.env.example` to `.env`.
-2. Set real credentials for PostgreSQL, MinIO, and session/auth values.
-3. Choose a generation backend mode.
-4. Enable observability and reconciliation automation for self-host.
-5. Start the stack.
+2. Leave `DATABASE_MODE=local` to keep bundled PostgreSQL, or set `DATABASE_MODE=neon` plus the Neon database URLs.
+3. Set real credentials for PostgreSQL when using bundled mode, plus MinIO and session/auth values.
+4. Choose a generation backend mode.
+5. Enable observability and reconciliation automation for self-host.
+6. Start the stack.
 
 ```bash
 cp .env.example .env
@@ -35,6 +39,12 @@ pnpm infra:selfhost:ps
 ```
 
 The migration container runs `pnpm db:migrate:deploy` before the app services start.
+
+Neon-specific notes:
+
+- `pnpm infra:selfhost:up` automatically selects the Neon Compose variant when `DATABASE_MODE=neon`.
+- Neon self-host mode omits the PostgreSQL container and expects `DATABASE_NEON_URL`.
+- Set `DATABASE_NEON_DIRECT_URL` for Prisma deploy/status workflows and `DATABASE_NEON_SHADOW_URL` only if you need `prisma migrate dev`.
 
 ## Recommended settings
 
@@ -66,7 +76,8 @@ The migration job will apply any new Prisma migrations before the app services p
 
 ## Backups
 
-- PostgreSQL: back up the `postgres-data` volume or run logical dumps with `pg_dump`
+- PostgreSQL: back up the `postgres-data` volume or run logical dumps with `pg_dump` when using bundled mode
+- Neon: use Neon-managed backups or external logical dump procedures when using `DATABASE_MODE=neon`
 - MinIO: back up the `minio-data` volume or replicate the private and public buckets externally
 - Redis: Redis is operationally useful but not the system of record; preserve the `redis-data` volume for queue recovery and alert timing continuity
 

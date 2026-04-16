@@ -1,16 +1,17 @@
-import { z } from "zod";
-
 import type { DatabaseClient } from "./client.js";
-
-const databaseHealthEnvSchema = z.object({
-  DATABASE_URL: z.string().min(1).optional()
-});
+import {
+  describeDatabaseRuntimeConfiguration,
+  type DatabaseMode,
+  type DatabaseRuntimeUrlSource
+} from "./database-mode.js";
 
 export type DatabaseHealthSnapshot = {
   liveConnectionDeferred: true;
+  mode: DatabaseMode;
   provider: "postgresql";
   status: "configured" | "missing_database_url";
   urlConfigured: boolean;
+  urlSource: DatabaseRuntimeUrlSource | null;
 };
 
 export type DatabaseConnectivityStatus = {
@@ -21,14 +22,18 @@ export type DatabaseConnectivityStatus = {
 export function createDatabaseHealthSnapshot(
   rawEnvironment: NodeJS.ProcessEnv
 ): DatabaseHealthSnapshot {
-  const env = databaseHealthEnvSchema.parse(rawEnvironment);
-  const urlConfigured = Boolean(env.DATABASE_URL);
+  const runtimeConfiguration =
+    describeDatabaseRuntimeConfiguration(rawEnvironment);
 
   return {
     liveConnectionDeferred: true,
+    mode: runtimeConfiguration.mode,
     provider: "postgresql",
-    status: urlConfigured ? "configured" : "missing_database_url",
-    urlConfigured
+    status: runtimeConfiguration.urlConfigured
+      ? "configured"
+      : "missing_database_url",
+    urlConfigured: runtimeConfiguration.urlConfigured,
+    urlSource: runtimeConfiguration.urlSource
   };
 }
 

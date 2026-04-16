@@ -1,26 +1,19 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Prisma, PrismaClient } from "@prisma/client";
-import { z } from "zod";
+
+import { resolveDatabaseRuntimeUrl } from "./database-mode.js";
 
 type DatabaseGlobal = typeof globalThis & {
   __aiNftForgeDatabaseClient?: PrismaClient;
 };
 
-const databaseClientEnvironmentSchema = z.object({
-  DATABASE_URL: z.string().min(1)
-});
-
 const databaseGlobal = globalThis as DatabaseGlobal;
-
-function resolveDatabaseUrl(rawEnvironment: NodeJS.ProcessEnv): string {
-  return databaseClientEnvironmentSchema.parse(rawEnvironment).DATABASE_URL;
-}
 
 export function createDatabaseClient(
   rawEnvironment: NodeJS.ProcessEnv = process.env
 ) {
   const adapter = new PrismaPg({
-    connectionString: resolveDatabaseUrl(rawEnvironment)
+    connectionString: resolveDatabaseRuntimeUrl(rawEnvironment)
   });
 
   return new PrismaClient({

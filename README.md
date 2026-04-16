@@ -58,6 +58,7 @@ pnpm --filter @ai-nft-forge/web dev
 ```
 
 Use `.env.example` as the starting point. The local runbook is in [docs/runbooks/local-development.md](/Users/mc/development/blockchain/ethereum/ai-nft-forge/docs/runbooks/local-development.md).
+Leave `DATABASE_MODE=local` for the current Docker-first PostgreSQL path, or switch to `DATABASE_MODE=neon` for the optional Neon runtime path.
 
 ### Single-node self-host
 
@@ -69,6 +70,7 @@ pnpm infra:selfhost:ps
 ```
 
 The self-host deployment guide is in [docs/deployment/self-host-docker-compose.md](/Users/mc/development/blockchain/ethereum/ai-nft-forge/docs/deployment/self-host-docker-compose.md).
+Bundled PostgreSQL remains the default self-host mode; set `DATABASE_MODE=neon` only when you want the Neon-backed variant.
 
 ## Validation
 

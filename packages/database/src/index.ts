@@ -6,6 +6,22 @@ export {
   type DatabaseTransactionClient
 } from "./client.js";
 export {
+  databaseModeSchema,
+  databaseModes,
+  describeDatabaseRuntimeConfiguration,
+  resolveDatabaseMode,
+  resolveDatabaseRuntimeConfiguration,
+  resolveDatabaseRuntimeUrl,
+  resolvePrismaDatabaseConfiguration,
+  type DatabaseMode,
+  type DatabaseModeEnvironment,
+  type DatabasePrismaUrlSource,
+  type DatabaseRuntimeConfigurationSummary,
+  type DatabaseRuntimeUrlSource,
+  type ResolvedDatabaseRuntimeConfiguration,
+  type ResolvedPrismaDatabaseConfiguration
+} from "./database-mode.js";
+export {
   checkDatabaseConnection,
   createDatabaseHealthSnapshot,
   type DatabaseConnectivityStatus,
