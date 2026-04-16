@@ -456,6 +456,7 @@ export {
   generationBackendEnvSchema,
   type GenerationBackendEnv
 } from "./env/generation-backend-env.js";
+export { loadRepositoryEnvironment } from "./env/load-repository-environment.js";
 export {
   parseStorageEnv,
   storageEnvSchema,

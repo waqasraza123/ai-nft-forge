@@ -1,4 +1,4 @@
-import "dotenv/config";
+import { loadRepositoryEnvironment } from "@ai-nft-forge/shared";
 
 import {
   bootstrapGenerationBackendApplication,
@@ -9,6 +9,8 @@ import {
   createGenerationBackendHealthSnapshot,
   createGenerationBackendReadinessSnapshot
 } from "./lib/health.js";
+
+loadRepositoryEnvironment(process.env);
 
 async function runGenerationBackendCommand(argv: string[]) {
   const command = argv[0] ?? "start";

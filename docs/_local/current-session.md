@@ -4,43 +4,51 @@
 2026-04-16
 
 ## Current Objective
-Implement Studio Redesign Step 5: settings and workspace administration redesign.
+Fix repo-root env loading for workspace-invoked Node service commands.
 
 ## Current Step
-Studio Step 5 complete: workspace administration cockpit redesign for `/studio/settings`.
+Shared env bootstrap fix complete for generation backend and worker.
 
 ## Changes Applied
-- Rebuilt `apps/web/src/app/(studio)/studio/settings/studio-settings-client.tsx` into a cockpit layout with a control header, section navigation, grouped workspace/brand/team/ownership/lifecycle/retention/estate/audit sections, and a sticky context rail.
-- Updated `apps/web/src/app/(studio)/studio/settings/page.tsx` to pass the accessible workspace offboarding estate into the settings client so offboarding and estate review can be presented together.
-- Added `apps/web/src/components/studio/studio-settings-section-nav.tsx` for the anchored section navigation used by the new settings workspace.
-- Added a focused Studio settings style section in `apps/web/src/app/globals.css` for the cockpit header, signal cards, section navigation, grouped form panels, layout rail, and responsive behavior.
+- Added `packages/shared/src/env/load-repository-environment.ts` to resolve the monorepo root from `pnpm-workspace.yaml` and load `.env.local` plus `.env` with `override: false`.
+- Switched `apps/generation-backend/src/index.ts` and `apps/worker/src/index.ts` from `import "dotenv/config"` to the shared repo-root env bootstrap.
+- Moved the `dotenv` dependency from the app packages into `packages/shared` so env loading lives with the shared bootstrap utility.
+- Updated durable repo memory to record repo-root env fallback behavior for workspace-invoked service commands.
 
 ## Notes
-- Preserved the existing settings data contracts, route behavior, invitation flow, membership removal flow, role escalation flow, lifecycle automation and SLA behavior, lifecycle delivery retry behavior, retention and decommission behavior, export behavior, and workspace status update behavior.
-- No route handlers, database code, worker code, contracts code, commerce behavior, collections behavior, ops pages, public routes, or auth/session logic were changed for this step.
-- `docs/project-state.md` did not need a durable update for this presentational workflow redesign.
+- The startup failure was not caused by missing S3 variables in the repo root `.env`; it was caused by `dotenv/config` resolving from the package working directory when `pnpm --filter ...` launched the app from inside its workspace.
+- The new loader preserves production-safe behavior by preferring already-exported environment variables and only using repo-root `.env.local` or `.env` as a local fallback.
+- Existing unrelated working-tree edits remain in `README.md` and the Studio settings files and were not changed for this task.
 
 ## Verification
-- `pnpm typecheck` ✅
-- `pnpm build` ✅
-- `pnpm lint` ❌ (fails only on the same pre-existing unrelated issue in `packages/database/src/repositories/workspace-decommission-request-repository.ts`: unused `WorkspaceDecommissionRequestStatus`)
+- `pnpm --filter @ai-nft-forge/shared build` ✅
+- `pnpm --filter @ai-nft-forge/generation-backend build` ✅
+- `pnpm generation-backend:health` ✅
+- `pnpm --filter @ai-nft-forge/worker build` ✅
+- `pnpm worker:health` ✅
 
 ## Changed Files
-- `apps/web/src/app/(studio)/studio/settings/page.tsx`
-- `apps/web/src/app/(studio)/studio/settings/studio-settings-client.tsx`
-- `apps/web/src/app/globals.css`
-- `apps/web/src/components/studio/studio-settings-section-nav.tsx`
+- `packages/shared/src/env/load-repository-environment.ts`
+- `packages/shared/src/index.ts`
+- `packages/shared/package.json`
+- `apps/generation-backend/src/index.ts`
+- `apps/generation-backend/package.json`
+- `apps/worker/src/index.ts`
+- `apps/worker/package.json`
+- `pnpm-lock.yaml`
+- `docs/project-state.md`
 - `docs/_local/current-session.md`
 
 ## Verification Commands
-- `pnpm typecheck`
-- `pnpm build`
-- `pnpm lint`
+- `pnpm --filter @ai-nft-forge/shared build`
+- `pnpm --filter @ai-nft-forge/generation-backend build`
+- `pnpm generation-backend:health`
+- `pnpm --filter @ai-nft-forge/worker build`
+- `pnpm worker:health`
 
 ## Verification Results
-- `pnpm typecheck`: passed.
-- `pnpm build`: passed.
-- `pnpm lint`: fails only in existing unrelated file `packages/database/src/repositories/workspace-decommission-request-repository.ts` because `WorkspaceDecommissionRequestStatus` is unused.
+- `pnpm generation-backend:health`: returns `status: "ok"` with the expected local provider and bind settings, confirming S3-related env values are now loaded before validation.
+- `pnpm worker:health`: returns `status: "ok"`, confirming the same repo-root env fallback works for the worker.
 
 ## Next Action
-- Commit Studio Step 5 settings cockpit redesign changes and push if remote access is available.
+- Start the generation backend and worker normally from the repo root after infra is up; env loading should no longer depend on the current package directory.

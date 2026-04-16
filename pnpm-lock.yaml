@@ -41,9 +41,6 @@ importers:
       '@ai-nft-forge/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      dotenv:
-        specifier: ^17.4.0
-        version: 17.4.0
       sharp:
         specifier: ^0.34.4
         version: 0.34.5
@@ -129,9 +126,6 @@ importers:
       bullmq:
         specifier: ^5.73.0
         version: 5.73.0
-      dotenv:
-        specifier: ^17.4.0
-        version: 17.4.0
       ioredis:
         specifier: ^5.10.1
         version: 5.10.1
@@ -165,6 +159,9 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
+      dotenv:
+        specifier: ^17.4.0
+        version: 17.4.0
       prisma:
         specifier: ^7.6.0
         version: 7.6.0(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@6.0.2)
@@ -177,6 +174,9 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.1024.0
         version: 3.1024.0
+      dotenv:
+        specifier: ^17.4.0
+        version: 17.4.0
       zod:
         specifier: ^4.3.6
         version: 4.3.6

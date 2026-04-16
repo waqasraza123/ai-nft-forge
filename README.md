@@ -90,6 +90,109 @@ docker build -f apps/worker/Dockerfile .
 docker build -f apps/generation-backend/Dockerfile .
 ```
 
+## Detailed Commands
+
+```
+1. Start the local app
+
+Open 4 terminals from the repo root.
+
+Terminal 1: backing services
+pnpm install
+pnpm infra:up
+pnpm db:migrate:deploy
+pnpm infra:ps
+
+Terminal 2: generation backend
+pnpm --filter @ai-nft-forge/generation-backend build
+pnpm --filter @ai-nft-forge/generation-backend start
+
+Terminal 3: worker
+pnpm --filter @ai-nft-forge/worker build
+pnpm --filter @ai-nft-forge/worker start
+
+Terminal 4: web
+pnpm --filter @ai-nft-forge/web dev
+
+2. Health checks after boot
+
+Run these from the repo root:
+pnpm worker:health
+pnpm generation-backend:health
+pnpm generation-backend:ready
+curl http://127.0.0.1:3000/api/health
+
+If you want production-style web instead of dev:
+
+pnpm --filter @ai-nft-forge/web build
+pnpm --filter @ai-nft-forge/web start
+3. Full repo verification
+
+Run this from the repo root:
+
+pnpm format-check
+pnpm prisma:validate
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+
+Or use the combined command:
+
+pnpm validate
+4. Browser smoke tests
+
+First make sure:
+
+Docker Desktop is running
+local infra is up
+Playwright browser is installed
+
+Then run:
+
+pnpm --filter @ai-nft-forge/web exec playwright install chromium
+node scripts/run-browser-smoke.mjs
+5. Docker and self-host validation
+pnpm infra:config
+pnpm infra:selfhost:config
+docker build -f apps/web/Dockerfile .
+docker build -f apps/worker/Dockerfile .
+docker build -f apps/generation-backend/Dockerfile .
+
+If you want to boot the self-host stack:
+
+pnpm infra:selfhost:up
+pnpm infra:selfhost:ps
+pnpm infra:selfhost:logs
+6. Clean shutdown
+
+Local dev stack:
+
+pnpm infra:down
+
+Self-host stack:
+
+pnpm infra:selfhost:down
+7. Best practical sequence
+
+If you want the shortest realistic “run + test everything” path, use this exact sequence:
+
+pnpm install
+pnpm infra:up
+pnpm db:migrate:deploy
+pnpm format-check
+pnpm prisma:validate
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm worker:health
+pnpm generation-backend:health
+pnpm generation-backend:ready
+pnpm --filter @ai-nft-forge/web exec playwright install chromium
+node scripts/run-browser-smoke.mjs
+```
+
 ## Documentation
 
 - Project state: [docs/project-state.md](/Users/mc/development/blockchain/ethereum/ai-nft-forge/docs/project-state.md)

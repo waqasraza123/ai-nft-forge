@@ -1,4 +1,4 @@
-import "dotenv/config";
+import { loadRepositoryEnvironment } from "@ai-nft-forge/shared";
 
 import { bootstrapWorkerApplication } from "./bootstrap/application.js";
 import { registerWorkerSignalHandlers } from "./bootstrap/signals.js";
@@ -6,6 +6,8 @@ import { createWorkerHealthSnapshot } from "./lib/health.js";
 import { reconcileRuntimeOps } from "./ops/reconciliation-runtime.js";
 import { captureRuntimeOpsObservability } from "./ops/runtime.js";
 import { runWorkspaceLifecycleAutomation } from "./workspaces/automation-runtime.js";
+
+loadRepositoryEnvironment(process.env);
 
 async function runWorkerCommand(argv: string[]) {
   const command = argv[0] ?? "start";
