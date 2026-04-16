@@ -8,6 +8,17 @@
 
 ## Boot Sequence
 
+Fastest full-app startup:
+
+- `pnpm app:up`
+- `pnpm app:up -- --mode=local`
+
+Command behavior:
+
+- `pnpm app:up` starts the attached self-host stack in the foreground and stops it cleanly on `Ctrl+C`
+- `pnpm app:up -- --mode=local` starts infra, migrations, generation backend, worker, and Next.js dev in one attached command and runs `pnpm infra:down` on `Ctrl+C`
+- both commands honor `DATABASE_MODE=local|neon`
+
 1. `cp .env.example .env`
 2. `pnpm install`
 3. Leave `DATABASE_MODE=local` for the current Docker-first PostgreSQL flow, or switch to `DATABASE_MODE=neon` plus `DATABASE_NEON_URL` when you want Neon Postgres.

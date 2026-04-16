@@ -8,6 +8,7 @@
     "pnpm": ">=10.11.1"
   },
   "scripts": {
+    "app:up": "node scripts/run-app-up.mjs",
     "build": "turbo run build",
     "db:migrate:deploy": "pnpm --filter @ai-nft-forge/database prisma:migrate:deploy",
     "db:migrate:status": "pnpm --filter @ai-nft-forge/database prisma:migrate:status",

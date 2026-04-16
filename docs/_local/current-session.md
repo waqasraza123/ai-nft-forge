@@ -4,40 +4,42 @@
 2026-04-16
 
 ## Current Objective
-Implement Ops Redesign Step 2: fleet triage workspace redesign.
+Add a single `pnpm app:up` command that can boot the full application in one step.
 
 ## Current Step
-`/ops/fleet` has been reshaped into a cross-workspace triage surface without changing fleet actions, route behavior, or scope handling.
+Implemented the root launcher and documented both supported startup modes.
 
 ## Changes Applied
-- Reworked `apps/web/src/app/(ops)/ops/fleet/ops-fleet-client.tsx` into a stronger triage layout with:
-  - clearer fleet header context
-  - a compact top-pressure leaderboard in the header
-  - estate-wide signal band context
-  - top-pressure workspace attention cards
-  - comparative alert concentration summary before the alert queue
-  - comparative reconciliation backlog summary before the reconciliation cards
-  - current-workspace highlighting in the full fleet board
-- Added fleet-specific CSS in `apps/web/src/app/globals.css` for the new triage summaries, current-row emphasis, and responsive lane behavior.
+- Added `scripts/run-app-up.mjs` as the root application launcher.
+- Added `app:up` to the root `package.json` scripts.
+- `pnpm app:up` now starts the attached self-host stack in the foreground.
+- `pnpm app:up -- --mode=local` now starts local infra, migrations, generation backend, worker, and Next.js dev in one attached command.
+- The launcher preserves the existing `DATABASE_MODE=local|neon` behavior and does not add any new database env vars.
+- Updated `README.md` and `docs/runbooks/local-development.md` to document the new one-command startup flow and the `--mode=local` variant.
 
 ## Notes
-- Fleet actions remain intact:
-  - alert acknowledge
-  - alert mute
-  - reconciliation run
-- No API shapes, route handlers, database code, worker code, or retention/audit surfaces were changed.
-- Unrelated worktree changes in `apps/generation-backend`, `apps/worker`, `docs/project-state.md`, `packages/shared/package.json`, `packages/shared/src/index.ts`, and `packages/shared/src/server.ts` were left untouched.
+- Default mode is `selfhost`.
+- The launcher uses `child_process.spawn` and `spawnSync`; no new process-manager dependency was added.
+- Local mode prefixes child-process logs for readability.
+- Ctrl+C handling:
+  - self-host mode runs best-effort compose shutdown
+  - local mode stops child processes and runs `pnpm infra:down`
+- Unrelated existing worktree formatting drift remains in `apps/web/src/app/(ops)/ops/fleet/ops-fleet-client.tsx` and was not modified by this task.
 
 ## Verification
-- `pnpm typecheck` ✅
-- `pnpm build` ✅
-- `pnpm lint` ❌ still fails only on the pre-existing unrelated database lint issue in `packages/database/src/repositories/workspace-decommission-request-repository.ts`
-- `git diff --check -- 'apps/web/src/app/(ops)/ops/fleet/ops-fleet-client.tsx' 'apps/web/src/app/globals.css'` ✅
+- `node --check scripts/run-app-up.mjs` ✅
+- `pnpm app:up -- --mode=unknown` ✅ clear usage error
+- `pnpm app:up` ❌ blocked by Docker daemon not running (`/Users/mc/.docker/run/docker.sock` missing)
+- `pnpm app:up -- --mode=local` ❌ blocked by Docker daemon not running
+- `git diff --check -- package.json README.md docs/runbooks/local-development.md scripts/run-app-up.mjs` ✅
+- `pnpm format-check` ❌ blocked by unrelated existing formatting issue in `apps/web/src/app/(ops)/ops/fleet/ops-fleet-client.tsx`
 
 ## Changed Files
-- `apps/web/src/app/(ops)/ops/fleet/ops-fleet-client.tsx`
-- `apps/web/src/app/globals.css`
+- `package.json`
+- `README.md`
+- `docs/runbooks/local-development.md`
+- `scripts/run-app-up.mjs`
 - `docs/_local/current-session.md`
 
 ## Next Action
-- Commit the fleet triage redesign and push if the environment allows.
+- Start Docker and rerun `pnpm app:up` and `pnpm app:up -- --mode=local` for full runtime verification.

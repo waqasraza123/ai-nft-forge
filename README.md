@@ -56,6 +56,22 @@ The repository ships as a pnpm monorepo with a Next.js control plane, a BullMQ w
 
 ## Quick Start
 
+### One-command startup
+
+```bash
+pnpm app:up
+```
+
+Defaults to the attached self-host stack and stops it cleanly on `Ctrl+C`.
+
+```bash
+pnpm app:up -- --mode=local
+```
+
+Starts the current local multi-process dev flow in one attached command and runs `pnpm infra:down` on `Ctrl+C`.
+
+Both commands honor `DATABASE_MODE=local|neon`.
+
 ### Database modes
 
 - `DATABASE_MODE=local`: default mode, uses the bundled Docker PostgreSQL service
@@ -136,6 +152,15 @@ pnpm infra:selfhost:ps
 ```
 
 Set `DATABASE_MODE=neon` and the Neon URLs in `.env` first. In this mode the self-host stack omits the PostgreSQL container and routes Prisma and runtime access to Neon.
+
+### One-command examples
+
+```bash
+pnpm app:up
+pnpm app:up -- --mode=local
+DATABASE_MODE=neon pnpm app:up
+DATABASE_MODE=neon pnpm app:up -- --mode=local
+```
 
 ## Validation
 
