@@ -12,12 +12,15 @@ Fastest full-app startup:
 
 - `pnpm app:up`
 - `pnpm app:up -- --mode=local`
+- `APP_RUNTIME_MODE=cloud DATABASE_MODE=neon pnpm app:up`
 
 Command behavior:
 
 - `pnpm app:up` starts the attached self-host stack in the foreground and stops it cleanly on `Ctrl+C`
 - `pnpm app:up -- --mode=local` starts infra, migrations, generation backend, worker, and Next.js dev in one attached command and runs `pnpm infra:down` on `Ctrl+C`
-- both commands honor `DATABASE_MODE=local|neon`
+- `APP_RUNTIME_MODE=cloud DATABASE_MODE=neon pnpm app:up` runs local app processes only and does not call Docker or Compose
+- browser smoke and default repo validation remain pinned to the Docker/local path
+- all commands honor `DATABASE_MODE=local|neon`, but cloud runtime requires `DATABASE_MODE=neon`
 
 1. `cp .env.example .env`
 2. `pnpm install`
@@ -44,6 +47,25 @@ Neon-specific notes:
 
 - `pnpm infra:up` still starts Redis and MinIO, but omits Docker Postgres when `DATABASE_MODE=neon`.
 - Set `DATABASE_NEON_DIRECT_URL` for Prisma and `DATABASE_NEON_SHADOW_URL` only when you need `pnpm --filter @ai-nft-forge/database prisma:migrate:dev`.
+
+Cloud-backed mode notes:
+
+- Set `APP_RUNTIME_MODE=cloud` to bypass Docker entirely for `pnpm app:up`.
+- Cloud mode requires hosted Neon, Upstash, and Cloudflare R2 credentials in `.env`.
+- Required cloud envs:
+  - `DATABASE_NEON_URL`
+  - `DATABASE_NEON_DIRECT_URL`
+  - `REDIS_URL` as `rediss://...`
+  - `S3_ENDPOINT`
+  - `S3_REGION=auto`
+  - `S3_FORCE_PATH_STYLE=false`
+  - `S3_ACCESS_KEY_ID`
+  - `S3_SECRET_ACCESS_KEY`
+  - `S3_BUCKET_PRIVATE`
+  - `S3_BUCKET_PUBLIC`
+  - `S3_PUBLIC_BASE_URL`
+- Cloud mode uses the existing S3-compatible client for private operations and `S3_PUBLIC_BASE_URL` for public asset reads.
+- `pnpm app:up -- --mode=selfhost` is not supported when `APP_RUNTIME_MODE=cloud`.
 
 ## Local Services
 

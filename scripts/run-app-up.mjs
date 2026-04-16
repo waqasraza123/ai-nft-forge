@@ -1,10 +1,14 @@
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const supportedModes = new Set(["local", "selfhost"]);
+import {
+  resolveAppRuntimeMode,
+  resolveAppStartupMode,
+  resolveRepositoryEnvironment,
+  resolveScriptPaths,
+  validateCloudRuntimeEnvironment
+} from "./runtime-environment.mjs";
+
+const { repoRoot } = resolveScriptPaths();
 const defaultPorts = {
   generationBackend: "8787",
   minioConsole: "59001",
@@ -15,91 +19,10 @@ let activeComposeChild = null;
 let activeLocalProcesses = [];
 let cleaningUp = false;
 
-class UsageError extends Error {}
-
-function normalizeEnvironmentValue(rawValue) {
-  const trimmedValue = rawValue.trim();
-
-  if (
-    (trimmedValue.startsWith('"') && trimmedValue.endsWith('"')) ||
-    (trimmedValue.startsWith("'") && trimmedValue.endsWith("'"))
-  ) {
-    return trimmedValue.slice(1, -1);
-  }
-
-  return trimmedValue;
-}
-
-function parseEnvironmentFile(filePath) {
-  if (!existsSync(filePath)) {
-    return {};
-  }
-
-  const contents = readFileSync(filePath, "utf8");
-  const entries = {};
-
-  for (const rawLine of contents.split(/\r?\n/u)) {
-    const line = rawLine.trim();
-
-    if (line.length === 0 || line.startsWith("#")) {
-      continue;
-    }
-
-    const separatorIndex = line.indexOf("=");
-
-    if (separatorIndex <= 0) {
-      continue;
-    }
-
-    const key = line.slice(0, separatorIndex).trim();
-
-    if (key.length === 0) {
-      continue;
-    }
-
-    entries[key] = normalizeEnvironmentValue(line.slice(separatorIndex + 1));
-  }
-
-  return entries;
-}
-
-function resolveRuntimeEnvironment() {
-  return {
-    ...parseEnvironmentFile(resolve(repoRoot, ".env")),
-    ...parseEnvironmentFile(resolve(repoRoot, ".env.local")),
-    ...process.env
-  };
-}
-
-function resolveMode(argv) {
-  let mode = "selfhost";
-
-  for (const arg of argv) {
-    if (arg.startsWith("--mode=")) {
-      mode = arg.slice("--mode=".length);
-      continue;
-    }
-
-    if (arg === "--help" || arg === "-h") {
-      printUsage();
-      process.exit(0);
-    }
-  }
-
-  if (!supportedModes.has(mode)) {
-    throw new UsageError(
-      `Unsupported mode "${mode}". Use one of: ${Array.from(
-        supportedModes
-      ).join(", ")}.`
-    );
-  }
-
-  return mode;
-}
-
 function printUsage() {
   console.log(`Usage:
   pnpm app:up
+  APP_RUNTIME_MODE=cloud DATABASE_MODE=neon pnpm app:up
   pnpm app:up -- --mode=local
   pnpm app:up -- --mode=selfhost`);
 }
@@ -216,6 +139,17 @@ async function cleanupLocal() {
   runCleanupCommand("pnpm", ["infra:down"], "Local infra shutdown");
 }
 
+async function cleanupCloud() {
+  const runningProcesses = [...activeLocalProcesses];
+  activeLocalProcesses = [];
+
+  for (const child of runningProcesses) {
+    terminateChildProcess(child);
+  }
+
+  await Promise.all(runningProcesses.map(waitForExit));
+}
+
 async function cleanup(mode) {
   if (cleaningUp) {
     return;
@@ -229,14 +163,19 @@ async function cleanup(mode) {
       return;
     }
 
+    if (mode === "cloud") {
+      await cleanupCloud();
+      return;
+    }
+
     await cleanupLocal();
   } finally {
     cleaningUp = false;
   }
 }
 
-function printStartupUrls(mode) {
-  const runtimeEnvironment = resolveRuntimeEnvironment();
+function printStartupUrls(mode, runtimeMode) {
+  const runtimeEnvironment = resolveRepositoryEnvironment();
   const webPort =
     mode === "selfhost"
       ? (runtimeEnvironment.WEB_PORT_PUBLIC ?? defaultPorts.web)
@@ -249,6 +188,13 @@ function printStartupUrls(mode) {
         defaultPorts.generationBackend);
   const minioConsolePort =
     runtimeEnvironment.MINIO_CONSOLE_PORT ?? defaultPorts.minioConsole;
+
+  if (runtimeMode === "cloud") {
+    console.log(`Application URLs:
+  Web: http://127.0.0.1:${webPort}
+  Generation backend: http://127.0.0.1:${generationBackendPort}`);
+    return;
+  }
 
   console.log(`Application URLs:
   Web: http://127.0.0.1:${webPort}
@@ -276,7 +222,7 @@ function registerSignalHandlers(mode) {
 }
 
 async function runSelfhostMode() {
-  printStartupUrls("selfhost");
+  printStartupUrls("selfhost", "docker");
   registerSignalHandlers("selfhost");
 
   const child = spawn(
@@ -326,9 +272,32 @@ async function runLocalMode() {
     "Worker build"
   );
 
-  printStartupUrls("local");
+  printStartupUrls("local", "docker");
   registerSignalHandlers("local");
 
+  await runAppProcesses("local");
+}
+
+async function runCloudMode() {
+  validateCloudRuntimeEnvironment(resolveRepositoryEnvironment());
+  runBlockingCommand("pnpm", ["db:migrate:deploy"], "Database migrations");
+  runBlockingCommand(
+    "pnpm",
+    ["--filter", "@ai-nft-forge/generation-backend", "build"],
+    "Generation backend build"
+  );
+  runBlockingCommand(
+    "pnpm",
+    ["--filter", "@ai-nft-forge/worker", "build"],
+    "Worker build"
+  );
+
+  printStartupUrls("local", "cloud");
+  registerSignalHandlers("cloud");
+  await runAppProcesses("cloud");
+}
+
+async function runAppProcesses(mode) {
   const children = [
     spawnPrefixedProcess("generation-backend", "pnpm", [
       "--filter",
@@ -359,10 +328,8 @@ async function runLocalMode() {
   });
 
   if (!cleaningUp) {
-    console.error(
-      `A local app process exited unexpectedly: ${exitResult.label}.`
-    );
-    await cleanup("local");
+    console.error(`An app process exited unexpectedly: ${exitResult.label}.`);
+    await cleanup(mode);
   }
 
   if (exitResult.signal) {
@@ -373,8 +340,23 @@ async function runLocalMode() {
 }
 
 async function main() {
-  const mode = resolveMode(process.argv.slice(2));
+  const argv = process.argv.slice(2);
+
+  if (argv.includes("--help") || argv.includes("-h")) {
+    printUsage();
+    process.exit(0);
+  }
+
+  const runtimeEnvironment = resolveRepositoryEnvironment();
+  const runtimeMode = resolveAppRuntimeMode(runtimeEnvironment);
+  const mode = resolveAppStartupMode(argv, runtimeMode);
   activeMode = mode;
+
+  if (runtimeMode === "cloud") {
+    activeMode = "cloud";
+    await runCloudMode();
+    return;
+  }
 
   if (mode === "selfhost") {
     await runSelfhostMode();
@@ -385,7 +367,9 @@ async function main() {
 }
 
 main().catch(async (error) => {
-  console.error(error instanceof Error ? error.message : String(error));
+  const message = error instanceof Error ? error.message : String(error);
+
+  console.error(message);
 
   if (activeMode && !cleaningUp) {
     try {
@@ -399,7 +383,10 @@ main().catch(async (error) => {
     }
   }
 
-  if (error instanceof UsageError) {
+  if (
+    message.includes("Unsupported mode") ||
+    message.includes("Remove --mode=selfhost")
+  ) {
     printUsage();
   }
 

@@ -5,6 +5,8 @@ This repository supports a single-node self-host deployment path through Docker 
 - bundled PostgreSQL via `infra/docker/docker-compose.selfhost.yml`
 - Neon-backed mode via `infra/docker/docker-compose.selfhost.neon.yml`
 
+This document is only for the Docker Compose self-host path. The no-Docker cloud-backed mode for `pnpm app:up` is a local-process developer/runtime flow and does not use Compose.
+
 ## What the stack includes
 
 - PostgreSQL in bundled/local mode only

@@ -223,11 +223,23 @@ export function createPublicStorageUrl(input: {
   endpoint: string;
   forcePathStyle: boolean;
   key: string;
+  publicBaseUrl?: string | undefined;
 }) {
   const normalizedKey = input.key
     .split("/")
     .map((segment) => encodeURIComponent(segment))
     .join("/");
+
+  if (input.publicBaseUrl) {
+    const publicBaseUrl = new URL(input.publicBaseUrl);
+    const normalizedBasePath = publicBaseUrl.pathname.endsWith("/")
+      ? publicBaseUrl.pathname
+      : `${publicBaseUrl.pathname}/`;
+    publicBaseUrl.pathname = `${normalizedBasePath}${normalizedKey}`;
+
+    return publicBaseUrl.toString();
+  }
+
   const endpointUrl = new URL(input.endpoint);
 
   if (input.forcePathStyle) {

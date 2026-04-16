@@ -16,6 +16,20 @@ describe("createPublicStorageUrl", () => {
     );
   });
 
+  it("prefers an explicit public base URL when configured", () => {
+    expect(
+      createPublicStorageUrl({
+        bucket: "ai-nft-forge-public",
+        endpoint: "https://account-id.r2.cloudflarestorage.com",
+        forcePathStyle: false,
+        key: "published-collections/draft_1/items/cover.png",
+        publicBaseUrl: "https://forge-public.r2.dev"
+      })
+    ).toBe(
+      "https://forge-public.r2.dev/published-collections/draft_1/items/cover.png"
+    );
+  });
+
   it("builds virtual-hosted public object URLs", () => {
     expect(
       createPublicStorageUrl({

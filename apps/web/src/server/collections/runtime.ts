@@ -128,7 +128,8 @@ export function createRuntimePublicCollectionService(
           bucket: input.bucket,
           endpoint: storageConfig.S3_ENDPOINT,
           forcePathStyle: storageConfig.S3_FORCE_PATH_STYLE,
-          key: input.key
+          key: input.key,
+          publicBaseUrl: storageConfig.S3_PUBLIC_BASE_URL
         })
     }
   });

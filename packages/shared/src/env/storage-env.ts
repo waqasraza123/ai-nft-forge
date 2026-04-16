@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { booleanEnvironmentValueSchema } from "./boolean-environment-value.js";
+import { optionalUrlSchema } from "./optional-environment-value.js";
 
 export const storageEnvSchema = z.object({
   GENERATED_ASSET_DOWNLOAD_URL_TTL_SECONDS: z.coerce
@@ -14,6 +15,7 @@ export const storageEnvSchema = z.object({
   S3_BUCKET_PUBLIC: z.string().trim().min(1),
   S3_ENDPOINT: z.string().url(),
   S3_FORCE_PATH_STYLE: booleanEnvironmentValueSchema.default(true),
+  S3_PUBLIC_BASE_URL: optionalUrlSchema,
   S3_REGION: z.string().trim().min(1).default("us-east-1"),
   S3_SECRET_ACCESS_KEY: z.string().trim().min(1),
   S3_USE_SSL: booleanEnvironmentValueSchema.default(false),

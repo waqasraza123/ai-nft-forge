@@ -58,6 +58,7 @@ export function resolveBrowserSmokeEnvironment() {
 
   return {
     ...baseEnvironment,
+    APP_RUNTIME_MODE: "docker",
     BROWSER_SMOKE_STORAGE_PREFIX:
       baseEnvironment.BROWSER_SMOKE_STORAGE_PREFIX ?? "browser-smoke",
     DATABASE_MODE: "local",

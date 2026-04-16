@@ -62,7 +62,7 @@ The repository ships as a pnpm monorepo with a Next.js control plane, a BullMQ w
 pnpm app:up
 ```
 
-Defaults to the attached self-host stack and stops it cleanly on `Ctrl+C`.
+Defaults to the attached Docker self-host stack and stops it cleanly on `Ctrl+C`.
 
 ```bash
 pnpm app:up -- --mode=local
@@ -70,12 +70,29 @@ pnpm app:up -- --mode=local
 
 Starts the current local multi-process dev flow in one attached command and runs `pnpm infra:down` on `Ctrl+C`.
 
-Both commands honor `DATABASE_MODE=local|neon`.
+Explicit no-Docker cloud-backed mode:
+
+```bash
+APP_RUNTIME_MODE=cloud DATABASE_MODE=neon pnpm app:up
+```
+
+This runs local app processes only and does not call Docker or Compose. It expects hosted dependencies:
+
+- Neon Postgres
+- Upstash Redis
+- Cloudflare R2
+
+`pnpm app:up` and `pnpm app:up -- --mode=local` remain Docker-backed by default.
 
 ### Database modes
 
 - `DATABASE_MODE=local`: default mode, uses the bundled Docker PostgreSQL service
 - `DATABASE_MODE=neon`: opt-in mode, uses Neon Postgres and does not start a Docker PostgreSQL service
+
+### Runtime modes
+
+- `APP_RUNTIME_MODE=docker`: default mode, keeps the current Docker/Compose-backed startup path
+- `APP_RUNTIME_MODE=cloud`: opt-in no-Docker mode for small dev/prototype workloads using Neon, Upstash, and R2
 
 Use `.env.example` as the starting point. The local runbook is in [docs/runbooks/local-development.md](/Users/mc/development/blockchain/ethereum/ai-nft-forge/docs/runbooks/local-development.md), and the self-host guide is in [docs/deployment/self-host-docker-compose.md](/Users/mc/development/blockchain/ethereum/ai-nft-forge/docs/deployment/self-host-docker-compose.md).
 
@@ -129,6 +146,48 @@ Notes:
 - `pnpm infra:config` should not show `postgres` in this mode.
 - `DATABASE_NEON_SHADOW_URL` is only needed for `prisma migrate dev`.
 
+### No-Docker cloud-backed development
+
+```bash
+cp .env.example .env
+pnpm install
+APP_RUNTIME_MODE=cloud DATABASE_MODE=neon pnpm prisma:validate
+APP_RUNTIME_MODE=cloud DATABASE_MODE=neon pnpm db:migrate:status
+APP_RUNTIME_MODE=cloud DATABASE_MODE=neon pnpm app:up
+```
+
+Set these in `.env` first:
+
+```env
+APP_RUNTIME_MODE=cloud
+DATABASE_MODE=neon
+DATABASE_NEON_URL=postgresql://...
+DATABASE_NEON_DIRECT_URL=postgresql://...
+REDIS_URL=rediss://...
+S3_ENDPOINT=https://<account_id>.r2.cloudflarestorage.com
+S3_REGION=auto
+S3_FORCE_PATH_STYLE=false
+S3_ACCESS_KEY_ID=...
+S3_SECRET_ACCESS_KEY=...
+S3_BUCKET_PRIVATE=...
+S3_BUCKET_PUBLIC=...
+S3_PUBLIC_BASE_URL=https://<public-bucket>.r2.dev
+```
+
+One-time provider setup:
+
+- create a Neon project and copy the pooled runtime URL plus the direct Prisma URL
+- create an Upstash Redis database and copy the `rediss://` URL
+- create private and public Cloudflare R2 buckets plus access keys
+- enable a public URL for the public bucket and set it as `S3_PUBLIC_BASE_URL`
+
+Notes:
+
+- cloud mode is local-process-based and does not deploy your app to hosted compute
+- `DATABASE_NEON_SHADOW_URL` is only needed for `pnpm --filter @ai-nft-forge/database prisma:migrate:dev`
+- `pnpm app:up -- --mode=selfhost` is not valid in cloud mode
+- browser smoke and default CI remain pinned to the Docker/local path
+
 ### Single-node self-host with bundled PostgreSQL
 
 ```bash
@@ -160,6 +219,7 @@ pnpm app:up
 pnpm app:up -- --mode=local
 DATABASE_MODE=neon pnpm app:up
 DATABASE_MODE=neon pnpm app:up -- --mode=local
+APP_RUNTIME_MODE=cloud DATABASE_MODE=neon pnpm app:up
 ```
 
 ## Validation

@@ -2,8 +2,11 @@
 
 This document is the durable source of truth for runtime environment variables across local development and single-node self-host deployment.
 
-## Database mode
+## Runtime and database modes
 
+- `APP_RUNTIME_MODE`
+  - `docker` is the default and preserves the current Docker/Compose-backed startup path
+  - `cloud` enables the no-Docker local-process path for `pnpm app:up` and requires hosted Neon, Upstash, and Cloudflare R2 dependencies
 - `DATABASE_MODE`
   - `local` is the default and preserves the current Docker/local PostgreSQL workflow
   - `neon` switches runtime and Prisma to Neon Postgres and makes the Neon Compose variants active for `infra:*` commands
@@ -24,6 +27,7 @@ This document is the durable source of truth for runtime environment variables a
 - `REDIS_URL`: Redis connection string used by `web` queue diagnostics and the worker
 - `S3_ENDPOINT`
 - `S3_FORCE_PATH_STYLE`
+- `S3_PUBLIC_BASE_URL`
 - `S3_REGION`
 - `S3_ACCESS_KEY_ID`
 - `S3_SECRET_ACCESS_KEY`
@@ -169,9 +173,19 @@ These are used by the bundled-Postgres Docker Compose variants and are optional 
 
 ## Local vs self-host guidance
 
+- Leave `APP_RUNTIME_MODE=docker` to preserve the current Docker-first startup path.
+- Set `APP_RUNTIME_MODE=cloud` only when you want `pnpm app:up` to run local processes without Docker or Compose.
+- `APP_RUNTIME_MODE=cloud` requires `DATABASE_MODE=neon`.
 - Leave `DATABASE_MODE=local` to keep the current Docker-first PostgreSQL workflow unchanged.
 - Set `DATABASE_MODE=neon` only when you want runtime and Prisma to use Neon Postgres instead of the bundled PostgreSQL container.
 - Neon mode expects `DATABASE_NEON_URL`; use `DATABASE_NEON_DIRECT_URL` for Prisma and add `DATABASE_NEON_SHADOW_URL` when you need `prisma migrate dev`.
+- Cloud mode expects a hosted `REDIS_URL` such as `rediss://...` and a hosted public storage URL in `S3_PUBLIC_BASE_URL`.
+- Keep `S3_PUBLIC_BASE_URL` unset in the Docker/MinIO path to preserve the current public-asset URL behavior.
+- Cloudflare R2 guidance for cloud mode:
+  - `S3_ENDPOINT=https://<account_id>.r2.cloudflarestorage.com`
+  - `S3_REGION=auto`
+  - `S3_FORCE_PATH_STYLE=false`
+  - `S3_PUBLIC_BASE_URL=https://<public-bucket>.r2.dev`
 - Local development can leave both automation schedulers disabled if you prefer manual actions.
 - Self-host deployment should enable both automation schedulers.
 - Local development can keep `COMFYUI_BASE_URL` pointed at `127.0.0.1`; containerized self-host should usually use `host.docker.internal` or an internal network host that your backend can reach.
