@@ -40,10 +40,11 @@ export default async function StudioSettingsPage() {
     <StudioSettingsClient
       availableWorkspaces={access.availableWorkspaces}
       currentWalletAddress={access.session.user.walletAddress}
-      currentWorkspaceSlug={access.workspace?.slug ?? null}
-      currentWorkspaceOffboarding={currentWorkspaceOffboarding}
       initialSettings={result.settings}
       ownerWalletAddress={access.owner.walletAddress}
+      currentWorkspaceSlug={access.workspace?.slug ?? null}
+      currentWorkspaceOffboarding={currentWorkspaceOffboarding}
+      workspaceOffboardingEntries={offboardingOverview.overview.workspaces}
       workspaceDirectoryEntries={workspaceDirectory.workspaces}
     />
   );

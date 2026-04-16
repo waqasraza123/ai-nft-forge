@@ -4,30 +4,32 @@
 2026-04-16
 
 ## Current Objective
-Implement Studio Redesign Step 4: commerce workspace redesign.
+Implement Studio Redesign Step 5: settings and workspace administration redesign.
 
 ## Current Step
-Studio Step 4 complete: commerce workspace redesign.
+Studio Step 5 complete: workspace administration cockpit redesign for `/studio/settings`.
 
 ## Changes Applied
-- Reworked `apps/web/src/app/(studio)/studio/commerce/studio-commerce-client.tsx` into a transaction-operations workspace with a control-room hero, overview signal band, attention queue, full session ledger, tighter brand scope rail, collection pressure context, and compact report/export module.
-- Added `apps/web/src/components/studio/studio-commerce-session-card.tsx` to keep checkout-session rendering modular while preserving manual payment, release, fulfillment update, and automation retry behaviors.
-- Added a focused Studio commerce style section in `apps/web/src/app/globals.css` for the new workspace layout, signal cards, scope rail, session cards, and responsive stacking.
+- Rebuilt `apps/web/src/app/(studio)/studio/settings/studio-settings-client.tsx` into a cockpit layout with a control header, section navigation, grouped workspace/brand/team/ownership/lifecycle/retention/estate/audit sections, and a sticky context rail.
+- Updated `apps/web/src/app/(studio)/studio/settings/page.tsx` to pass the accessible workspace offboarding estate into the settings client so offboarding and estate review can be presented together.
+- Added `apps/web/src/components/studio/studio-settings-section-nav.tsx` for the anchored section navigation used by the new settings workspace.
+- Added a focused Studio settings style section in `apps/web/src/app/globals.css` for the cockpit header, signal cards, section navigation, grouped form panels, layout rail, and responsive behavior.
 
 ## Notes
-- Preserved existing commerce data contracts, route behavior, brand filtering, report/export flow, fulfillment update flow, retry flow, provider behavior, and workspace/session boundaries.
-- No changes were made to route handlers, database code, worker code, contracts code, collections/settings behavior, ops surfaces, or public routes.
-- `apps/web/src/app/(studio)/studio/commerce/page.tsx` did not require a route-level change for this step.
+- Preserved the existing settings data contracts, route behavior, invitation flow, membership removal flow, role escalation flow, lifecycle automation and SLA behavior, lifecycle delivery retry behavior, retention and decommission behavior, export behavior, and workspace status update behavior.
+- No route handlers, database code, worker code, contracts code, commerce behavior, collections behavior, ops pages, public routes, or auth/session logic were changed for this step.
+- `docs/project-state.md` did not need a durable update for this presentational workflow redesign.
 
 ## Verification
 - `pnpm typecheck` ✅
 - `pnpm build` ✅
-- `pnpm lint` ❌ (fails on the same pre-existing issue in `packages/database/src/repositories/workspace-decommission-request-repository.ts`: unused `WorkspaceDecommissionRequestStatus`)
+- `pnpm lint` ❌ (fails only on the same pre-existing unrelated issue in `packages/database/src/repositories/workspace-decommission-request-repository.ts`: unused `WorkspaceDecommissionRequestStatus`)
 
 ## Changed Files
-- `apps/web/src/app/(studio)/studio/commerce/studio-commerce-client.tsx`
-- `apps/web/src/components/studio/studio-commerce-session-card.tsx`
+- `apps/web/src/app/(studio)/studio/settings/page.tsx`
+- `apps/web/src/app/(studio)/studio/settings/studio-settings-client.tsx`
 - `apps/web/src/app/globals.css`
+- `apps/web/src/components/studio/studio-settings-section-nav.tsx`
 - `docs/_local/current-session.md`
 
 ## Verification Commands
@@ -41,4 +43,4 @@ Studio Step 4 complete: commerce workspace redesign.
 - `pnpm lint`: fails only in existing unrelated file `packages/database/src/repositories/workspace-decommission-request-repository.ts` because `WorkspaceDecommissionRequestStatus` is unused.
 
 ## Next Action
-- Commit and push Studio Step 4 commerce workspace redesign changes.
+- Commit Studio Step 5 settings cockpit redesign changes and push if remote access is available.
