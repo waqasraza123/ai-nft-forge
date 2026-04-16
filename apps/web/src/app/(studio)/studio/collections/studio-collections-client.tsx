@@ -4,8 +4,11 @@ import Link from "next/link";
 import {
   startTransition,
   type FormEvent,
+  type ReactNode,
   useEffect,
   useEffectEvent,
+  useMemo,
+  useRef,
   useState
 } from "react";
 import { createPublicClient, custom, getAddress, isAddressEqual } from "viem";
@@ -20,6 +23,7 @@ import {
   collectionContractMintIntentResponseSchema,
   collectionDraftListResponseSchema,
   collectionDraftResponseSchema,
+  generatedAssetDownloadIntentResponseSchema,
   type CollectionContractChainKey,
   type CollectionDraftStatus,
   type CollectionDraftSummary,
@@ -28,13 +32,7 @@ import {
   type GeneratedAssetModerationStatus,
   type StudioWorkspaceRole
 } from "@ai-nft-forge/shared";
-import {
-  MetricTile,
-  PageShell,
-  Pill,
-  SurfaceCard,
-  SurfaceGrid
-} from "@ai-nft-forge/ui";
+import { MetricTile, PageShell, Pill, SurfaceCard } from "@ai-nft-forge/ui";
 
 import {
   createWalletAddChainParameters,
@@ -55,6 +53,8 @@ type NoticeState = {
   message: string;
   tone: "error" | "info" | "success";
 } | null;
+
+type GeneratedAssetPreviewUrlMap = Record<string, string>;
 
 type BrowserEthereumProvider = {
   request(input: { method: string; params?: unknown[] }): Promise<unknown>;
@@ -245,6 +245,54 @@ function formatModerationStatus(status: GeneratedAssetModerationStatus) {
   }
 }
 
+function formatStorefrontStatus(status: string) {
+  switch (status) {
+    case "live":
+      return "Live";
+    case "sold_out":
+      return "Sold out";
+    case "upcoming":
+      return "Upcoming";
+    default:
+      return "Ended";
+  }
+}
+
+function getDraftPreviewGeneratedAssetId(draft: CollectionDraftSummary) {
+  return (
+    draft.publication?.heroGeneratedAssetId ??
+    draft.items[0]?.generatedAsset.generatedAssetId ??
+    null
+  );
+}
+
+function getDraftAttentionLabel(input: {
+  draft: CollectionDraftSummary;
+  hasInvalidItems: boolean;
+}) {
+  if (input.hasInvalidItems) {
+    return "Needs repair";
+  }
+
+  if (input.draft.publication?.activeDeployment) {
+    return "Onchain live";
+  }
+
+  if (input.draft.publication) {
+    return "Published";
+  }
+
+  if (input.draft.status === "review_ready") {
+    return "Ready to publish";
+  }
+
+  if (input.draft.itemCount > 0) {
+    return "In curation";
+  }
+
+  return "Needs composition";
+}
+
 function createInitialEditorState(draft: CollectionDraftSummary | null) {
   return {
     description: draft?.description ?? "",
@@ -346,6 +394,121 @@ function resolveSelectedPublicationTargetId(input: {
   return publicationBrandTarget?.brandId ?? input.publicationTargets[0]?.brandId ?? null;
 }
 
+type CollectionDraftBrowserCardProps = {
+  draft: CollectionDraftSummary;
+  hasInvalidItems: boolean;
+  isSelected: boolean;
+  onSelect: () => void;
+  previewUrl: string | null;
+};
+
+function CollectionDraftBrowserCard({
+  draft,
+  hasInvalidItems,
+  isSelected,
+  onSelect,
+  previewUrl
+}: CollectionDraftBrowserCardProps) {
+  const attentionLabel = getDraftAttentionLabel({
+    draft,
+    hasInvalidItems
+  });
+
+  return (
+    <button
+      className={`studio-collections-draft-card${
+        isSelected ? " studio-collections-draft-card--selected" : ""
+      }`}
+      onClick={onSelect}
+      type="button"
+    >
+      <div className="studio-collections-draft-card__media">
+        {previewUrl ? (
+          <img
+            alt={draft.title}
+            className="studio-collections-draft-card__image"
+            src={previewUrl}
+          />
+        ) : (
+          <div className="studio-collections-draft-card__placeholder">
+            <span>{draft.slug}</span>
+          </div>
+        )}
+        <div className="studio-collections-draft-card__state">
+          <span>{attentionLabel}</span>
+        </div>
+      </div>
+      <div className="studio-collections-draft-card__copy">
+        <div className="studio-collections-draft-card__eyebrow">
+          <span>{formatDraftStatus(draft.status)}</span>
+          {draft.publication ? <span>Published</span> : <span>Draft only</span>}
+          {hasInvalidItems ? <span>Blocked</span> : null}
+        </div>
+        <strong>{draft.title}</strong>
+        <p>
+          {draft.description?.trim() || "No internal release framing has been saved yet."}
+        </p>
+        <div className="studio-collections-draft-card__meta">
+          <span>{draft.itemCount} curated items</span>
+          <span>Updated {formatCandidateTimestamp(draft.updatedAt)}</span>
+          <span>
+            {draft.publication?.publicPath ?? `/collections/${draft.slug}`}
+          </span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+type CollectionArtworkCardProps = {
+  actions: ReactNode;
+  meta: ReactNode;
+  previewUrl: string | null;
+  statusLabel: string;
+  statusTone: "default" | "danger" | "success" | "warning";
+  subtitle: string;
+  title: string;
+};
+
+function CollectionArtworkCard({
+  actions,
+  meta,
+  previewUrl,
+  statusLabel,
+  statusTone,
+  subtitle,
+  title
+}: CollectionArtworkCardProps) {
+  return (
+    <div className="studio-collections-art-card">
+      <div className="studio-collections-art-card__media">
+        {previewUrl ? (
+          <img
+            alt={title}
+            className="studio-collections-art-card__image"
+            src={previewUrl}
+          />
+        ) : (
+          <div className="studio-collections-art-card__placeholder">
+            <span>{subtitle}</span>
+          </div>
+        )}
+        <div
+          className={`studio-collections-art-card__status studio-collections-art-card__status--${statusTone}`}
+        >
+          {statusLabel}
+        </div>
+      </div>
+      <div className="studio-collections-art-card__copy">
+        <strong>{title}</strong>
+        <span>{subtitle}</span>
+        <div className="studio-collections-art-card__meta">{meta}</div>
+      </div>
+      <div className="studio-collections-art-card__actions">{actions}</div>
+    </div>
+  );
+}
+
 export function StudioCollectionsClient({
   initialDrafts,
   initialGeneratedAssetCandidates,
@@ -399,6 +562,8 @@ export function StudioCollectionsClient({
   );
   const [onchainFlowState, setOnchainFlowState] =
     useState<OnchainFlowState | null>(null);
+  const [generatedAssetPreviewUrls, setGeneratedAssetPreviewUrls] =
+    useState<GeneratedAssetPreviewUrlMap>({});
   const [notice, setNotice] = useState<NoticeState>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -419,6 +584,7 @@ export function StudioCollectionsClient({
     null
   );
   const [busyItemKey, setBusyItemKey] = useState<string | null>(null);
+  const failedGeneratedAssetPreviewIdsRef = useRef<Set<string>>(new Set());
 
   const selectedDraft =
     drafts.find((draft) => draft.id === selectedDraftId) ?? drafts[0] ?? null;
@@ -457,6 +623,27 @@ export function StudioCollectionsClient({
   const connectedWalletChainLabel = getWalletChainLabel(connectedWalletChainId);
   const canManagePublication = studioRole === "owner";
   const canManageOnchain = studioRole === "owner";
+  const previewAssetIds = useMemo(() => {
+    const assetIds = new Set<string>();
+
+    for (const draft of drafts) {
+      const draftPreviewGeneratedAssetId = getDraftPreviewGeneratedAssetId(draft);
+
+      if (draftPreviewGeneratedAssetId) {
+        assetIds.add(draftPreviewGeneratedAssetId);
+      }
+    }
+
+    for (const item of selectedDraft?.items ?? []) {
+      assetIds.add(item.generatedAsset.generatedAssetId);
+    }
+
+    for (const candidate of generatedAssetCandidates.slice(0, 18)) {
+      assetIds.add(candidate.generatedAssetId);
+    }
+
+    return [...assetIds];
+  }, [drafts, generatedAssetCandidates, selectedDraft]);
 
   useEffect(() => {
     if (!selectedDraft && selectedDraftId) {
@@ -526,6 +713,76 @@ export function StudioCollectionsClient({
     baseAccountConnector,
     connectedWalletConnector?.id,
     injectedWalletConnector
+  ]);
+
+  const requestGeneratedAssetPreviewUrl = useEffectEvent(
+    async (generatedAssetId: string) => {
+      const cachedUrl = generatedAssetPreviewUrls[generatedAssetId];
+
+      if (cachedUrl) {
+        return cachedUrl;
+      }
+
+      const response = await fetch(
+        `/api/studio/generated-assets/${generatedAssetId}/download-intent`,
+        {
+          method: "POST"
+        }
+      );
+      const result = await parseJsonResponse({
+        response,
+        schema: generatedAssetDownloadIntentResponseSchema
+      });
+
+      setGeneratedAssetPreviewUrls((currentGeneratedAssetPreviewUrls) => {
+        if (currentGeneratedAssetPreviewUrls[generatedAssetId]) {
+          return currentGeneratedAssetPreviewUrls;
+        }
+
+        return {
+          ...currentGeneratedAssetPreviewUrls,
+          [generatedAssetId]: result.download.url
+        };
+      });
+
+      return result.download.url;
+    }
+  );
+
+  useEffect(() => {
+    const missingAssetIds = previewAssetIds.filter(
+      (generatedAssetId) =>
+        !generatedAssetPreviewUrls[generatedAssetId] &&
+        !failedGeneratedAssetPreviewIdsRef.current.has(generatedAssetId)
+    );
+
+    if (missingAssetIds.length === 0) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    void (async () => {
+      for (const generatedAssetId of missingAssetIds) {
+        try {
+          await requestGeneratedAssetPreviewUrl(generatedAssetId);
+        } catch {
+          failedGeneratedAssetPreviewIdsRef.current.add(generatedAssetId);
+        }
+
+        if (isCancelled) {
+          return;
+        }
+      }
+    })();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [
+    generatedAssetPreviewUrls,
+    previewAssetIds,
+    requestGeneratedAssetPreviewUrl
   ]);
 
   const refreshDrafts = useEffectEvent(async (input?: { silent?: boolean }) => {
@@ -1688,6 +1945,9 @@ export function StudioCollectionsClient({
   const featuredPublishedCount = drafts.filter(
     (draft) => draft.publication?.isFeatured
   ).length;
+  const deployedCount = drafts.filter(
+    (draft) => draft.publication?.activeDeployment
+  ).length;
   const curatedAssetCount = drafts.reduce(
     (count, draft) => count + draft.itemCount,
     0
@@ -1695,12 +1955,93 @@ export function StudioCollectionsClient({
   const approvedCandidateCount = generatedAssetCandidates.filter(
     (candidate) => candidate.moderationStatus === "approved"
   ).length;
+  const selectedDraftPreviewGeneratedAssetId = selectedDraft
+    ? getDraftPreviewGeneratedAssetId(selectedDraft)
+    : null;
+  const selectedDraftPreviewUrl = selectedDraftPreviewGeneratedAssetId
+    ? generatedAssetPreviewUrls[selectedDraftPreviewGeneratedAssetId] ?? null
+    : null;
+  const selectedDraftPublicPath = selectedDraft
+    ? selectedDraft.publication?.publicPath ??
+      (selectedPublicationTarget
+        ? `${selectedPublicationTarget.publicBrandPath}/collections/${selectedDraft.slug}`
+        : "/brands/[brandSlug]/collections/[collectionSlug]")
+    : null;
+  const selectedDraftMetadataPath = selectedDraft?.publication
+    ? buildPublishedCollectionMetadataPath(selectedDraft.publication.publicPath)
+    : null;
+  const selectedDraftContractPath = selectedDraft?.publication
+    ? buildPublishedCollectionContractPath({
+        brandSlug: selectedDraft.publication.brandSlug,
+        collectionSlug: selectedDraft.publication.collectionSlug
+      })
+    : null;
+  const selectedDraftLaunchNotes: Array<{
+    body: string;
+    title: string;
+    tone: "error" | "info" | "success";
+  }> = [];
+
+  if (selectedDraft) {
+    if (selectedDraft.itemCount === 0) {
+      selectedDraftLaunchNotes.push({
+        body: "Curate at least one approved output from the candidate rail before this release can move forward.",
+        title: "Composition required",
+        tone: "error"
+      });
+    }
+
+    if (selectedDraftHasInvalidItems) {
+      selectedDraftLaunchNotes.push({
+        body: selectedDraftNeedsRepairDowngrade
+          ? "This release should move back to draft until every curated item returns to approved status."
+          : "Replace or remove the curated items that are no longer approved before pushing this release further.",
+        title: "Curation repair required",
+        tone: "error"
+      });
+    }
+
+    if (selectedDraft.status !== "review_ready") {
+      selectedDraftLaunchNotes.push({
+        body: "Save the draft as review ready when the title, route, story, and curated order are locked.",
+        title: "Review readiness is still pending",
+        tone: "info"
+      });
+    }
+
+    if (!selectedPublicationTarget) {
+      selectedDraftLaunchNotes.push({
+        body: "Configure a publication target in Studio Settings before publishing any release.",
+        title: "Publication target missing",
+        tone: "error"
+      });
+    }
+
+    if (selectedDraft.publication && !selectedDraft.publication.activeDeployment) {
+      selectedDraftLaunchNotes.push({
+        body: "The public release is live, but no verified contract deployment has been recorded yet.",
+        title: "Onchain deployment pending",
+        tone: "info"
+      });
+    }
+
+    if (
+      selectedDraft.publication?.activeDeployment &&
+      selectedDraft.publication.mintedTokenCount === 0
+    ) {
+      selectedDraftLaunchNotes.push({
+        body: "The contract is deployed. Use the mint controls when collector or operator issuance should begin.",
+        title: "Mint path ready",
+        tone: "success"
+      });
+    }
+  }
 
   return (
     <PageShell
-      eyebrow="Collections"
-      title="Curate release-ready collection drafts"
-      lead="This collection surface now covers curation and publication: create owner-scoped drafts, assemble an ordered set of generated variants, mark the draft review-ready, and publish it to a live public brand route."
+      eyebrow="Studio collections"
+      title="Compose releases, publish with intent, and supervise launch state"
+      lead="Use Collections as the internal launch builder: shape the draft story, sequence curated art, read blockers at a glance, and move each release from review to public and onchain state without leaving the workspace."
       actions={
         <>
           <button
@@ -1711,7 +2052,7 @@ export function StudioCollectionsClient({
             }}
             type="button"
           >
-            {isRefreshing ? "Refreshing…" : "Refresh data"}
+            {isRefreshing ? "Refreshing…" : "Refresh workspace"}
           </button>
           <Link className="action-link" href="/studio/assets">
             Open assets
@@ -1726,793 +2067,1010 @@ export function StudioCollectionsClient({
       }
       tone="studio"
     >
-      <SurfaceGrid>
-        <SurfaceCard
-          body="Drafts are still owner-scoped at this stage, and collection curation is now gated to approved generated outputs so review-ready and publication flows inherit a moderation safeguard."
-          eyebrow="Phase 3"
-          span={12}
-          title="Collection draft foundation"
-        >
-          <div className="metric-list">
-            <MetricTile label="Drafts" value={drafts.length.toString()} />
-            <MetricTile
-              label="Review ready"
-              value={reviewReadyCount.toString()}
-            />
-            <MetricTile label="Published" value={publishedCount.toString()} />
-            <MetricTile
-              label="Featured"
-              value={featuredPublishedCount.toString()}
-            />
-            <MetricTile
-              label="Curated assets"
-              value={curatedAssetCount.toString()}
-            />
-          </div>
-          <div className="pill-row">
-            <Pill>{ownerWalletAddress}</Pill>
-            <Pill>
-              {generatedAssetCandidates.length} recent generated assets
-            </Pill>
-            <Pill>{approvedCandidateCount} approved for curation</Pill>
-            <Pill>/studio/collections</Pill>
-          </div>
-        </SurfaceCard>
-        <SurfaceCard
-          body="Create a draft shell first, then refine its metadata and curate generated variants into an ordered collection."
-          eyebrow="Create"
-          span={4}
-          title="New collection draft"
-        >
-          <form className="studio-form" onSubmit={handleCreateDraft}>
-            <label className="field-stack">
-              <span className="field-label">Title</span>
-              <input
-                className="input-field"
-                maxLength={120}
-                onChange={(event) => {
-                  setCreateTitle(event.target.value);
-                }}
-                placeholder="Genesis Portrait Set"
-                required
-                value={createTitle}
-              />
-            </label>
-            <label className="field-stack">
-              <span className="field-label">Description</span>
-              <textarea
-                className="input-field input-field--multiline"
-                maxLength={1000}
-                onChange={(event) => {
-                  setCreateDescription(event.target.value);
-                }}
-                placeholder="Internal curation notes for this draft collection."
-                rows={5}
-                value={createDescription}
-              />
-            </label>
-            <div className="studio-action-row">
-              <button
-                className="button-action button-action--accent"
-                disabled={isCreating}
-                type="submit"
+      <div className="studio-collections-workspace">
+        <aside className="studio-collections-workspace__browser">
+          <SurfaceCard
+            body="Drafts, attention, and creation live together here so the operator can see what exists, what is blocked, and what is nearest to launch."
+            eyebrow="Release browser"
+            title="Draft inventory"
+          >
+            <div className="studio-collections-browser">
+              <div className="metric-list">
+                <MetricTile label="Drafts" value={drafts.length.toString()} />
+                <MetricTile
+                  label="Review ready"
+                  value={reviewReadyCount.toString()}
+                />
+                <MetricTile label="Published" value={publishedCount.toString()} />
+                <MetricTile
+                  label="Deployed"
+                  value={deployedCount.toString()}
+                />
+                <MetricTile
+                  label="Featured"
+                  value={featuredPublishedCount.toString()}
+                />
+                <MetricTile
+                  label="Curated items"
+                  value={curatedAssetCount.toString()}
+                />
+              </div>
+              <div className="studio-collections-browser__cues">
+                <Pill>{approvedCandidateCount} approved outputs ready</Pill>
+                <Pill>{generatedAssetCandidates.length} recent candidates</Pill>
+                <Pill>Owner {shortHex(ownerWalletAddress)}</Pill>
+              </div>
+              <form
+                className="studio-form studio-collections-create-panel"
+                onSubmit={handleCreateDraft}
               >
-                {isCreating ? "Creating…" : "Create draft"}
-              </button>
-            </div>
-          </form>
-        </SurfaceCard>
-        <SurfaceCard
-          body="Select a draft to edit its metadata, curate its ordered asset list, and move it toward release review."
-          eyebrow="Roster"
-          span={8}
-          title="Draft roster"
-        >
-          <div className="collection-draft-list">
-            {drafts.length === 0 ? (
-              <div className="collection-empty-state">
-                No collection drafts exist yet.
-              </div>
-            ) : (
-              drafts.map((draft) => {
-                const isSelected = draft.id === selectedDraft?.id;
-
-                return (
-                  <button
-                    className={`collection-draft-list__button${
-                      isSelected
-                        ? " collection-draft-list__button--selected"
-                        : ""
-                    }`}
-                    key={draft.id}
-                    onClick={() => {
-                      setSelectedDraftId(draft.id);
-                      setNotice(null);
+                <div className="studio-collections-create-panel__copy">
+                  <p className="field-label">Create draft</p>
+                  <h2>Start a new release object</h2>
+                  <p>
+                    Create the shell first, then shape its story, composition,
+                    publication state, and onchain path.
+                  </p>
+                </div>
+                <label className="field-stack">
+                  <span className="field-label">Title</span>
+                  <input
+                    className="input-field"
+                    maxLength={120}
+                    onChange={(event) => {
+                      setCreateTitle(event.target.value);
                     }}
-                    type="button"
+                    placeholder="Genesis Portrait Set"
+                    required
+                    value={createTitle}
+                  />
+                </label>
+                <label className="field-stack">
+                  <span className="field-label">Internal framing</span>
+                  <textarea
+                    className="input-field input-field--multiline"
+                    maxLength={1000}
+                    onChange={(event) => {
+                      setCreateDescription(event.target.value);
+                    }}
+                    placeholder="What kind of release is this and why does it exist?"
+                    rows={4}
+                    value={createDescription}
+                  />
+                </label>
+                <div className="studio-action-row">
+                  <button
+                    className="button-action button-action--accent"
+                    disabled={isCreating}
+                    type="submit"
                   >
-                    <span className="collection-draft-list__title">
-                      {draft.title}
-                    </span>
-                    <span className="collection-draft-list__meta">
-                      {formatDraftStatus(draft.status)} · {draft.itemCount}{" "}
-                      items
-                    </span>
-                    <span className="collection-draft-list__meta">
-                      {draft.publication?.isFeatured
-                        ? "Featured release"
-                        : draft.publication
-                          ? `Display order ${draft.publication.displayOrder}`
-                          : "Not published"}
-                    </span>
-                    <span className="collection-draft-list__meta">
-                      {draft.publication?.publicPath ??
-                        `/collections/${draft.slug}`}
-                    </span>
+                    {isCreating ? "Creating…" : "Create release draft"}
                   </button>
-                );
-              })
-            )}
-          </div>
-        </SurfaceCard>
-        <SurfaceCard
-          body="Edit the draft metadata that anchors review status and the eventual public collection route."
-          eyebrow="Metadata"
-          span={6}
-          title={
-            selectedDraft ? selectedDraft.title : "Select a collection draft"
-          }
-        >
-          {selectedDraft ? (
-            <form className="studio-form" onSubmit={handleSaveDraft}>
-              <label className="field-stack">
-                <span className="field-label">Title</span>
-                <input
-                  className="input-field"
-                  maxLength={120}
-                  onChange={(event) => {
-                    setEditorState((current) => ({
-                      ...current,
-                      title: event.target.value
-                    }));
-                  }}
-                  required
-                  value={editorState.title}
-                />
-              </label>
-              <label className="field-stack">
-                <span className="field-label">Slug</span>
-                <input
-                  className="input-field"
-                  maxLength={80}
-                  onChange={(event) => {
-                    setEditorState((current) => ({
-                      ...current,
-                      slug: event.target.value
-                    }));
-                  }}
-                  pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
-                  required
-                  value={editorState.slug}
-                />
-              </label>
-              <label className="field-stack">
-                <span className="field-label">Status</span>
-                <select
-                  className="input-field"
-                  onChange={(event) => {
-                    setEditorState((current) => ({
-                      ...current,
-                      status: event.target.value as CollectionDraftStatus
-                    }));
-                  }}
-                  value={editorState.status}
-                >
-                  <option value="draft">Draft</option>
-                  <option value="review_ready">Review ready</option>
-                </select>
-              </label>
-              <label className="field-stack">
-                <span className="field-label">Description</span>
-                <textarea
-                  className="input-field input-field--multiline"
-                  maxLength={1000}
-                  onChange={(event) => {
-                    setEditorState((current) => ({
-                      ...current,
-                      description: event.target.value
-                    }));
-                  }}
-                  rows={6}
-                  value={editorState.description}
-                />
-              </label>
-              <div className="pill-row">
-                <Pill>{formatDraftStatus(selectedDraft.status)}</Pill>
-                <Pill>{selectedDraft.itemCount} curated assets</Pill>
-                {selectedDraftHasInvalidItems ? (
-                  <Pill>
-                    {selectedDraftInvalidItems.length} invalid curated asset
-                    {selectedDraftInvalidItems.length === 1 ? "" : "s"}
-                  </Pill>
-                ) : null}
-                {selectedDraft.publication ? <Pill>Published</Pill> : null}
-                {selectedDraft.publication?.isFeatured ? (
-                  <Pill>Featured release</Pill>
-                ) : null}
-                <Pill>
-                  Updated {formatCandidateTimestamp(selectedDraft.updatedAt)}
-                </Pill>
-              </div>
-              {selectedDraftHasInvalidItems ? (
-                <div className="status-banner status-banner--error">
-                  <strong>
-                    {selectedDraftNeedsRepairDowngrade
-                      ? "Review-ready draft is no longer valid"
-                      : "Draft contains unapproved assets"}
-                  </strong>
-                  <span>
-                    {selectedDraftNeedsRepairDowngrade
-                      ? "At least one curated asset was later rejected or reset, so this draft should be returned to draft before publication."
-                      : "One or more curated assets are no longer approved. Replace them or remove them before moving this draft forward."}
-                  </span>
                 </div>
-              ) : null}
-              <div className="studio-action-row">
-                <button
-                  className="button-action button-action--accent"
-                  disabled={savingDraftId === selectedDraft.id}
-                  type="submit"
-                >
-                  {savingDraftId === selectedDraft.id
-                    ? "Saving…"
-                    : "Save draft"}
-                </button>
+              </form>
+              <div className="studio-collections-browser__list">
+                {drafts.length === 0 ? (
+                  <div className="collection-empty-state">
+                    No collection drafts exist yet. Create one to begin the
+                    release workflow.
+                  </div>
+                ) : (
+                  drafts.map((draft) => (
+                    <CollectionDraftBrowserCard
+                      draft={draft}
+                      hasInvalidItems={draft.items.some(
+                        (item) =>
+                          item.generatedAsset.moderationStatus !== "approved"
+                      )}
+                      isSelected={draft.id === selectedDraft?.id}
+                      key={draft.id}
+                      onSelect={() => {
+                        setSelectedDraftId(draft.id);
+                        setNotice(null);
+                      }}
+                      previewUrl={
+                        (() => {
+                          const previewGeneratedAssetId =
+                            getDraftPreviewGeneratedAssetId(draft);
+
+                          return previewGeneratedAssetId
+                            ? generatedAssetPreviewUrls[previewGeneratedAssetId] ??
+                                null
+                            : null;
+                        })()
+                      }
+                    />
+                  ))
+                )}
               </div>
-            </form>
-          ) : (
-            <div className="collection-empty-state">
-              Create a draft to start curation.
             </div>
-          )}
-        </SurfaceCard>
-        <SurfaceCard
-          body="Only review-ready drafts can be published. Publication now targets an explicit saved brand, and published drafts can carry durable storefront merchandising controls for feature placement and ordering."
-          eyebrow="Publication"
-          span={6}
-          title={
-            selectedDraft?.publication
-              ? "Published route"
-              : "Publish review-ready draft"
-          }
-        >
+          </SurfaceCard>
+        </aside>
+
+        <section className="studio-collections-workspace__main">
           {selectedDraft ? (
-            <form className="studio-form" onSubmit={handlePublishDraft}>
-              {!canManagePublication ? (
-                <div className="status-banner status-banner--info">
-                  <strong>Operator read-only</strong>
-                  <span>
-                    Operators can curate drafts, but only workspace owners can
-                    publish releases, republish routes, or change storefront
-                    merchandising.
-                  </span>
+            <>
+              <SurfaceCard
+                body="Define the release identity here, then use the composition board beneath it to turn approved outputs into an ordered edition."
+                eyebrow="Active release"
+                title={selectedDraft.title}
+              >
+                <div className="studio-collections-focus">
+                  <div className="studio-collections-focus__hero">
+                    <div className="studio-collections-focus__media">
+                      {selectedDraftPreviewUrl ? (
+                        <img
+                          alt={selectedDraft.title}
+                          className="studio-collections-focus__image"
+                          src={selectedDraftPreviewUrl}
+                        />
+                      ) : (
+                        <div className="studio-collections-focus__placeholder">
+                          <strong>{selectedDraft.slug}</strong>
+                          <span>Curate art to give this release a visual center.</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="studio-collections-focus__summary">
+                      <div className="pill-row">
+                        <Pill>{formatDraftStatus(selectedDraft.status)}</Pill>
+                        <Pill>{selectedDraft.itemCount} curated items</Pill>
+                        <Pill>
+                          Updated {formatCandidateTimestamp(selectedDraft.updatedAt)}
+                        </Pill>
+                        {selectedDraft.publication ? <Pill>Published</Pill> : null}
+                        {selectedDraft.publication?.isFeatured ? (
+                          <Pill>Featured release</Pill>
+                        ) : null}
+                        {selectedDraftHasInvalidItems ? (
+                          <Pill>
+                            {selectedDraftInvalidItems.length} invalid item
+                            {selectedDraftInvalidItems.length === 1 ? "" : "s"}
+                          </Pill>
+                        ) : null}
+                      </div>
+                      <div className="studio-collections-focus__headline">
+                        <h2>{selectedDraft.title}</h2>
+                        <p>
+                          {selectedDraft.description?.trim() ||
+                            "Add internal story framing so reviewers and operators understand the release intent."}
+                        </p>
+                      </div>
+                      <div className="studio-collections-release-stats">
+                        <div className="studio-collections-release-stat">
+                          <span>Route</span>
+                          <strong>{selectedDraftPublicPath}</strong>
+                        </div>
+                        <div className="studio-collections-release-stat">
+                          <span>Publication</span>
+                          <strong>
+                            {selectedDraft.publication
+                              ? formatStorefrontStatus(
+                                  selectedDraft.publication.storefrontStatus
+                                )
+                              : "Not published"}
+                          </strong>
+                        </div>
+                        <div className="studio-collections-release-stat">
+                          <span>Onchain</span>
+                          <strong>
+                            {selectedDraft.publication?.activeDeployment
+                              ? selectedDraft.publication.activeDeployment.chain.label
+                              : "No deployment"}
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <form className="studio-form" onSubmit={handleSaveDraft}>
+                    <div className="studio-collections-form-grid">
+                      <label className="field-stack">
+                        <span className="field-label">Title</span>
+                        <input
+                          className="input-field"
+                          maxLength={120}
+                          onChange={(event) => {
+                            setEditorState((current) => ({
+                              ...current,
+                              title: event.target.value
+                            }));
+                          }}
+                          required
+                          value={editorState.title}
+                        />
+                      </label>
+                      <label className="field-stack">
+                        <span className="field-label">Slug</span>
+                        <input
+                          className="input-field"
+                          maxLength={80}
+                          onChange={(event) => {
+                            setEditorState((current) => ({
+                              ...current,
+                              slug: event.target.value
+                            }));
+                          }}
+                          pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                          required
+                          value={editorState.slug}
+                        />
+                      </label>
+                      <label className="field-stack">
+                        <span className="field-label">Workflow state</span>
+                        <select
+                          className="input-field"
+                          onChange={(event) => {
+                            setEditorState((current) => ({
+                              ...current,
+                              status: event.target.value as CollectionDraftStatus
+                            }));
+                          }}
+                          value={editorState.status}
+                        >
+                          <option value="draft">Draft</option>
+                          <option value="review_ready">Review ready</option>
+                        </select>
+                      </label>
+                      <label className="field-stack studio-collections-form-grid__full">
+                        <span className="field-label">Internal story</span>
+                        <textarea
+                          className="input-field input-field--multiline"
+                          maxLength={1000}
+                          onChange={(event) => {
+                            setEditorState((current) => ({
+                              ...current,
+                              description: event.target.value
+                            }));
+                          }}
+                          rows={5}
+                          value={editorState.description}
+                        />
+                      </label>
+                    </div>
+                    <div className="studio-action-row">
+                      <button
+                        className="button-action button-action--accent"
+                        disabled={savingDraftId === selectedDraft.id}
+                        type="submit"
+                      >
+                        {savingDraftId === selectedDraft.id
+                          ? "Saving…"
+                          : "Save release identity"}
+                      </button>
+                    </div>
+                  </form>
                 </div>
-              ) : null}
-              {selectedPublicationTarget ? (
-                <div className="publication-target-card">
-                  <div className="publication-target-card__copy">
-                    <strong>{selectedPublicationTarget.brandName}</strong>
-                    <span>{selectedPublicationTarget.publicBrandPath}</span>
+              </SurfaceCard>
+
+              <SurfaceCard
+                body="The composition board is the release backbone. The order below becomes the edition order, publication payload, and token numbering path."
+                eyebrow="Composition board"
+                title="Curated release sequence"
+              >
+                {selectedDraft.items.length === 0 ? (
+                  <div className="collection-empty-state">
+                    No generated assets have been curated into this release yet.
+                    Add approved outputs from the candidate rail.
+                  </div>
+                ) : (
+                  <div className="studio-collections-art-grid">
+                    {selectedDraft.items.map((item, index) => (
+                      <CollectionArtworkCard
+                        actions={
+                          <>
+                            <button
+                              className="button-action"
+                              disabled={
+                                busyItemKey !== null ||
+                                savingDraftId === selectedDraft.id ||
+                                index === 0
+                              }
+                              onClick={() => {
+                                void moveDraftItem(item.id, -1);
+                              }}
+                              type="button"
+                            >
+                              Move up
+                            </button>
+                            <button
+                              className="button-action"
+                              disabled={
+                                busyItemKey !== null ||
+                                savingDraftId === selectedDraft.id ||
+                                index === selectedDraft.items.length - 1
+                              }
+                              onClick={() => {
+                                void moveDraftItem(item.id, 1);
+                              }}
+                              type="button"
+                            >
+                              Move down
+                            </button>
+                            <button
+                              className="button-action"
+                              disabled={
+                                busyItemKey !== null ||
+                                savingDraftId === selectedDraft.id
+                              }
+                              onClick={() => {
+                                void removeDraftItem(item.id);
+                              }}
+                              type="button"
+                            >
+                              Remove
+                            </button>
+                          </>
+                        }
+                        key={item.id}
+                        meta={
+                          <>
+                            <span>{item.generatedAsset.pipelineKey}</span>
+                            <span>Source {item.generatedAsset.sourceAssetId}</span>
+                            <span>
+                              Added {formatCandidateTimestamp(item.generatedAsset.createdAt)}
+                            </span>
+                          </>
+                        }
+                        previewUrl={
+                          generatedAssetPreviewUrls[
+                            item.generatedAsset.generatedAssetId
+                          ] ?? null
+                        }
+                        statusLabel={formatModerationStatus(
+                          item.generatedAsset.moderationStatus
+                        )}
+                        statusTone={
+                          item.generatedAsset.moderationStatus === "approved"
+                            ? "success"
+                            : "danger"
+                        }
+                        subtitle={`Edition ${item.position}`}
+                        title={formatCandidateLabel(item.generatedAsset)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </SurfaceCard>
+
+              <SurfaceCard
+                body="Approved outputs stay on deck here so operators can keep composing the release without bouncing back to the assets workspace."
+                eyebrow="Curation rail"
+                title="Recent generated outputs"
+              >
+                {generatedAssetCandidates.length === 0 ? (
+                  <div className="collection-empty-state">
+                    No generated assets are available yet. Generate variants in
+                    `/studio/assets` first.
+                  </div>
+                ) : (
+                  <div className="studio-collections-art-grid studio-collections-art-grid--candidates">
+                    {generatedAssetCandidates.map((candidate) => {
+                      const isIncluded = includedGeneratedAssetIds.has(
+                        candidate.generatedAssetId
+                      );
+                      const isApproved =
+                        candidate.moderationStatus === "approved";
+
+                      return (
+                        <CollectionArtworkCard
+                          actions={
+                            <>
+                              <Pill>Source {candidate.sourceAssetId}</Pill>
+                              <button
+                                className="button-action"
+                                disabled={
+                                  !selectedDraft ||
+                                  !isApproved ||
+                                  isIncluded ||
+                                  busyItemKey !== null ||
+                                  savingDraftId !== null
+                                }
+                                onClick={() => {
+                                  void addGeneratedAssetToSelectedDraft(
+                                    candidate.generatedAssetId
+                                  );
+                                }}
+                                type="button"
+                              >
+                                {isIncluded
+                                  ? "Included"
+                                  : isApproved
+                                    ? "Add to release"
+                                    : "Awaiting approval"}
+                              </button>
+                            </>
+                          }
+                          key={candidate.generatedAssetId}
+                          meta={
+                            <>
+                              <span>{candidate.pipelineKey}</span>
+                              <span>
+                                {formatCandidateTimestamp(candidate.createdAt)}
+                              </span>
+                              <span>
+                                {formatModerationStatus(candidate.moderationStatus)}
+                              </span>
+                            </>
+                          }
+                          previewUrl={
+                            generatedAssetPreviewUrls[candidate.generatedAssetId] ??
+                            null
+                          }
+                          statusLabel={
+                            isIncluded
+                              ? "Included"
+                              : formatModerationStatus(candidate.moderationStatus)
+                          }
+                          statusTone={
+                            isIncluded
+                              ? "success"
+                              : candidate.moderationStatus === "approved"
+                                ? "default"
+                                : "warning"
+                          }
+                          subtitle={`Variant ${candidate.variantIndex}`}
+                          title={formatCandidateLabel(candidate)}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </SurfaceCard>
+            </>
+          ) : (
+            <SurfaceCard
+              body="Create a draft from the browser column, then select it to begin composing the release, publication plan, and onchain path."
+              eyebrow="No release selected"
+              title="Choose a release draft"
+            >
+              <div className="collection-empty-state">
+                The launch workspace is ready, but no active release is selected yet.
+              </div>
+            </SurfaceCard>
+          )}
+        </section>
+
+        <aside className="studio-collections-workspace__rail">
+          {notice ? (
+            <SurfaceCard
+              body={notice.message}
+              eyebrow="Workflow status"
+              title={notice.tone === "error" ? "Action failed" : "Latest update"}
+            >
+              <div className={`status-banner status-banner--${notice.tone}`}>
+                <span>{notice.message}</span>
+              </div>
+            </SurfaceCard>
+          ) : null}
+
+          <SurfaceCard
+            body="Publication state, blockers, and release links stay in one control rail so operators can decide quickly whether this draft needs curation, publication, or onchain work."
+            eyebrow="Launch rail"
+            title={
+              selectedDraft?.publication ? "Published release control" : "Release control"
+            }
+          >
+            {selectedDraft ? (
+              <div className="studio-form">
+                <div className="studio-collections-launch-grid">
+                  <div className="studio-collections-launch-card">
+                    <span>Draft state</span>
+                    <strong>{formatDraftStatus(selectedDraft.status)}</strong>
+                    <small>{selectedDraft.itemCount} curated items</small>
+                  </div>
+                  <div className="studio-collections-launch-card">
+                    <span>Publication</span>
+                    <strong>
+                      {selectedDraft.publication
+                        ? formatStorefrontStatus(
+                            selectedDraft.publication.storefrontStatus
+                          )
+                        : "Not published"}
+                    </strong>
+                    <small>{selectedDraftPublicPath}</small>
+                  </div>
+                  <div className="studio-collections-launch-card">
+                    <span>Onchain</span>
+                    <strong>
+                      {selectedDraft.publication?.activeDeployment
+                        ? selectedDraft.publication.activeDeployment.chain.label
+                        : "No deployment"}
+                    </strong>
+                    <small>
+                      {selectedDraft.publication
+                        ? `${selectedDraft.publication.mintedTokenCount} recorded mints`
+                        : "Publish first"}
+                    </small>
+                  </div>
+                </div>
+
+                {!canManagePublication ? (
+                  <div className="status-banner status-banner--info">
+                    <strong>Owner action required</strong>
                     <span>
-                      Selected route:{" "}
-                      {selectedDraft.publication?.publicPath ??
-                        `${selectedPublicationTarget.publicBrandPath}/collections/${selectedDraft.slug}`}
+                      Operators can shape the release, but publication and
+                      merchandising stay owner-only.
                     </span>
                   </div>
-                  <Link className="inline-link" href="/studio/settings">
-                    Edit studio settings
-                  </Link>
-                </div>
-              ) : (
-                <div className="collection-empty-state">
-                  Configure `/studio/settings` before publishing any
-                  review-ready drafts.
-                </div>
-              )}
-              {publicationTargets.length > 1 ? (
-                <label className="field-stack">
-                  <span className="field-label">Publication brand</span>
-                  <select
-                    className="input-field"
-                    disabled={!canManagePublication}
-                    onChange={(event) => {
-                      setSelectedPublicationTargetId(event.target.value || null);
-                    }}
-                    value={selectedPublicationTarget?.brandId ?? ""}
+                ) : null}
+
+                {selectedDraftLaunchNotes.map((note) => (
+                  <div
+                    className={`status-banner ${
+                      note.tone === "error"
+                        ? "status-banner--error"
+                        : note.tone === "success"
+                          ? "status-banner--success"
+                          : "status-banner--info"
+                    }`}
+                    key={`${note.title}-${note.body}`}
                   >
-                    {publicationTargets.map((target) => (
-                      <option key={target.brandId} value={target.brandId}>
-                        {target.brandName} · {target.publicBrandPath}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : null}
-              {selectedDraft.publication &&
-              selectedPublicationTarget &&
-              selectedDraft.publication.brandSlug !==
-                selectedPublicationTarget.brandSlug ? (
-                <div className="status-banner status-banner--info">
-                  <strong>Republish will move this release</strong>
-                  <span>
-                    Republishing will move the public route from{" "}
-                    {selectedDraft.publication.publicPath} to{" "}
-                    {selectedPublicationTarget.publicBrandPath}/collections/
-                    {selectedDraft.slug}.
-                  </span>
-                </div>
-              ) : null}
-              <div className="pill-row">
-                <Pill>
-                  {selectedDraft.publication?.publicPath ??
-                    (selectedPublicationTarget
-                      ? `${selectedPublicationTarget.publicBrandPath}/collections/${selectedDraft.slug}`
-                      : "/brands/[brandSlug]/collections/[collectionSlug]")}
-                </Pill>
+                    <strong>{note.title}</strong>
+                    <span>{note.body}</span>
+                  </div>
+                ))}
+
                 {selectedPublicationTarget ? (
-                  <Pill>{selectedPublicationTarget.brandSlug}</Pill>
-                ) : null}
+                  <div className="publication-target-card">
+                    <div className="publication-target-card__copy">
+                      <strong>{selectedPublicationTarget.brandName}</strong>
+                      <span>{selectedPublicationTarget.publicBrandPath}</span>
+                      <span>Selected route: {selectedDraftPublicPath}</span>
+                    </div>
+                    <Link className="inline-link" href="/studio/settings">
+                      Edit targets
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="collection-empty-state">
+                    Configure `/studio/settings` before publishing a release.
+                  </div>
+                )}
+
                 {publicationTargets.length > 1 ? (
-                  <Pill>{publicationTargets.length} brands</Pill>
-                ) : null}
-                {selectedDraft.publication ? (
-                  <Pill>
-                    Published{" "}
-                    {formatCandidateTimestamp(
-                      selectedDraft.publication.publishedAt
-                    )}
-                  </Pill>
-                ) : null}
-                {selectedDraft.publication ? (
-                  <Pill>Order {selectedDraft.publication.displayOrder}</Pill>
-                ) : null}
-                {selectedDraft.publication?.isFeatured ? (
-                  <Pill>Featured release</Pill>
-                ) : null}
-                {selectedDraft.publication ? (
-                  <Pill>{selectedDraft.publication.storefrontStatus}</Pill>
-                ) : null}
-                {selectedDraft.publication?.activeDeployment ? (
-                  <Pill>
-                    {selectedDraft.publication.activeDeployment.chain.label}
-                  </Pill>
-                ) : null}
-                {selectedDraft.publication?.activeDeployment ? (
-                  <Pill>
-                    {shortHex(
-                      selectedDraft.publication.activeDeployment.contractAddress
-                    )}
-                  </Pill>
-                ) : null}
-                {selectedDraft.publication ? (
-                  <Pill>
-                    {selectedDraft.publication.mintedTokenCount} minted
-                  </Pill>
-                ) : null}
-                {selectedDraft.publication?.priceLabel ? (
-                  <Pill>{selectedDraft.publication.priceLabel}</Pill>
-                ) : null}
-                {selectedDraft.publication?.priceAmountMinor !== null &&
-                selectedDraft.publication?.priceAmountMinor !== undefined &&
-                selectedDraft.publication?.priceCurrency ? (
-                  <Pill>
-                    {selectedDraft.publication.priceAmountMinor}{" "}
-                    {selectedDraft.publication.priceCurrency.toUpperCase()}
-                  </Pill>
-                ) : null}
-                {selectedDraft.publication?.totalSupply !== null &&
-                selectedDraft.publication?.totalSupply !== undefined ? (
-                  <Pill>
-                    {selectedDraft.publication.soldCount}/
-                    {selectedDraft.publication.totalSupply} claimed
-                  </Pill>
-                ) : null}
-                {selectedDraft.publication ? (
-                  <Pill>
-                    {buildPublishedCollectionMetadataPath(
-                      selectedDraft.publication.publicPath
-                    )}
-                  </Pill>
-                ) : null}
-                {selectedDraft.publication ? (
-                  <Pill>
-                    {buildPublishedCollectionContractPath({
-                      brandSlug: selectedDraft.publication.brandSlug,
-                      collectionSlug: selectedDraft.publication.collectionSlug
-                    })}
-                  </Pill>
-                ) : null}
-              </div>
-              <div className="studio-action-row">
-                <button
-                  className="button-action button-action--accent"
-                  disabled={
-                    !canManagePublication ||
-                    !selectedPublicationTarget ||
-                    publishingDraftId === selectedDraft.id ||
-                    selectedDraft.status !== "review_ready" ||
-                    selectedDraft.itemCount === 0
-                  }
-                  type="submit"
-                >
-                  {publishingDraftId === selectedDraft.id
-                    ? "Publishing…"
-                    : selectedDraft.publication
-                      ? "Republish draft"
-                      : "Publish draft"}
-                </button>
-                <button
-                  className="button-action"
-                  disabled={
-                    !canManagePublication ||
-                    !selectedDraft.publication ||
-                    unpublishingDraftId === selectedDraft.id
-                  }
-                  onClick={() => {
-                    void handleUnpublishDraft();
-                  }}
-                  type="button"
-                >
-                  {unpublishingDraftId === selectedDraft.id
-                    ? "Unpublishing…"
-                    : "Unpublish"}
-                </button>
-                {!selectedPublicationTarget ? (
-                  <Link className="inline-link" href="/studio/settings">
-                    Configure settings
-                  </Link>
-                ) : null}
-                {selectedDraft.publication ? (
-                  <Link
-                    className="inline-link"
-                    href={selectedDraft.publication.publicPath}
-                    target="_blank"
-                  >
-                    Open public route
-                  </Link>
-                ) : null}
-                {selectedDraft.publication ? (
-                  <Link
-                    className="inline-link"
-                    href={buildPublishedCollectionContractPath({
-                      brandSlug: selectedDraft.publication.brandSlug,
-                      collectionSlug: selectedDraft.publication.collectionSlug
-                    })}
-                    target="_blank"
-                  >
-                    Open contract manifest
-                  </Link>
-                ) : null}
-                {selectedDraft.publication ? (
-                  <Link
-                    className="inline-link"
-                    href={buildPublishedCollectionMetadataPath(
-                      selectedDraft.publication.publicPath
-                    )}
-                    target="_blank"
-                  >
-                    Open metadata manifest
-                  </Link>
-                ) : null}
-                {selectedDraft.publication && selectedDraft.items[0] ? (
-                  <Link
-                    className="inline-link"
-                    href={createCollectionTokenUriPath({
-                      brandSlug: selectedDraft.publication.brandSlug,
-                      collectionSlug: selectedDraft.publication.collectionSlug,
-                      tokenId: selectedDraft.items[0].position
-                    })}
-                    target="_blank"
-                  >
-                    Open first token URI
-                  </Link>
-                ) : null}
-                {selectedDraft.publication && selectedDraft.items[0] ? (
-                  <Link
-                    className="inline-link"
-                    href={`${buildPublishedCollectionMetadataPath(
-                      selectedDraft.publication.publicPath
-                    )}/${selectedDraft.items[0].position}`}
-                    target="_blank"
-                  >
-                    Open first edition metadata
-                  </Link>
-                ) : null}
-                {selectedDraft.publication && selectedPublicationTarget ? (
-                  <Link
-                    className="inline-link"
-                    href={selectedPublicationTarget.publicBrandPath}
-                    target="_blank"
-                  >
-                    Open brand landing
-                  </Link>
-                ) : null}
-              </div>
-              {selectedDraftHasInvalidItems ? (
-                <div className="status-banner status-banner--error">
-                  <strong>Publication warning</strong>
-                  <span>
-                    This draft has curated assets that are no longer approved.
-                    Reconciliation will flag it, and review-ready publication
-                    should be downgraded until the invalid items are fixed.
-                  </span>
-                </div>
-              ) : null}
-              {selectedDraft.publication ? (
-                <form
-                  className="studio-form publication-merchandising-form"
-                  onSubmit={handleSavePublicationMerchandising}
-                >
-                  <fieldset
-                    disabled={!canManagePublication || savingPublicationDraftId === selectedDraft.id}
-                  >
                   <label className="field-stack">
-                    <span className="field-label">Storefront status</span>
+                    <span className="field-label">Publication brand</span>
                     <select
                       className="input-field"
+                      disabled={!canManagePublication}
                       onChange={(event) => {
-                        setPublicationMerchandisingState((current) => ({
-                          ...current,
-                          storefrontStatus: event.target.value as
-                            | "upcoming"
-                            | "live"
-                            | "sold_out"
-                            | "ended"
-                        }));
+                        setSelectedPublicationTargetId(event.target.value || null);
                       }}
-                      value={publicationMerchandisingState.storefrontStatus}
+                      value={selectedPublicationTarget?.brandId ?? ""}
                     >
-                      <option value="upcoming">Upcoming</option>
-                      <option value="live">Live</option>
-                      <option value="sold_out">Sold out</option>
-                      <option value="ended">Ended</option>
-                    </select>
-                  </label>
-                  <label className="field-stack">
-                    <span className="field-label">Display order</span>
-                    <input
-                      className="input-field"
-                      min={0}
-                      onChange={(event) => {
-                        setPublicationMerchandisingState((current) => ({
-                          ...current,
-                          displayOrder: Number.parseInt(
-                            event.target.value || "0",
-                            10
-                          )
-                        }));
-                      }}
-                      type="number"
-                      value={publicationMerchandisingState.displayOrder}
-                    />
-                  </label>
-                  <label className="field-stack">
-                    <span className="field-label">Launch time</span>
-                    <input
-                      className="input-field"
-                      onChange={(event) => {
-                        setPublicationMerchandisingState((current) => ({
-                          ...current,
-                          launchAt: event.target.value
-                        }));
-                      }}
-                      type="datetime-local"
-                      value={publicationMerchandisingState.launchAt}
-                    />
-                  </label>
-                  <label className="field-stack">
-                    <span className="field-label">End time</span>
-                    <input
-                      className="input-field"
-                      onChange={(event) => {
-                        setPublicationMerchandisingState((current) => ({
-                          ...current,
-                          endAt: event.target.value
-                        }));
-                      }}
-                      type="datetime-local"
-                      value={publicationMerchandisingState.endAt}
-                    />
-                  </label>
-                  <label className="field-stack">
-                    <span className="field-label">Price label</span>
-                    <input
-                      className="input-field"
-                      maxLength={60}
-                      onChange={(event) => {
-                        setPublicationMerchandisingState((current) => ({
-                          ...current,
-                          priceLabel: event.target.value
-                        }));
-                      }}
-                      placeholder="0.08 ETH"
-                      value={publicationMerchandisingState.priceLabel}
-                    />
-                  </label>
-                  <label className="field-stack">
-                    <span className="field-label">Price amount (minor)</span>
-                    <input
-                      className="input-field"
-                      min={1}
-                      onChange={(event) => {
-                        setPublicationMerchandisingState((current) => ({
-                          ...current,
-                          priceAmountMinor: event.target.value
-                        }));
-                      }}
-                      placeholder="1800"
-                      type="number"
-                      value={publicationMerchandisingState.priceAmountMinor}
-                    />
-                  </label>
-                  <label className="field-stack">
-                    <span className="field-label">Price currency</span>
-                    <input
-                      className="input-field"
-                      maxLength={3}
-                      onChange={(event) => {
-                        setPublicationMerchandisingState((current) => ({
-                          ...current,
-                          priceCurrency: event.target.value.toUpperCase()
-                        }));
-                      }}
-                      placeholder="USD"
-                      value={publicationMerchandisingState.priceCurrency}
-                    />
-                  </label>
-                  <label className="field-stack">
-                    <span className="field-label">Total supply</span>
-                    <input
-                      className="input-field"
-                      min={1}
-                      onChange={(event) => {
-                        setPublicationMerchandisingState((current) => ({
-                          ...current,
-                          totalSupply: event.target.value
-                        }));
-                      }}
-                      type="number"
-                      value={publicationMerchandisingState.totalSupply}
-                    />
-                  </label>
-                  <label className="field-stack">
-                    <span className="field-label">Sold count</span>
-                    <input
-                      className="input-field"
-                      min={0}
-                      onChange={(event) => {
-                        setPublicationMerchandisingState((current) => ({
-                          ...current,
-                          soldCount: event.target.value
-                        }));
-                      }}
-                      type="number"
-                      value={publicationMerchandisingState.soldCount}
-                    />
-                  </label>
-                  <label className="field-stack">
-                    <span className="field-label">Hero asset</span>
-                    <select
-                      className="input-field"
-                      onChange={(event) => {
-                        setPublicationMerchandisingState((current) => ({
-                          ...current,
-                          heroGeneratedAssetId: event.target.value
-                        }));
-                      }}
-                      value={publicationMerchandisingState.heroGeneratedAssetId}
-                    >
-                      <option value="">Use first published item</option>
-                      {selectedDraft.items.map((item) => (
-                        <option
-                          key={item.generatedAsset.generatedAssetId}
-                          value={item.generatedAsset.generatedAssetId}
-                        >
-                          {formatCandidateLabel(item.generatedAsset)}
+                      {publicationTargets.map((target) => (
+                        <option key={target.brandId} value={target.brandId}>
+                          {target.brandName} · {target.publicBrandPath}
                         </option>
                       ))}
                     </select>
                   </label>
-                  <label className="field-stack">
-                    <span className="field-label">Storefront headline</span>
-                    <input
-                      className="input-field"
-                      maxLength={120}
-                      onChange={(event) => {
-                        setPublicationMerchandisingState((current) => ({
-                          ...current,
-                          storefrontHeadline: event.target.value
-                        }));
+                ) : null}
+
+                {selectedDraft.publication &&
+                selectedPublicationTarget &&
+                selectedDraft.publication.brandSlug !==
+                  selectedPublicationTarget.brandSlug ? (
+                  <div className="status-banner status-banner--info">
+                    <strong>Republish will move the route</strong>
+                    <span>
+                      Republishing will move this release from{" "}
+                      {selectedDraft.publication.publicPath} to {selectedDraftPublicPath}.
+                    </span>
+                  </div>
+                ) : null}
+
+                <div className="pill-row">
+                  <Pill>{selectedDraftPublicPath}</Pill>
+                  {selectedPublicationTarget ? (
+                    <Pill>{selectedPublicationTarget.brandSlug}</Pill>
+                  ) : null}
+                  {selectedDraft.publication ? (
+                    <Pill>
+                      Published{" "}
+                      {formatCandidateTimestamp(selectedDraft.publication.publishedAt)}
+                    </Pill>
+                  ) : null}
+                  {selectedDraft.publication ? (
+                    <Pill>
+                      Order {selectedDraft.publication.displayOrder}
+                    </Pill>
+                  ) : null}
+                  {selectedDraft.publication?.isFeatured ? (
+                    <Pill>Featured release</Pill>
+                  ) : null}
+                  {selectedDraft.publication?.priceLabel ? (
+                    <Pill>{selectedDraft.publication.priceLabel}</Pill>
+                  ) : null}
+                </div>
+
+                <form className="studio-form" onSubmit={handlePublishDraft}>
+                  <div className="studio-action-row">
+                    <button
+                      className="button-action button-action--accent"
+                      disabled={
+                        !canManagePublication ||
+                        !selectedPublicationTarget ||
+                        publishingDraftId === selectedDraft.id ||
+                        selectedDraft.status !== "review_ready" ||
+                        selectedDraft.itemCount === 0
+                      }
+                      type="submit"
+                    >
+                      {publishingDraftId === selectedDraft.id
+                        ? "Publishing…"
+                        : selectedDraft.publication
+                          ? "Republish release"
+                          : "Publish release"}
+                    </button>
+                    <button
+                      className="button-action"
+                      disabled={
+                        !canManagePublication ||
+                        !selectedDraft.publication ||
+                        unpublishingDraftId === selectedDraft.id
+                      }
+                      onClick={() => {
+                        void handleUnpublishDraft();
                       }}
-                      placeholder="A midnight launch built for collectors."
-                      value={publicationMerchandisingState.storefrontHeadline}
-                    />
-                  </label>
-                  <label className="field-stack">
-                    <span className="field-label">Storefront body</span>
-                    <textarea
-                      className="input-field input-field--multiline"
-                      maxLength={600}
-                      onChange={(event) => {
-                        setPublicationMerchandisingState((current) => ({
-                          ...current,
-                          storefrontBody: event.target.value
-                        }));
-                      }}
-                      rows={4}
-                      value={publicationMerchandisingState.storefrontBody}
-                    />
-                  </label>
-                  <label className="field-stack">
-                    <span className="field-label">Primary CTA label</span>
-                    <input
-                      className="input-field"
-                      maxLength={40}
-                      onChange={(event) => {
-                        setPublicationMerchandisingState((current) => ({
-                          ...current,
-                          primaryCtaLabel: event.target.value
-                        }));
-                      }}
-                      placeholder="Join the launch"
-                      value={publicationMerchandisingState.primaryCtaLabel}
-                    />
-                  </label>
-                  <label className="field-stack">
-                    <span className="field-label">Primary CTA URL</span>
-                    <input
-                      className="input-field"
-                      onChange={(event) => {
-                        setPublicationMerchandisingState((current) => ({
-                          ...current,
-                          primaryCtaHref: event.target.value
-                        }));
-                      }}
-                      placeholder="https://launch.example.com"
-                      type="url"
-                      value={publicationMerchandisingState.primaryCtaHref}
-                    />
-                  </label>
-                  <label className="field-stack">
-                    <span className="field-label">Secondary CTA label</span>
-                    <input
-                      className="input-field"
-                      maxLength={40}
-                      onChange={(event) => {
-                        setPublicationMerchandisingState((current) => ({
-                          ...current,
-                          secondaryCtaLabel: event.target.value
-                        }));
-                      }}
-                      placeholder="Read the story"
-                      value={publicationMerchandisingState.secondaryCtaLabel}
-                    />
-                  </label>
-                  <label className="field-stack">
-                    <span className="field-label">Secondary CTA URL</span>
-                    <input
-                      className="input-field"
-                      onChange={(event) => {
-                        setPublicationMerchandisingState((current) => ({
-                          ...current,
-                          secondaryCtaHref: event.target.value
-                        }));
-                      }}
-                      placeholder="https://launch.example.com/story"
-                      type="url"
-                      value={publicationMerchandisingState.secondaryCtaHref}
-                    />
-                  </label>
+                      type="button"
+                    >
+                      {unpublishingDraftId === selectedDraft.id
+                        ? "Unpublishing…"
+                        : "Unpublish"}
+                    </button>
+                  </div>
+                </form>
+
+                <div className="studio-collections-link-grid">
+                  {!selectedPublicationTarget ? (
+                    <Link className="inline-link" href="/studio/settings">
+                      Configure publication targets
+                    </Link>
+                  ) : null}
+                  {selectedDraft.publication ? (
+                    <Link
+                      className="inline-link"
+                      href={selectedDraft.publication.publicPath}
+                      target="_blank"
+                    >
+                      Open public route
+                    </Link>
+                  ) : null}
+                  {selectedDraftContractPath ? (
+                    <Link
+                      className="inline-link"
+                      href={selectedDraftContractPath}
+                      target="_blank"
+                    >
+                      Open contract manifest
+                    </Link>
+                  ) : null}
+                  {selectedDraftMetadataPath ? (
+                    <Link
+                      className="inline-link"
+                      href={selectedDraftMetadataPath}
+                      target="_blank"
+                    >
+                      Open metadata manifest
+                    </Link>
+                  ) : null}
+                  {selectedDraft.publication && selectedDraft.items[0] ? (
+                    <Link
+                      className="inline-link"
+                      href={createCollectionTokenUriPath({
+                        brandSlug: selectedDraft.publication.brandSlug,
+                        collectionSlug: selectedDraft.publication.collectionSlug,
+                        tokenId: selectedDraft.items[0].position
+                      })}
+                      target="_blank"
+                    >
+                      Open first token URI
+                    </Link>
+                  ) : null}
+                  {selectedDraftMetadataPath && selectedDraft.items[0] ? (
+                    <Link
+                      className="inline-link"
+                      href={`${selectedDraftMetadataPath}/${selectedDraft.items[0].position}`}
+                      target="_blank"
+                    >
+                      Open first edition metadata
+                    </Link>
+                  ) : null}
+                  {selectedDraft.publication && selectedPublicationTarget ? (
+                    <Link
+                      className="inline-link"
+                      href={selectedPublicationTarget.publicBrandPath}
+                      target="_blank"
+                    >
+                      Open brand landing
+                    </Link>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <div className="collection-empty-state">
+                Select a draft to inspect publication state and launch controls.
+              </div>
+            )}
+          </SurfaceCard>
+
+          {selectedDraft?.publication ? (
+            <SurfaceCard
+              body="Storefront metadata stays separate from the draft identity so operators can tune live presentation without losing track of the underlying release object."
+              eyebrow="Storefront control"
+              title="Merchandising and release timing"
+            >
+              <form
+                className="studio-form"
+                onSubmit={handleSavePublicationMerchandising}
+              >
+                <fieldset
+                  className="studio-collections-fieldset"
+                  disabled={
+                    !canManagePublication ||
+                    savingPublicationDraftId === selectedDraft.id
+                  }
+                >
+                  <div className="studio-collections-form-grid">
+                    <label className="field-stack">
+                      <span className="field-label">Storefront status</span>
+                      <select
+                        className="input-field"
+                        onChange={(event) => {
+                          setPublicationMerchandisingState((current) => ({
+                            ...current,
+                            storefrontStatus: event.target.value as
+                              | "upcoming"
+                              | "live"
+                              | "sold_out"
+                              | "ended"
+                          }));
+                        }}
+                        value={publicationMerchandisingState.storefrontStatus}
+                      >
+                        <option value="upcoming">Upcoming</option>
+                        <option value="live">Live</option>
+                        <option value="sold_out">Sold out</option>
+                        <option value="ended">Ended</option>
+                      </select>
+                    </label>
+                    <label className="field-stack">
+                      <span className="field-label">Display order</span>
+                      <input
+                        className="input-field"
+                        min={0}
+                        onChange={(event) => {
+                          setPublicationMerchandisingState((current) => ({
+                            ...current,
+                            displayOrder: Number.parseInt(
+                              event.target.value || "0",
+                              10
+                            )
+                          }));
+                        }}
+                        type="number"
+                        value={publicationMerchandisingState.displayOrder}
+                      />
+                    </label>
+                    <label className="field-stack">
+                      <span className="field-label">Launch time</span>
+                      <input
+                        className="input-field"
+                        onChange={(event) => {
+                          setPublicationMerchandisingState((current) => ({
+                            ...current,
+                            launchAt: event.target.value
+                          }));
+                        }}
+                        type="datetime-local"
+                        value={publicationMerchandisingState.launchAt}
+                      />
+                    </label>
+                    <label className="field-stack">
+                      <span className="field-label">End time</span>
+                      <input
+                        className="input-field"
+                        onChange={(event) => {
+                          setPublicationMerchandisingState((current) => ({
+                            ...current,
+                            endAt: event.target.value
+                          }));
+                        }}
+                        type="datetime-local"
+                        value={publicationMerchandisingState.endAt}
+                      />
+                    </label>
+                    <label className="field-stack">
+                      <span className="field-label">Price label</span>
+                      <input
+                        className="input-field"
+                        maxLength={60}
+                        onChange={(event) => {
+                          setPublicationMerchandisingState((current) => ({
+                            ...current,
+                            priceLabel: event.target.value
+                          }));
+                        }}
+                        placeholder="0.08 ETH"
+                        value={publicationMerchandisingState.priceLabel}
+                      />
+                    </label>
+                    <label className="field-stack">
+                      <span className="field-label">Price amount (minor)</span>
+                      <input
+                        className="input-field"
+                        min={1}
+                        onChange={(event) => {
+                          setPublicationMerchandisingState((current) => ({
+                            ...current,
+                            priceAmountMinor: event.target.value
+                          }));
+                        }}
+                        placeholder="1800"
+                        type="number"
+                        value={publicationMerchandisingState.priceAmountMinor}
+                      />
+                    </label>
+                    <label className="field-stack">
+                      <span className="field-label">Price currency</span>
+                      <input
+                        className="input-field"
+                        maxLength={3}
+                        onChange={(event) => {
+                          setPublicationMerchandisingState((current) => ({
+                            ...current,
+                            priceCurrency: event.target.value.toUpperCase()
+                          }));
+                        }}
+                        placeholder="USD"
+                        value={publicationMerchandisingState.priceCurrency}
+                      />
+                    </label>
+                    <label className="field-stack">
+                      <span className="field-label">Total supply</span>
+                      <input
+                        className="input-field"
+                        min={1}
+                        onChange={(event) => {
+                          setPublicationMerchandisingState((current) => ({
+                            ...current,
+                            totalSupply: event.target.value
+                          }));
+                        }}
+                        type="number"
+                        value={publicationMerchandisingState.totalSupply}
+                      />
+                    </label>
+                    <label className="field-stack">
+                      <span className="field-label">Sold count</span>
+                      <input
+                        className="input-field"
+                        min={0}
+                        onChange={(event) => {
+                          setPublicationMerchandisingState((current) => ({
+                            ...current,
+                            soldCount: event.target.value
+                          }));
+                        }}
+                        type="number"
+                        value={publicationMerchandisingState.soldCount}
+                      />
+                    </label>
+                    <label className="field-stack studio-collections-form-grid__full">
+                      <span className="field-label">Hero asset</span>
+                      <select
+                        className="input-field"
+                        onChange={(event) => {
+                          setPublicationMerchandisingState((current) => ({
+                            ...current,
+                            heroGeneratedAssetId: event.target.value
+                          }));
+                        }}
+                        value={publicationMerchandisingState.heroGeneratedAssetId}
+                      >
+                        <option value="">Use first published item</option>
+                        {selectedDraft.items.map((item) => (
+                          <option
+                            key={item.generatedAsset.generatedAssetId}
+                            value={item.generatedAsset.generatedAssetId}
+                          >
+                            {formatCandidateLabel(item.generatedAsset)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field-stack">
+                      <span className="field-label">Storefront headline</span>
+                      <input
+                        className="input-field"
+                        maxLength={120}
+                        onChange={(event) => {
+                          setPublicationMerchandisingState((current) => ({
+                            ...current,
+                            storefrontHeadline: event.target.value
+                          }));
+                        }}
+                        placeholder="A midnight launch built for collectors."
+                        value={publicationMerchandisingState.storefrontHeadline}
+                      />
+                    </label>
+                    <label className="field-stack studio-collections-form-grid__full">
+                      <span className="field-label">Storefront body</span>
+                      <textarea
+                        className="input-field input-field--multiline"
+                        maxLength={600}
+                        onChange={(event) => {
+                          setPublicationMerchandisingState((current) => ({
+                            ...current,
+                            storefrontBody: event.target.value
+                          }));
+                        }}
+                        rows={4}
+                        value={publicationMerchandisingState.storefrontBody}
+                      />
+                    </label>
+                    <label className="field-stack">
+                      <span className="field-label">Primary CTA label</span>
+                      <input
+                        className="input-field"
+                        maxLength={40}
+                        onChange={(event) => {
+                          setPublicationMerchandisingState((current) => ({
+                            ...current,
+                            primaryCtaLabel: event.target.value
+                          }));
+                        }}
+                        placeholder="Join the launch"
+                        value={publicationMerchandisingState.primaryCtaLabel}
+                      />
+                    </label>
+                    <label className="field-stack">
+                      <span className="field-label">Primary CTA URL</span>
+                      <input
+                        className="input-field"
+                        onChange={(event) => {
+                          setPublicationMerchandisingState((current) => ({
+                            ...current,
+                            primaryCtaHref: event.target.value
+                          }));
+                        }}
+                        placeholder="https://launch.example.com"
+                        type="url"
+                        value={publicationMerchandisingState.primaryCtaHref}
+                      />
+                    </label>
+                    <label className="field-stack">
+                      <span className="field-label">Secondary CTA label</span>
+                      <input
+                        className="input-field"
+                        maxLength={40}
+                        onChange={(event) => {
+                          setPublicationMerchandisingState((current) => ({
+                            ...current,
+                            secondaryCtaLabel: event.target.value
+                          }));
+                        }}
+                        placeholder="Read the story"
+                        value={publicationMerchandisingState.secondaryCtaLabel}
+                      />
+                    </label>
+                    <label className="field-stack">
+                      <span className="field-label">Secondary CTA URL</span>
+                      <input
+                        className="input-field"
+                        onChange={(event) => {
+                          setPublicationMerchandisingState((current) => ({
+                            ...current,
+                            secondaryCtaHref: event.target.value
+                          }));
+                        }}
+                        placeholder="https://launch.example.com/story"
+                        type="url"
+                        value={publicationMerchandisingState.secondaryCtaHref}
+                      />
+                    </label>
+                  </div>
                   <label className="toggle-field">
                     <input
                       checked={publicationMerchandisingState.isFeatured}
@@ -2540,460 +3098,285 @@ export function StudioCollectionsClient({
                         : "Save merchandising"}
                     </button>
                   </div>
-                  </fieldset>
-                </form>
-              ) : null}
-            </form>
-          ) : (
-            <div className="collection-empty-state">
-              Select a draft to publish it.
-            </div>
-          )}
-        </SurfaceCard>
-        <SurfaceCard
-          body="Prepare, sign, submit, confirm, and record owner-signed deployment and mint transactions directly from the immutable published snapshot. The server now verifies chain receipts before it accepts any deployment or mint record."
-          eyebrow="Onchain"
-          span={6}
-          title="Deployment and minting"
-        >
-          {selectedDraft?.publication ? (
-            <div className="studio-form">
-              {!canManageOnchain ? (
-                <div className="status-banner status-banner--info">
-                  <strong>Owner action required</strong>
-                  <span>
-                    Deployment and mint recording stay owner-only because they
-                    depend on verified owner wallet actions and immutable
-                    published state.
-                  </span>
-                </div>
-              ) : null}
-              <div className="pill-row">
-                <Pill>
-                  {walletProviderAvailable
-                    ? "Wallet connector ready"
-                    : "No wallet connector ready"}
-                </Pill>
-                <Pill>Owner {shortHex(ownerWalletAddress)}</Pill>
-                {connectedWalletAddress ? (
-                  <Pill>
-                    {connectedOwnerWallet ? "Connected" : "Wallet mismatch"}{" "}
-                    {shortHex(connectedWalletAddress)}
-                  </Pill>
-                ) : (
-                  <Pill>Wallet not connected</Pill>
-                )}
-                {connectedWalletConnector ? (
-                  <Pill>{connectedWalletConnector.name}</Pill>
-                ) : null}
-                {connectedWalletChainLabel ? (
-                  <Pill>{connectedWalletChainLabel}</Pill>
-                ) : null}
-                {selectedDraft.publication.activeDeployment ? (
-                  <>
-                    <Pill>
-                      {
-                        selectedDraft.publication.activeDeployment.chain.label
-                      }
-                    </Pill>
-                    <Pill>
-                      {shortHex(
-                        selectedDraft.publication.activeDeployment
-                          .contractAddress
-                      )}
-                    </Pill>
-                    <Pill>
-                      {shortHex(
-                        selectedDraft.publication.activeDeployment.deployTxHash
-                      )}
-                    </Pill>
-                  </>
-                ) : (
-                  <Pill>No deployment recorded</Pill>
-                )}
-                <Pill>
-                  {selectedDraft.publication.mintedTokenCount} recorded mint
-                  {selectedDraft.publication.mintedTokenCount === 1 ? "" : "s"}
-                </Pill>
-              </div>
-              <fieldset disabled={!canManageOnchain}>
-              <label className="field-stack">
-                <span className="field-label">Wallet path</span>
-                <select
-                  className="input-field"
-                  onChange={(event) => {
-                    setSelectedWalletConnectorId(
-                      event.target.value as SupportedWalletConnectorId
-                    );
-                  }}
-                  value={selectedWalletConnectorId}
-                >
-                  {baseAccountConnector ? (
-                    <option value="baseAccount">Base Account</option>
-                  ) : null}
-                  {injectedWalletConnector ? (
-                    <option value="injected">
-                      {injectedWalletConnector.name}
-                    </option>
-                  ) : null}
-                </select>
-              </label>
-              <div className="studio-action-row">
-                <button
-                  className="button-action"
-                  disabled={!walletProviderAvailable}
-                  onClick={() => {
-                    void handleConnectWallet();
-                  }}
-                  type="button"
-                >
-                  Connect selected wallet
-                </button>
-                {connectedWalletConnector ? (
-                  <button
-                    className="button-action"
-                    onClick={() => {
-                      void handleDisconnectWallet();
-                    }}
-                    type="button"
-                  >
-                    Disconnect wallet
-                  </button>
-                ) : null}
-              </div>
-              {onchainFlowState ? (
-                <div
-                  className={`status-banner ${
-                    onchainFlowState.status === "failed"
-                      ? "status-banner--error"
-                      : onchainFlowState.status === "success"
-                        ? "status-banner--success"
-                        : ""
-                  }`}
-                >
-                  <strong>
-                    {onchainFlowState.kind === "deployment"
-                      ? "Deployment flow"
-                      : "Mint flow"}
-                  </strong>
-                  <span>{onchainFlowState.message}</span>
-                  {onchainFlowState.txHash ? (
-                    <span>Tx: {onchainFlowState.txHash}</span>
-                  ) : null}
-                </div>
-              ) : null}
-              <label className="field-stack">
-                <span className="field-label">Deployment chain</span>
-                <select
-                  className="input-field"
-                  onChange={(event) => {
-                    setDeploymentChainKey(
-                      event.target.value as CollectionContractChainKey
-                    );
-                  }}
-                  value={deploymentChainKey}
-                >
-                  <option value="base-sepolia">Base Sepolia</option>
-                  <option value="base">Base</option>
-                </select>
-              </label>
-              <div className="studio-action-row">
-                <button
-                  className="button-action"
-                  disabled={
-                    deployingDraftId === selectedDraft.id ||
-                    Boolean(selectedDraft.publication.activeDeployment)
-                  }
-                  onClick={() => {
-                    void handleDeployWithWallet();
-                  }}
-                  type="button"
-                >
-                  {deployingDraftId === selectedDraft.id
-                    ? "Processing deployment…"
-                    : "Deploy with wallet"}
-                </button>
-                {pendingDeploymentTxHash &&
-                !selectedDraft.publication.activeDeployment ? (
-                  <button
-                    className="button-action"
-                    disabled={deployingDraftId === selectedDraft.id}
-                    onClick={() => {
-                      void handleRetryDeploymentRecord();
-                    }}
-                    type="button"
-                  >
-                    Retry deployment confirmation
-                  </button>
-                ) : null}
-              </div>
-              {deploymentIntentJson ? (
-                <label className="field-stack">
-                  <span className="field-label">Deployment intent JSON</span>
-                  <textarea
-                    className="input-field input-field--multiline"
-                    readOnly
-                    rows={10}
-                    value={deploymentIntentJson}
-                  />
-                </label>
-              ) : null}
+                </fieldset>
+              </form>
+            </SurfaceCard>
+          ) : null}
+
+          <SurfaceCard
+            body="Prepare, sign, submit, confirm, and record deployment or mint transactions directly from the immutable published snapshot. The server verifies chain receipts before accepting any record."
+            eyebrow="Onchain rail"
+            title="Deployment and minting"
+          >
+            {selectedDraft?.publication ? (
               <div className="studio-form">
-                <label className="field-stack">
-                  <span className="field-label">Recipient wallet</span>
-                  <input
-                    className="input-field"
-                    onChange={(event) => {
-                      setMintRequestState((current) => ({
-                        ...current,
-                        recipientWalletAddress: event.target.value
-                      }));
-                    }}
-                    placeholder="0x..."
-                    value={mintRequestState.recipientWalletAddress}
-                  />
-                </label>
-                <label className="field-stack">
-                  <span className="field-label">Token ID</span>
-                  <input
-                    className="input-field"
-                    min={1}
-                    onChange={(event) => {
-                      setMintRequestState((current) => ({
-                        ...current,
-                        tokenId: event.target.value
-                      }));
-                    }}
-                    type="number"
-                    value={mintRequestState.tokenId}
-                  />
-                </label>
-                <div className="studio-action-row">
-                  <button
-                    className="button-action"
-                    disabled={
-                      mintingDraftId === selectedDraft.id ||
-                      !selectedDraft.publication.activeDeployment
-                    }
-                    onClick={() => {
-                      void handleMintWithWallet();
-                    }}
-                    type="button"
-                  >
-                    {mintingDraftId === selectedDraft.id
-                      ? "Processing mint…"
-                      : "Mint with wallet"}
-                  </button>
-                  {pendingMintTxHash ? (
+                {!canManageOnchain ? (
+                  <div className="status-banner status-banner--info">
+                    <strong>Owner action required</strong>
+                    <span>
+                      Deployment and mint recording stay owner-only because they
+                      depend on verified owner wallet activity.
+                    </span>
+                  </div>
+                ) : null}
+                <div className="pill-row">
+                  <Pill>
+                    {walletProviderAvailable
+                      ? "Wallet connector ready"
+                      : "No wallet connector ready"}
+                  </Pill>
+                  <Pill>Owner {shortHex(ownerWalletAddress)}</Pill>
+                  {connectedWalletAddress ? (
+                    <Pill>
+                      {connectedOwnerWallet ? "Connected" : "Wallet mismatch"}{" "}
+                      {shortHex(connectedWalletAddress)}
+                    </Pill>
+                  ) : (
+                    <Pill>Wallet not connected</Pill>
+                  )}
+                  {connectedWalletConnector ? (
+                    <Pill>{connectedWalletConnector.name}</Pill>
+                  ) : null}
+                  {connectedWalletChainLabel ? (
+                    <Pill>{connectedWalletChainLabel}</Pill>
+                  ) : null}
+                  {selectedDraft.publication.activeDeployment ? (
+                    <>
+                      <Pill>
+                        {selectedDraft.publication.activeDeployment.chain.label}
+                      </Pill>
+                      <Pill>
+                        {shortHex(
+                          selectedDraft.publication.activeDeployment.contractAddress
+                        )}
+                      </Pill>
+                    </>
+                  ) : (
+                    <Pill>No deployment recorded</Pill>
+                  )}
+                  <Pill>
+                    {selectedDraft.publication.mintedTokenCount} recorded mint
+                    {selectedDraft.publication.mintedTokenCount === 1 ? "" : "s"}
+                  </Pill>
+                </div>
+                <fieldset
+                  className="studio-collections-fieldset"
+                  disabled={!canManageOnchain}
+                >
+                  <label className="field-stack">
+                    <span className="field-label">Wallet path</span>
+                    <select
+                      className="input-field"
+                      onChange={(event) => {
+                        setSelectedWalletConnectorId(
+                          event.target.value as SupportedWalletConnectorId
+                        );
+                      }}
+                      value={selectedWalletConnectorId}
+                    >
+                      {baseAccountConnector ? (
+                        <option value="baseAccount">Base Account</option>
+                      ) : null}
+                      {injectedWalletConnector ? (
+                        <option value="injected">
+                          {injectedWalletConnector.name}
+                        </option>
+                      ) : null}
+                    </select>
+                  </label>
+                  <div className="studio-action-row">
                     <button
                       className="button-action"
-                      disabled={mintingDraftId === selectedDraft.id}
+                      disabled={!walletProviderAvailable}
                       onClick={() => {
-                        void handleRetryMintRecord();
+                        void handleConnectWallet();
                       }}
                       type="button"
                     >
-                      Retry mint confirmation
+                      Connect selected wallet
                     </button>
+                    {connectedWalletConnector ? (
+                      <button
+                        className="button-action"
+                        onClick={() => {
+                          void handleDisconnectWallet();
+                        }}
+                        type="button"
+                      >
+                        Disconnect wallet
+                      </button>
+                    ) : null}
+                  </div>
+                  {onchainFlowState ? (
+                    <div
+                      className={`status-banner ${
+                        onchainFlowState.status === "failed"
+                          ? "status-banner--error"
+                          : onchainFlowState.status === "success"
+                            ? "status-banner--success"
+                            : "status-banner--info"
+                      }`}
+                    >
+                      <strong>
+                        {onchainFlowState.kind === "deployment"
+                          ? "Deployment flow"
+                          : "Mint flow"}
+                      </strong>
+                      <span>{onchainFlowState.message}</span>
+                      {onchainFlowState.txHash ? (
+                        <span>Tx: {onchainFlowState.txHash}</span>
+                      ) : null}
+                    </div>
                   ) : null}
-                </div>
-                {mintIntentJson ? (
                   <label className="field-stack">
-                    <span className="field-label">Mint intent JSON</span>
-                    <textarea
-                      className="input-field input-field--multiline"
-                      readOnly
-                      rows={10}
-                      value={mintIntentJson}
-                    />
+                    <span className="field-label">Deployment chain</span>
+                    <select
+                      className="input-field"
+                      onChange={(event) => {
+                        setDeploymentChainKey(
+                          event.target.value as CollectionContractChainKey
+                        );
+                      }}
+                      value={deploymentChainKey}
+                    >
+                      <option value="base-sepolia">Base Sepolia</option>
+                      <option value="base">Base</option>
+                    </select>
                   </label>
-                ) : null}
-              </div>
-              </fieldset>
-              {selectedDraft.publication.mints.length > 0 ? (
-                <div className="collection-item-list">
-                  {selectedDraft.publication.mints.map((mint) => (
-                    <div className="collection-item-card" key={mint.id}>
-                      <div className="collection-item-card__copy">
+                  <div className="studio-action-row">
+                    <button
+                      className="button-action"
+                      disabled={
+                        deployingDraftId === selectedDraft.id ||
+                        Boolean(selectedDraft.publication.activeDeployment)
+                      }
+                      onClick={() => {
+                        void handleDeployWithWallet();
+                      }}
+                      type="button"
+                    >
+                      {deployingDraftId === selectedDraft.id
+                        ? "Processing deployment…"
+                        : "Deploy with wallet"}
+                    </button>
+                    {pendingDeploymentTxHash &&
+                    !selectedDraft.publication.activeDeployment ? (
+                      <button
+                        className="button-action"
+                        disabled={deployingDraftId === selectedDraft.id}
+                        onClick={() => {
+                          void handleRetryDeploymentRecord();
+                        }}
+                        type="button"
+                      >
+                        Retry deployment confirmation
+                      </button>
+                    ) : null}
+                  </div>
+                  {deploymentIntentJson ? (
+                    <label className="field-stack">
+                      <span className="field-label">Deployment intent JSON</span>
+                      <textarea
+                        className="input-field input-field--multiline"
+                        readOnly
+                        rows={10}
+                        value={deploymentIntentJson}
+                      />
+                    </label>
+                  ) : null}
+                  <div className="studio-form">
+                    <label className="field-stack">
+                      <span className="field-label">Recipient wallet</span>
+                      <input
+                        className="input-field"
+                        onChange={(event) => {
+                          setMintRequestState((current) => ({
+                            ...current,
+                            recipientWalletAddress: event.target.value
+                          }));
+                        }}
+                        placeholder="0x..."
+                        value={mintRequestState.recipientWalletAddress}
+                      />
+                    </label>
+                    <label className="field-stack">
+                      <span className="field-label">Token ID</span>
+                      <input
+                        className="input-field"
+                        min={1}
+                        onChange={(event) => {
+                          setMintRequestState((current) => ({
+                            ...current,
+                            tokenId: event.target.value
+                          }));
+                        }}
+                        type="number"
+                        value={mintRequestState.tokenId}
+                      />
+                    </label>
+                    <div className="studio-action-row">
+                      <button
+                        className="button-action"
+                        disabled={
+                          mintingDraftId === selectedDraft.id ||
+                          !selectedDraft.publication.activeDeployment
+                        }
+                        onClick={() => {
+                          void handleMintWithWallet();
+                        }}
+                        type="button"
+                      >
+                        {mintingDraftId === selectedDraft.id
+                          ? "Processing mint…"
+                          : "Mint with wallet"}
+                      </button>
+                      {pendingMintTxHash ? (
+                        <button
+                          className="button-action"
+                          disabled={mintingDraftId === selectedDraft.id}
+                          onClick={() => {
+                            void handleRetryMintRecord();
+                          }}
+                          type="button"
+                        >
+                          Retry mint confirmation
+                        </button>
+                      ) : null}
+                    </div>
+                    {mintIntentJson ? (
+                      <label className="field-stack">
+                        <span className="field-label">Mint intent JSON</span>
+                        <textarea
+                          className="input-field input-field--multiline"
+                          readOnly
+                          rows={10}
+                          value={mintIntentJson}
+                        />
+                      </label>
+                    ) : null}
+                  </div>
+                </fieldset>
+                {selectedDraft.publication.mints.length > 0 ? (
+                  <div className="studio-collections-mint-list">
+                    {selectedDraft.publication.mints.map((mint) => (
+                      <div className="studio-collections-mint-card" key={mint.id}>
                         <strong>Token #{mint.tokenId}</strong>
                         <span>{mint.recipientWalletAddress}</span>
                         <span>{formatCandidateTimestamp(mint.mintedAt)}</span>
-                      </div>
-                      <div className="collection-item-card__actions">
                         <Pill>{shortHex(mint.txHash)}</Pill>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <div className="collection-empty-state">
-              Publish a collection before preparing deployment or minting.
-            </div>
-          )}
-        </SurfaceCard>
-        <SurfaceCard
-          body="The ordered item list is the curated backbone for this draft. Review-ready status requires at least one included generated asset, and every included asset must remain approved."
-          eyebrow="Curated order"
-          span={6}
-          title="Draft items"
-        >
-          {selectedDraft ? (
-            <div className="collection-item-list">
-              {selectedDraft.items.length === 0 ? (
-                <div className="collection-empty-state">
-                  No generated assets have been curated into this draft yet.
-                </div>
-              ) : (
-                selectedDraft.items.map((item, index) => (
-                  <div className="collection-item-card" key={item.id}>
-                    <div className="collection-item-card__copy">
-                      <strong>
-                        {formatCandidateLabel(item.generatedAsset)}
-                      </strong>
-                      <span>
-                        {item.generatedAsset.pipelineKey} · position{" "}
-                        {item.position}
-                      </span>
-                      <span>
-                        Added from source asset{" "}
-                        {item.generatedAsset.sourceAssetId}
-                      </span>
-                    </div>
-                    <div className="collection-item-card__actions">
-                      <Pill>
-                        {formatModerationStatus(
-                          item.generatedAsset.moderationStatus
-                        )}
-                      </Pill>
-                      <button
-                        className="button-action"
-                        disabled={
-                          busyItemKey !== null ||
-                          savingDraftId === selectedDraft.id ||
-                          index === 0
-                        }
-                        onClick={() => {
-                          void moveDraftItem(item.id, -1);
-                        }}
-                        type="button"
-                      >
-                        Move up
-                      </button>
-                      <button
-                        className="button-action"
-                        disabled={
-                          busyItemKey !== null ||
-                          savingDraftId === selectedDraft.id ||
-                          index === selectedDraft.items.length - 1
-                        }
-                        onClick={() => {
-                          void moveDraftItem(item.id, 1);
-                        }}
-                        type="button"
-                      >
-                        Move down
-                      </button>
-                      <button
-                        className="button-action"
-                        disabled={
-                          busyItemKey !== null ||
-                          savingDraftId === selectedDraft.id
-                        }
-                        onClick={() => {
-                          void removeDraftItem(item.id);
-                        }}
-                        type="button"
-                      >
-                        Remove
-                      </button>
-                    </div>
+                    ))}
                   </div>
-                ))
-              )}
-            </div>
-          ) : (
-            <div className="collection-empty-state">
-              Select a draft to curate assets.
-            </div>
-          )}
-        </SurfaceCard>
-        <SurfaceCard
-          body="Recent generated outputs stay available as curation candidates so the operator can turn generation throughput into a deliberate collection, but only approved outputs can be added."
-          eyebrow="Candidates"
-          span={12}
-          title="Recent generated assets"
-        >
-          <div className="candidate-list">
-            {generatedAssetCandidates.length === 0 ? (
-              <div className="collection-empty-state">
-                No generated assets are available yet. Generate variants from
-                `/studio/assets` first.
+                ) : null}
               </div>
             ) : (
-              generatedAssetCandidates.map((candidate) => {
-                const isIncluded = includedGeneratedAssetIds.has(
-                  candidate.generatedAssetId
-                );
-                const isApproved =
-                  candidate.moderationStatus === "approved";
-
-                return (
-                  <div
-                    className="candidate-card"
-                    key={candidate.generatedAssetId}
-                  >
-                    <div className="candidate-card__copy">
-                      <strong>{formatCandidateLabel(candidate)}</strong>
-                      <span>{candidate.pipelineKey}</span>
-                      <span>
-                        {formatCandidateTimestamp(candidate.createdAt)}
-                      </span>
-                      <span>
-                        {formatModerationStatus(candidate.moderationStatus)}
-                      </span>
-                    </div>
-                    <div className="candidate-card__actions">
-                      <Pill>Source {candidate.sourceAssetId}</Pill>
-                      <Pill>
-                        {formatModerationStatus(candidate.moderationStatus)}
-                      </Pill>
-                      <button
-                        className="button-action"
-                        disabled={
-                          !selectedDraft ||
-                          !isApproved ||
-                          isIncluded ||
-                          busyItemKey !== null ||
-                          savingDraftId !== null
-                        }
-                        onClick={() => {
-                          void addGeneratedAssetToSelectedDraft(
-                            candidate.generatedAssetId
-                          );
-                        }}
-                        type="button"
-                      >
-                        {isIncluded
-                          ? "Included"
-                          : isApproved
-                            ? "Add to selected draft"
-                            : "Awaiting approval"}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
+              <div className="collection-empty-state">
+                Publish a release before preparing deployment or minting.
+              </div>
             )}
-          </div>
-        </SurfaceCard>
-      </SurfaceGrid>
-      {notice ? (
-        <div className={`notice-banner notice-banner--${notice.tone}`}>
-          {notice.message}
-        </div>
-      ) : null}
+          </SurfaceCard>
+        </aside>
+      </div>
     </PageShell>
   );
 }
