@@ -90,6 +90,19 @@ type NoticeState = {
   tone: "error" | "info" | "success";
 } | null;
 
+type StatusBannerTone = "error" | "info" | "success" | "warning";
+
+const statusBannerToneClasses = {
+  error: "border-red-500/45 bg-red-500/12 text-red-50",
+  info: "border-blue-500/35 bg-blue-500/12 text-blue-50",
+  success: "border-emerald-500/45 bg-emerald-500/12 text-emerald-50",
+  warning: "border-amber-400/45 bg-amber-400/12 text-amber-100"
+} as const;
+
+function getStatusBannerToneClass(tone: StatusBannerTone) {
+  return statusBannerToneClasses[tone];
+}
+
 type StudioBrandEditorState = {
   accentColor: string;
   automateDecommissionNotices: boolean;
@@ -2046,7 +2059,7 @@ export function StudioSettingsClient({
       actions={
         <>
           <button
-            className="button-action"
+            className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
             disabled={isRefreshing}
             onClick={() => {
               void refreshSettings();
@@ -2055,10 +2068,10 @@ export function StudioSettingsClient({
           >
             {isRefreshing ? "Refreshing…" : "Refresh data"}
           </button>
-          <Link className="action-link" href="/studio/collections">
+          <Link className="inline-flex items-center rounded-full border border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)] px-3 py-1.5 text-sm font-medium text-[color:var(--color-text)] transition hover:bg-[color:var(--color-accent)] hover:text-white" href="/studio/collections">
             Open collections
           </Link>
-          <Link className="inline-link" href="/studio/commerce">
+          <Link className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm" href="/studio/commerce">
             Open commerce
           </Link>
         </>
@@ -2067,7 +2080,7 @@ export function StudioSettingsClient({
     >
       <div className="studio-settings-cockpit">
         {notice ? (
-          <div className={`notice-banner notice-banner--${notice.tone}`}>
+          <div className={`rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)]--${notice.tone}`}>
             {notice.message}
           </div>
         ) : null}
@@ -2200,7 +2213,7 @@ export function StudioSettingsClient({
                 value={pendingRoleEscalationCount.toString()}
               />
             </div>
-            <div className="pill-row">
+            <div className="flex flex-wrap items-center gap-2">
               <Pill>/studio/settings</Pill>
               <Pill>
                 {selectedBrand?.publicBrandPath ?? "/brands/[brandSlug]"}
@@ -2216,7 +2229,7 @@ export function StudioSettingsClient({
               </Pill>
             </div>
             {inactiveWorkspaceMessage && settings?.workspace ? (
-              <div className="status-banner status-banner--info">
+              <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                 <strong>
                   {formatWorkspaceStatus(settings.workspace.status)}
                 </strong>
@@ -2243,13 +2256,13 @@ export function StudioSettingsClient({
               workspaces={availableWorkspaces}
             />
             <div className="studio-settings-hero-sidecard__links">
-              <Link className="inline-link" href="/studio/assets">
+              <Link className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm" href="/studio/assets">
                 Open assets
               </Link>
-              <Link className="inline-link" href="/studio/collections">
+              <Link className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm" href="/studio/collections">
                 Open collections
               </Link>
-              <Link className="inline-link" href="/studio/commerce">
+              <Link className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm" href="/studio/commerce">
                 Open commerce
               </Link>
             </div>
@@ -2286,7 +2299,7 @@ export function StudioSettingsClient({
                   }
                 >
                   {!canManageWorkspace ? (
-                    <div className="status-banner status-banner--info">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>Operator read-only</strong>
                       <span>
                         Operators can review workspace policy and identity, but
@@ -2295,7 +2308,7 @@ export function StudioSettingsClient({
                     </div>
                   ) : null}
                   {inactiveWorkspaceMessage && settings?.workspace ? (
-                    <div className="status-banner status-banner--info">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>Workspace read-only</strong>
                       <span>{inactiveWorkspaceMessage}</span>
                     </div>
@@ -2311,10 +2324,10 @@ export function StudioSettingsClient({
                               administration context across Studio and Ops.
                             </p>
                           </div>
-                          <label className="field-stack">
-                            <span className="field-label">Workspace name</span>
+                          <label className="grid gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Workspace name</span>
                             <input
-                              className="input-field"
+                              className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={120}
                               onChange={(event) => {
                                 setEditorState((current) => ({
@@ -2327,10 +2340,10 @@ export function StudioSettingsClient({
                               value={editorState.workspaceName}
                             />
                           </label>
-                          <label className="field-stack">
-                            <span className="field-label">Workspace slug</span>
+                          <label className="grid gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Workspace slug</span>
                             <input
-                              className="input-field"
+                              className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={80}
                               onChange={(event) => {
                                 setEditorState((current) => ({
@@ -2353,12 +2366,12 @@ export function StudioSettingsClient({
                               and offboarding requirements for this workspace.
                             </p>
                           </div>
-                          <label className="field-stack">
-                            <span className="field-label">
+                          <label className="grid gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
                               Default decommission retention
                             </span>
                             <input
-                              className="input-field"
+                              className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               max={365}
                               min={editorState.minimumDecommissionRetentionDays}
                               onChange={(event) => {
@@ -2376,12 +2389,12 @@ export function StudioSettingsClient({
                               }
                             />
                           </label>
-                          <label className="field-stack">
-                            <span className="field-label">
+                          <label className="grid gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
                               Minimum decommission retention
                             </span>
                             <input
-                              className="input-field"
+                              className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               max={365}
                               min={7}
                               onChange={(event) => {
@@ -2403,12 +2416,12 @@ export function StudioSettingsClient({
                               }
                             />
                           </label>
-                          <label className="field-stack">
-                            <span className="field-label">
+                          <label className="grid gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
                               Require decommission reason
                             </span>
                             <select
-                              className="input-field"
+                              className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               onChange={(event) => {
                                 setEditorState((current) => ({
                                   ...current,
@@ -2436,12 +2449,12 @@ export function StudioSettingsClient({
                               providers in addition to the audit-log leg.
                             </p>
                           </div>
-                          <label className="field-stack">
-                            <span className="field-label">
+                          <label className="grid gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
                               Lifecycle webhook delivery
                             </span>
                             <select
-                              className="input-field"
+                              className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               onChange={(event) => {
                                 setEditorState((current) => ({
                                   ...current,
@@ -2459,12 +2472,12 @@ export function StudioSettingsClient({
                               <option value="enabled">Enabled</option>
                             </select>
                           </label>
-                          <label className="field-stack">
-                            <span className="field-label">
+                          <label className="grid gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
                               Invitation reminder delivery
                             </span>
                             <select
-                              className="input-field"
+                              className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               disabled={!editorState.webhookEnabled}
                               onChange={(event) => {
                                 setEditorState((current) => ({
@@ -2483,12 +2496,12 @@ export function StudioSettingsClient({
                               <option value="disabled">Disabled</option>
                             </select>
                           </label>
-                          <label className="field-stack">
-                            <span className="field-label">
+                          <label className="grid gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
                               Decommission notice delivery
                             </span>
                             <select
-                              className="input-field"
+                              className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               disabled={!editorState.webhookEnabled}
                               onChange={(event) => {
                                 setEditorState((current) => ({
@@ -2507,7 +2520,7 @@ export function StudioSettingsClient({
                               <option value="disabled">Disabled</option>
                             </select>
                           </label>
-                          <div className="pill-row">
+                          <div className="flex flex-wrap items-center gap-2">
                             <Pill>
                               Webhook{" "}
                               {lifecycleDeliveryPolicy.webhookEnabled
@@ -2537,7 +2550,7 @@ export function StudioSettingsClient({
                       </div>
                       <div className="studio-action-row">
                         <button
-                          className="button-action button-action--accent"
+                          className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
                           disabled={!canManageWorkspace || isSaving}
                           type="submit"
                         >
@@ -2558,7 +2571,7 @@ export function StudioSettingsClient({
                   title="Workspace lifecycle"
                 >
                   {!settings?.workspace ? (
-                    <div className="status-banner status-banner--info">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>No workspace selected</strong>
                       <span>
                         Create a workspace before changing lifecycle state.
@@ -2567,7 +2580,7 @@ export function StudioSettingsClient({
                   ) : null}
                   {settings?.workspace ? (
                     <>
-                      <div className="pill-row">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Pill>
                           {formatWorkspaceStatus(settings.workspace.status)}
                         </Pill>
@@ -2575,13 +2588,13 @@ export function StudioSettingsClient({
                         <Pill>{access.role}</Pill>
                       </div>
                       {inactiveWorkspaceMessage ? (
-                        <div className="status-banner status-banner--info">
+                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                           <strong>Read-only</strong>
                           <span>{inactiveWorkspaceMessage}</span>
                         </div>
                       ) : null}
                       {!canManageWorkspace ? (
-                        <div className="status-banner status-banner--info">
+                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                           <strong>Owner only</strong>
                           <span>
                             Operators can review lifecycle state, but only
@@ -2594,7 +2607,7 @@ export function StudioSettingsClient({
                         {settings.workspace.status === "active" ? (
                           <>
                             <button
-                              className="button-action button-action--secondary"
+                              className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] text-[color:var(--color-text)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] hover:border-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60"
                               disabled={
                                 !canManageWorkspace ||
                                 actingWorkspaceStatus !== null
@@ -2609,7 +2622,7 @@ export function StudioSettingsClient({
                                 : "Suspend workspace"}
                             </button>
                             <button
-                              className="button-action"
+                              className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
                               disabled={
                                 !canManageWorkspace ||
                                 actingWorkspaceStatus !== null
@@ -2626,7 +2639,7 @@ export function StudioSettingsClient({
                           </>
                         ) : (
                           <button
-                            className="button-action button-action--accent"
+                            className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
                             disabled={
                               !canManageWorkspace ||
                               actingWorkspaceStatus !== null
@@ -2652,7 +2665,7 @@ export function StudioSettingsClient({
                   title="Export and archive review"
                 >
                   {!settings?.workspace ? (
-                    <div className="status-banner status-banner--info">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>No workspace selected</strong>
                       <span>
                         Choose a workspace before exporting or reviewing archive
@@ -2662,7 +2675,7 @@ export function StudioSettingsClient({
                   ) : null}
                   {offboardingSummary ? (
                     <>
-                      <div className="pill-row">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Pill>
                           {formatWorkspaceOffboardingCode(
                             offboardingSummary.readiness
@@ -2680,7 +2693,7 @@ export function StudioSettingsClient({
                         </Pill>
                       </div>
                       {offboardingSummary.blockerCodes.length ? (
-                        <div className="status-banner status-banner--error">
+                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-red-500/45 bg-red-500/12 text-red-50">
                           <strong>Archive blocked</strong>
                           <span>
                             Resolve{" "}
@@ -2693,7 +2706,7 @@ export function StudioSettingsClient({
                       ) : null}
                       {!offboardingSummary.blockerCodes.length &&
                       offboardingSummary.cautionCodes.length ? (
-                        <div className="status-banner status-banner--info">
+                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                           <strong>Review before archive</strong>
                           <span>
                             Check{" "}
@@ -2706,7 +2719,7 @@ export function StudioSettingsClient({
                       ) : null}
                       {!offboardingSummary.blockerCodes.length &&
                       !offboardingSummary.cautionCodes.length ? (
-                        <div className="status-banner status-banner--success">
+                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-emerald-500/45 bg-emerald-500/12 text-emerald-50">
                           <strong>Archive-ready</strong>
                           <span>
                             No active operational blockers are currently
@@ -2717,20 +2730,20 @@ export function StudioSettingsClient({
                       {canManageWorkspace ? (
                         <div className="studio-action-row">
                           <Link
-                            className="action-link"
+                            className="inline-flex items-center rounded-full border border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)] px-3 py-1.5 text-sm font-medium text-[color:var(--color-text)] transition hover:bg-[color:var(--color-accent)] hover:text-white"
                             href={`/api/studio/workspaces/${exportWorkspaceId ?? ""}/export?format=json`}
                           >
                             Export JSON
                           </Link>
                           <Link
-                            className="inline-link"
+                            className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
                             href={`/api/studio/workspaces/${exportWorkspaceId ?? ""}/export?format=csv`}
                           >
                             Export CSV
                           </Link>
                         </div>
                       ) : (
-                        <div className="status-banner status-banner--info">
+                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                           <strong>Owner only</strong>
                           <span>
                             Operators can review archive readiness, but only
@@ -2772,7 +2785,7 @@ export function StudioSettingsClient({
                   }
                 >
                   {!canManageWorkspace ? (
-                    <div className="status-banner status-banner--info">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>Operator read-only</strong>
                       <span>
                         Operators can review brand configuration, but only
@@ -2781,7 +2794,7 @@ export function StudioSettingsClient({
                     </div>
                   ) : null}
                   {inactiveWorkspaceMessage && settings?.workspace ? (
-                    <div className="status-banner status-banner--info">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>Workspace read-only</strong>
                       <span>{inactiveWorkspaceMessage}</span>
                     </div>
@@ -2798,10 +2811,10 @@ export function StudioSettingsClient({
                             </p>
                           </div>
                           {settings?.brands.length ? (
-                            <label className="field-stack">
-                              <span className="field-label">Editing brand</span>
+                            <label className="grid gap-1.5">
+                              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Editing brand</span>
                               <select
-                                className="input-field"
+                                className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                                 onChange={(event) => {
                                   setSelectedBrandId(
                                     event.target.value || null
@@ -2817,10 +2830,10 @@ export function StudioSettingsClient({
                               </select>
                             </label>
                           ) : null}
-                          <label className="field-stack">
-                            <span className="field-label">Brand name</span>
+                          <label className="grid gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Brand name</span>
                             <input
-                              className="input-field"
+                              className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={120}
                               onChange={(event) => {
                                 setEditorState((current) => ({
@@ -2833,10 +2846,10 @@ export function StudioSettingsClient({
                               value={editorState.brandName}
                             />
                           </label>
-                          <label className="field-stack">
-                            <span className="field-label">Brand slug</span>
+                          <label className="grid gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Brand slug</span>
                             <input
-                              className="input-field"
+                              className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={80}
                               onChange={(event) => {
                                 setEditorState((current) => ({
@@ -2850,10 +2863,10 @@ export function StudioSettingsClient({
                               value={editorState.brandSlug}
                             />
                           </label>
-                          <label className="field-stack">
-                            <span className="field-label">Custom domain</span>
+                          <label className="grid gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Custom domain</span>
                             <input
-                              className="input-field"
+                              className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={253}
                               onChange={(event) => {
                                 setEditorState((current) => ({
@@ -2865,10 +2878,10 @@ export function StudioSettingsClient({
                               value={editorState.customDomain}
                             />
                           </label>
-                          <label className="field-stack">
-                            <span className="field-label">Theme preset</span>
+                          <label className="grid gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Theme preset</span>
                             <select
-                              className="input-field"
+                              className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               onChange={(event) => {
                                 setEditorState((current) => ({
                                   ...current,
@@ -2889,8 +2902,8 @@ export function StudioSettingsClient({
                               </option>
                             </select>
                           </label>
-                          <label className="field-stack">
-                            <span className="field-label">Accent color</span>
+                          <label className="grid gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Accent color</span>
                             <div className="color-input-row">
                               <input
                                 className="color-swatch-input"
@@ -2904,7 +2917,7 @@ export function StudioSettingsClient({
                                 value={editorState.accentColor}
                               />
                               <input
-                                className="input-field"
+                                className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                                 maxLength={7}
                                 onChange={(event) => {
                                   setEditorState((current) => ({
@@ -2927,12 +2940,12 @@ export function StudioSettingsClient({
                               frames published collection releases.
                             </p>
                           </div>
-                          <label className="field-stack">
-                            <span className="field-label">
+                          <label className="grid gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
                               Landing headline
                             </span>
                             <input
-                              className="input-field"
+                              className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={120}
                               onChange={(event) => {
                                 setEditorState((current) => ({
@@ -2945,12 +2958,12 @@ export function StudioSettingsClient({
                               value={editorState.landingHeadline}
                             />
                           </label>
-                          <label className="field-stack">
-                            <span className="field-label">
+                          <label className="grid gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
                               Landing description
                             </span>
                             <textarea
-                              className="input-field input-field--multiline"
+                              className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] min-h-[10rem] resize-y focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={280}
                               onChange={(event) => {
                                 setEditorState((current) => ({
@@ -2962,10 +2975,10 @@ export function StudioSettingsClient({
                               value={editorState.landingDescription}
                             />
                           </label>
-                          <label className="field-stack">
-                            <span className="field-label">Wordmark</span>
+                          <label className="grid gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Wordmark</span>
                             <input
-                              className="input-field"
+                              className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={40}
                               onChange={(event) => {
                                 setEditorState((current) => ({
@@ -2977,10 +2990,10 @@ export function StudioSettingsClient({
                               value={editorState.wordmark}
                             />
                           </label>
-                          <label className="field-stack">
-                            <span className="field-label">Hero kicker</span>
+                          <label className="grid gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Hero kicker</span>
                             <input
-                              className="input-field"
+                              className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={60}
                               onChange={(event) => {
                                 setEditorState((current) => ({
@@ -2992,10 +3005,10 @@ export function StudioSettingsClient({
                               value={editorState.heroKicker}
                             />
                           </label>
-                          <label className="field-stack">
-                            <span className="field-label">Story headline</span>
+                          <label className="grid gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Story headline</span>
                             <input
-                              className="input-field"
+                              className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={120}
                               onChange={(event) => {
                                 setEditorState((current) => ({
@@ -3007,10 +3020,10 @@ export function StudioSettingsClient({
                               value={editorState.storyHeadline}
                             />
                           </label>
-                          <label className="field-stack">
-                            <span className="field-label">Story body</span>
+                          <label className="grid gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Story body</span>
                             <textarea
-                              className="input-field input-field--multiline"
+                              className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] min-h-[10rem] resize-y focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={600}
                               onChange={(event) => {
                                 setEditorState((current) => ({
@@ -3031,12 +3044,12 @@ export function StudioSettingsClient({
                               aligned with the current brand voice.
                             </p>
                           </div>
-                          <label className="field-stack">
-                            <span className="field-label">
+                          <label className="grid gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
                               Featured release label
                             </span>
                             <input
-                              className="input-field"
+                              className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={40}
                               onChange={(event) => {
                                 setEditorState((current) => ({
@@ -3049,12 +3062,12 @@ export function StudioSettingsClient({
                               value={editorState.featuredReleaseLabel}
                             />
                           </label>
-                          <label className="field-stack">
-                            <span className="field-label">
+                          <label className="grid gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
                               Primary CTA label
                             </span>
                             <input
-                              className="input-field"
+                              className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={40}
                               onChange={(event) => {
                                 setEditorState((current) => ({
@@ -3066,12 +3079,12 @@ export function StudioSettingsClient({
                               value={editorState.primaryCtaLabel}
                             />
                           </label>
-                          <label className="field-stack">
-                            <span className="field-label">
+                          <label className="grid gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
                               Secondary CTA label
                             </span>
                             <input
-                              className="input-field"
+                              className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={40}
                               onChange={(event) => {
                                 setEditorState((current) => ({
@@ -3083,7 +3096,7 @@ export function StudioSettingsClient({
                               value={editorState.secondaryCtaLabel}
                             />
                           </label>
-                          <div className="pill-row">
+                          <div className="flex flex-wrap items-center gap-2">
                             <Pill>
                               {editorState.brandSlug
                                 ? `/brands/${editorState.brandSlug}`
@@ -3101,7 +3114,7 @@ export function StudioSettingsClient({
                       </div>
                       <div className="studio-action-row">
                         <button
-                          className="button-action button-action--accent"
+                          className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
                           disabled={!canManageWorkspace || isSaving}
                           type="submit"
                         >
@@ -3172,7 +3185,7 @@ export function StudioSettingsClient({
                       </span>
                     </div>
                   </div>
-                  <div className="pill-row">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Pill>{editorState.workspaceSlug || "workspace-slug"}</Pill>
                     <Pill>{editorState.brandSlug || "brand-slug"}</Pill>
                     <Pill>{editorState.accentColor}</Pill>
@@ -3183,10 +3196,10 @@ export function StudioSettingsClient({
                     </Pill>
                   </div>
                   <div className="settings-preview-links">
-                    <Link className="inline-link" href="/studio/collections">
+                    <Link className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm" href="/studio/collections">
                       Collections publish from this profile
                     </Link>
-                    <Link className="inline-link" href="/studio/assets">
+                    <Link className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm" href="/studio/assets">
                       Generated assets still feed the same curation path
                     </Link>
                   </div>
@@ -3198,7 +3211,7 @@ export function StudioSettingsClient({
                   title="Create brand"
                 >
                   {!canManageWorkspace ? (
-                    <div className="status-banner status-banner--info">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>Owner action required</strong>
                       <span>
                         Only workspace owners can create additional brands.
@@ -3206,7 +3219,7 @@ export function StudioSettingsClient({
                     </div>
                   ) : null}
                   {inactiveWorkspaceMessage && settings?.workspace ? (
-                    <div className="status-banner status-banner--info">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>Workspace read-only</strong>
                       <span>{inactiveWorkspaceMessage}</span>
                     </div>
@@ -3216,10 +3229,10 @@ export function StudioSettingsClient({
                       disabled={!canEditCurrentWorkspace || isCreatingBrand}
                     >
                       <div className="studio-settings-form-cluster">
-                        <label className="field-stack">
-                          <span className="field-label">Brand name</span>
+                        <label className="grid gap-1.5">
+                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Brand name</span>
                           <input
-                            className="input-field"
+                            className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                             maxLength={120}
                             onChange={(event) => {
                               setNewBrandState((current) => ({
@@ -3232,10 +3245,10 @@ export function StudioSettingsClient({
                             value={newBrandState.brandName}
                           />
                         </label>
-                        <label className="field-stack">
-                          <span className="field-label">Brand slug</span>
+                        <label className="grid gap-1.5">
+                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Brand slug</span>
                           <input
-                            className="input-field"
+                            className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                             maxLength={80}
                             onChange={(event) => {
                               setNewBrandState((current) => ({
@@ -3249,10 +3262,10 @@ export function StudioSettingsClient({
                             value={newBrandState.brandSlug}
                           />
                         </label>
-                        <label className="field-stack">
-                          <span className="field-label">Theme preset</span>
+                        <label className="grid gap-1.5">
+                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Theme preset</span>
                           <select
-                            className="input-field"
+                            className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                             onChange={(event) => {
                               setNewBrandState((current) => ({
                                 ...current,
@@ -3273,8 +3286,8 @@ export function StudioSettingsClient({
                             </option>
                           </select>
                         </label>
-                        <label className="field-stack">
-                          <span className="field-label">Accent color</span>
+                        <label className="grid gap-1.5">
+                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Accent color</span>
                           <div className="color-input-row">
                             <input
                               className="color-swatch-input"
@@ -3288,7 +3301,7 @@ export function StudioSettingsClient({
                               value={newBrandState.accentColor}
                             />
                             <input
-                              className="input-field"
+                              className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={7}
                               onChange={(event) => {
                                 setNewBrandState((current) => ({
@@ -3303,7 +3316,7 @@ export function StudioSettingsClient({
                           </div>
                         </label>
                       </div>
-                      <div className="pill-row">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Pill>
                           {settings?.workspace.slug ??
                             editorState.workspaceSlug ??
@@ -3320,7 +3333,7 @@ export function StudioSettingsClient({
                       </div>
                       <div className="studio-action-row">
                         <button
-                          className="button-action"
+                          className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
                           disabled={
                             !canEditCurrentWorkspace ||
                             isCreatingBrand ||
@@ -3358,18 +3371,18 @@ export function StudioSettingsClient({
                   span={6}
                   title="Team access"
                 >
-                  <div className="pill-row">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Pill>{access.role}</Pill>
                     <Pill>{settings?.members.length ?? 1} total members</Pill>
                   </div>
                   {!canManageMembers ? (
-                    <div className="status-banner status-banner--info">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>Operator read-only</strong>
                       <span>Only workspace owners can remove members.</span>
                     </div>
                   ) : null}
                   {inactiveWorkspaceMessage && settings?.workspace ? (
-                    <div className="status-banner status-banner--info">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>Workspace read-only</strong>
                       <span>{inactiveWorkspaceMessage}</span>
                     </div>
@@ -3393,7 +3406,7 @@ export function StudioSettingsClient({
                           {member.membershipId ? (
                             <div className="collection-item-card__actions">
                               <button
-                                className="button-action"
+                                className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
                                 disabled={
                                   !canMutateMembers ||
                                   removingMembershipId === member.membershipId
@@ -3428,7 +3441,7 @@ export function StudioSettingsClient({
                   span={6}
                   title="Invitation queue"
                 >
-                  <div className="pill-row">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Pill>{pendingInvitationCount} pending invites</Pill>
                     <Pill>{expiringInvitationCount} expiring</Pill>
                     <Pill>
@@ -3436,7 +3449,7 @@ export function StudioSettingsClient({
                     </Pill>
                   </div>
                   {!canManageMembers ? (
-                    <div className="status-banner status-banner--info">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>Operator read-only</strong>
                       <span>
                         Only workspace owners can create invitations, log
@@ -3445,7 +3458,7 @@ export function StudioSettingsClient({
                     </div>
                   ) : null}
                   {inactiveWorkspaceMessage && settings?.workspace ? (
-                    <div className="status-banner status-banner--info">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>Workspace read-only</strong>
                       <span>{inactiveWorkspaceMessage}</span>
                     </div>
@@ -3482,7 +3495,7 @@ export function StudioSettingsClient({
                           </div>
                           <div className="collection-item-card__actions">
                             <button
-                              className="button-action button-action--secondary"
+                              className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] text-[color:var(--color-text)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] hover:border-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60"
                               disabled={
                                 !canMutateMembers ||
                                 invitation.status === "expired" ||
@@ -3499,7 +3512,7 @@ export function StudioSettingsClient({
                                 : "Record reminder"}
                             </button>
                             <button
-                              className="button-action"
+                              className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
                               disabled={
                                 !canMutateMembers ||
                                 remindingInvitationId === invitation.id ||
@@ -3530,12 +3543,12 @@ export function StudioSettingsClient({
                     <fieldset
                       disabled={!canMutateMembers || isCreatingInvitation}
                     >
-                      <label className="field-stack">
-                        <span className="field-label">
+                      <label className="grid gap-1.5">
+                        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
                           Invite operator wallet
                         </span>
                         <input
-                          className="input-field"
+                          className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                           onChange={(event) => {
                             setMemberState({
                               walletAddress: event.target.value
@@ -3548,7 +3561,7 @@ export function StudioSettingsClient({
                       </label>
                       <div className="studio-action-row">
                         <button
-                          className="button-action"
+                          className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
                           disabled={!canMutateMembers || isCreatingInvitation}
                           type="submit"
                         >
@@ -3586,7 +3599,7 @@ export function StudioSettingsClient({
                   span={12}
                   title="Role escalation"
                 >
-                  <div className="pill-row">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Pill>
                       {settings?.roleEscalationRequests.length ?? 0} requests
                     </Pill>
@@ -3602,7 +3615,7 @@ export function StudioSettingsClient({
                     </Pill>
                   </div>
                   {inactiveWorkspaceMessage && settings?.workspace ? (
-                    <div className="status-banner status-banner--info">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>Workspace read-only</strong>
                       <span>{inactiveWorkspaceMessage}</span>
                     </div>
@@ -3625,7 +3638,7 @@ export function StudioSettingsClient({
                         </div>
                         <div className="collection-item-card__actions">
                           <button
-                            className="button-action"
+                            className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
                             disabled={
                               !workspaceIsActive ||
                               actingRoleEscalationRequestId ===
@@ -3648,7 +3661,7 @@ export function StudioSettingsClient({
                     ) : (
                       <>
                         {pendingRoleEscalationRequest ? (
-                          <div className="status-banner status-banner--info">
+                          <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                             <strong>Owner review already pending</strong>
                             <span>
                               Another ownership transfer request is already open
@@ -3669,10 +3682,10 @@ export function StudioSettingsClient({
                               Boolean(pendingRoleEscalationRequest)
                             }
                           >
-                            <label className="field-stack">
-                              <span className="field-label">Request note</span>
+                            <label className="grid gap-1.5">
+                              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Request note</span>
                               <textarea
-                                className="input-field input-field--multiline"
+                                className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] min-h-[10rem] resize-y focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                                 maxLength={280}
                                 onChange={(event) => {
                                   setRoleEscalationJustification(
@@ -3686,7 +3699,7 @@ export function StudioSettingsClient({
                             </label>
                             <div className="studio-action-row">
                               <button
-                                className="button-action"
+                                className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
                                 disabled={
                                   !canRequestRoleEscalation ||
                                   isRequestingRoleEscalation ||
@@ -3730,7 +3743,7 @@ export function StudioSettingsClient({
                                 </div>
                                 <div className="collection-item-card__actions">
                                   <button
-                                    className="button-action button-action--accent"
+                                    className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
                                     disabled={
                                       !workspaceIsActive ||
                                       actingRoleEscalationRequestId ===
@@ -3747,7 +3760,7 @@ export function StudioSettingsClient({
                                       : "Approve"}
                                   </button>
                                   <button
-                                    className="button-action"
+                                    className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
                                     disabled={
                                       !workspaceIsActive ||
                                       actingRoleEscalationRequestId ===
@@ -3836,7 +3849,7 @@ export function StudioSettingsClient({
                   title="Lifecycle automation policy"
                 >
                   {!canManageWorkspace ? (
-                    <div className="status-banner status-banner--info">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>Operator read-only</strong>
                       <span>
                         Operators can review lifecycle automation, but only
@@ -3845,7 +3858,7 @@ export function StudioSettingsClient({
                     </div>
                   ) : null}
                   {!settings?.workspace ? (
-                    <div className="status-banner status-banner--info">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>No workspace selected</strong>
                       <span>
                         Choose a workspace before changing lifecycle automation.
@@ -3865,10 +3878,10 @@ export function StudioSettingsClient({
                           isSavingLifecycleAutomationPolicy
                         }
                       >
-                        <label className="field-stack">
-                          <span className="field-label">Automation status</span>
+                        <label className="grid gap-1.5">
+                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Automation status</span>
                           <select
-                            className="input-field"
+                            className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                             onChange={(event) => {
                               setEditorState((current) => ({
                                 ...current,
@@ -3886,12 +3899,12 @@ export function StudioSettingsClient({
                             <option value="disabled">Disabled</option>
                           </select>
                         </label>
-                        <label className="field-stack">
-                          <span className="field-label">
+                        <label className="grid gap-1.5">
+                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
                             Invitation reminder automation
                           </span>
                           <select
-                            className="input-field"
+                            className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                             disabled={!editorState.automationEnabled}
                             onChange={(event) => {
                               setEditorState((current) => ({
@@ -3910,12 +3923,12 @@ export function StudioSettingsClient({
                             <option value="disabled">Disabled</option>
                           </select>
                         </label>
-                        <label className="field-stack">
-                          <span className="field-label">
+                        <label className="grid gap-1.5">
+                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
                             Decommission notice automation
                           </span>
                           <select
-                            className="input-field"
+                            className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                             disabled={!editorState.automationEnabled}
                             onChange={(event) => {
                               setEditorState((current) => ({
@@ -3934,7 +3947,7 @@ export function StudioSettingsClient({
                             <option value="disabled">Disabled</option>
                           </select>
                         </label>
-                        <div className="pill-row">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Pill>
                             Current{" "}
                             {lifecycleAutomationPolicy.enabled
@@ -3954,7 +3967,7 @@ export function StudioSettingsClient({
                               : "disabled"}
                           </Pill>
                         </div>
-                        <button className="button-action" type="submit">
+                        <button className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95" type="submit">
                           {isSavingLifecycleAutomationPolicy
                             ? "Saving…"
                             : "Save lifecycle automation"}
@@ -3970,7 +3983,7 @@ export function StudioSettingsClient({
                   title="Lifecycle SLA policy"
                 >
                   {!canManageWorkspace ? (
-                    <div className="status-banner status-banner--info">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>Operator read-only</strong>
                       <span>
                         Operators can review lifecycle SLA state, but only
@@ -3979,7 +3992,7 @@ export function StudioSettingsClient({
                     </div>
                   ) : null}
                   {!settings?.workspace ? (
-                    <div className="status-banner status-banner--info">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>No workspace selected</strong>
                       <span>
                         Choose a workspace before changing lifecycle SLA policy.
@@ -3999,10 +4012,10 @@ export function StudioSettingsClient({
                           isSavingLifecycleSlaPolicy
                         }
                       >
-                        <label className="field-stack">
-                          <span className="field-label">SLA monitoring</span>
+                        <label className="grid gap-1.5">
+                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">SLA monitoring</span>
                           <select
-                            className="input-field"
+                            className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                             onChange={(event) => {
                               setEditorState((current) => ({
                                 ...current,
@@ -4020,12 +4033,12 @@ export function StudioSettingsClient({
                             <option value="disabled">Disabled</option>
                           </select>
                         </label>
-                        <label className="field-stack">
-                          <span className="field-label">
+                        <label className="grid gap-1.5">
+                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
                             Automation max age (minutes)
                           </span>
                           <input
-                            className="input-field"
+                            className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                             min={5}
                             onChange={(event) => {
                               const value = Number(event.target.value);
@@ -4045,12 +4058,12 @@ export function StudioSettingsClient({
                             }
                           />
                         </label>
-                        <label className="field-stack">
-                          <span className="field-label">
+                        <label className="grid gap-1.5">
+                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
                             Webhook failure threshold
                           </span>
                           <input
-                            className="input-field"
+                            className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                             min={1}
                             onChange={(event) => {
                               const value = Number(event.target.value);
@@ -4071,8 +4084,10 @@ export function StudioSettingsClient({
                           />
                         </label>
                         <div
-                          className={`status-banner status-banner--${getSlaTone(
-                            lifecycleSlaSummary?.status ?? "unreachable"
+                          className={`rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] ${getStatusBannerToneClass(
+                            getSlaTone(
+                              lifecycleSlaSummary?.status ?? "unreachable"
+                            ) as StatusBannerTone
                           )}`}
                         >
                           <strong>
@@ -4083,7 +4098,7 @@ export function StudioSettingsClient({
                               "Lifecycle SLA summary is not available on this service instance."}
                           </span>
                         </div>
-                        <div className="pill-row">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Pill>
                             Current{" "}
                             {lifecycleSlaPolicy.enabled
@@ -4110,7 +4125,7 @@ export function StudioSettingsClient({
                           </Pill>
                         </div>
                         {lifecycleSlaSummary?.reasonCodes.length ? (
-                          <div className="pill-row">
+                          <div className="flex flex-wrap items-center gap-2">
                             {lifecycleSlaSummary.reasonCodes.map(
                               (reasonCode) => (
                                 <Pill key={reasonCode}>
@@ -4120,7 +4135,7 @@ export function StudioSettingsClient({
                             )}
                           </div>
                         ) : null}
-                        <button className="button-action" type="submit">
+                        <button className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95" type="submit">
                           {isSavingLifecycleSlaPolicy
                             ? "Saving…"
                             : "Save lifecycle SLA"}
@@ -4141,22 +4156,23 @@ export function StudioSettingsClient({
                 >
                   {lifecycleAutomationHealth ? (
                     <div className="stack-md">
-                      <div
-                        className={`status-banner status-banner--${
-                          lifecycleAutomationHealth.status === "healthy"
-                            ? "success"
-                            : lifecycleAutomationHealth.status === "warning" ||
-                                lifecycleAutomationHealth.status === "stale" ||
-                                lifecycleAutomationHealth.status ===
-                                  "unreachable"
-                              ? "error"
-                              : "info"
-                        }`}
-                      >
-                        <strong>{lifecycleAutomationHealth.status}</strong>
-                        <span>{lifecycleAutomationHealth.message}</span>
-                      </div>
-                      <div className="pill-row">
+                        <div
+                          className={`rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] ${getStatusBannerToneClass(
+                            lifecycleAutomationHealth.status === "healthy"
+                              ? "success"
+                              : lifecycleAutomationHealth.status ===
+                                    "warning" ||
+                                  lifecycleAutomationHealth.status ===
+                                    "stale" ||
+                                  lifecycleAutomationHealth.status === "unreachable"
+                                ? "error"
+                                : "info"
+                          )}`}
+                        >
+                          <strong>{lifecycleAutomationHealth.status}</strong>
+                          <span>{lifecycleAutomationHealth.message}</span>
+                        </div>
+                      <div className="flex flex-wrap items-center gap-2">
                         <Pill>
                           {lifecycleAutomationHealth.enabled
                             ? "Scheduler enabled"
@@ -4246,7 +4262,7 @@ export function StudioSettingsClient({
                   title="Lifecycle delivery health"
                 >
                   {!settings?.workspace ? (
-                    <div className="status-banner status-banner--info">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>No workspace selected</strong>
                       <span>
                         Choose a workspace before reviewing lifecycle delivery
@@ -4255,7 +4271,7 @@ export function StudioSettingsClient({
                     </div>
                   ) : (
                     <div className="stack-md">
-                      <div className="pill-row">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Pill>
                           Audit-log delivered {recentAuditLogDeliveryCount}
                         </Pill>
@@ -4337,7 +4353,7 @@ export function StudioSettingsClient({
                               <div className="collection-item-card__actions">
                                 <Pill>{delivery.deliveryState}</Pill>
                                 <button
-                                  className="button-action button-action--secondary"
+                                  className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] text-[color:var(--color-text)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] hover:border-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60"
                                   disabled={
                                     !canManageWorkspace ||
                                     delivery.deliveryChannel !== "webhook" ||
@@ -4394,7 +4410,7 @@ export function StudioSettingsClient({
                   title="Current workspace offboarding"
                 >
                   {!currentWorkspaceOffboardingState ? (
-                    <div className="status-banner status-banner--info">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>No workspace offboarding data</strong>
                       <span>
                         Select a workspace to review its current archive and
@@ -4403,7 +4419,7 @@ export function StudioSettingsClient({
                     </div>
                   ) : (
                     <div className="stack-md">
-                      <div className="pill-row">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Pill>
                           {formatWorkspaceOffboardingCode(
                             currentWorkspaceOffboardingState.summary.readiness
@@ -4433,7 +4449,7 @@ export function StudioSettingsClient({
                       </div>
                       {currentWorkspaceOffboardingState.summary.blockerCodes
                         .length ? (
-                        <div className="status-banner status-banner--error">
+                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-red-500/45 bg-red-500/12 text-red-50">
                           <strong>Blocked</strong>
                           <span>
                             {currentWorkspaceOffboardingState.summary.blockerCodes
@@ -4444,7 +4460,7 @@ export function StudioSettingsClient({
                       ) : null}
                       {currentWorkspaceOffboardingState.summary.cautionCodes
                         .length ? (
-                        <div className="status-banner status-banner--info">
+                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                           <strong>Review cues</strong>
                           <span>
                             {currentWorkspaceOffboardingState.summary.cautionCodes
@@ -4453,7 +4469,7 @@ export function StudioSettingsClient({
                           </span>
                         </div>
                       ) : null}
-                      <div className="pill-row">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Pill>
                           {
                             currentWorkspaceOffboardingState.lifecycleDelivery
@@ -4486,7 +4502,7 @@ export function StudioSettingsClient({
                   title="Decommission workspace"
                 >
                   {!settings?.workspace ? (
-                    <div className="status-banner status-banner--info">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>No workspace selected</strong>
                       <span>
                         Choose a workspace before scheduling a decommission
@@ -4497,7 +4513,7 @@ export function StudioSettingsClient({
                   {settings?.workspace ? (
                     <div className="stack-md">
                       {!canManageWorkspace ? (
-                        <div className="status-banner status-banner--info">
+                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                           <strong>Owner only</strong>
                           <span>
                             Operators can review retention state, but only
@@ -4506,7 +4522,7 @@ export function StudioSettingsClient({
                           </span>
                         </div>
                       ) : null}
-                      <div className="pill-row">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Pill>
                           Default{" "}
                           {retentionPolicy.defaultDecommissionRetentionDays}{" "}
@@ -4526,7 +4542,7 @@ export function StudioSettingsClient({
                       </div>
                       {canManageWorkspace && scheduledDecommission ? (
                         <>
-                          <div className="pill-row">
+                          <div className="flex flex-wrap items-center gap-2">
                             <Pill>{scheduledDecommission.status}</Pill>
                             <Pill>
                               {scheduledDecommission.retentionDays} day
@@ -4537,7 +4553,7 @@ export function StudioSettingsClient({
                               notices
                             </Pill>
                           </div>
-                          <div className="status-banner status-banner--info">
+                          <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                             <strong>Scheduled</strong>
                             <span>
                               Execution opens on{" "}
@@ -4553,7 +4569,7 @@ export function StudioSettingsClient({
                             </p>
                           ) : null}
                           {decommissionWorkflow?.latestNotification ? (
-                            <div className="status-banner">
+                            <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)]">
                               <strong>Latest notice recorded</strong>
                               <span>
                                 {formatDecommissionNotificationKind(
@@ -4568,7 +4584,7 @@ export function StudioSettingsClient({
                             </div>
                           ) : null}
                           {decommissionWorkflow?.nextDueKind ? (
-                            <div className="status-banner status-banner--info">
+                            <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                               <strong>Notice due</strong>
                               <span>
                                 Record the{" "}
@@ -4582,7 +4598,7 @@ export function StudioSettingsClient({
                           {canManageWorkspace &&
                           decommissionWorkflow?.nextDueKind ? (
                             <button
-                              className="button-action button-action--secondary"
+                              className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] text-[color:var(--color-text)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] hover:border-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60"
                               disabled={
                                 Boolean(
                                   recordingDecommissionNotificationKind
@@ -4606,7 +4622,7 @@ export function StudioSettingsClient({
                             </button>
                           ) : null}
                           <label
-                            className="field-label"
+                            className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]"
                             htmlFor="decommission-execute-slug"
                           >
                             Confirm workspace slug to execute
@@ -4631,7 +4647,7 @@ export function StudioSettingsClient({
                             }
                           />
                           {!scheduledDecommissionReadyForExecution ? (
-                            <div className="status-banner">
+                            <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)]">
                               <strong>Retention window active</strong>
                               <span>
                                 Final execution stays locked until{" "}
@@ -4644,7 +4660,7 @@ export function StudioSettingsClient({
                           ) : null}
                           <div className="studio-action-row">
                             <button
-                              className="button-action button-action--secondary"
+                              className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] text-[color:var(--color-text)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] hover:border-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60"
                               disabled={
                                 isCancelingDecommission ||
                                 isExecutingDecommission ||
@@ -4660,7 +4676,7 @@ export function StudioSettingsClient({
                                 : "Cancel schedule"}
                             </button>
                             <button
-                              className="button-action"
+                              className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
                               disabled={
                                 isCancelingDecommission ||
                                 isExecutingDecommission ||
@@ -4681,7 +4697,7 @@ export function StudioSettingsClient({
                       {canManageWorkspace &&
                       !scheduledDecommission &&
                       settings.workspace.status !== "archived" ? (
-                        <div className="status-banner">
+                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)]">
                           <strong>Archive required</strong>
                           <span>
                             Archive the workspace before you can schedule
@@ -4693,7 +4709,7 @@ export function StudioSettingsClient({
                       !scheduledDecommission &&
                       settings.workspace.status === "archived" &&
                       offboardingSummary?.readiness !== "ready" ? (
-                        <div className="status-banner status-banner--info">
+                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                           <strong>Resolve offboarding review first</strong>
                           <span>
                             Decommission unlocks only after this workspace
@@ -4712,7 +4728,7 @@ export function StudioSettingsClient({
                           }}
                         >
                           <label
-                            className="field-label"
+                            className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]"
                             htmlFor="decommission-retention"
                           >
                             Retention window
@@ -4746,7 +4762,7 @@ export function StudioSettingsClient({
                             day(s).
                           </p>
                           <label
-                            className="field-label"
+                            className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]"
                             htmlFor="decommission-slug"
                           >
                             Confirm workspace slug
@@ -4771,7 +4787,7 @@ export function StudioSettingsClient({
                             }
                           />
                           <label
-                            className="field-label"
+                            className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]"
                             htmlFor="decommission-reason"
                           >
                             Reason
@@ -4796,7 +4812,7 @@ export function StudioSettingsClient({
                             value={workspaceDecommissionFormState.reason}
                           />
                           <button
-                            className="button-action"
+                            className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
                             disabled={isSchedulingDecommission}
                             type="submit"
                           >
@@ -4843,7 +4859,7 @@ export function StudioSettingsClient({
                   title="Create workspace"
                 >
                   {!canManageWorkspace ? (
-                    <div className="status-banner status-banner--info">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>Owner only</strong>
                       <span>
                         Operators can review the workspace estate, but only
@@ -4858,10 +4874,10 @@ export function StudioSettingsClient({
                     <fieldset
                       disabled={!canManageWorkspace || isCreatingWorkspace}
                     >
-                      <label className="field-stack">
-                        <span className="field-label">Workspace name</span>
+                      <label className="grid gap-1.5">
+                        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Workspace name</span>
                         <input
-                          className="input-field"
+                          className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                           maxLength={120}
                           onChange={(event) => {
                             setWorkspaceCreateState((current) => ({
@@ -4874,10 +4890,10 @@ export function StudioSettingsClient({
                           value={workspaceCreateState.workspaceName}
                         />
                       </label>
-                      <label className="field-stack">
-                        <span className="field-label">Workspace slug</span>
+                      <label className="grid gap-1.5">
+                        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Workspace slug</span>
                         <input
-                          className="input-field"
+                          className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                           maxLength={80}
                           onChange={(event) => {
                             setWorkspaceCreateState((current) => ({
@@ -4891,10 +4907,10 @@ export function StudioSettingsClient({
                           value={workspaceCreateState.workspaceSlug}
                         />
                       </label>
-                      <label className="field-stack">
-                        <span className="field-label">Initial brand name</span>
+                      <label className="grid gap-1.5">
+                        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Initial brand name</span>
                         <input
-                          className="input-field"
+                          className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                           maxLength={120}
                           onChange={(event) => {
                             setWorkspaceCreateState((current) => ({
@@ -4907,10 +4923,10 @@ export function StudioSettingsClient({
                           value={workspaceCreateState.brandName}
                         />
                       </label>
-                      <label className="field-stack">
-                        <span className="field-label">Initial brand slug</span>
+                      <label className="grid gap-1.5">
+                        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Initial brand slug</span>
                         <input
-                          className="input-field"
+                          className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                           maxLength={80}
                           onChange={(event) => {
                             setWorkspaceCreateState((current) => ({
@@ -4924,10 +4940,10 @@ export function StudioSettingsClient({
                           value={workspaceCreateState.brandSlug}
                         />
                       </label>
-                      <label className="field-stack">
-                        <span className="field-label">Accent color</span>
+                      <label className="grid gap-1.5">
+                        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Accent color</span>
                         <input
-                          className="input-field"
+                          className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                           onChange={(event) => {
                             setWorkspaceCreateState((current) => ({
                               ...current,
@@ -4938,10 +4954,10 @@ export function StudioSettingsClient({
                           value={workspaceCreateState.accentColor}
                         />
                       </label>
-                      <label className="field-stack">
-                        <span className="field-label">Theme preset</span>
+                      <label className="grid gap-1.5">
+                        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Theme preset</span>
                         <select
-                          className="input-field"
+                          className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                           onChange={(event) => {
                             setWorkspaceCreateState((current) => ({
                               ...current,
@@ -4959,13 +4975,13 @@ export function StudioSettingsClient({
                         </select>
                       </label>
                       <div className="studio-action-row">
-                        <button className="button-action" type="submit">
+                        <button className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95" type="submit">
                           {isCreatingWorkspace
                             ? "Provisioning…"
                             : "Create workspace"}
                         </button>
                         <Link
-                          className="inline-link"
+                          className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
                           href="/studio/commerce/fleet"
                         >
                           Open commerce fleet
@@ -5007,12 +5023,12 @@ export function StudioSettingsClient({
                   span={12}
                   title="Member lifecycle history"
                 >
-                  <div className="pill-row">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Pill>
                       {settings?.auditEntries.length ?? 0} recent events
                     </Pill>
                     <Pill>workspace audit</Pill>
-                    <Link className="inline-link" href="/ops/audit">
+                    <Link className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm" href="/ops/audit">
                       Open full audit
                     </Link>
                   </div>
@@ -5060,7 +5076,7 @@ export function StudioSettingsClient({
                 accessible workspace
                 {availableWorkspaces.length === 1 ? "" : "s"}.
               </p>
-              <div className="pill-row">
+              <div className="flex flex-wrap items-center gap-2">
                 <Pill>
                   {workspaceStatus
                     ? formatWorkspaceStatus(workspaceStatus)
@@ -5072,13 +5088,13 @@ export function StudioSettingsClient({
               {canManageWorkspace && exportWorkspaceId ? (
                 <div className="studio-settings-rail-card__actions">
                   <Link
-                    className="inline-link"
+                    className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
                     href={`/api/studio/workspaces/${exportWorkspaceId}/export?format=json`}
                   >
                     Export JSON
                   </Link>
                   <Link
-                    className="inline-link"
+                    className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
                     href={`/api/studio/workspaces/${exportWorkspaceId}/export?format=csv`}
                   >
                     Export CSV
@@ -5114,7 +5130,7 @@ export function StudioSettingsClient({
                 />
               </div>
               {offboardingSummary?.blockerCodes.length ? (
-                <div className="status-banner status-banner--error">
+                <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-red-500/45 bg-red-500/12 text-red-50">
                   <strong>Resolve blockers</strong>
                   <span>
                     {offboardingSummary.blockerCodes
@@ -5135,18 +5151,21 @@ export function StudioSettingsClient({
                 {lifecycleAutomationHealth?.message ??
                   "Automation health is unavailable."}
               </p>
-              <div className="pill-row">
+              <div className="flex flex-wrap items-center gap-2">
                 <Pill>
                   {lifecycleAutomationHealth?.status ?? "unreachable"}
                 </Pill>
                 <Pill>{lifecycleSlaSummary?.status ?? "unreachable"}</Pill>
                 <Pill>Failed webhooks {recentWebhookFailedCount}</Pill>
               </div>
-              <div
-                className={`status-banner status-banner--${getSlaTone(
-                  lifecycleSlaSummary?.status ?? "unreachable"
-                )}`}
-              >
+                          <div
+                            className={`rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] ${getStatusBannerToneClass(
+                              getSlaTone(
+                                lifecycleSlaSummary?.status ??
+                                  "unreachable"
+                              ) as StatusBannerTone
+                            )}`}
+                          >
                 <strong>{lifecycleSlaSummary?.status ?? "unreachable"}</strong>
                 <span>
                   {lifecycleSlaSummary?.message ??
@@ -5196,7 +5215,7 @@ export function StudioSettingsClient({
                   ? ` and currently maps to ${selectedBrand.customDomain}.`
                   : "."}
               </p>
-              <div className="pill-row">
+              <div className="flex flex-wrap items-center gap-2">
                 <Pill>
                   {selectedBrand?.themePreset ?? editorState.themePreset}
                 </Pill>

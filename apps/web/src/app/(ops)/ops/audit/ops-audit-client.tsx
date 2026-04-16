@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   startTransition,
   type ChangeEvent,
@@ -15,7 +14,16 @@ import {
   type OpsWorkspaceAuditResponse,
   type OpsWorkspaceAuditEntry
 } from "@ai-nft-forge/shared";
-import { Pill, SurfaceCard, SurfaceGrid } from "@ai-nft-forge/ui";
+import {
+  ActionButton,
+  ActionLink,
+  FieldLabel,
+  FieldStack,
+  Pill,
+  StatusBanner,
+  SurfaceCard,
+  SurfaceGrid
+} from "@ai-nft-forge/ui";
 
 type OpsAuditClientProps = {
   initialAudit: OpsWorkspaceAuditResponse | null;
@@ -260,11 +268,11 @@ export function OpsAuditClient({
           span={4}
           title="Audit controls"
         >
-          <div className="studio-form">
-            <label className="field-stack">
-              <span className="field-label">Category</span>
+          <div className="grid gap-3">
+            <FieldStack>
+              <FieldLabel>Category</FieldLabel>
               <select
-                className="input-field"
+                className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                 onChange={handleCategoryChange}
                 value={category}
               >
@@ -274,11 +282,11 @@ export function OpsAuditClient({
                   </option>
                 ))}
               </select>
-            </label>
-            <label className="field-stack">
-              <span className="field-label">Action</span>
+            </FieldStack>
+            <FieldStack>
+              <FieldLabel>Action</FieldLabel>
               <select
-                className="input-field"
+                className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                 onChange={handleActionChange}
                 value={selectedAction}
               >
@@ -289,31 +297,31 @@ export function OpsAuditClient({
                   </option>
                 ))}
               </select>
-            </label>
-            <div className="studio-action-row">
-              <button
-                className="button-action"
+            </FieldStack>
+            <div className="flex flex-wrap gap-2">
+              <ActionButton
                 disabled={isRefreshing}
                 onClick={() => {
                   void refreshAudit();
                 }}
+                tone="primary"
                 type="button"
               >
                 {isRefreshing ? "Refreshing…" : "Apply filters"}
-              </button>
-              <a
-                className="action-link"
+              </ActionButton>
+              <ActionLink
                 href={buildAuditUrl({
                   action: selectedAction,
                   category,
                   format: "csv"
                 })}
+                tone="inline"
               >
                 Export CSV
-              </a>
+              </ActionLink>
             </div>
           </div>
-          <div className="pill-row">
+          <div className="mt-3 flex flex-wrap gap-2">
             <Pill>{workspaceSlug}</Pill>
             <Pill>{audit.audit.entries.length} loaded</Pill>
             <Pill>{category.replaceAll("_", " ")}</Pill>
@@ -325,22 +333,25 @@ export function OpsAuditClient({
           span={8}
           title="Workspace activity"
         >
-          <div className="pill-row">
+          <div className="flex flex-wrap gap-2">
             <Pill>{audit.audit.actions.length} matching actions</Pill>
             <Pill>
               {audit.audit.nextCursor
                 ? "more history available"
                 : "end of current history"}
             </Pill>
-            <Link className="inline-link" href="/studio/settings">
+            <ActionLink href="/studio/settings" tone="inline">
               Settings audit source
-            </Link>
+            </ActionLink>
           </div>
           {audit.audit.entries.length ? (
-            <div className="collection-item-list">
+            <div className="mt-3 space-y-3">
               {audit.audit.entries.map((entry: OpsWorkspaceAuditEntry) => (
-                <div className="collection-item-card" key={entry.id}>
-                  <div className="collection-item-card__copy">
+                <article
+                  className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4"
+                  key={entry.id}
+                >
+                  <div className="grid gap-1">
                     <strong>{entry.action.replaceAll("_", " ")}</strong>
                     <span>
                       {formatDateTime(entry.createdAt)} ·{" "}
@@ -360,34 +371,34 @@ export function OpsAuditClient({
                       {entry.requestId ? ` · request ${entry.requestId}` : ""}
                     </span>
                   </div>
-                </div>
+                </article>
               ))}
             </div>
           ) : (
-            <div className="collection-empty-state">
+            <div className="mt-3 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-muted)]">
               No audit entries matched the current filter.
             </div>
           )}
           {audit.audit.nextCursor ? (
-            <div className="studio-action-row">
-              <button
-                className="button-action"
+            <div className="mt-3 flex flex-wrap gap-2">
+              <ActionButton
                 disabled={isLoadingMore}
+                type="button"
                 onClick={() => {
                   void handleLoadMore();
                 }}
-                type="button"
+                tone="primary"
               >
                 {isLoadingMore ? "Loading…" : "Load more"}
-              </button>
+              </ActionButton>
             </div>
           ) : null}
         </SurfaceCard>
       </SurfaceGrid>
       {notice ? (
-        <div className={`notice-banner notice-banner--${notice.tone}`}>
+        <StatusBanner className="mt-4" tone={notice.tone}>
           {notice.message}
-        </div>
+        </StatusBanner>
       ) : null}
     </>
   );

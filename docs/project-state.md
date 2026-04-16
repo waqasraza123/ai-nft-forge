@@ -43,6 +43,7 @@ Current implementation status:
 - Database selection is centralized in `packages/database/src/database-mode.ts` with an explicit `DATABASE_MODE=local|neon` contract that defaults to `local`; runtime code, Prisma config, and root Docker compose wrappers must switch behavior only from that env key, not from the presence of a Neon URL alone.
 - Application startup selection is now also explicit through `APP_RUNTIME_MODE=docker|cloud`, defaulting to `docker`; Docker mode preserves the current Compose-backed workflows, while cloud mode is a local-process path that requires hosted Neon, Upstash, and Cloudflare R2 dependencies and never calls Docker or Compose.
 - The default Docker-first local and self-host flows remain the bundled PostgreSQL plus Docker Redis/MinIO path, while explicit Neon mode uses `DATABASE_NEON_URL` for runtime access, `DATABASE_NEON_DIRECT_URL` for Prisma deploy/status work, and `DATABASE_NEON_SHADOW_URL` only for `prisma migrate dev`; browser smoke remains pinned to `APP_RUNTIME_MODE=docker` and `DATABASE_MODE=local`.
+- Root `db:migrate:deploy` and `db:migrate:status` remain Prisma-first, but in explicit `APP_RUNTIME_MODE=cloud` plus `DATABASE_MODE=neon` they now fall back to a `pg`-based SQL migration runner if Prisma's schema engine cannot reach Neon even though direct Postgres connectivity is available; this keeps the no-Docker cloud path usable without changing the default Docker workflow.
 - Public asset URLs now prefer `S3_PUBLIC_BASE_URL` when configured so Cloudflare R2 public reads can stay separate from the S3 API endpoint, while Docker/MinIO behavior remains unchanged when that env is unset.
 - The runtime database client uses the PostgreSQL driver adapter and is created lazily from the resolved database runtime URL.
 - The first source asset intake slice uses server-issued signed uploads into the private object-storage bucket plus explicit upload completion verification.
@@ -175,6 +176,8 @@ The frozen technical direction remains:
 - Shared repo config lives in `packages/config`.
 - `apps/web` uses Next.js App Router route groups to keep marketing, studio, public, and ops concerns separate from the start.
 - `packages/ui` is the shared UI boundary for reusable shell primitives.
+- Browser UI styling has shifted toward a Tailwind-first path in `apps/web` and `packages/ui`; `globals.css` is now intentionally minimal (Tailwind directives + base tokens), and the styled-class abstraction layer is being removed route by route with reusable variants in UI primitives.
+- Internal app chrome styling is now defined through a 5-theme sidebar token system (`obsidian-amber`, `graphite-cyan`, `midnight-violet`, `forest-mint`, `ember-rose`) with local persistence and runtime CSS variable injection; Studio and Ops route surfaces consume `--app-*` tokens through Tailwind utility classes rather than semantic stylesheet classes.
 - `packages/shared` is the shared boundary for auth and worker schemas plus env parsing helpers.
 - The worker runtime uses BullMQ with Redis and keeps product job families deferred behind a noop foundation queue.
 - `packages/database` owns the Prisma schema, migrations, and thin repository boundary for users, auth nonces, auth sessions, workspaces, brands, and audit logs.

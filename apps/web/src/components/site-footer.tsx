@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ActionLink } from "@ai-nft-forge/ui";
 
 export function SiteFooter() {
   const supportLinks = [
@@ -17,32 +17,38 @@ export function SiteFooter() {
   ];
 
   return (
-    <footer className="site-footer">
-      <section className="site-footer-brand">
-        <span className="site-footer-brand-title">AI NFT Forge</span>
-        <span className="site-footer-brand-copy">
-          Dark-mode public storefronts with premium workflow surfaces for
-          creators, operators, and studio teams.
-        </span>
-      </section>
-      <section className="site-footer-links">
-        <div className="site-footer-column">
-          <span className="site-footer-column-title">Product</span>
-          {productLinks.map((link) => (
-            <Link className="site-footer-link" href={link.href} key={link.href}>
-              {link.label}
-            </Link>
-          ))}
+    <footer className="mx-auto mt-8 w-full max-w-7xl rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)]/70 p-4 backdrop-blur-sm">
+      <div className="grid gap-4 sm:grid-cols-[1.4fr_1fr]">
+        <div>
+          <span className="text-sm font-semibold">AI NFT Forge</span>
+          <p className="mt-2 max-w-2xl text-sm text-[color:var(--color-muted)]">
+            Premium surfaces for creator studios, operators, and marketplace
+            workflows with a single workspace-aware style language.
+          </p>
         </div>
-        <div className="site-footer-column">
-          <span className="site-footer-column-title">Operations</span>
-          {supportLinks.map((link) => (
-            <Link className="site-footer-link" href={link.href} key={link.href}>
-              {link.label}
-            </Link>
-          ))}
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--color-muted)]">
+              Product
+            </p>
+            {productLinks.map((link) => (
+              <ActionLink href={link.href} key={link.href} tone="inline">
+                {link.label}
+              </ActionLink>
+            ))}
+          </div>
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--color-muted)]">
+              Operations
+            </p>
+            {supportLinks.map((link) => (
+              <ActionLink href={link.href} key={link.href} tone="inline">
+                {link.label}
+              </ActionLink>
+            ))}
+          </div>
         </div>
-      </section>
+      </div>
     </footer>
   );
 }

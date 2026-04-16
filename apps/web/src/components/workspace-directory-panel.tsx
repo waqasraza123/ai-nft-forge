@@ -36,30 +36,33 @@ export function WorkspaceDirectoryPanel({
       title={title}
       {...(span ? { span } : {})}
     >
-      <div className="stack-md">
+      <div className="space-y-4">
         {entries.length === 0 ? (
-          <div className="status-banner">
-            <strong>No accessible workspaces</strong>
-            <span>
+          <div className="rounded-xl border border-emerald-200/20 bg-emerald-500/8 p-3 text-emerald-100">
+            <strong className="font-semibold">No accessible workspaces</strong>
+            <p className="mt-1 text-sm text-[color:var(--color-muted)]">
               Workspace summaries will appear here after ownership or operator
               access is provisioned.
-            </span>
+            </p>
           </div>
         ) : null}
         {entries.map((entry) => (
-          <article className="collection-list-card" key={entry.workspace.id}>
-            <div className="stack-sm">
-              <div className="collection-list-card__header">
+          <article
+            className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] p-4"
+            key={entry.workspace.id}
+          >
+            <div className="space-y-3">
+              <div className="flex flex-col gap-1">
                 <div>
-                  <h3>{entry.workspace.name}</h3>
-                  <p>
+                  <h3 className="text-base font-semibold">{entry.workspace.name}</h3>
+                  <p className="text-sm text-[color:var(--color-muted)]">
                     {entry.workspace.slug} · {entry.workspace.role} ·{" "}
                     {entry.workspace.status}
                   </p>
                 </div>
                 {entry.current ? <Pill>Current workspace</Pill> : null}
               </div>
-              <div className="pill-row">
+              <div className="flex flex-wrap gap-2">
                 <Pill>{entry.brandCount} brands</Pill>
                 <Pill>{entry.memberCount} members</Pill>
                 <Pill>{entry.pendingInvitationCount} pending invites</Pill>
@@ -69,7 +72,7 @@ export function WorkspaceDirectoryPanel({
                   {entry.pendingRoleEscalationCount} pending escalations
                 </Pill>
               </div>
-              <p className="surface-card__body-copy">
+              <p className="text-sm text-[color:var(--color-muted)]">
                 Last activity: {formatDateTime(entry.lastActivityAt)}
               </p>
             </div>

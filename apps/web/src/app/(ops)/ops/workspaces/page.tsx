@@ -1,6 +1,4 @@
-import Link from "next/link";
-
-import { PageShell, SurfaceGrid } from "@ai-nft-forge/ui";
+import { ActionLink, SurfaceCard } from "@ai-nft-forge/ui";
 
 import { WorkspaceDirectoryPanel } from "../../../../components/workspace-directory-panel";
 import { WorkspaceOffboardingPanel } from "../../../../components/workspace-offboarding-panel";
@@ -44,43 +42,47 @@ export default async function OpsWorkspacesPage() {
       };
 
   return (
-    <PageShell
-      eyebrow="Ops"
-      title="Review the accessible workspace estate"
-      lead="This route keeps workspace-wide operator context visible without flattening distinct workspaces into one dataset. Counts here come only from workspace-native settings, member, invitation, escalation, and audit records."
-      actions={
-        <>
-          <Link className="action-link" href="/ops/audit">
-            Audit activity
-          </Link>
-          <Link className="action-link" href="/ops/retention">
-            Retention review
-          </Link>
-          <Link className="action-link" href="/ops">
-            Runtime overview
-          </Link>
-          <Link className="inline-link" href="/">
-            Back to marketing
-          </Link>
-        </>
-      }
-      tone="ops"
-    >
-      <SurfaceGrid>
+    <section className="space-y-6">
+      <section className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-5 shadow-[var(--shadow-surface)]">
+        <div className="flex flex-wrap justify-between gap-3">
+          <div className="space-y-2">
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">
+              Ops
+            </span>
+            <h1 className="text-3xl font-semibold font-[var(--font-display)]">
+              Review the accessible workspace estate
+            </h1>
+            <p className="max-w-4xl text-sm leading-7 text-[color:var(--color-muted)]">
+              This route keeps workspace-wide operator context visible without
+              flattening distinct workspaces into one dataset. Counts here come
+              only from workspace-native settings, members, invitations,
+              escalations, and audit records.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <ActionLink href="/ops/audit">Audit activity</ActionLink>
+            <ActionLink href="/ops/retention">Retention review</ActionLink>
+            <ActionLink href="/ops">Runtime overview</ActionLink>
+            <ActionLink href="/" tone="inline">
+              Back to marketing
+            </ActionLink>
+          </div>
+        </div>
+      </section>
+
+      <div className="grid gap-5 md:grid-cols-2">
         <WorkspaceDirectoryPanel
           body="Switching still keeps one active workspace at a time, but this directory makes the current accessible estate auditable before you pivot between owner and operator contexts."
           entries={workspaceDirectory.workspaces}
           eyebrow="Workspace directory"
-          span={8}
+          span={6}
           title="Accessible workspaces"
         />
         <WorkspaceDirectoryPanel
-          body="Use the shared switcher to move the live studio and ops context after reviewing the accessible workspace estate."
-          entries={workspaceDirectory.workspaces.filter(
-            (entry) => entry.current
-          )}
+          body="Use the shared switcher to move the live studio and ops context after reviewing the current accessible workspace estate."
+          entries={workspaceDirectory.workspaces.filter((entry) => entry.current)}
           eyebrow="Selection"
-          span={4}
+          span={6}
           title="Current workspace"
         />
         <WorkspaceOffboardingPanel
@@ -90,26 +92,19 @@ export default async function OpsWorkspacesPage() {
           span={12}
           title="Archive readiness and export"
         />
-        <div className="surface-card surface-card--span-12">
-          <div className="surface-card__content">
-            <div className="surface-card__header">
-              <p className="surface-card__eyebrow">Workspace scope</p>
-              <h2 className="surface-card__title">Switch active workspace</h2>
-            </div>
-            <p className="surface-card__body-copy">
-              The active workspace cookie still drives the rest of the ops and
-              studio routes. Use this control after reviewing the current
-              accessible estate above.
-            </p>
-            <WorkspaceScopeSwitcher
-              currentWorkspaceSlug={
-                runtime.operator.access?.workspace?.slug ?? null
-              }
-              workspaces={runtime.operator.access?.availableWorkspaces ?? []}
-            />
-          </div>
-        </div>
-      </SurfaceGrid>
-    </PageShell>
+      </div>
+
+      <SurfaceCard
+        body="The active workspace cookie still drives the rest of the ops and studio routes. Use this control after reviewing the current accessible estate above."
+        eyebrow="Workspace scope"
+        span={12}
+        title="Switch active workspace"
+      >
+        <WorkspaceScopeSwitcher
+          currentWorkspaceSlug={runtime.operator.access?.workspace?.slug ?? null}
+          workspaces={runtime.operator.access?.availableWorkspaces ?? []}
+        />
+      </SurfaceCard>
+    </section>
   );
 }

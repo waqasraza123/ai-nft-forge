@@ -1,6 +1,4 @@
-import Link from "next/link";
-
-import { PageShell, SurfaceGrid } from "@ai-nft-forge/ui";
+import { ActionLink, PageShell, SurfaceGrid } from "@ai-nft-forge/ui";
 
 import { WorkspaceScopeSwitcher } from "../../../../components/workspace-scope-switcher";
 import { getCurrentStudioAccess } from "../../../../server/studio/access";
@@ -30,40 +28,38 @@ export default async function OpsRetentionPage() {
       lead="This route separates retention and decommission oversight from the live runtime and fleet triage pages so archive blockers, scheduled cleanup windows, and final operator-safe cancellation stay explicit."
       actions={
         <>
-          <Link className="action-link" href="/ops">
+          <ActionLink href="/ops" tone="action">
             Runtime overview
-          </Link>
-          <Link className="action-link" href="/ops/fleet">
+          </ActionLink>
+          <ActionLink href="/ops/fleet" tone="action">
             Fleet triage
-          </Link>
-          <Link className="action-link" href="/ops/workspaces">
+          </ActionLink>
+          <ActionLink href="/ops/workspaces" tone="action">
             Workspace directory
-          </Link>
-          <Link className="inline-link" href="/">
+          </ActionLink>
+          <ActionLink href="/" tone="inline">
             Back to marketing
-          </Link>
+          </ActionLink>
         </>
       }
       tone="ops"
     >
       <SurfaceGrid>
-        <div className="surface-card surface-card--span-12">
-          <div className="surface-card__content">
-            <div className="surface-card__header">
-              <p className="surface-card__eyebrow">Workspace scope</p>
-              <h2 className="surface-card__title">
-                Active workspace selection
-              </h2>
-            </div>
-            <p className="surface-card__body-copy">
-              Retention review is fleet-wide, but the shared selector still
-              drives the rest of the studio and ops surfaces.
+        <div className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 md:col-span-12">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-accent)]">
+              Workspace scope
             </p>
-            <WorkspaceScopeSwitcher
-              currentWorkspaceSlug={access.workspace?.slug ?? null}
-              workspaces={access.availableWorkspaces}
-            />
+            <h2 className="text-xl font-semibold">Active workspace selection</h2>
           </div>
+          <p className="mt-1 text-sm text-[color:var(--color-muted)]">
+            Retention review is fleet-wide, but the shared selector still
+            drives the rest of the studio and ops surfaces.
+          </p>
+          <WorkspaceScopeSwitcher
+            currentWorkspaceSlug={access.workspace?.slug ?? null}
+            workspaces={access.availableWorkspaces}
+          />
         </div>
       </SurfaceGrid>
       <OpsRetentionClient initialReport={report.report} />

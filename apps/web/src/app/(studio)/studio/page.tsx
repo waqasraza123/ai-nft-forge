@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ActionButton, ActionLink } from "@ai-nft-forge/ui";
 
 import { getCurrentStudioAccess } from "../../../server/studio/access";
 
@@ -52,91 +52,112 @@ export default async function StudioPage() {
   const roleCopy = isOwner ? "owner" : "operator";
 
   return (
-    <section className="studio-dashboard">
-      <header className="studio-dashboard__hero">
-        <p className="studio-dashboard__eyebrow">Operational foundation</p>
-        <h1 className="studio-dashboard__title">
+    <section className="space-y-6">
+      <header className="rounded-3xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)]/80 p-6 shadow-[var(--shadow-surface)]">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
+          Operational foundation
+        </p>
+        <h1 className="mt-2 text-3xl font-semibold font-[var(--font-display)]">
           Creator launch operating room
         </h1>
-        <p className="studio-dashboard__lead">
+        <p className="mt-3 max-w-4xl text-sm leading-7 text-[color:var(--color-muted)]">
           Keep one workspace in focus while moving from source capture to
-          collection release, and then to owner-side commerce supervision. This
-          is your operator command surface for the next safe action.
+          collection release, and then to owner-side commerce supervision. This is
+          your operator command surface for the next safe action.
         </p>
-        <div className="studio-dashboard__actions">
-          <Link
-            className="button-action button-action--accent"
-            href={primaryDestination}
+        <div className="mt-4 flex flex-wrap gap-2">
+          <ActionButton
+            onClick={() => {
+              return;
+            }}
+            tone="accent"
+            type="button"
           >
             {nextActionLabel}
-          </Link>
-          <Link className="action-link" href="/studio/collections">
+          </ActionButton>
+          <ActionLink href="/studio/collections" tone="inline">
             Review latest collections
-          </Link>
-          <Link className="inline-link" href="/">
+          </ActionLink>
+          <ActionLink href="/" tone="inline">
             Return to marketing
-          </Link>
+          </ActionLink>
         </div>
       </header>
-      <section className="studio-dashboard__context">
-        <article className="studio-dashboard__panel">
-          <h2 className="studio-dashboard__panel-title">
+      <section className="grid gap-4 xl:grid-cols-2">
+        <article className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-5">
+          <h2 className="text-xl font-semibold font-[var(--font-display)]">
             Current workspace context
           </h2>
-          <dl className="studio-dashboard__meta">
-            <div>
-              <dt>Workspace</dt>
+          <dl className="mt-4 grid gap-2 text-sm">
+            <div className="grid gap-0.5">
+              <dt className="text-xs uppercase tracking-[0.15em] text-[color:var(--color-muted)]">
+                Workspace
+              </dt>
               <dd>{workspaceName}</dd>
             </div>
-            <div>
-              <dt>Slug</dt>
+            <div className="grid gap-0.5">
+              <dt className="text-xs uppercase tracking-[0.15em] text-[color:var(--color-muted)]">
+                Slug
+              </dt>
               <dd>{workspaceSlug}</dd>
             </div>
-            <div>
-              <dt>Status</dt>
+            <div className="grid gap-0.5">
+              <dt className="text-xs uppercase tracking-[0.15em] text-[color:var(--color-muted)]">
+                Status
+              </dt>
               <dd>{workspaceStatus}</dd>
             </div>
-            <div>
-              <dt>Role</dt>
+            <div className="grid gap-0.5">
+              <dt className="text-xs uppercase tracking-[0.15em] text-[color:var(--color-muted)]">
+                Role
+              </dt>
               <dd>{roleCopy}</dd>
             </div>
-            <div>
-              <dt>Workspace owner</dt>
+            <div className="grid gap-0.5">
+              <dt className="text-xs uppercase tracking-[0.15em] text-[color:var(--color-muted)]">
+                Workspace owner
+              </dt>
               <dd>{ownerAddress}</dd>
             </div>
           </dl>
         </article>
-        <article className="studio-dashboard__panel">
-          <h2 className="studio-dashboard__panel-title">Operational rhythm</h2>
-          <p>
+        <article className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-5">
+          <h2 className="text-xl font-semibold font-[var(--font-display)]">
+            Operational rhythm
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-[color:var(--color-muted)]">
             Work with this sequence: capture source assets, curate collections,
             run storefront release preparation, then monitor fulfillment and
             delivery.
           </p>
-          <ol className="studio-dashboard__path">
+          <ol className="mt-3 list-decimal space-y-1 pl-4 text-sm text-[color:var(--color-muted)]">
             <li>Capture and process source material.</li>
             <li>Approve and curate outputs into release drafts.</li>
             <li>Publish from draft once review constraints pass.</li>
             <li>Close the loop with checkout and fulfillment health.</li>
           </ol>
-          <p className="studio-dashboard__focus">
+          <p className="mt-3 text-sm text-[color:var(--color-muted)]">
             All actions are scoped to the selected workspace and remain
             protected by auth boundaries.
           </p>
         </article>
       </section>
-      <section
-        className="studio-dashboard__modules"
-        aria-label="Primary studio areas"
-      >
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {studioModules.map((module, index) => (
-          <article className="studio-dashboard__module" key={module.title}>
-            <span className="studio-dashboard__module-index">0{index + 1}</span>
-            <h2 className="studio-dashboard__module-title">{module.title}</h2>
-            <p>{module.description}</p>
-            <Link className="studio-dashboard__module-link" href={module.href}>
+          <article
+            className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4"
+            key={module.title}
+          >
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
+              0{index + 1}
+            </span>
+            <h2 className="mt-2 text-lg font-semibold">{module.title}</h2>
+            <p className="mt-2 text-sm text-[color:var(--color-muted)]">
+              {module.description}
+            </p>
+            <ActionLink href={module.href} tone="inline" className="mt-4">
               Open {module.title.toLowerCase()}
-            </Link>
+            </ActionLink>
           </article>
         ))}
       </section>

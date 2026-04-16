@@ -10,8 +10,8 @@
   "scripts": {
     "app:up": "node scripts/run-app-up.mjs",
     "build": "turbo run build",
-    "db:migrate:deploy": "pnpm --filter @ai-nft-forge/database prisma:migrate:deploy",
-    "db:migrate:status": "pnpm --filter @ai-nft-forge/database prisma:migrate:status",
+    "db:migrate:deploy": "node scripts/run-database-migration-command.mjs deploy",
+    "db:migrate:status": "node scripts/run-database-migration-command.mjs status",
     "generation-backend:health": "pnpm --filter @ai-nft-forge/generation-backend health",
     "generation-backend:ready": "pnpm --filter @ai-nft-forge/generation-backend ready",
     "infra:config": "node scripts/run-compose.mjs local config",

@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { CSSProperties } from "react";
 
 import {
   createCollectionContractPath,
   createCollectionTokenUriPath
 } from "@ai-nft-forge/contracts";
+import { ActionLink } from "@ai-nft-forge/ui";
 import type { CollectionPublicBrandTheme } from "@ai-nft-forge/shared";
 
 import { createRuntimePublicCollectionService } from "../../../../../../server/collections/runtime";
-
+import { createStorefrontThemeStyle } from "../../../../../../lib/ui/storefront-theme";
 import { PurchasePanel } from "./purchase-panel";
 
 type CollectionPageProps = {
@@ -158,74 +158,43 @@ function computeProofStats(input: {
   ];
 }
 
-function createStorefrontThemeStyle(theme: CollectionPublicBrandTheme) {
-  const presetTokens: Record<
-    CollectionPublicBrandTheme["themePreset"],
-    Record<string, string>
-  > = {
-    editorial_warm: {
-      "--storefront-bg":
-        "linear-gradient(180deg, rgba(255, 249, 240, 0.98) 0%, rgba(245, 236, 219, 0.96) 100%)",
-      "--storefront-panel": "rgba(255, 252, 247, 0.74)",
-      "--storefront-panel-strong": "rgba(255, 249, 241, 0.9)",
-      "--storefront-text": "#201711",
-      "--storefront-muted": "#6f5e51",
-      "--storefront-border": "rgba(80, 48, 26, 0.12)"
-    },
-    gallery_mono: {
-      "--storefront-bg":
-        "linear-gradient(180deg, rgba(244, 244, 241, 0.98) 0%, rgba(228, 229, 225, 0.94) 100%)",
-      "--storefront-panel": "rgba(255, 255, 255, 0.7)",
-      "--storefront-panel-strong": "rgba(255, 255, 255, 0.88)",
-      "--storefront-text": "#111315",
-      "--storefront-muted": "#565d63",
-      "--storefront-border": "rgba(17, 19, 21, 0.1)"
-    },
-    midnight_launch: {
-      "--storefront-bg":
-        "radial-gradient(circle at top left, rgba(255, 143, 78, 0.16), transparent 34%), linear-gradient(180deg, rgba(13, 18, 28, 0.98) 0%, rgba(23, 31, 48, 0.95) 100%)",
-      "--storefront-panel": "rgba(14, 20, 34, 0.7)",
-      "--storefront-panel-strong": "rgba(22, 29, 47, 0.84)",
-      "--storefront-text": "#f3f2ed",
-      "--storefront-muted": "#b5bac7",
-      "--storefront-border": "rgba(243, 242, 237, 0.12)"
-    }
-  };
-
-  return {
-    ...presetTokens[theme.themePreset],
-    "--storefront-accent": theme.accentColor
-  } as CSSProperties;
+function SectionHeader({
+  kicker,
+  title
+}: {
+  kicker: string;
+  title: string;
+}) {
+  return (
+    <div className="mb-3 space-y-2">
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
+        {kicker}
+      </p>
+      <h2 className="text-2xl font-semibold font-[var(--font-display)]">
+        {title}
+      </h2>
+    </div>
+  );
 }
 
-function buildCollectionMetadataPath(input: {
-  brandSlug: string;
-  collectionSlug: string;
+function StorefrontChip({
+  accent,
+  children
+}: {
+  accent?: boolean;
+  children: React.ReactNode;
 }) {
-  return `/brands/${input.brandSlug}/collections/${input.collectionSlug}/metadata`;
-}
-
-function createPrimaryHeroCallToAction(input: {
-  collectionStatus: "upcoming" | "live" | "sold_out" | "ended";
-  fallbackToReserve: string;
-  primaryCtaHref: string | null;
-  primaryCtaLabel: string | null;
-}) {
-  if (input.primaryCtaLabel && input.primaryCtaHref) {
-    return {
-      label: input.primaryCtaLabel,
-      href: input.primaryCtaHref
-    };
-  }
-
-  if (input.collectionStatus === "live") {
-    return {
-      label: "Reserve now",
-      href: input.fallbackToReserve
-    };
-  }
-
-  return null;
+  return (
+    <span
+      className={
+        accent
+          ? "inline-flex items-center rounded-full border border-[color:var(--storefront-accent)]/45 bg-[color:var(--storefront-accent)]/15 px-3 py-1 text-xs font-semibold text-[color:var(--storefront-accent)]"
+          : "inline-flex items-center rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] px-2.5 py-1 text-xs text-[color:var(--storefront-muted)]"
+      }
+    >
+      {children}
+    </span>
+  );
 }
 
 function CollectionHeroSection(input: {
@@ -246,91 +215,84 @@ function CollectionHeroSection(input: {
   totalSupply: number | null;
   priceLabel: string | null;
 }) {
-  const fallbackCta = createPrimaryHeroCallToAction({
-    collectionStatus: input.storefrontStatus,
-    fallbackToReserve: "#reserve",
-    primaryCtaHref: input.primaryCtaHref,
-    primaryCtaLabel: input.primaryCtaLabel
-  });
+  const fallbackCta =
+    input.primaryCtaLabel && input.primaryCtaHref
+      ? {
+          label: input.primaryCtaLabel,
+          href: input.primaryCtaHref
+        }
+      : input.storefrontStatus === "live"
+        ? {
+            label: "Reserve now",
+            href: "#reserve"
+          }
+        : null;
 
   return (
-    <section className="storefront-collection-hero">
-      <div className="storefront-collection-hero__media">
+    <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+      <div className="space-y-5">
+        <StorefrontChip accent>{input.featuredMessage}</StorefrontChip>
+        <p className="text-xs uppercase tracking-[0.2em] text-[color:var(--storefront-muted)]">
+          {input.brandPath}
+        </p>
+        <h1 className="text-3xl font-semibold leading-tight font-[var(--font-display)] md:text-5xl">
+          {input.title}
+        </h1>
+        <p className="text-sm leading-7 text-[color:var(--storefront-muted)] md:text-base">
+          {input.description}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {fallbackCta ? (
+            <ActionLink href={fallbackCta.href} tone="action">
+              {fallbackCta.label}
+            </ActionLink>
+          ) : null}
+          {input.secondaryCtaLabel && input.secondaryCtaHref ? (
+            <ActionLink href={input.secondaryCtaHref} tone="inline">
+              {input.secondaryCtaLabel}
+            </ActionLink>
+          ) : null}
+          <ActionLink href={input.brandPath} tone="inline">
+            Back to brand release floor
+          </ActionLink>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <StorefrontChip accent>Launch mode</StorefrontChip>
+          <StorefrontChip>
+            {input.storefrontStatus === "live"
+              ? "Open"
+              : input.storefrontStatus === "upcoming"
+                ? "Queued"
+                : input.storefrontStatus === "ended"
+                  ? "Closed"
+                  : "Sold out"}
+          </StorefrontChip>
+          {input.totalSupply ? (
+            <StorefrontChip>{formatCount(input.totalSupply)} artworks</StorefrontChip>
+          ) : null}
+          {input.priceLabel ? <StorefrontChip>{input.priceLabel}</StorefrontChip> : null}
+          <StorefrontChip>{formatCount(input.claimedCount)} claimed</StorefrontChip>
+        </div>
+      </div>
+      <div className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] p-4">
         {input.heroImageUrl ? (
           <img
             alt={`${input.title} hero artwork`}
-            className="storefront-collection-hero__image"
+            className="aspect-[4/5] w-full rounded-2xl border border-[color:var(--storefront-border)] object-cover"
             src={input.heroImageUrl}
           />
         ) : (
-          <div className="storefront-collection-hero__fallback">
+          <div className="aspect-[4/5] rounded-2xl border border-dashed border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-4 text-sm text-[color:var(--storefront-muted)] grid place-items-center">
             Hero artwork unavailable
           </div>
         )}
-        <div className="storefront-collection-hero__status-stack">
-          <span className="storefront-chip storefront-chip--accent">
-            {formatStatusLabel(input.storefrontStatus)}
-          </span>
-          <span className="storefront-chip">{input.availabilityLabel}</span>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <StorefrontChip accent>{input.availabilityLabel}</StorefrontChip>
+          <StorefrontChip>{formatTimestamp(input.launchAt)}</StorefrontChip>
         </div>
-      </div>
-      <div className="storefront-collection-hero__copy">
-        <div>
-          <p className="storefront-collection-hero__kicker">
-            {input.featuredMessage}
-          </p>
-          <p className="storefront-wordmark">{input.brandThemeWordmark}</p>
-          <p className="storefront-wordmark__path">{input.brandPath}</p>
-        </div>
-        <h1 className="storefront-hero__title">{input.title}</h1>
-        <p className="storefront-hero__lead">{input.description}</p>
-        <div className="storefront-hero__actions">
-          {fallbackCta ? (
-            <Link
-              className="storefront-button storefront-button--primary"
-              href={fallbackCta.href}
-            >
-              {fallbackCta.label}
-            </Link>
-          ) : null}
-          {input.secondaryCtaLabel && input.secondaryCtaHref ? (
-            <Link
-              className="storefront-button storefront-button--secondary"
-              href={input.secondaryCtaHref}
-              target="_blank"
-            >
-              {input.secondaryCtaLabel}
-            </Link>
-          ) : null}
-          <Link
-            className="storefront-button storefront-button--ghost"
-            href={input.brandPath}
-          >
-            Back to brand release floor
-          </Link>
-        </div>
-        <div
-          className="storefront-collection-hero__meta"
-          aria-label="Collection status"
-        >
-          <article className="storefront-chip storefront-chip--accent">
-            Launch mode
-          </article>
-          <article className="storefront-chip">
-            {launchLabel(input.launchAt, input.storefrontStatus)}
-          </article>
-          {input.totalSupply ? (
-            <article className="storefront-chip">
-              {formatCount(input.totalSupply)} artworks
-            </article>
-          ) : null}
-          {input.priceLabel ? (
-            <article className="storefront-chip">{input.priceLabel}</article>
-          ) : null}
-          <article className="storefront-chip">
-            {formatCount(input.claimedCount)} claimed
-          </article>
-        </div>
+        <p className="mt-4 text-sm text-[color:var(--storefront-muted)]">
+          {input.brandThemeWordmark}
+        </p>
       </div>
     </section>
   );
@@ -344,23 +306,30 @@ function CollectionLaunchStory(input: {
   mintedTokenCount: number;
 }) {
   return (
-    <section className="storefront-section storefront-collection-story">
-      <div className="storefront-collection-story__copy">
-        <p className="storefront-section-kicker">Launch story</p>
-        <h2>{input.headline}</h2>
-        <p className="storefront-hero__lead">{input.lead}</p>
-      </div>
-      <div className="storefront-collection-story__proof storefront-proof-card">
-        <p className="storefront-section-kicker">Collector proof</p>
-        <h3>{formatStatusLabel(input.status)} runway</h3>
-        <div className="storefront-proof-card__statset">
-          <span className="storefront-chip storefront-chip--accent">
-            {input.availabilityLabel}
-          </span>
-          <span className="storefront-chip">
-            {formatCount(input.mintedTokenCount)} minted proofs
-          </span>
+    <section className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] p-5">
+      <div className="grid gap-4 md:grid-cols-[1fr_0.8fr] md:items-center">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
+            Launch story
+          </p>
+          <h2 className="mt-1 text-2xl font-semibold font-[var(--font-display)]">
+            {input.headline}
+          </h2>
+          <p className="mt-3 text-sm leading-7 text-[color:var(--storefront-muted)]">
+            {input.lead}
+          </p>
         </div>
+        <article className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
+            Collector proof
+          </p>
+          <h3 className="mt-2 text-xl font-semibold">
+            {formatStatusLabel(input.status)} runway
+          </h3>
+          <p className="mt-2 text-sm text-[color:var(--storefront-muted)]">
+            {input.availabilityLabel} · {formatCount(input.mintedTokenCount)} minted proofs
+          </p>
+        </article>
       </div>
     </section>
   );
@@ -396,28 +365,40 @@ function CollectionProofPanel(input: {
   const proofs = computeProofStats(input);
 
   return (
-    <section className="storefront-section" id="proofs">
-      <div className="storefront-section__heading">
-        <div>
-          <p className="storefront-section-kicker">Collector proof</p>
-          <h2>Drop ledger and launch telemetry</h2>
-        </div>
-      </div>
-      <div className="storefront-collection-proof-grid">
+    <section className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] p-5">
+      <SectionHeader
+        kicker="Collector proof"
+        title="Drop ledger and launch telemetry"
+      />
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {proofs.map((proof) => (
-          <article className="storefront-proof-card" key={proof.label}>
-            <span>{proof.label}</span>
-            <strong>{proof.value}</strong>
+          <article
+            className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-4"
+            key={proof.label}
+          >
+            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
+              {proof.label}
+            </span>
+            <strong className="mt-1 block text-sm text-[color:var(--storefront-text)]">
+              {proof.value}
+            </strong>
           </article>
         ))}
       </div>
-      <p className="storefront-collection-trust-copy">
+      <p className="mt-4 text-sm leading-7 text-[color:var(--storefront-muted)]">
         {input.storefrontStatus === "upcoming"
           ? describeSupply(input)
           : `${describeSupply(input)}. ${input.activeDeployment ? `Deployed contract on ${input.activeDeployment.chain.label}.` : "No onchain deployment recorded yet."}`}
       </p>
+      <p className="mt-2 text-xs text-[color:var(--storefront-accent)]">
+        Launch timing: {launchLabel(input.launchAt, input.storefrontStatus)} · Ends {formatTimestamp(input.endAt)}
+      </p>
     </section>
   );
+}
+
+function linkClass(): "inline" {
+  return "inline";
 }
 
 function CollectionReserveZone(input: {
@@ -438,20 +419,18 @@ function CollectionReserveZone(input: {
   availabilityLabel: string;
 }) {
   return (
-    <section className="storefront-section" id="reserve">
-      <div className="storefront-section__heading">
-        <div>
-          <p className="storefront-section-kicker">Reserve module</p>
-          <h2>Secure your edition before it sells out</h2>
-        </div>
-        <div className="storefront-chip-row">
-          <span className="storefront-chip storefront-chip--accent">
-            {input.availabilityLabel}
-          </span>
-          <span className="storefront-chip">Reserve-ready</span>
+    <section className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] p-5">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <SectionHeader
+          kicker="Reserve module"
+          title="Secure your edition before it sells out"
+        />
+        <div className="flex flex-wrap gap-2">
+          <StorefrontChip accent>{input.availabilityLabel}</StorefrontChip>
+          <StorefrontChip>Reserve-ready</StorefrontChip>
         </div>
       </div>
-      <div className="storefront-collection-reserve-grid">
+      <div className="grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
         <PurchasePanel
           activeReservationCount={input.activeReservationCount}
           availableEditionCount={input.availableEditionCount}
@@ -463,21 +442,22 @@ function CollectionReserveZone(input: {
           priceLabel={input.priceLabel}
           providerMode={input.providerMode}
         />
-        <article className="storefront-panel storefront-collection-trust-card">
-          <span className="storefront-section-kicker">Reserve trust</span>
-          <h3>Trust before checkout</h3>
-          <ul className="storefront-collection-trust-list">
-            <li>Reservation is time-bound and consumed at checkout.</li>
-            <li>
-              Availability is sourced from immutable published snapshot state.
-            </li>
-            <li>
-              Provider state and launch timing remain explicit in this route.
-            </li>
-            <li>
-              Onchain deployment status is presented as transparent proof.
-            </li>
+        <article className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
+            Reserve trust
+          </p>
+          <h3 className="mt-2 text-xl font-semibold">Trust before checkout</h3>
+          <ul className="mt-3 space-y-2 text-sm text-[color:var(--storefront-muted)]">
+            <li>Reservations are time-bound and consumed at checkout.</li>
+            <li>Availability is sourced from immutable published snapshot state.</li>
+            <li>Provider state and launch timing remain explicit in this route.</li>
+            <li>Onchain deployment status is presented as transparent proof.</li>
           </ul>
+          {input.providerMode === "stripe" ? (
+            <p className="mt-3 text-xs text-[color:var(--storefront-accent)]">
+              Stripe-powered checkout available for active reservations.
+            </p>
+          ) : null}
         </article>
       </div>
     </section>
@@ -497,40 +477,37 @@ function CollectionGallery(input: {
 }) {
   if (input.items.length === 0) {
     return (
-      <section className="storefront-section">
-        <div className="storefront-section__heading">
-          <p className="storefront-section-kicker">Gallery wall</p>
-          <h2>{`Gallery is waiting for published variants for ${input.title}`}</h2>
-        </div>
-        <div className="storefront-empty-state">
+      <section className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] p-5">
+        <SectionHeader
+          kicker="Gallery wall"
+          title={`Gallery waiting for published variants for ${input.title}`}
+        />
+        <p className="text-sm text-[color:var(--storefront-muted)]">
           No artwork has been published for this release yet.
-        </div>
+        </p>
       </section>
     );
   }
 
   return (
-    <section className="storefront-section">
-      <div className="storefront-section__heading">
-        <p className="storefront-section-kicker">Gallery wall</p>
-        <h2>Curated collectible set</h2>
-      </div>
-      <div className="storefront-collection-gallery-grid">
+    <section className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] p-5">
+      <SectionHeader kicker="Gallery wall" title="Curated collectible set" />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {input.items.map((item) => (
           <article
-            className="storefront-collection-gallery-card"
+            className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] overflow-hidden"
             key={item.generatedAssetId}
           >
             <img
               alt={`${input.title} edition ${item.position}`}
-              className="storefront-collection-gallery-card__image"
+              className="aspect-[1/1] w-full border-b border-[color:var(--storefront-border)] object-cover"
               src={item.imageUrl}
             />
-            <div className="storefront-collection-gallery-card__copy">
-              <strong>
+            <div className="space-y-1 p-3">
+              <strong className="block text-sm">
                 {item.sourceAssetOriginalFilename} · Edition {item.position}
               </strong>
-              <span>
+              <span className="text-xs text-[color:var(--storefront-muted)]">
                 Variant {item.variantIndex} from {item.pipelineKey}
               </span>
             </div>
@@ -552,83 +529,76 @@ function CollectionTechnicalSection(input: {
   } | null;
 }) {
   return (
-    <section className="storefront-section" id="technical-proof">
-      <div className="storefront-section__heading">
-        <div>
-          <p className="storefront-section-kicker">Technical proof</p>
-          <h2>Manifest and contract references</h2>
-        </div>
-      </div>
-      <div className="storefront-technical-proof-grid">
-        <article className="storefront-proof-card storefront-proof-card--technical">
-          <p>Deployment record</p>
-          <h3>{input.activeDeployment ? "Deployed" : "Not deployed"}</h3>
+    <section className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] p-5">
+      <SectionHeader
+        kicker="Technical proof"
+        title="Manifest and contract references"
+      />
+      <div className="grid gap-4 xl:grid-cols-3">
+        <article className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-4">
+          <p className="text-xs text-[color:var(--storefront-muted)]">
+            Deployment record
+          </p>
+          <h3 className="mt-2 text-xl font-semibold">
+            {input.activeDeployment ? "Deployed" : "Not deployed"}
+          </h3>
           {input.activeDeployment ? (
-            <div className="storefront-technical-proof-list">
-              <span>Chain {input.activeDeployment.chain.label}</span>
-              <span>
-                {formatAddressShort(input.activeDeployment.contractAddress)}
-              </span>
-              <span>
-                {formatAddressShort(input.activeDeployment.deployTxHash)}
-              </span>
-              <span>{formatTimestamp(input.activeDeployment.deployedAt)}</span>
+            <div className="mt-3 space-y-1 text-sm text-[color:var(--storefront-muted)]">
+              <p>Chain {input.activeDeployment.chain.label}</p>
+              <p>{formatAddressShort(input.activeDeployment.contractAddress)}</p>
+              <p>{formatAddressShort(input.activeDeployment.deployTxHash)}</p>
+              <p>{formatTimestamp(input.activeDeployment.deployedAt)}</p>
             </div>
-          ) : null}
-          {!input.activeDeployment ? (
-            <p className="storefront-technical-proof-copy">
+          ) : (
+            <p className="mt-2 text-sm text-[color:var(--storefront-muted)]">
               This collection has no recorded chain deployment yet.
             </p>
-          ) : null}
+          )}
         </article>
 
-        <article className="storefront-proof-card storefront-proof-card--technical">
-          <p>Publication manifest</p>
-          <h3>Public metadata</h3>
-          <div className="storefront-tech-links storefront-tech-links--stacked">
-            <Link
-              className="inline-link"
-              href={input.metadataPath}
-              target="_blank"
-            >
+        <article className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-4">
+          <p className="text-xs text-[color:var(--storefront-muted)]">
+            Publication manifest
+          </p>
+          <h3 className="mt-2 text-xl font-semibold">Public metadata</h3>
+          <div className="mt-3 flex flex-col gap-2">
+            <ActionLink href={input.metadataPath} tone={linkClass()} target="_blank">
               Collection metadata JSON
-            </Link>
-            <Link
-              className="inline-link"
-              href={input.contractPath}
-              target="_blank"
-            >
+            </ActionLink>
+            <ActionLink href={input.contractPath} tone={linkClass()} target="_blank">
               Contract manifest
-            </Link>
+            </ActionLink>
           </div>
         </article>
 
-        <article className="storefront-proof-card storefront-proof-card--technical">
-          <p>Token URI reference</p>
-          <h3>Edition example</h3>
+        <article className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-4">
+          <p className="text-xs text-[color:var(--storefront-muted)]">
+            Token URI reference
+          </p>
+          <h3 className="mt-2 text-xl font-semibold">Edition example</h3>
           {input.firstEdition ? (
-            <div className="storefront-tech-links storefront-tech-links--stacked">
-              <Link
-                className="inline-link"
+            <div className="mt-3 flex flex-col gap-2">
+              <ActionLink
                 href={`${input.metadataPath}/${input.firstEdition.position}`}
+                tone={linkClass()}
                 target="_blank"
               >
                 Metadata #{input.firstEdition.position}
-              </Link>
-              <Link
-                className="inline-link"
+              </ActionLink>
+              <ActionLink
                 href={createCollectionTokenUriPath({
                   brandSlug: input.brandSlug,
                   collectionSlug: input.collectionSlug,
                   tokenId: input.firstEdition.position
                 })}
+                tone={linkClass()}
                 target="_blank"
               >
                 Token URI sample #{input.firstEdition.position}
-              </Link>
+              </ActionLink>
             </div>
           ) : (
-            <p className="storefront-technical-proof-copy">
+            <p className="mt-2 text-sm text-[color:var(--storefront-muted)]">
               Add editions to generate sample token URI references.
             </p>
           )}
@@ -647,34 +617,38 @@ function CollectionRelatedSection(input: {
   }>;
 }) {
   return (
-    <section className="storefront-section">
-      <div className="storefront-section__heading">
-        <p className="storefront-section-kicker">Related drops</p>
-        <h2>Connected brand releases</h2>
-      </div>
+    <section className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] p-5">
+      <SectionHeader kicker="Related drops" title="Connected brand releases" />
       {input.relatedCollections.length === 0 ? (
-        <div className="storefront-empty-state">
+        <p className="text-sm text-[color:var(--storefront-muted)]">
           This brand has no other released drops yet.
-        </div>
+        </p>
       ) : (
-        <div className="storefront-related-grid storefront-related-grid--collection">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {input.relatedCollections.map((related) => (
             <Link
-              className="storefront-related-card storefront-related-card--collection"
+              className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-4 transition hover:translate-y-[-2px] hover:border-[color:var(--storefront-accent)] hover:shadow-[0_12px_40px_rgba(255,255,255,0.06)]"
               href={related.publicPath}
               key={related.publicPath}
             >
-              <span className="storefront-chip storefront-chip--accent">
-                {formatStatusLabel(related.storefrontStatus)}
-              </span>
-              <strong>{related.title}</strong>
-              <span>Collection {related.collectionSlug}</span>
+              <StorefrontChip accent>{formatStatusLabel(related.storefrontStatus)}</StorefrontChip>
+              <h3 className="mt-2 text-lg font-semibold">{related.title}</h3>
+              <p className="mt-1 text-sm text-[color:var(--storefront-muted)]">
+                Collection {related.collectionSlug}
+              </p>
             </Link>
           ))}
         </div>
       )}
     </section>
   );
+}
+
+function buildCollectionMetadataPath(input: {
+  brandSlug: string;
+  collectionSlug: string;
+}) {
+  return `/brands/${input.brandSlug}/collections/${input.collectionSlug}/metadata`;
 }
 
 export default async function CollectionPage({ params }: CollectionPageProps) {
@@ -708,82 +682,82 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
 
   return (
     <div
-      className={`storefront-shell storefront-shell--${collection.brandTheme.themePreset}`}
+      className="min-h-screen bg-[var(--storefront-bg)] text-[color:var(--storefront-text)]"
       style={createStorefrontThemeStyle(collection.brandTheme)}
     >
-      <CollectionHeroSection
-        availabilityLabel={collection.availabilityLabel}
-        brandPath={collection.brandPublicPath}
-        brandThemeWordmark={
-          collection.brandTheme.wordmark ?? collection.brandName
-        }
-        description={launchStory}
-        featuredMessage={collection.brandTheme.featuredReleaseLabel}
-        heroImageUrl={collection.heroImageUrl}
-        launchAt={collection.launchAt}
-        primaryCtaHref={collection.primaryCtaHref}
-        primaryCtaLabel={collection.primaryCtaLabel}
-        secondaryCtaHref={collection.secondaryCtaHref}
-        secondaryCtaLabel={collection.secondaryCtaLabel}
-        claimedCount={collection.soldCount}
-        storefrontStatus={collection.storefrontStatus}
-        title={heroHeadline}
-        totalSupply={collection.totalSupply}
-        priceLabel={collection.priceLabel}
-      />
+      <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-8 md:px-6 lg:px-8">
+        <CollectionHeroSection
+          availabilityLabel={collection.availabilityLabel}
+          brandPath={collection.brandPublicPath}
+          brandThemeWordmark={collection.brandTheme.wordmark ?? collection.brandName}
+          description={launchStory}
+          featuredMessage={collection.brandTheme.featuredReleaseLabel}
+          heroImageUrl={collection.heroImageUrl}
+          launchAt={collection.launchAt}
+          primaryCtaHref={collection.primaryCtaHref}
+          primaryCtaLabel={collection.primaryCtaLabel}
+          secondaryCtaHref={collection.secondaryCtaHref}
+          secondaryCtaLabel={collection.secondaryCtaLabel}
+          claimedCount={collection.soldCount}
+          storefrontStatus={collection.storefrontStatus}
+          title={heroHeadline}
+          totalSupply={collection.totalSupply}
+          priceLabel={collection.priceLabel}
+        />
 
-      <CollectionLaunchStory
-        availabilityLabel={collection.availabilityLabel}
-        headline={heroHeadline}
-        lead={launchStory}
-        mintedTokenCount={collection.mintedTokenCount}
-        status={collection.storefrontStatus}
-      />
+        <CollectionLaunchStory
+          availabilityLabel={collection.availabilityLabel}
+          headline={heroHeadline}
+          lead={launchStory}
+          mintedTokenCount={collection.mintedTokenCount}
+          status={collection.storefrontStatus}
+        />
 
-      <CollectionProofPanel
-        activeDeployment={collection.activeDeployment}
-        launchAt={collection.launchAt}
-        endAt={collection.endAt}
-        storefrontStatus={collection.storefrontStatus}
-        totalSupply={collection.totalSupply}
-        remainingSupply={collection.remainingSupply}
-        priceLabel={collection.priceLabel}
-        soldCount={collection.soldCount}
-        availableEditionCount={collection.commerce.availableEditionCount}
-        activeReservationCount={collection.commerce.activeReservationCount}
-      />
+        <CollectionProofPanel
+          activeDeployment={collection.activeDeployment}
+          launchAt={collection.launchAt}
+          endAt={collection.endAt}
+          storefrontStatus={collection.storefrontStatus}
+          totalSupply={collection.totalSupply}
+          remainingSupply={collection.remainingSupply}
+          priceLabel={collection.priceLabel}
+          soldCount={collection.soldCount}
+          availableEditionCount={collection.commerce.availableEditionCount}
+          activeReservationCount={collection.commerce.activeReservationCount}
+        />
 
-      <CollectionReserveZone
-        activeReservationCount={collection.commerce.activeReservationCount}
-        availableEditionCount={collection.commerce.availableEditionCount}
-        brandSlug={collection.brandSlug}
-        checkoutAvailabilityReason={
-          collection.commerce.checkoutAvailabilityReason
-        }
-        checkoutEnabled={collection.commerce.checkoutEnabled}
-        collectionSlug={collection.collectionSlug}
-        nextAvailableEditionNumber={
-          collection.commerce.nextAvailableEditionNumber
-        }
-        priceLabel={collection.priceLabel}
-        providerMode={collection.commerce.providerMode}
-        availabilityLabel={collection.availabilityLabel}
-      />
+        <CollectionReserveZone
+          activeReservationCount={collection.commerce.activeReservationCount}
+          availableEditionCount={collection.commerce.availableEditionCount}
+          brandSlug={collection.brandSlug}
+          checkoutAvailabilityReason={
+            collection.commerce.checkoutAvailabilityReason
+          }
+          checkoutEnabled={collection.commerce.checkoutEnabled}
+          collectionSlug={collection.collectionSlug}
+          nextAvailableEditionNumber={
+            collection.commerce.nextAvailableEditionNumber
+          }
+          priceLabel={collection.priceLabel}
+          providerMode={collection.commerce.providerMode}
+          availabilityLabel={collection.availabilityLabel}
+        />
 
-      <CollectionGallery items={collection.items} title={collection.title} />
+        <CollectionGallery items={collection.items} title={collection.title} />
 
-      <CollectionTechnicalSection
-        activeDeployment={collection.activeDeployment}
-        collectionSlug={collection.collectionSlug}
-        brandSlug={collection.brandSlug}
-        metadataPath={metadataPath}
-        contractPath={contractPath}
-        firstEdition={firstEdition}
-      />
+        <CollectionTechnicalSection
+          activeDeployment={collection.activeDeployment}
+          collectionSlug={collection.collectionSlug}
+          brandSlug={collection.brandSlug}
+          metadataPath={metadataPath}
+          contractPath={contractPath}
+          firstEdition={firstEdition}
+        />
 
-      <CollectionRelatedSection
-        relatedCollections={collection.relatedCollections}
-      />
+        <CollectionRelatedSection
+          relatedCollections={collection.relatedCollections}
+        />
+      </div>
     </div>
   );
 }

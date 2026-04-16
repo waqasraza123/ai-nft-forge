@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { startTransition, useEffectEvent, useState } from "react";
 
@@ -10,7 +9,15 @@ import {
   workspaceRetentionFleetReportResponseSchema,
   type WorkspaceRetentionFleetReportResponse
 } from "@ai-nft-forge/shared";
-import { MetricTile, Pill, SurfaceCard, SurfaceGrid } from "@ai-nft-forge/ui";
+import {
+  ActionButton,
+  ActionLink,
+  MetricTile,
+  Pill,
+  StatusBanner,
+  SurfaceCard,
+  SurfaceGrid
+} from "@ai-nft-forge/ui";
 
 type OpsRetentionClientProps = {
   initialReport: WorkspaceRetentionFleetReportResponse["report"];
@@ -57,6 +64,24 @@ function formatDurationSeconds(value: number | null) {
   return remainingMinutes === 0
     ? `${hours}h`
     : `${hours}h ${remainingMinutes}m`;
+}
+
+function resolveNoticeTone(
+  tone: "error" | "info" | "success"
+) {
+  return tone === "error" ? "error" : tone === "success" ? "success" : "info";
+}
+
+function resolveAutomationTone(status: string | null | undefined) {
+  if (status === "healthy") {
+    return "success";
+  }
+
+  if (status === "disabled") {
+    return "info";
+  }
+
+  return "error";
 }
 
 async function parseJsonResponse<T>(input: {
@@ -253,7 +278,7 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
         span={12}
         title="Retention and decommission overview"
       >
-        <div className="metric-row">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
           <MetricTile
             label="Workspaces"
             value={report.summary.totalWorkspaceCount.toString()}
@@ -279,36 +304,28 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
             value={report.summary.reasonRequiredWorkspaceCount.toString()}
           />
         </div>
-        <div className="pill-row">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <Pill>{formatTimestamp(report.generatedAt)}</Pill>
-          <Link className="action-link" href="/api/ops/retention?format=json">
+          <ActionLink href="/api/ops/retention?format=json" tone="inline">
             Export JSON
-          </Link>
-          <Link className="action-link" href="/api/ops/retention?format=csv">
+          </ActionLink>
+          <ActionLink href="/api/ops/retention?format=csv" tone="inline">
             Export CSV
-          </Link>
-          <button
-            className="button-action button-action--secondary"
+          </ActionLink>
+          <ActionButton
             disabled={isRefreshing}
             onClick={() => {
               void refreshReport();
             }}
+            tone="secondary"
             type="button"
           >
             {isRefreshing ? "Refreshing…" : "Refresh retention"}
-          </button>
+          </ActionButton>
         </div>
         {notice ? (
-          <div
-            className={`status-banner ${
-              notice.tone === "error"
-                ? "status-banner--error"
-                : notice.tone === "success"
-                  ? "status-banner--success"
-                  : ""
-            }`}
-          >
-            <strong>
+          <StatusBanner tone={resolveNoticeTone(notice.tone)} className="mt-3">
+            <strong className="mb-1 block font-semibold">
               {notice.tone === "error"
                 ? "Retention error"
                 : notice.tone === "success"
@@ -316,7 +333,7 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
                   : "Working"}
             </strong>
             <span>{notice.message}</span>
-          </div>
+          </StatusBanner>
         ) : null}
       </SurfaceCard>
       <SurfaceCard
@@ -325,19 +342,15 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
         span={12}
         title="Lifecycle automation"
       >
-        <div
-          className={`status-banner ${
-            report.lifecycleAutomationHealth.status === "healthy"
-              ? "status-banner--success"
-              : report.lifecycleAutomationHealth.status === "disabled"
-                ? "status-banner--info"
-                : "status-banner--error"
-          }`}
+        <StatusBanner
+          tone={resolveAutomationTone(report.lifecycleAutomationHealth.status)}
         >
-          <strong>{report.lifecycleAutomationHealth.status}</strong>
+          <strong className="mb-1 block font-semibold">
+            {report.lifecycleAutomationHealth.status}
+          </strong>
           <span>{report.lifecycleAutomationHealth.message}</span>
-        </div>
-        <div className="pill-row">
+        </StatusBanner>
+        <div className="mt-3 flex flex-wrap gap-2">
           <Pill>
             {report.lifecycleAutomationHealth.enabled
               ? "Scheduler enabled"
@@ -370,12 +383,15 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
               : "n/a"}
           </Pill>
         </div>
-        <div className="collection-item-list">
+        <div className="mt-4 space-y-2">
           {report.recentLifecycleAutomationRuns.length ? (
             report.recentLifecycleAutomationRuns.map((run) => (
-              <div className="collection-item-card" key={run.id}>
-                <div className="collection-item-card__copy">
-                  <strong>
+              <article
+                className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4"
+                key={run.id}
+              >
+                <div className="grid gap-1 text-sm text-[color:var(--color-muted)]">
+                  <strong className="text-[color:var(--color-text)]">
                     {formatStatus(run.status)} · {run.triggerSource}
                   </strong>
                   <span>
@@ -399,10 +415,10 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
                     {run.failureMessage ? ` · ${run.failureMessage}` : ""}
                   </span>
                 </div>
-              </div>
+              </article>
             ))
           ) : (
-            <div className="collection-empty-state">
+            <div className="rounded-2xl border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 text-center text-sm text-[color:var(--color-muted)]">
               No lifecycle automation runs have been recorded yet.
             </div>
           )}
@@ -414,21 +430,21 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
         span={12}
         title="Cancel scheduled decommissions"
       >
-        <div className="pill-row">
+        <div className="flex flex-wrap items-center gap-2">
           <Pill>{selectedCancelableWorkspaceIds.length} selected</Pill>
           <Pill>{cancelableWorkspaceIds.length} cancelable</Pill>
-          <button
-            className="button-action"
+          <ActionButton
             disabled={
               isCanceling || selectedCancelableWorkspaceIds.length === 0
             }
             onClick={() => {
               void handleBulkCancel();
             }}
+            tone="primary"
             type="button"
           >
             {isCanceling ? "Canceling…" : "Cancel selected schedules"}
-          </button>
+          </ActionButton>
         </div>
       </SurfaceCard>
       <SurfaceCard
@@ -437,11 +453,10 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
         span={12}
         title="Lifecycle automation control"
       >
-        <div className="pill-row">
+        <div className="flex flex-wrap items-center gap-2">
           <Pill>{selectedAutomationWorkspaceIds.length} selected</Pill>
           <Pill>{automationManageableWorkspaceIds.length} owner-managed</Pill>
-          <button
-            className="button-action button-action--secondary"
+          <ActionButton
             disabled={
               isUpdatingAutomationPolicy ||
               selectedAutomationWorkspaceIds.length === 0
@@ -449,12 +464,12 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
             onClick={() => {
               void handleBulkAutomationUpdate(false);
             }}
+            tone="secondary"
             type="button"
           >
             {isUpdatingAutomationPolicy ? "Updating…" : "Pause automation"}
-          </button>
-          <button
-            className="button-action"
+          </ActionButton>
+          <ActionButton
             disabled={
               isUpdatingAutomationPolicy ||
               selectedAutomationWorkspaceIds.length === 0
@@ -462,233 +477,219 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
             onClick={() => {
               void handleBulkAutomationUpdate(true);
             }}
+            tone="primary"
             type="button"
           >
             {isUpdatingAutomationPolicy ? "Updating…" : "Resume automation"}
-          </button>
+          </ActionButton>
         </div>
       </SurfaceCard>
-      <div className="surface-card surface-card--span-12">
-        <div className="surface-card__content">
-          <div className="surface-card__header">
-            <p className="surface-card__eyebrow">Workspaces</p>
-            <h2 className="surface-card__title">
-              Offboarding and decommission state
-            </h2>
-          </div>
-          <div className="collection-item-list">
-            {report.workspaces.map((workspace) => {
-              const selectable =
-                workspace.workspace.role === "owner" &&
-                workspace.decommission?.status === "scheduled";
+      <SurfaceCard
+        body="Workspaces that are owner-managed and active are included in every safe bulk control path so operators keep context before acting."
+        eyebrow="Workspaces"
+        span={12}
+        title="Offboarding and decommission state"
+      >
+        <div className="mt-3 space-y-2">
+          {report.workspaces.map((workspace) => {
+            const canSelectCancel =
+              workspace.workspace.role === "owner" &&
+              workspace.decommission?.status === "scheduled";
 
-              return (
-                <div
-                  className="collection-item-card"
-                  key={workspace.workspace.id}
-                >
-                  <div className="collection-item-card__copy">
-                    <strong>
-                      {workspace.workspace.name} · /{workspace.workspace.slug}
-                    </strong>
+            return (
+              <article
+                className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4"
+                key={workspace.workspace.id}
+              >
+                <div className="grid gap-1.5 text-sm text-[color:var(--color-muted)]">
+                  <strong className="text-[color:var(--color-text)]">
+                    {workspace.workspace.name} · /{workspace.workspace.slug}
+                  </strong>
+                  <span>
+                    {workspace.workspace.role} ·{" "}
+                    {formatStatus(workspace.workspace.status)}
+                    {workspace.current ? " · current selection" : ""}
+                  </span>
+                  <span>
+                    readiness {formatStatus(workspace.summary.readiness)} ·{" "}
+                    {workspace.summary.activeAlertCount} alerts ·{" "}
+                    {workspace.summary.openCheckoutCount} open checkouts ·{" "}
+                    {workspace.summary.openReconciliationIssueCount} open
+                    reconciliation
+                  </span>
+                  <span>
+                    invites {workspace.directory.pendingInvitationCount}{" "}
+                    pending · {workspace.directory.expiringInvitationCount}{" "}
+                    expiring · {workspace.directory.expiredInvitationCount}{" "}
+                    expired
+                  </span>
+                  <span>
+                    policy default{" "}
+                    {workspace.retentionPolicy.defaultDecommissionRetentionDays}d
+                    · minimum {workspace.retentionPolicy.minimumDecommissionRetentionDays}
+                    d · reason{" "}
+                    {workspace.retentionPolicy.requireDecommissionReason
+                      ? "required"
+                      : "optional"}
+                  </span>
+                  <span>
+                    automation{" "}
+                    {workspace.lifecycleAutomationPolicy.enabled
+                      ? "enabled"
+                      : "disabled"}{" "}
+                    · invites{" "}
+                    {workspace.lifecycleAutomationPolicy
+                      .automateInvitationReminders
+                      ? "enabled"
+                      : "disabled"}{" "}
+                    · decommission{" "}
+                    {workspace.lifecycleAutomationPolicy
+                      .automateDecommissionNotices
+                      ? "enabled"
+                      : "disabled"}
+                  </span>
+                  <span>
+                    SLA {formatStatus(workspace.lifecycleSlaSummary.status)} · max
+                    age {workspace.lifecycleSlaPolicy.automationMaxAgeMinutes}m ·
+                    failure threshold{" "}
+                    {workspace.lifecycleSlaPolicy.webhookFailureThreshold} · failed
+                    webhooks {workspace.lifecycleSlaSummary.failedWebhookCount}
+                    {workspace.lifecycleSlaSummary.reasonCodes.length
+                      ? ` · reasons ${workspace.lifecycleSlaSummary.reasonCodes
+                          .map((reasonCode) => formatStatus(reasonCode))
+                          .join(", ")}`
+                      : ""}
+                  </span>
+                  <span>
+                    lifecycle webhook{" "}
+                    {workspace.lifecycleDeliveryPolicy.webhookEnabled
+                      ? "enabled"
+                      : "disabled"}{" "}
+                    · audit-log delivered{" "}
+                    {workspace.lifecycleDelivery.auditLog.deliveredCount} ·
+                    webhook delivered{" "}
+                    {workspace.lifecycleDelivery.webhook.deliveredCount} ·
+                    webhook failed {workspace.lifecycleDelivery.webhook.failedCount} ·
+                    webhook queued{" "}
+                    {workspace.lifecycleDelivery.webhook.queuedCount}
+                    {workspace.lifecycleDelivery.providers.length
+                      ? ` · providers ${workspace.lifecycleDelivery.providers
+                          .map(
+                            (provider) =>
+                              `${provider.label} ${provider.deliveredCount}/${provider.failedCount}/${provider.queuedCount}`
+                          )
+                          .join(", ")}`
+                      : ""}
+                  </span>
+                  <span>
+                    {workspace.decommission
+                      ? `scheduled for ${formatTimestamp(
+                          workspace.decommission.executeAfter
+                        )}`
+                      : "no decommission scheduled"}
+                  </span>
+                  {workspace.decommission ? (
                     <span>
-                      {workspace.workspace.role} ·{" "}
-                      {formatStatus(workspace.workspace.status)}
-                      {workspace.current ? " · current selection" : ""}
-                    </span>
-                    <span>
-                      readiness {formatStatus(workspace.summary.readiness)} ·{" "}
-                      {workspace.summary.activeAlertCount} alerts ·{" "}
-                      {workspace.summary.openCheckoutCount} open checkouts ·{" "}
-                      {workspace.summary.openReconciliationIssueCount} open
-                      reconciliation
-                    </span>
-                    <span>
-                      invites {workspace.directory.pendingInvitationCount}{" "}
-                      pending · {workspace.directory.expiringInvitationCount}{" "}
-                      expiring · {workspace.directory.expiredInvitationCount}{" "}
-                      expired
-                    </span>
-                    <span>
-                      policy default{" "}
-                      {
-                        workspace.retentionPolicy
-                          .defaultDecommissionRetentionDays
-                      }
-                      d · minimum{" "}
-                      {
-                        workspace.retentionPolicy
-                          .minimumDecommissionRetentionDays
-                      }
-                      d · reason{" "}
-                      {workspace.retentionPolicy.requireDecommissionReason
-                        ? "required"
-                        : "optional"}
-                    </span>
-                    <span>
-                      automation{" "}
-                      {workspace.lifecycleAutomationPolicy.enabled
-                        ? "enabled"
-                        : "disabled"}{" "}
-                      · invites{" "}
-                      {workspace.lifecycleAutomationPolicy
-                        .automateInvitationReminders
-                        ? "enabled"
-                        : "disabled"}{" "}
-                      · decommission{" "}
-                      {workspace.lifecycleAutomationPolicy
-                        .automateDecommissionNotices
-                        ? "enabled"
-                        : "disabled"}
-                    </span>
-                    <span>
-                      SLA {formatStatus(workspace.lifecycleSlaSummary.status)} ·
-                      max age{" "}
-                      {workspace.lifecycleSlaPolicy.automationMaxAgeMinutes}m ·
-                      failure threshold{" "}
-                      {workspace.lifecycleSlaPolicy.webhookFailureThreshold} ·
-                      failed webhooks{" "}
-                      {workspace.lifecycleSlaSummary.failedWebhookCount}
-                      {workspace.lifecycleSlaSummary.reasonCodes.length
-                        ? ` · reasons ${workspace.lifecycleSlaSummary.reasonCodes
-                            .map((reasonCode) => formatStatus(reasonCode))
-                            .join(", ")}`
-                        : ""}
-                    </span>
-                    <span>
-                      lifecycle webhook{" "}
-                      {workspace.lifecycleDeliveryPolicy.webhookEnabled
-                        ? "enabled"
-                        : "disabled"}{" "}
-                      · audit-log delivered{" "}
-                      {workspace.lifecycleDelivery.auditLog.deliveredCount} ·
-                      webhook delivered{" "}
-                      {workspace.lifecycleDelivery.webhook.deliveredCount} ·
-                      webhook failed{" "}
-                      {workspace.lifecycleDelivery.webhook.failedCount} ·
-                      webhook queued{" "}
-                      {workspace.lifecycleDelivery.webhook.queuedCount}
-                      {workspace.lifecycleDelivery.providers.length
-                        ? ` · providers ${workspace.lifecycleDelivery.providers
-                            .map(
-                              (provider) =>
-                                `${provider.label} ${provider.deliveredCount}/${provider.failedCount}/${provider.queuedCount}`
-                            )
-                            .join(", ")}`
-                        : ""}
-                    </span>
-                    <span>
-                      {workspace.decommission
-                        ? `scheduled for ${formatTimestamp(
-                            workspace.decommission.executeAfter
+                      notices {workspace.decommissionWorkflow.notificationCount}
+                      {workspace.decommissionWorkflow.nextDueKind
+                        ? ` · next due ${formatStatus(
+                            workspace.decommissionWorkflow.nextDueKind
                           )}`
-                        : "no decommission scheduled"}
+                        : ""}
                     </span>
-                    {workspace.decommission ? (
-                      <span>
-                        notices{" "}
-                        {workspace.decommissionWorkflow.notificationCount}
-                        {workspace.decommissionWorkflow.nextDueKind
-                          ? ` · next due ${formatStatus(
-                              workspace.decommissionWorkflow.nextDueKind
-                            )}`
-                          : ""}
-                      </span>
-                    ) : null}
-                    {workspace.lifecycleDelivery.latestDelivery ? (
-                      <span>
-                        latest lifecycle{" "}
-                        {formatStatus(
-                          workspace.lifecycleDelivery.latestDelivery.eventKind
-                        )}{" "}
-                        {formatStatus(
-                          workspace.lifecycleDelivery.latestDelivery
-                            .deliveryState
-                        )}{" "}
-                        {formatTimestamp(
-                          workspace.lifecycleDelivery.latestDelivery.updatedAt
-                        )}
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="studio-action-row">
-                    {selectable ? (
-                      <label
-                        className="pill-row"
-                        htmlFor={workspace.workspace.id}
-                      >
-                        <input
-                          checked={selectedCancelableWorkspaceIds.includes(
-                            workspace.workspace.id
-                          )}
-                          id={workspace.workspace.id}
-                          onChange={(event) => {
-                            setSelectedCancelableWorkspaceIds((current) => {
-                              if (event.target.checked) {
-                                return current.includes(workspace.workspace.id)
-                                  ? current
-                                  : [...current, workspace.workspace.id];
-                              }
-
-                              return current.filter(
-                                (workspaceId) =>
-                                  workspaceId !== workspace.workspace.id
-                              );
-                            });
-                          }}
-                          type="checkbox"
-                        />
-                        <span>Cancel schedule</span>
-                      </label>
-                    ) : null}
-                    {workspace.workspace.role === "owner" ? (
-                      <label
-                        className="pill-row"
-                        htmlFor={`${workspace.workspace.id}-automation`}
-                      >
-                        <input
-                          checked={selectedAutomationWorkspaceIds.includes(
-                            workspace.workspace.id
-                          )}
-                          id={`${workspace.workspace.id}-automation`}
-                          onChange={(event) => {
-                            setSelectedAutomationWorkspaceIds((current) => {
-                              if (event.target.checked) {
-                                return current.includes(workspace.workspace.id)
-                                  ? current
-                                  : [...current, workspace.workspace.id];
-                              }
-
-                              return current.filter(
-                                (workspaceId) =>
-                                  workspaceId !== workspace.workspace.id
-                              );
-                            });
-                          }}
-                          type="checkbox"
-                        />
-                        <span>
-                          {workspace.lifecycleAutomationPolicy.enabled
-                            ? "Pause/resume automation"
-                            : "Resume automation"}
-                        </span>
-                      </label>
-                    ) : null}
-                    {workspace.workspace.role === "owner" ? (
-                      <Link
-                        className="inline-link"
-                        href={`/api/studio/workspaces/${workspace.workspace.id}/export?format=json`}
-                      >
-                        Workspace export
-                      </Link>
-                    ) : null}
-                  </div>
+                  ) : null}
+                  {workspace.lifecycleDelivery.latestDelivery ? (
+                    <span>
+                      latest lifecycle{" "}
+                      {formatStatus(
+                        workspace.lifecycleDelivery.latestDelivery.eventKind
+                      )}{" "}
+                      {formatStatus(
+                        workspace.lifecycleDelivery.latestDelivery.deliveryState
+                      )}{" "}
+                      {formatTimestamp(
+                        workspace.lifecycleDelivery.latestDelivery.updatedAt
+                      )}
+                    </span>
+                  ) : null}
                 </div>
-              );
-            })}
-          </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {canSelectCancel ? (
+                    <label
+                      className="inline-flex items-center gap-2 text-sm text-[color:var(--color-text)]"
+                      htmlFor={workspace.workspace.id}
+                    >
+                      <input
+                        checked={selectedCancelableWorkspaceIds.includes(
+                          workspace.workspace.id
+                        )}
+                        id={workspace.workspace.id}
+                        onChange={(event) => {
+                          setSelectedCancelableWorkspaceIds((current) => {
+                            if (event.target.checked) {
+                              return current.includes(workspace.workspace.id)
+                                ? current
+                                : [...current, workspace.workspace.id];
+                            }
+
+                            return current.filter(
+                              (workspaceId) =>
+                                workspaceId !== workspace.workspace.id
+                            );
+                          });
+                        }}
+                        type="checkbox"
+                      />
+                      <span>Cancel schedule</span>
+                    </label>
+                  ) : null}
+                  {workspace.workspace.role === "owner" ? (
+                    <label
+                      className="inline-flex items-center gap-2 text-sm text-[color:var(--color-text)]"
+                      htmlFor={`${workspace.workspace.id}-automation`}
+                    >
+                      <input
+                        checked={selectedAutomationWorkspaceIds.includes(
+                          workspace.workspace.id
+                        )}
+                        id={`${workspace.workspace.id}-automation`}
+                        onChange={(event) => {
+                          setSelectedAutomationWorkspaceIds((current) => {
+                            if (event.target.checked) {
+                              return current.includes(workspace.workspace.id)
+                                ? current
+                                : [...current, workspace.workspace.id];
+                            }
+
+                            return current.filter(
+                              (workspaceId) =>
+                                workspaceId !== workspace.workspace.id
+                            );
+                          });
+                        }}
+                        type="checkbox"
+                      />
+                      <span>
+                        {workspace.lifecycleAutomationPolicy.enabled
+                          ? "Pause/resume automation"
+                          : "Resume automation"}
+                      </span>
+                    </label>
+                  ) : null}
+                  {workspace.workspace.role === "owner" ? (
+                    <ActionLink
+                      href={`/api/studio/workspaces/${workspace.workspace.id}/export?format=json`}
+                      tone="inline"
+                    >
+                      Workspace export
+                    </ActionLink>
+                  ) : null}
+                </div>
+              </article>
+            );
+          })}
         </div>
-      </div>
+      </SurfaceCard>
     </SurfaceGrid>
   );
 }

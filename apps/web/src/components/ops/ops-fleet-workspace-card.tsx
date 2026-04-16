@@ -1,7 +1,7 @@
 "use client";
 
 import type { WorkspaceFleetWorkspaceSummary } from "@ai-nft-forge/shared";
-import { Pill } from "@ai-nft-forge/ui";
+import { ActionButton, Pill } from "@ai-nft-forge/ui";
 
 type OpsFleetWorkspaceCardProps = {
   busyKey: string | null;
@@ -44,6 +44,30 @@ function resolvePressureTone(
   return "healthy";
 }
 
+function getCardToneClass(tone: "critical" | "warning" | "healthy") {
+  if (tone === "critical") {
+    return "border-rose-300/40 bg-rose-500/10";
+  }
+
+  if (tone === "warning") {
+    return "border-amber-300/40 bg-amber-500/12";
+  }
+
+  return "border-[color:var(--color-line)] bg-[color:var(--color-surface)]";
+}
+
+function getScoreTextClass(tone: "critical" | "warning" | "healthy") {
+  if (tone === "critical") {
+    return "text-rose-300";
+  }
+
+  if (tone === "warning") {
+    return "text-amber-200";
+  }
+
+  return "text-emerald-200";
+}
+
 export function OpsFleetWorkspaceCard({
   busyKey,
   onRunReconciliation,
@@ -57,58 +81,58 @@ export function OpsFleetWorkspaceCard({
 
   return (
     <article
-      className={`ops-fleet-workspace-card ops-fleet-workspace-card--${tone}`}
+      className={`rounded-2xl border p-4 ${getCardToneClass(tone)} shadow-sm`}
     >
-      <div className="ops-fleet-workspace-card__header">
-        <div className="ops-fleet-workspace-card__copy">
-          <span className="ops-fleet-workspace-card__rank">Rank {rank}</span>
-          <strong className="ops-fleet-workspace-card__title">
-            {workspace.workspace.name}
-          </strong>
-          <span className="ops-fleet-workspace-card__meta">
-            /{workspace.workspace.slug} · {workspace.workspace.role} ·{" "}
-            {formatWorkspaceStatus(workspace.workspace.status)}
-          </span>
-          <span className="ops-fleet-workspace-card__meta">
-            {workspace.directory.brandCount} brands · last activity{" "}
-            {formatTimestamp(workspace.directory.lastActivityAt)}
-          </span>
+      <div className="space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--color-accent)]">
+              Rank {rank}
+            </span>
+            <strong className="text-base font-semibold">
+              {workspace.workspace.name}
+            </strong>
+            <p className="text-sm text-[color:var(--color-muted)]">
+              /{workspace.workspace.slug} · {workspace.workspace.role} ·{" "}
+              {formatWorkspaceStatus(workspace.workspace.status)}
+            </p>
+            <p className="text-sm text-[color:var(--color-muted)]">
+              {workspace.directory.brandCount} brands · last activity{" "}
+              {formatTimestamp(workspace.directory.lastActivityAt)}
+            </p>
+          </div>
+          <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] px-3 py-2 text-center">
+            <p className="text-xs text-[color:var(--color-muted)]">Pressure</p>
+            <p className={`text-lg font-semibold ${getScoreTextClass(tone)}`}>
+              {pressureScore}
+            </p>
+          </div>
         </div>
-        <div className="ops-fleet-workspace-card__score">
-          <span className="ops-fleet-workspace-card__score-label">
-            Pressure
-          </span>
-          <strong className="ops-fleet-workspace-card__score-value">
-            {pressureScore}
-          </strong>
+        <div className="flex flex-wrap gap-2">
+          {workspace.directory.current ? <Pill>Current selection</Pill> : null}
+          <Pill>{workspace.ops.criticalAlertCount} critical</Pill>
+          <Pill>{workspace.ops.openReconciliationIssueCount} recon</Pill>
+          <Pill>{workspace.commerce.openCheckoutCount} open checkouts</Pill>
+          <Pill>{workspace.commerce.unfulfilledCheckoutCount} unfulfilled</Pill>
         </div>
-      </div>
-      <div className="pill-row ops-fleet-workspace-card__pills">
-        {workspace.directory.current ? <Pill>Current selection</Pill> : null}
-        <Pill>{workspace.ops.criticalAlertCount} critical</Pill>
-        <Pill>{workspace.ops.openReconciliationIssueCount} recon</Pill>
-        <Pill>{workspace.commerce.openCheckoutCount} open checkouts</Pill>
-        <Pill>{workspace.commerce.unfulfilledCheckoutCount} unfulfilled</Pill>
-      </div>
-      <div className="ops-fleet-workspace-card__footer">
-        <div className="ops-fleet-workspace-card__summary">
-          <span>
-            {workspace.ops.activeAlertCount} active alerts ·{" "}
-            {workspace.ops.warningAlertCount} warnings
-          </span>
-          <span>
-            {workspace.commerce.automationFailedCheckoutCount} automation
-            failures · {workspace.publications.livePublicationCount} live
-            publications
-          </span>
-        </div>
-        <div className="studio-action-row">
-          <button
-            className="button-action button-action--secondary"
+        <div className="space-y-2 border-t border-[color:var(--color-line)] pt-3">
+          <div className="flex flex-wrap gap-3 text-sm text-[color:var(--color-muted)]">
+            <span>
+              {workspace.ops.activeAlertCount} active alerts ·{" "}
+              {workspace.ops.warningAlertCount} warnings
+            </span>
+            <span>
+              {workspace.commerce.automationFailedCheckoutCount} automation
+              failures · {workspace.publications.livePublicationCount} live
+              publications
+            </span>
+          </div>
+          <ActionButton
             disabled={!workspaceIsActive || busyKey === reconciliationBusyKey}
             onClick={() => {
               onRunReconciliation(workspace);
             }}
+            tone="secondary"
             type="button"
           >
             {!workspaceIsActive
@@ -116,7 +140,7 @@ export function OpsFleetWorkspaceCard({
               : busyKey === reconciliationBusyKey
                 ? "Running…"
                 : "Run reconciliation"}
-          </button>
+          </ActionButton>
         </div>
       </div>
     </article>

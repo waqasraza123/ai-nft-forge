@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { CSSProperties } from "react";
 
+import { ActionLink } from "@ai-nft-forge/ui";
 import type {
   CollectionPublicBrandPreview,
   CollectionPublicBrandTheme
 } from "@ai-nft-forge/shared";
 
 import { createRuntimePublicCollectionService } from "../../../../server/collections/runtime";
+import { createStorefrontThemeStyle } from "../../../../lib/ui/storefront-theme";
 
 type BrandPageProps = {
   params: Promise<{
@@ -39,7 +40,7 @@ const brandSectionCopyByTone: Record<BrandSectionTone, string> = {
   live: "Active campaigns and current mint windows.",
   upcoming: "Planned drops and next-wave campaigns in queue.",
   archive:
-    "Published campaigns preserved as a launch history with immutable reference data."
+    "Published campaigns preserved as immutable reference data for historical context."
 };
 
 function formatTimestamp(value: string | null) {
@@ -107,46 +108,6 @@ function formatAvailabilityLabel(input: {
   return rows;
 }
 
-function createStorefrontThemeStyle(theme: CollectionPublicBrandTheme) {
-  const presetTokens: Record<
-    CollectionPublicBrandTheme["themePreset"],
-    Record<string, string>
-  > = {
-    editorial_warm: {
-      "--storefront-bg":
-        "linear-gradient(180deg, rgba(255, 249, 240, 0.98) 0%, rgba(245, 236, 219, 0.96) 100%)",
-      "--storefront-panel": "rgba(255, 252, 247, 0.74)",
-      "--storefront-panel-strong": "rgba(255, 249, 241, 0.9)",
-      "--storefront-text": "#201711",
-      "--storefront-muted": "#6f5e51",
-      "--storefront-border": "rgba(80, 48, 26, 0.12)"
-    },
-    gallery_mono: {
-      "--storefront-bg":
-        "linear-gradient(180deg, rgba(244, 244, 241, 0.98) 0%, rgba(228, 229, 225, 0.94) 100%)",
-      "--storefront-panel": "rgba(255, 255, 255, 0.7)",
-      "--storefront-panel-strong": "rgba(255, 255, 255, 0.88)",
-      "--storefront-text": "#111315",
-      "--storefront-muted": "#565d63",
-      "--storefront-border": "rgba(17, 19, 21, 0.1)"
-    },
-    midnight_launch: {
-      "--storefront-bg":
-        "radial-gradient(circle at top left, rgba(255, 143, 78, 0.16), transparent 34%), linear-gradient(180deg, rgba(13, 18, 28, 0.98) 0%, rgba(23, 31, 48, 0.95) 100%)",
-      "--storefront-panel": "rgba(14, 20, 34, 0.7)",
-      "--storefront-panel-strong": "rgba(22, 29, 47, 0.84)",
-      "--storefront-text": "#f3f2ed",
-      "--storefront-muted": "#b5bac7",
-      "--storefront-border": "rgba(243, 242, 237, 0.12)"
-    }
-  };
-
-  return {
-    ...presetTokens[theme.themePreset],
-    "--storefront-accent": theme.accentColor
-  } as CSSProperties;
-}
-
 function createHeroCtaLabel(input: {
   collection: CollectionPublicBrandPreview;
   preferredLabel: string | null;
@@ -179,64 +140,75 @@ function dedupeByPublicPath(
   );
 }
 
+function BrandFeaturePill(input: { label: string; tone?: "default" | "accent" }) {
+  return (
+    <span
+      className={
+        input.tone === "accent"
+          ? "inline-flex items-center rounded-full border border-[color:var(--storefront-accent)]/45 bg-[color:var(--storefront-accent)]/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]"
+          : "inline-flex items-center rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/70 px-3 py-1 text-xs text-[color:var(--storefront-muted)]"
+      }
+    >
+      {input.label}
+    </span>
+  );
+}
+
 function BrandHeroVisual(input: {
-  accentColor: string;
   release: CollectionPublicBrandPreview | null;
 }) {
   return (
-    <section className="public-brand-hero-composition">
-      <div
-        className="public-brand-hero-composition__glow"
-        style={{ "--public-brand-accent": input.accentColor } as CSSProperties}
-      />
-      <div className="public-brand-hero-composition__frame">
-        {input.release ? (
-          <div className="public-brand-hero-media">
-            {input.release.heroImageUrl ? (
-              <img
-                alt={`${input.release.title} campaign artwork`}
-                className="public-brand-hero-media__image"
-                src={input.release.heroImageUrl}
-              />
-            ) : (
-              <div className="public-brand-hero-media--empty">
-                Visual assets unavailable for this release.
-              </div>
-            )}
+    <section className="relative overflow-hidden rounded-3xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/60 p-4 md:p-6">
+      <div className="absolute -left-20 top-8 h-40 w-40 rounded-full bg-[color:var(--storefront-accent)]/15 blur-3xl" />
+      <div className="absolute -right-16 bottom-4 h-44 w-44 rounded-full bg-[color:var(--storefront-accent)]/10 blur-3xl" />
+      <div className="relative space-y-4">
+        <div className="grid gap-2">
+          <p className="text-xs uppercase tracking-[0.2em] text-[color:var(--storefront-muted)]">
+            Campaign stage
+          </p>
+          <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--storefront-accent)]">
+            <span>{input.release ? formatStatusLabel(input.release.storefrontStatus) : "Campaign"}</span>
+            <span>{input.release ? formatSectionHeadline({
+              itemCount: input.release.itemCount,
+              status: input.release.storefrontStatus
+            }) : "Launch world"}</span>
           </div>
-        ) : (
-          <div className="public-brand-hero-media public-brand-hero-media--empty">
-            Visual campaign deck will be active once a release is published.
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs text-[color:var(--storefront-muted)]">
+          <span>
+            {input.release
+              ? `${input.release.itemCount} works`
+              : "No active release"}
+          </span>
+          <span>·</span>
+          <span>
+            {input.release
+              ? input.release.availabilityLabel
+              : "Awaiting campaign"}
+          </span>
+        </div>
+        <div className="mt-2 grid gap-2 text-sm text-[color:var(--storefront-muted)]">
+          <div className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)]/80 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--storefront-accent)]">
+              Featured spotlight
+            </p>
+            <p className="mt-1">{input.release ? "Live campaign loaded from immutable publication snapshot." : "The spotlight remains empty until a release is published."}</p>
           </div>
-        )}
+        </div>
       </div>
-      <div className="public-brand-hero-composition__hud">
-        <p className="public-brand-kicker">
-          {input.release
-            ? formatStatusLabel(input.release.storefrontStatus)
-            : "Campaign"}
-        </p>
-        <p className="public-brand-hero-composition__kicker">
-          {input.release
-            ? formatSectionHeadline({
-                itemCount: input.release.itemCount,
-                status: input.release.storefrontStatus
-              })
-            : "Launch world"}
-        </p>
-      </div>
-      <div className="public-brand-hero-composition__meta">
-        <span>
-          {input.release
-            ? `${input.release.itemCount} works`
-            : "No active release"}
-        </span>
-        <span>
-          {input.release
-            ? input.release.availabilityLabel
-            : "Awaiting campaign"}
-        </span>
-      </div>
+      {input.release ? (
+        <div className="mt-5 rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] p-2">
+          <img
+            alt={`${input.release.title} campaign artwork`}
+            className="aspect-[16/10] w-full rounded-xl object-cover"
+            src={input.release.heroImageUrl ?? "/"}
+          />
+        </div>
+      ) : (
+        <div className="mt-5 rounded-2xl border border-dashed border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] p-6 text-sm text-[color:var(--storefront-muted)]">
+          Visual campaign deck will become active once a release is published.
+        </div>
+      )}
     </section>
   );
 }
@@ -244,7 +216,6 @@ function BrandHeroVisual(input: {
 function BrandHeroSection(input: {
   brandLabel: string;
   brandPath: string;
-  accentColor: string;
   heroKicker: string;
   heroHeadline: string;
   heroDescription: string;
@@ -256,51 +227,53 @@ function BrandHeroSection(input: {
   release: CollectionPublicBrandPreview | null;
 }) {
   return (
-    <section className="public-brand-hero">
-      <div className="public-brand-hero__campaign">
-        <div className="public-brand-wordmark">
+    <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+      <div className="space-y-5">
+        <p className="inline-flex items-center gap-2 rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--storefront-accent)]">
           <span>{input.brandLabel}</span>
-          <span className="public-brand-wordmark__path">{input.brandPath}</span>
-        </div>
-        <p className="public-brand-kicker">{input.heroKicker}</p>
-        <h1 className="public-brand-hero__title">{input.heroHeadline}</h1>
-        <p className="public-brand-hero__description">
+          <span>·</span>
+          <span>{input.brandPath}</span>
+        </p>
+        <h1 className="text-3xl font-semibold leading-tight font-[var(--font-display)] md:text-5xl">
+          {input.heroHeadline}
+        </h1>
+        <p className="max-w-2xl text-sm leading-7 text-[color:var(--storefront-muted)] md:text-base">
           {input.heroDescription}
         </p>
-        <div className="public-brand-hero__actions">
+        <div className="flex flex-wrap gap-3">
           {input.primaryCtaHref ? (
-            <Link
-              className="public-brand-button public-brand-button--primary"
-              href={input.primaryCtaHref}
-            >
+            <ActionLink href={input.primaryCtaHref} tone="action">
               {input.primaryCtaLabel}
-            </Link>
+            </ActionLink>
           ) : null}
           {input.secondaryCtaHref ? (
-            <Link
-              className="public-brand-button public-brand-button--ghost"
-              href={input.secondaryCtaHref}
-            >
+            <ActionLink href={input.secondaryCtaHref} tone="inline">
               {input.secondaryCtaLabel}
-            </Link>
+            </ActionLink>
           ) : null}
         </div>
-        <div
-          className="public-brand-hero-stats"
-          aria-label="Brand campaign metrics"
-        >
-          {input.campaignMetrics.map((metric) => (
-            <article className="public-brand-stat" key={metric.label}>
-              <strong>{metric.value}</strong>
-              <span>{metric.label}</span>
-            </article>
-          ))}
+        <div className="rounded-3xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/80 p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
+            {input.heroKicker}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {input.campaignMetrics.map((metric) => (
+              <div
+                className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-3"
+                key={metric.label}
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--storefront-accent)]">
+                  {metric.label}
+                </p>
+                <p className="mt-1 text-sm text-[color:var(--storefront-text)]">
+                  {metric.value}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-      <BrandHeroVisual
-        accentColor={input.accentColor}
-        release={input.release}
-      />
+      <BrandHeroVisual release={input.release} />
     </section>
   );
 }
@@ -311,10 +284,8 @@ function BrandFeaturedReleaseCard(input: {
 }) {
   if (!input.release) {
     return (
-      <section className="public-brand-featured-card public-brand-featured-card--empty">
-        <p className="public-brand-featured-card__empty">
-          Campaign spotlight is waiting on a published release.
-        </p>
+      <section className="rounded-3xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/70 p-5 text-sm text-[color:var(--storefront-muted)]">
+        Campaign spotlight is waiting on a published release.
       </section>
     );
   }
@@ -323,66 +294,55 @@ function BrandFeaturedReleaseCard(input: {
   const metadataRows = formatAvailabilityLabel({ release });
 
   return (
-    <section className="public-brand-featured-card">
-      <div className="public-brand-featured-card__media">
+    <section className="rounded-3xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/70 p-5">
+      <div className="grid gap-5 md:grid-cols-[1fr_1.1fr] md:items-center">
         {release.heroImageUrl ? (
           <img
             alt={`${release.title} featured release`}
-            className="public-brand-release-card__image"
+            className="aspect-[16/10] w-full rounded-2xl border border-[color:var(--storefront-border)] object-cover"
             src={release.heroImageUrl}
           />
         ) : (
-          <div className="public-brand-featured-card__placeholder">
+          <div className="aspect-[16/10] rounded-2xl border border-dashed border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-4 text-sm text-[color:var(--storefront-muted)]">
             Featured artwork unavailable
           </div>
         )}
-      </div>
-      <div className="public-brand-featured-card__copy">
-        <p className="public-brand-kicker">
-          {input.featuredLabel ?? "Featured release"}
-        </p>
-        <h2 className="public-brand-featured-card__title">
-          {release.storefrontHeadline ?? release.title}
-        </h2>
-        <p className="public-brand-featured-card__body">
-          {release.storefrontHeadline
-            ? release.storefrontHeadline
-            : (release.description ??
-              "Published collectible drops are surfaced from immutable snapshots and arranged by brand campaign rhythm.")}
-        </p>
-        <div className="public-brand-release-card__chips">
-          <span className="public-brand-chip public-brand-chip--accent">
-            {formatStatusLabel(release.storefrontStatus)}
-          </span>
-          {release.priceLabel ? (
-            <span className="public-brand-chip">{release.priceLabel}</span>
-          ) : null}
-          <span className="public-brand-chip">
-            {formatSectionHeadline({
-              itemCount: release.itemCount,
-              status: release.storefrontStatus
-            })}
-          </span>
-        </div>
-        <ul
-          className="public-brand-featured-card__meta"
-          aria-label={`${release.title} metadata`}
-        >
-          {metadataRows.map((metric) => (
-            <li key={`${release.publicPath}-featured-${metric}`}>{metric}</li>
-          ))}
-        </ul>
-        <div className="public-brand-release-card__actions">
-          <Link
-            className="public-brand-button public-brand-button--primary"
-            href={release.publicPath}
-          >
-            Open launch campaign
-          </Link>
-          <span className="public-brand-featured-card__timeline">
-            Launch {formatTimestamp(release.launchAt)} · Ends{" "}
-            {formatTimestamp(release.endAt)}
-          </span>
+        <div className="space-y-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
+            {input.featuredLabel ?? "Featured release"}
+          </p>
+          <h2 className="text-2xl font-semibold font-[var(--font-display)]">
+            {release.storefrontHeadline ?? release.title}
+          </h2>
+          <p className="text-sm leading-7 text-[color:var(--storefront-muted)]">
+            {release.storefrontHeadline
+              ? release.storefrontHeadline
+              : (release.description ??
+                "Published collectible drops are surfaced from immutable snapshots and arranged by brand campaign rhythm.")}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <BrandFeaturePill tone="accent" label={formatStatusLabel(release.storefrontStatus)} />
+            {release.priceLabel ? <BrandFeaturePill label={release.priceLabel} /> : null}
+            <BrandFeaturePill
+              label={formatSectionHeadline({
+                itemCount: release.itemCount,
+                status: release.storefrontStatus
+              })}
+            />
+          </div>
+          <ul className="grid gap-1 text-sm text-[color:var(--storefront-muted)] md:grid-cols-2" aria-label={`${release.title} metadata`}>
+            {metadataRows.map((metric) => (
+              <li key={`${release.publicPath}-featured-${metric}`}>• {metric}</li>
+            ))}
+          </ul>
+          <div className="flex flex-wrap items-center gap-2">
+            <ActionLink href={release.publicPath} tone="action">
+              Open launch campaign
+            </ActionLink>
+            <span className="text-xs text-[color:var(--storefront-muted)]">
+              Launch {formatTimestamp(release.launchAt)} · Ends {formatTimestamp(release.endAt)}
+            </span>
+          </div>
         </div>
       </div>
     </section>
@@ -395,22 +355,34 @@ function BrandStorySection(input: {
   metrics: BrandMetric[];
 }) {
   return (
-    <section className="public-brand-manifesto">
-      <div className="public-brand-manifesto__copy">
-        <p className="public-brand-kicker">Brand manifesto</p>
-        <h2>{input.headline}</h2>
-        <p>{input.body}</p>
-      </div>
-      <div
-        className="public-brand-manifesto-grid"
-        aria-label="Brand campaign profile"
-      >
-        {input.metrics.map((metric) => (
-          <article className="public-brand-manifesto-stat" key={metric.label}>
-            <strong>{metric.value}</strong>
-            <span>{metric.label}</span>
-          </article>
-        ))}
+    <section className="rounded-3xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/70 p-6">
+      <div className="grid gap-4 md:grid-cols-[1.1fr_1fr] md:items-start">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
+            Brand manifesto
+          </p>
+          <h2 className="mt-1 text-2xl font-semibold font-[var(--font-display)]">
+            {input.headline}
+          </h2>
+          <p className="mt-4 max-w-2xl text-sm leading-7 text-[color:var(--storefront-muted)]">
+            {input.body}
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {input.metrics.map((metric) => (
+            <div
+              className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-3"
+              key={metric.label}
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--storefront-accent)]">
+                {metric.label}
+              </p>
+              <p className="mt-1 text-sm text-[color:var(--storefront-text)]">
+                {metric.value}
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -421,62 +393,49 @@ function BrandReleaseCard(input: {
   tone: BrandSectionTone;
 }) {
   const metadata = formatAvailabilityLabel({ release: input.release });
-  const toneClass = `public-brand-release-card--${input.tone}`;
-  const metaPrefix =
-    input.tone === "upcoming"
-      ? "Anticipating"
-      : input.tone === "archive"
-        ? "Record"
-        : "Live";
 
   return (
-    <article className={`public-brand-release-card ${toneClass}`}>
-      <Link
-        className="public-brand-release-card__media"
-        href={input.release.publicPath}
-      >
+    <article className="rounded-3xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/70 p-4">
+      <Link href={input.release.publicPath}>
         {input.release.heroImageUrl ? (
           <img
             alt={`${input.release.title} release artwork`}
-            className="public-brand-release-card__image"
+            className="mb-3 aspect-[16/10] w-full rounded-2xl border border-[color:var(--storefront-border)] object-cover"
             src={input.release.heroImageUrl}
           />
         ) : (
-          <div className="public-brand-release-card__placeholder">
+          <div className="mb-3 flex h-44 items-center rounded-2xl border border-dashed border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-4 text-sm text-[color:var(--storefront-muted)]">
             Campaign preview unavailable
           </div>
         )}
       </Link>
-      <div className="public-brand-release-card__copy">
-        <p className="public-brand-kicker">{metaPrefix}</p>
-        <h3 className="public-brand-release-card__title">
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
+          {input.tone === "upcoming"
+            ? "Anticipating"
+            : input.tone === "archive"
+              ? "Record"
+              : "Live"}
+        </p>
+        <h3 className="text-lg font-semibold font-[var(--font-display)]">
           {input.release.storefrontHeadline ?? input.release.title}
         </h3>
-        <p className="public-brand-release-card__body">
+        <p className="text-sm leading-6 text-[color:var(--storefront-muted)]">
           {input.release.description ??
-            `${metaPrefix.toLowerCase()} campaign entry for this campaign route.`}
+            "Campaign entry for this campaign route."}
         </p>
-        <div className="public-brand-release-card__chips">
-          <span className="public-brand-chip public-brand-chip--accent">
-            {formatStatusLabel(input.release.storefrontStatus)}
-          </span>
-          <span className="public-brand-chip">
-            {input.release.availabilityLabel}
-          </span>
+        <div className="flex flex-wrap gap-2">
+          <BrandFeaturePill tone="accent" label={formatStatusLabel(input.release.storefrontStatus)} />
+          <BrandFeaturePill label={input.release.availabilityLabel} />
         </div>
-        <ul
-          className="public-brand-release-card__meta"
-          aria-label={`${input.release.title} metadata`}
-        >
+        <ul className="text-sm leading-6 text-[color:var(--storefront-muted)]">
           {metadata.map((metric) => (
-            <li key={`${input.release.publicPath}-${metric}`}>{metric}</li>
+            <li key={`${input.release.publicPath}-${metric}`}>• {metric}</li>
           ))}
         </ul>
-        <div className="public-brand-release-card__actions">
-          <Link className="public-brand-button" href={input.release.publicPath}>
-            Open campaign
-          </Link>
-        </div>
+        <ActionLink href={input.release.publicPath} tone="inline">
+          Open campaign
+        </ActionLink>
       </div>
     </article>
   );
@@ -484,23 +443,23 @@ function BrandReleaseCard(input: {
 
 function BrandReleaseSection(input: BrandSection) {
   return (
-    <section
-      className={`public-brand-release-section public-brand-release-section--${input.tone}`}
-      id={input.id}
-    >
-      <div className="public-brand-section__heading">
-        <div>
-          <p className="public-brand-kicker">
-            {brandSectionTitleByTone[input.tone]}
-          </p>
-          <h2>{input.title}</h2>
-          <p className="public-brand-release-section__subtitle">
-            {brandSectionCopyByTone[input.tone]}
-          </p>
+    <section className="space-y-4" id={input.id}>
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
+          {brandSectionTitleByTone[input.tone]}
+        </p>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-2xl font-semibold font-[var(--font-display)]">{input.title}</h2>
+          <span className="rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] px-3 py-1 text-xs text-[color:var(--storefront-muted)]">
+            {input.collections.length} drops
+          </span>
         </div>
+        <p className="text-sm text-[color:var(--storefront-muted)]">
+          {brandSectionCopyByTone[input.tone]}
+        </p>
       </div>
       {input.collections.length === 0 ? (
-        <div className="public-brand-empty-state">
+        <div className="rounded-3xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/70 p-6 text-sm text-[color:var(--storefront-muted)]">
           {input.tone === "live"
             ? "No live launches are active right now."
             : input.tone === "upcoming"
@@ -508,9 +467,7 @@ function BrandReleaseSection(input: BrandSection) {
               : "Archived campaigns are currently being recorded in this brand route."}
         </div>
       ) : (
-        <div
-          className={`public-brand-release-rail public-brand-release-rail--${input.tone}`}
-        >
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {input.collections.map((release) => (
             <BrandReleaseCard
               key={release.publicPath}
@@ -618,58 +575,67 @@ export default async function BrandPage({ params }: BrandPageProps) {
 
   return (
     <div
-      className={`public-brand-page storefront-shell storefront-shell--${brand.theme.themePreset}`}
-      style={createStorefrontThemeStyle(brand.theme)}
+      className="min-h-screen bg-[var(--storefront-bg)] text-[color:var(--storefront-text)]"
+      style={createStorefrontThemeStyle(brand.theme as CollectionPublicBrandTheme)}
     >
-      <BrandHeroSection
-        brandLabel={heroBrandLabel}
-        brandPath={brand.publicPath}
-        accentColor={brand.theme.accentColor}
-        heroKicker={heroKicker}
-        heroHeadline={heroHeadline}
-        heroDescription={heroDescription}
-        primaryCtaHref={primaryHref}
-        primaryCtaLabel={primaryCtaLabel}
-        secondaryCtaHref={secondaryCtaHref}
-        secondaryCtaLabel={secondaryCtaLabel}
-        campaignMetrics={campaignStats}
-        release={featuredRelease}
-      />
-      <section className="public-brand-featured">
-        <div className="public-brand-section__heading">
-          <p className="public-brand-kicker">Featured spotlight</p>
-          <h2>Campaign centerpiece</h2>
-        </div>
-        <BrandFeaturedReleaseCard
-          featuredLabel={brand.theme.featuredReleaseLabel}
+      <div className="mx-auto grid w-full max-w-7xl gap-8 px-4 py-8 md:px-6 lg:px-8">
+        <BrandHeroSection
+          brandLabel={heroBrandLabel}
+          brandPath={brand.publicPath}
+          heroKicker={heroKicker}
+          heroHeadline={heroHeadline}
+          heroDescription={heroDescription}
+          primaryCtaHref={primaryHref}
+          primaryCtaLabel={primaryCtaLabel}
+          secondaryCtaHref={secondaryCtaHref}
+          secondaryCtaLabel={secondaryCtaLabel}
+          campaignMetrics={campaignStats}
           release={featuredRelease}
         />
-      </section>
 
-      <BrandStorySection
-        headline={storyHeadline}
-        body={storyBody}
-        metrics={storyMetrics}
-      />
+        <section className="space-y-4">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
+              Featured spotlight
+            </p>
+            <Link
+              className="text-xs font-semibold text-[color:var(--storefront-accent)] hover:underline"
+              href="#live-releases"
+            >
+              Browse live
+            </Link>
+          </div>
+          <BrandFeaturedReleaseCard
+            featuredLabel={brand.theme.featuredReleaseLabel}
+            release={featuredRelease}
+          />
+        </section>
 
-      <BrandReleaseSection
-        collections={liveReleases}
-        id="live-releases"
-        tone="live"
-        title="Live releases"
-      />
-      <BrandReleaseSection
-        collections={upcomingReleases}
-        id="upcoming-releases"
-        tone="upcoming"
-        title="Upcoming releases"
-      />
-      <BrandReleaseSection
-        collections={archiveReleases}
-        id="archive-vault"
-        tone="archive"
-        title="Archive vault"
-      />
+        <BrandStorySection
+          headline={storyHeadline}
+          body={storyBody}
+          metrics={storyMetrics}
+        />
+
+        <BrandReleaseSection
+          collections={liveReleases}
+          id="live-releases"
+          tone="live"
+          title="Live releases"
+        />
+        <BrandReleaseSection
+          collections={upcomingReleases}
+          id="upcoming-releases"
+          tone="upcoming"
+          title="Upcoming releases"
+        />
+        <BrandReleaseSection
+          collections={archiveReleases}
+          id="archive-vault"
+          tone="archive"
+          title="Archive vault"
+        />
+      </div>
     </div>
   );
 }

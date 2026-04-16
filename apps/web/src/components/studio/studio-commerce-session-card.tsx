@@ -1,12 +1,19 @@
 "use client";
 
-import Link from "next/link";
 import type { FormEvent } from "react";
 
 import {
   type CommerceCheckoutFulfillmentStatus,
   type StudioCommerceCheckoutSummary
 } from "@ai-nft-forge/shared";
+import {
+  ActionButton,
+  ActionLink,
+  FieldLabel,
+  FieldStack,
+  StatusBanner,
+  TextAreaField
+} from "@ai-nft-forge/ui";
 import { Pill } from "@ai-nft-forge/ui";
 
 export type StudioCommerceSessionEditor = {
@@ -136,6 +143,47 @@ function shortenValue(value: string) {
   return `${value.slice(0, 10)}…${value.slice(-6)}`;
 }
 
+const toneCardClassMap: Record<
+  StudioCommerceSessionEmphasisTone,
+  {
+    card: string;
+  }
+> = {
+  critical: {
+    card: "border-red-400/45 bg-red-500/12 text-red-100"
+  },
+  warning: {
+    card: "border-amber-400/35 bg-amber-500/12 text-amber-100"
+  },
+  success: {
+    card: "border-emerald-400/35 bg-emerald-500/12 text-emerald-100"
+  },
+  neutral: {
+    card: "border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-text)]"
+  }
+};
+
+function resolveBadgeTone(
+  tone: StudioCommerceSessionEmphasisTone
+) {
+  if (tone === "critical") {
+    return "border-red-500 text-red-100";
+  }
+
+  if (tone === "warning") {
+    return "border-amber-500 text-amber-100";
+  }
+
+  if (tone === "success") {
+    return "border-emerald-500 text-emerald-100";
+  }
+
+  return "border-[color:var(--color-line)] text-[color:var(--color-muted)]";
+}
+
+const selectClass =
+  "w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30";
+
 export function StudioCommerceSessionCard({
   checkout,
   editor,
@@ -158,29 +206,25 @@ export function StudioCommerceSessionCard({
       checkout.fulfillmentAutomationStatus === "idle");
 
   return (
-    <article
-      className={`studio-commerce-session-card studio-commerce-session-card--${emphasisTone}`}
-    >
-      <div className="studio-commerce-session-card__top">
-        <div className="studio-commerce-session-card__title-block">
-          <p className="studio-commerce-session-card__eyebrow">
+    <article className={`rounded-3xl border p-4 md:p-5 xl:p-6 ${toneCardClassMap[emphasisTone].card}`}>
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div className="grid gap-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--color-accent)]">
             {checkout.brandName} · {checkout.collectionSlug}
           </p>
-          <h3 className="studio-commerce-session-card__title">
-            {checkout.title}
-          </h3>
-          <p className="studio-commerce-session-card__summary">
+          <h3 className="text-xl font-semibold">{checkout.title}</h3>
+          <p className="text-sm text-[color:var(--color-muted)]">
             {formatBuyerIdentity(checkout)}
           </p>
         </div>
         <span
-          className={`studio-commerce-session-card__badge studio-commerce-session-card__badge--${emphasisTone}`}
+          className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${resolveBadgeTone(emphasisTone)}`}
         >
           {emphasisLabel}
         </span>
       </div>
 
-      <div className="pill-row">
+      <div className="mt-4 flex flex-wrap gap-2">
         <Pill>{formatCheckoutStatus(checkout.status)}</Pill>
         <Pill>{formatProviderKind(checkout.providerKind)}</Pill>
         <Pill>{formatFulfillmentStatus(checkout.fulfillmentStatus)}</Pill>
@@ -192,144 +236,134 @@ export function StudioCommerceSessionCard({
         {checkout.priceLabel ? <Pill>{checkout.priceLabel}</Pill> : null}
       </div>
 
-      <div className="studio-commerce-session-card__grid">
-        <div className="studio-commerce-session-card__field">
-          <span className="studio-commerce-session-card__field-label">
+      <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+        <div className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-bg-strong)] p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--color-muted)]">
             Buyer
-          </span>
-          <strong className="studio-commerce-session-card__field-value">
+          </p>
+          <strong className="mt-1 block text-sm">
             {checkout.buyerDisplayName ?? "Unnamed buyer"}
           </strong>
-          <span className="studio-commerce-session-card__field-detail">
+          <p className="mt-1 text-sm text-[color:var(--color-muted)]">
             {checkout.buyerEmail}
-          </span>
-          <span className="studio-commerce-session-card__field-detail">
+          </p>
+          <p className="text-sm text-[color:var(--color-muted)]">
             {checkout.buyerWalletAddress ?? "No wallet captured"}
-          </span>
+          </p>
         </div>
-        <div className="studio-commerce-session-card__field">
-          <span className="studio-commerce-session-card__field-label">
+        <div className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-bg-strong)] p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--color-muted)]">
             Reservation
-          </span>
-          <strong className="studio-commerce-session-card__field-value">
+          </p>
+          <strong className="mt-1 block text-sm">
             {formatReservationStatus(checkout.reservationStatus)}
           </strong>
-          <span className="studio-commerce-session-card__field-detail">
+          <p className="mt-1 text-sm text-[color:var(--color-muted)]">
             Created {formatTimestamp(checkout.createdAt)}
-          </span>
-          <span className="studio-commerce-session-card__field-detail">
+          </p>
+          <p className="text-sm text-[color:var(--color-muted)]">
             Expires {formatTimestamp(checkout.expiresAt)}
-          </span>
+          </p>
         </div>
-        <div className="studio-commerce-session-card__field">
-          <span className="studio-commerce-session-card__field-label">
+        <div className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-bg-strong)] p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--color-muted)]">
             Payment
-          </span>
-          <strong className="studio-commerce-session-card__field-value">
+          </p>
+          <strong className="mt-1 block text-sm">
             {formatCheckoutStatus(checkout.status)}
           </strong>
-          <span className="studio-commerce-session-card__field-detail">
+          <p className="mt-1 text-sm text-[color:var(--color-muted)]">
             {formatProviderKind(checkout.providerKind)}
-          </span>
-          <span className="studio-commerce-session-card__field-detail">
+          </p>
+          <p className="text-sm text-[color:var(--color-muted)]">
             Paid {formatTimestamp(checkout.completedAt)}
-          </span>
+          </p>
         </div>
-        <div className="studio-commerce-session-card__field">
-          <span className="studio-commerce-session-card__field-label">
+        <div className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-bg-strong)] p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--color-muted)]">
             Fulfillment
-          </span>
-          <strong className="studio-commerce-session-card__field-value">
+          </p>
+          <strong className="mt-1 block text-sm">
             {formatFulfillmentStatus(checkout.fulfillmentStatus)}
           </strong>
-          <span className="studio-commerce-session-card__field-detail">
+          <p className="mt-1 text-sm text-[color:var(--color-muted)]">
             {checkout.fulfillmentProviderKind === "webhook"
               ? "Webhook automation"
               : "Manual fulfillment"}
-          </span>
-          <span className="studio-commerce-session-card__field-detail">
+          </p>
+          <p className="text-sm text-[color:var(--color-muted)]">
             Fulfilled {formatTimestamp(checkout.fulfilledAt)}
-          </span>
+          </p>
         </div>
-        <div className="studio-commerce-session-card__field">
-          <span className="studio-commerce-session-card__field-label">
+        <div className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-bg-strong)] p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--color-muted)]">
             Automation
-          </span>
-          <strong className="studio-commerce-session-card__field-value">
+          </p>
+          <strong className="mt-1 block text-sm">
             {formatAutomationStatus(checkout.fulfillmentAutomationStatus)}
           </strong>
-          <span className="studio-commerce-session-card__field-detail">
+          <p className="mt-1 text-sm text-[color:var(--color-muted)]">
             {checkout.fulfillmentAutomationAttemptCount.toString()} attempts
-          </span>
-          <span className="studio-commerce-session-card__field-detail">
-            Last attempt{" "}
-            {formatTimestamp(checkout.fulfillmentAutomationLastAttemptedAt)}
-          </span>
+          </p>
+          <p className="text-sm text-[color:var(--color-muted)]">
+            Last attempt {formatTimestamp(checkout.fulfillmentAutomationLastAttemptedAt)}
+          </p>
         </div>
-        <div className="studio-commerce-session-card__field">
-          <span className="studio-commerce-session-card__field-label">
+        <div className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-bg-strong)] p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--color-muted)]">
             References
-          </span>
-          <strong className="studio-commerce-session-card__field-value">
+          </p>
+          <strong className="mt-1 block text-sm">
             {checkout.providerSessionId
               ? shortenValue(checkout.providerSessionId)
               : "No provider session"}
           </strong>
-          <span className="studio-commerce-session-card__field-detail">
+          <p className="mt-1 text-sm text-[color:var(--color-muted)]">
             {checkout.fulfillmentAutomationExternalReference
               ? shortenValue(checkout.fulfillmentAutomationExternalReference)
               : "No external fulfillment reference"}
-          </span>
-          <span className="studio-commerce-session-card__field-detail">
-            Retry window{" "}
-            {formatTimestamp(checkout.fulfillmentAutomationNextRetryAt)}
-          </span>
+          </p>
+          <p className="text-sm text-[color:var(--color-muted)]">
+            Retry window {formatTimestamp(checkout.fulfillmentAutomationNextRetryAt)}
+          </p>
         </div>
       </div>
 
-      <div className="studio-commerce-session-card__links">
-        <Link
-          className="inline-link"
+      <div className="mt-5 flex flex-wrap gap-2">
+        <ActionLink
           href={checkout.collectionPublicPath}
-          rel="noreferrer"
+          tone="inline"
           target="_blank"
         >
           Public release
-        </Link>
-        <Link
-          className="inline-link"
+        </ActionLink>
+        <ActionLink
           href={`/brands/${checkout.brandSlug}/collections/${checkout.collectionSlug}/checkout/${checkout.checkoutSessionId}`}
-          rel="noreferrer"
+          tone="inline"
           target="_blank"
         >
           Hosted checkout
-        </Link>
+        </ActionLink>
         {checkout.providerKind === "stripe" ? (
-          <Link
-            className="inline-link"
-            href={checkout.checkoutUrl}
-            rel="noreferrer"
-            target="_blank"
-          >
+          <ActionLink href={checkout.checkoutUrl} tone="inline" target="_blank">
             Stripe session
-          </Link>
+          </ActionLink>
         ) : null}
       </div>
 
       {checkout.fulfillmentAutomationErrorMessage ? (
-        <div className="studio-commerce-session-card__alert status-banner status-banner--error">
+        <StatusBanner className="mt-4" tone="error">
           <strong>
             {checkout.fulfillmentAutomationErrorCode ?? "Automation failure"}
           </strong>
           <span>{checkout.fulfillmentAutomationErrorMessage}</span>
-        </div>
+        </StatusBanner>
       ) : null}
 
       {canCompleteManually || canCancel || canRetryAutomation ? (
-        <div className="studio-commerce-session-card__actions">
+        <div className="mt-4 flex flex-wrap gap-2">
           {canCompleteManually ? (
-            <button
-              className="button-action button-action--accent"
+            <ActionButton
               disabled={isBusy}
               onClick={() => {
                 void onRunAction({
@@ -339,14 +373,14 @@ export function StudioCommerceSessionCard({
                   successMessage: "Manual checkout marked completed."
                 });
               }}
+              tone="accent"
               type="button"
             >
               {isBusy ? "Working…" : "Mark paid"}
-            </button>
+            </ActionButton>
           ) : null}
           {canCancel ? (
-            <button
-              className="button-action"
+            <ActionButton
               disabled={isBusy}
               onClick={() => {
                 void onRunAction({
@@ -356,14 +390,14 @@ export function StudioCommerceSessionCard({
                   successMessage: "Checkout session released."
                 });
               }}
+              tone="primary"
               type="button"
             >
               {isBusy ? "Working…" : "Release session"}
-            </button>
+            </ActionButton>
           ) : null}
           {canRetryAutomation ? (
-            <button
-              className="button-action"
+            <ActionButton
               disabled={isBusy}
               onClick={() => {
                 void onRunAction({
@@ -376,26 +410,27 @@ export function StudioCommerceSessionCard({
                   successMessage: "Fulfillment automation requeued."
                 });
               }}
+              tone="primary"
               type="button"
             >
               {isBusy ? "Working…" : "Retry automation"}
-            </button>
+            </ActionButton>
           ) : null}
         </div>
       ) : null}
 
       {canEditFulfillment ? (
         <form
-          className="studio-form studio-commerce-session-card__form"
+          className="mt-4 rounded-2xl border border-[color:var(--color-line)] p-4"
           onSubmit={(event) => {
             onSubmitFulfillment(event, checkout);
           }}
         >
-          <div className="studio-commerce-session-card__form-grid">
-            <label className="field-stack">
-              <span className="field-label">Fulfillment status</span>
+          <div className="grid gap-3 md:grid-cols-2">
+            <FieldStack>
+              <FieldLabel>Fulfillment status</FieldLabel>
               <select
-                className="input-field"
+                className={selectClass}
                 onChange={(event) => {
                   onEditorChange({
                     checkoutSessionId: checkout.checkoutSessionId,
@@ -408,11 +443,11 @@ export function StudioCommerceSessionCard({
                 <option value="unfulfilled">Unfulfilled</option>
                 <option value="fulfilled">Fulfilled</option>
               </select>
-            </label>
-            <label className="field-stack">
-              <span className="field-label">Fulfillment notes</span>
-              <textarea
-                className="input-field"
+            </FieldStack>
+            <FieldStack>
+              <FieldLabel>Fulfillment notes</FieldLabel>
+              <TextAreaField
+                className="w-full min-h-[8rem]"
                 onChange={(event) => {
                   onEditorChange({
                     checkoutSessionId: checkout.checkoutSessionId,
@@ -423,15 +458,16 @@ export function StudioCommerceSessionCard({
                 rows={3}
                 value={editor.fulfillmentNotes}
               />
-            </label>
+            </FieldStack>
           </div>
-          <div className="studio-commerce-session-card__actions">
-            <button className="button-action" disabled={isBusy} type="submit">
+          <div className="mt-3 flex justify-end">
+            <ActionButton disabled={isBusy} tone="primary" type="submit">
               {isBusy ? "Saving…" : "Save fulfillment"}
-            </button>
+            </ActionButton>
           </div>
         </form>
       ) : null}
+
     </article>
   );
 }

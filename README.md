@@ -10,6 +10,8 @@
 [![Monorepo](https://img.shields.io/badge/repo-pnpm%20workspace-4B32C3)](package.json)
 [![Local DB](https://img.shields.io/badge/database-Docker%20Postgres-2496ED?logo=docker&logoColor=white)](infra/docker/docker-compose.yml)
 [![Neon Mode](https://img.shields.io/badge/database-Optional%20Neon-00E599)](docs/runbooks/local-development.md)
+[![Upstash Redis](https://img.shields.io/badge/redis-Upstash-00E9A3)](docs/runbooks/local-development.md)
+[![Cloudflare R2](https://img.shields.io/badge/storage-Cloudflare%20R2-F38020?logo=cloudflare&logoColor=white)](docs/runbooks/local-development.md)
 [![Compose](https://img.shields.io/badge/orchestration-Docker%20Compose-2496ED?logo=docker&logoColor=white)](infra/docker)
 [![Deployment](https://img.shields.io/badge/deployment-self--hosted-0A7B83)](docs/deployment/self-host-docker-compose.md)
 

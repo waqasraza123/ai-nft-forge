@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { ActionButton } from "@ai-nft-forge/ui";
 
 type PurchasePanelProps = {
   activeReservationCount: number;
@@ -101,45 +102,51 @@ export function PurchasePanel(props: PurchasePanelProps) {
           : "Checkout opens once this release is live.";
 
   return (
-    <article className="storefront-panel storefront-commerce-panel">
-      <span className="storefront-section-kicker">Reserve and checkout</span>
-      <h2>
+    <article className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] p-6 shadow-[var(--shadow-surface)]">
+      <p className="mb-1 text-xs uppercase tracking-[0.18em] text-[color:var(--storefront-accent)]">
+        Reserve and checkout
+      </p>
+      <h2 className="text-xl font-semibold text-[color:var(--storefront-text)]">
         {props.priceLabel
           ? `Reserve the next available edition for ${props.priceLabel}`
           : "Reserve the next available edition"}
       </h2>
-      <div className="storefront-commerce-meta">
-        <span className="storefront-chip">
+      <div className="mt-2 flex flex-wrap gap-2">
+        <span className="rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-2.5 py-1 text-xs text-[color:var(--storefront-text)]">
           {props.availableEditionCount} editions open
         </span>
         {props.nextAvailableEditionNumber ? (
-          <span className="storefront-chip">
+          <span className="rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-2.5 py-1 text-xs text-[color:var(--storefront-text)]">
             Next edition #{props.nextAvailableEditionNumber}
           </span>
         ) : null}
         {props.activeReservationCount > 0 ? (
-          <span className="storefront-chip">
+          <span className="rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-2.5 py-1 text-xs text-[color:var(--storefront-text)]">
             {props.activeReservationCount} held right now
           </span>
         ) : null}
       </div>
       {props.checkoutEnabled ? (
-        <form className="storefront-commerce-form" onSubmit={handleSubmit}>
-          <label className="storefront-commerce-field">
-            <span>Name</span>
+        <form className="mt-3 space-y-3" onSubmit={handleSubmit}>
+          <label className="grid gap-1.5">
+            <span className="text-sm font-semibold text-[color:var(--storefront-text)]">
+              Name
+            </span>
             <input
               autoComplete="name"
-              className="storefront-commerce-input"
+              className="rounded-xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-3 py-2 text-sm text-[color:var(--storefront-text)] placeholder:text-[color:var(--storefront-muted)]"
               onChange={(event) => setBuyerDisplayName(event.target.value)}
               placeholder="Collector name"
               value={buyerDisplayName}
             />
           </label>
-          <label className="storefront-commerce-field">
-            <span>Email</span>
+          <label className="grid gap-1.5">
+            <span className="text-sm font-semibold text-[color:var(--storefront-text)]">
+              Email
+            </span>
             <input
               autoComplete="email"
-              className="storefront-commerce-input"
+              className="rounded-xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-3 py-2 text-sm text-[color:var(--storefront-text)] placeholder:text-[color:var(--storefront-muted)]"
               onChange={(event) => setBuyerEmail(event.target.value)}
               placeholder="collector@example.com"
               required
@@ -147,22 +154,26 @@ export function PurchasePanel(props: PurchasePanelProps) {
               value={buyerEmail}
             />
           </label>
-          <label className="storefront-commerce-field">
-            <span>Wallet address</span>
+          <label className="grid gap-1.5">
+            <span className="text-sm font-semibold text-[color:var(--storefront-text)]">
+              Wallet address
+            </span>
             <input
               autoComplete="off"
-              className="storefront-commerce-input"
+              className="rounded-xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-3 py-2 text-sm text-[color:var(--storefront-text)] placeholder:text-[color:var(--storefront-muted)]"
               onChange={(event) => setBuyerWalletAddress(event.target.value)}
               placeholder="Optional delivery wallet"
               value={buyerWalletAddress}
             />
           </label>
           {error ? (
-            <div className="storefront-commerce-error">{error}</div>
+            <p className="rounded-xl border border-red-400/45 bg-red-500/12 p-2.5 text-sm text-red-100">
+              {error}
+            </p>
           ) : null}
-          <button
-            className="storefront-button storefront-button--primary"
+          <ActionButton
             disabled={busy}
+            tone="primary"
             type="submit"
           >
             {busy
@@ -170,10 +181,12 @@ export function PurchasePanel(props: PurchasePanelProps) {
               : props.providerMode === "stripe"
                 ? "Reserve and continue to payment"
                 : "Reserve and continue"}
-          </button>
+          </ActionButton>
         </form>
       ) : (
-        <div className="storefront-commerce-empty">{disabledMessage}</div>
+        <p className="mt-3 rounded-xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-3 text-sm text-[color:var(--storefront-text)]">
+          {disabledMessage}
+        </p>
       )}
     </article>
   );

@@ -1,6 +1,10 @@
-import Link from "next/link";
-
-import { PageShell, Pill, SurfaceCard, SurfaceGrid } from "@ai-nft-forge/ui";
+import {
+  ActionLink,
+  PageShell,
+  Pill,
+  SurfaceCard,
+  SurfaceGrid
+} from "@ai-nft-forge/ui";
 
 import { WorkspaceScopeSwitcher } from "../../../../components/workspace-scope-switcher";
 import { OpsAuditClient } from "./ops-audit-client";
@@ -23,15 +27,15 @@ export default async function OpsAuditPage() {
       lead="The ops audit surface now exposes durable workspace activity as a filterable operational timeline instead of limiting audit review to the short settings history widget."
       actions={
         <>
-          <Link className="action-link" href="/ops">
+          <ActionLink href="/ops" tone="action">
             Open ops
-          </Link>
-          <Link className="action-link" href="/studio/settings">
+          </ActionLink>
+          <ActionLink href="/studio/settings" tone="action">
             Open settings
-          </Link>
-          <Link className="inline-link" href="/">
+          </ActionLink>
+          <ActionLink href="/" tone="inline">
             Back to marketing
-          </Link>
+          </ActionLink>
         </>
       }
       tone="ops"
@@ -43,7 +47,7 @@ export default async function OpsAuditPage() {
           span={8}
           title="Workspace audit trail"
         >
-          <div className="pill-row">
+          <div className="flex flex-wrap gap-2">
             <Pill>{access?.workspace?.slug ?? "Session required"}</Pill>
             <Pill>{access?.role ?? "unauthenticated"}</Pill>
             <Pill>

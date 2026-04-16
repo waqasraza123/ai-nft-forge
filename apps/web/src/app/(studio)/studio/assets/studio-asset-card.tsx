@@ -3,7 +3,14 @@ import {
   type GenerationRequestSummary,
   type StudioSourceAssetSummary
 } from "@ai-nft-forge/shared";
-import { Pill, SurfaceCard } from "@ai-nft-forge/ui";
+import {
+  ActionButton,
+  FieldLabel,
+  FieldStack,
+  Pill,
+  StatusBanner,
+  SurfaceCard
+} from "@ai-nft-forge/ui";
 
 type AssetImage = {
   label: string;
@@ -240,15 +247,12 @@ export function StudioAssetCard({
         eyebrow={asset.status}
         title={asset.originalFilename}
         footer={
-          <div className="studio-source-card__footer">
-            <div className="studio-action-stack">
-              <label
-                className="field-stack"
-                htmlFor={`variant-count-${asset.id}`}
-              >
-                <span className="field-label">Variant count</span>
+          <div className="grid gap-2.5">
+            <div className="flex flex-wrap gap-2">
+              <FieldStack>
+                <FieldLabel>Variant count</FieldLabel>
                 <select
-                  className="input-field"
+                  className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                   disabled={isDispatchingGeneration}
                   id={`variant-count-${asset.id}`}
                   onChange={(event) =>
@@ -264,58 +268,58 @@ export function StudioAssetCard({
                     )
                   )}
                 </select>
-              </label>
+              </FieldStack>
               {canStartGeneration(asset) ? (
-                <button
-                  className="button-action button-action--accent"
+                <ActionButton
                   disabled={isDispatchingGeneration}
                   onClick={() =>
                     void startGeneration(asset.id, generationVariantCount)
                   }
+                  tone="accent"
                   type="button"
                 >
                   {resolveGenerationActionLabel(asset)}
-                </button>
+                </ActionButton>
               ) : null}
             </div>
-            <div className="studio-source-card__quick-actions">
-              <button
-                className="button-action"
+            <div>
+              <ActionButton
                 onClick={() => {
                   onSelect?.();
                 }}
                 type="button"
+                tone="ghost"
               >
                 {isSelected ? "Inspecting now" : "Inspect in workflow"}
-              </button>
+              </ActionButton>
             </div>
           </div>
         }
       >
-        <div className="studio-source-card">
-          <div className="studio-source-card__media">
+        <div className="grid gap-3 md:grid-cols-[1fr_1.4fr]">
+          <div className="relative overflow-hidden rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] p-2">
             {primaryPreview.url ? (
               <img
                 alt={`Latest generated output for ${asset.originalFilename}`}
-                className="studio-source-card__media-image"
+                className="h-full min-h-40 w-full rounded-lg object-cover"
                 loading="lazy"
                 src={primaryPreview.url}
               />
             ) : (
-              <div className="studio-source-card__media-fallback">
+              <div className="grid min-h-40 place-items-center rounded-lg border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-xs text-[color:var(--color-muted)]">
                 {asset.contentType}
               </div>
             )}
-            <span className="studio-source-card__media-state">
+            <span className="absolute left-2 top-2 inline-flex items-center rounded-full bg-[color:var(--color-surface)]/85 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-[color:var(--color-muted)]">
               {latestStatusLabel}
             </span>
           </div>
-          <div className="studio-source-card__copy">
-            <p className="field-label">State</p>
+          <div className="grid gap-2">
+            <FieldLabel>State</FieldLabel>
             <p>
               {asset.id} · {formatIsoDateTime(asset.uploadedAt)}
             </p>
-            <div className="pill-row">
+            <div className="flex flex-wrap gap-2">
               <Pill>
                 {asset.latestGeneration
                   ? `${asset.latestGeneration.requestedVariantCount} variants`
@@ -332,7 +336,7 @@ export function StudioAssetCard({
                   : "No outputs"}
               </Pill>
             </div>
-            <p className="studio-source-card__copy-meta">
+            <p className="text-xs text-[color:var(--color-muted)]">
               Source size {formatAssetByteSize(asset.byteSize)}
             </p>
           </div>
@@ -348,14 +352,11 @@ export function StudioAssetCard({
       title={asset.originalFilename}
       footer={
         canStartGeneration(asset) ? (
-          <div className="studio-action-stack">
-            <label
-              className="field-stack"
-              htmlFor={`variant-count-${asset.id}`}
-            >
-              <span className="field-label">Variant count</span>
+          <div className="flex flex-wrap gap-2">
+            <FieldStack>
+              <FieldLabel>Variant count</FieldLabel>
               <select
-                className="input-field"
+                className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                 disabled={isDispatchingGeneration}
                 id={`variant-count-${asset.id}`}
                 onChange={(event) =>
@@ -371,23 +372,23 @@ export function StudioAssetCard({
                   )
                 )}
               </select>
-            </label>
-            <button
-              className="button-action button-action--accent"
+            </FieldStack>
+            <ActionButton
               disabled={isDispatchingGeneration}
               onClick={() =>
                 void startGeneration(asset.id, generationVariantCount)
               }
+              tone="accent"
               type="button"
             >
               {resolveGenerationActionLabel(asset)}
-            </button>
+            </ActionButton>
           </div>
         ) : null
       }
     >
-      <div className="studio-source-card__detail">
-        <div className="pill-row">
+      <div className="grid gap-3">
+        <div className="flex flex-wrap gap-2">
           <Pill>{asset.id}</Pill>
           <Pill>{formatIsoDateTime(asset.uploadedAt)}</Pill>
           <Pill>{latestStatusLabel}</Pill>
@@ -419,8 +420,8 @@ export function StudioAssetCard({
           ) : null}
         </div>
         {generationRunCount > 0 ? (
-          <div className="generation-detail-stack">
-            <div className="status-banner status-banner--info">
+          <div className="grid gap-3">
+            <StatusBanner tone="info">
               <strong>
                 {selectedGeneration?.id === asset.latestGeneration?.id
                   ? "Viewing the latest generation run."
@@ -431,35 +432,37 @@ export function StudioAssetCard({
               <span>
                 {totalStoredOutputCount} stored outputs across history
               </span>
-            </div>
-            <div className="generation-history-list">
+            </StatusBanner>
+            <div className="space-y-3">
               {asset.generationHistory.map((generation, index) => {
                 const isSelected = generation.id === selectedGeneration?.id;
 
                 return (
                   <div
-                    className={`generation-history-item${isSelected ? " generation-history-item--selected" : ""}`}
+                    className={`rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 ${
+                      isSelected ? "border-[color:var(--color-accent)]" : ""
+                    }`}
                     key={generation.id}
                   >
-                    <div className="generation-history-item__header">
-                      <div className="generation-history-item__copy">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="grid gap-1">
                         <strong>
                           {index === 0 ? "Latest run" : `Run ${index + 1}`}
                         </strong>
                         <span>{generation.id}</span>
                       </div>
-                      <div className="generation-history-item__actions">
+                      <div className="flex flex-wrap gap-2">
                         <Pill>{generation.status}</Pill>
-                        <button
-                          className="button-action"
+                        <ActionButton
                           onClick={() => setSelectedGenerationId(generation.id)}
+                          tone="ghost"
                           type="button"
                         >
                           {isSelected ? "Viewing run" : "Inspect run"}
-                        </button>
+                        </ActionButton>
                       </div>
                     </div>
-                    <div className="generation-history-meta">
+                    <div className="mt-2 grid gap-1 text-xs text-[color:var(--color-muted)]">
                       <span>
                         Requested {formatIsoDateTime(generation.createdAt)}
                       </span>
@@ -482,7 +485,7 @@ export function StudioAssetCard({
             </div>
             {selectedGeneration ? (
               <>
-                <div className="pill-row studio-generation-selection-meta">
+                <div className="mt-2 flex flex-wrap gap-2">
                   <Pill>{selectedGeneration.id}</Pill>
                   <Pill>
                     Requested {formatIsoDateTime(selectedGeneration.createdAt)}
@@ -502,48 +505,47 @@ export function StudioAssetCard({
                   ) : null}
                 </div>
                 {selectedGeneration.result ? (
-                  <div className="status-banner status-banner--success">
+                  <StatusBanner tone="success">
                     <strong>Generation completed.</strong>
                     <span>
                       {selectedGeneration.result.generatedVariantCount} variants
                       requested
                     </span>
                     <span>
-                      {selectedGeneration.result.storedAssetCount} stored
-                      outputs
+                      {selectedGeneration.result.storedAssetCount} stored outputs
                     </span>
-                    <span className="asset-output-key">
+                    <span className="text-xs text-[color:var(--color-muted)]">
                       {selectedGeneration.result.outputGroupKey}
                     </span>
-                  </div>
+                  </StatusBanner>
                 ) : null}
                 {selectedGeneration.failureMessage ? (
-                  <div className="status-banner status-banner--error">
+                  <StatusBanner tone="error">
                     <strong>Generation failed.</strong>
                     {selectedGeneration.failureCode ? (
                       <span>{selectedGeneration.failureCode}</span>
                     ) : null}
                     <span>{selectedGeneration.failureMessage}</span>
                     {canRetrySelectedGeneration ? (
-                      <button
-                        className="button-action"
+                      <ActionButton
                         disabled={
                           retryingGenerationRequestId === selectedGeneration.id
                         }
                         onClick={() =>
                           void retryGeneration(selectedGeneration.id)
                         }
+                        tone="secondary"
                         type="button"
                       >
                         {retryingGenerationRequestId === selectedGeneration.id
                           ? "Retrying..."
                           : "Retry failed run"}
-                      </button>
+                      </ActionButton>
                     ) : null}
-                  </div>
+                  </StatusBanner>
                 ) : null}
                 {selectedGeneration.generatedAssets.length > 0 ? (
-                  <div className="asset-output-list">
+                  <div className="grid gap-3">
                     {selectedGeneration.generatedAssets.map(
                       (generatedAsset) => {
                         const isDownloading =
@@ -559,25 +561,25 @@ export function StudioAssetCard({
                         );
 
                         return (
-                          <div
-                            className="asset-output-item"
+                          <article
+                            className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3"
                             key={generatedAsset.id}
                           >
-                            <div className="studio-generated-preview">
+                            <div className="overflow-hidden rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)]">
                               {generatedAssetImage.url ? (
                                 <img
                                   alt={`Variant ${generatedAssetImage.variantIndex} output`}
-                                  className="studio-generated-preview__image"
+                                  className="h-full min-h-40 w-full object-cover"
                                   loading="lazy"
                                   src={generatedAssetImage.url}
                                 />
                               ) : (
-                                <div className="studio-generated-preview__placeholder">
+                                <div className="grid min-h-40 place-items-center rounded-lg border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-xs text-[color:var(--color-muted)]">
                                   {generatedAssetImage.label}
                                 </div>
                               )}
                             </div>
-                            <div className="asset-output-copy">
+                            <div className="mt-3 grid gap-1">
                               <strong>
                                 Variant {generatedAsset.variantIndex}
                               </strong>
@@ -592,23 +594,20 @@ export function StudioAssetCard({
                               {generatedAsset.moderatedAt ? (
                                 <span>
                                   Reviewed{" "}
-                                  {formatIsoDateTime(
-                                    generatedAsset.moderatedAt
-                                  )}
+                                  {formatIsoDateTime(generatedAsset.moderatedAt)}
                                 </span>
                               ) : null}
-                              <span className="asset-output-key">
+                              <span className="text-xs text-[color:var(--color-muted)]">
                                 {generatedAsset.storageObjectKey}
                               </span>
                             </div>
-                            <div className="candidate-card__actions">
+                            <div className="mt-3 flex flex-wrap gap-2">
                               <Pill>
                                 {formatModerationStatus(
                                   generatedAsset.moderationStatus
                                 )}
                               </Pill>
-                              <button
-                                className="button-action"
+                              <ActionButton
                                 disabled={isModerating}
                                 onClick={() =>
                                   void updateGeneratedAssetModeration(
@@ -616,15 +615,15 @@ export function StudioAssetCard({
                                     "approved"
                                   )
                                 }
+                                tone="secondary"
                                 type="button"
                               >
                                 {isModerating &&
                                 generatedAsset.moderationStatus !== "approved"
                                   ? "Saving..."
                                   : "Approve"}
-                              </button>
-                              <button
-                                className="button-action"
+                              </ActionButton>
+                              <ActionButton
                                 disabled={isModerating}
                                 onClick={() =>
                                   void updateGeneratedAssetModeration(
@@ -632,15 +631,15 @@ export function StudioAssetCard({
                                     "rejected"
                                   )
                                 }
+                                tone="secondary"
                                 type="button"
                               >
                                 {isModerating &&
                                 generatedAsset.moderationStatus !== "rejected"
                                   ? "Saving..."
                                   : "Reject"}
-                              </button>
-                              <button
-                                className="button-action"
+                              </ActionButton>
+                              <ActionButton
                                 disabled={isModerating}
                                 onClick={() =>
                                   void updateGeneratedAssetModeration(
@@ -648,6 +647,7 @@ export function StudioAssetCard({
                                     "pending_review"
                                   )
                                 }
+                                tone="secondary"
                                 type="button"
                               >
                                 {isModerating &&
@@ -655,37 +655,36 @@ export function StudioAssetCard({
                                   "pending_review"
                                   ? "Saving..."
                                   : "Reset"}
-                              </button>
-                              <button
-                                className="button-action"
+                              </ActionButton>
+                              <ActionButton
                                 disabled={isDownloading}
                                 onClick={() =>
                                   void downloadGeneratedAsset(generatedAsset.id)
                                 }
+                                tone="primary"
                                 type="button"
                               >
                                 {isDownloading ? "Preparing..." : "Download"}
-                              </button>
+                              </ActionButton>
                             </div>
-                          </div>
+                          </article>
                         );
                       }
                     )}
                   </div>
                 ) : (
-                  <div className="asset-placeholder">
+                  <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 text-sm text-[color:var(--color-muted)]">
                     {resolveOutputPlaceholderMessage(selectedGeneration)}
                   </div>
                 )}
               </>
             ) : null}
           </div>
-        ) : (
-          <div className="asset-placeholder">
-            Stored generated outputs will appear here after worker processing
-            succeeds.
-          </div>
-        )}
+    ) : (
+      <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 text-sm text-[color:var(--color-muted)]">
+        Stored generated outputs will appear here after worker processing succeeds.
+      </div>
+    )}
       </div>
     </SurfaceCard>
   );

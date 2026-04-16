@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { getAddress, toHex } from "viem";
@@ -11,7 +10,13 @@ import {
   authSessionResponseSchema,
   type AuthSessionResponse
 } from "@ai-nft-forge/shared";
-import { MetricTile, Pill, SurfaceCard } from "@ai-nft-forge/ui";
+import {
+  ActionButton,
+  ActionLink,
+  MetricTile,
+  Pill,
+  SurfaceCard
+} from "@ai-nft-forge/ui";
 
 import {
   defaultWalletAuthChain,
@@ -24,7 +29,7 @@ type SignInClientProps = {
 
 type NoticeState = {
   message: string;
-  tone: "error" | "info" | "success";
+  tone: NoticeTone;
 } | null;
 
 type BaseAccountWalletConnectResponse = {
@@ -95,6 +100,24 @@ function shortHex(value: string) {
   return `${value.slice(0, 8)}…${value.slice(-6)}`;
 }
 
+type NoticeTone = "error" | "info" | "success";
+
+function formatNoticeToneClass(tone: NoticeTone | null) {
+  if (!tone) {
+    return "";
+  }
+
+  if (tone === "error") {
+    return "border-red-400/55 bg-red-500/12 text-red-100";
+  }
+
+  if (tone === "success") {
+    return "border-emerald-400/45 bg-emerald-500/12 text-emerald-100";
+  }
+
+  return "border-cyan-400/40 bg-cyan-500/15 text-cyan-100";
+}
+
 export function SignInClient({ initialSession }: SignInClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -112,8 +135,7 @@ export function SignInClient({ initialSession }: SignInClientProps) {
   const browserWalletConnector =
     connectors.find((connector) => connector.id === "injected") ?? null;
   const availableConnectorCount =
-    Number(Boolean(baseAccountConnector)) +
-    Number(Boolean(browserWalletConnector));
+    Number(Boolean(baseAccountConnector)) + Number(Boolean(browserWalletConnector));
   const connectedWalletAddress = walletConnection.address ?? null;
   const connectedWalletChainLabel = getWalletChainLabel(
     walletConnection.chainId ?? null
@@ -352,12 +374,12 @@ export function SignInClient({ initialSession }: SignInClientProps) {
   return (
     <>
       <SurfaceCard
-        body="Sign in with Base Account or a standard injected wallet. Both paths still terminate at the same server-issued nonce, signature verification, and HTTP-only session boundary."
+        body="Sign in with Base Account or a standard injected wallet. Both paths terminate at the same server-issued nonce, signature verification, and HTTP-only session boundary."
         eyebrow="Interactive"
         span={8}
         title="Wallet sign-in"
       >
-        <div className="metric-list">
+        <div className="grid gap-3 md:grid-cols-3">
           <MetricTile
             label="Studio session"
             value={session ? "Authenticated" : "Not signed in"}
@@ -373,7 +395,7 @@ export function SignInClient({ initialSession }: SignInClientProps) {
             value={walletConnection.connector?.name ?? "Not connected"}
           />
         </div>
-        <div className="pill-row">
+        <div className="mt-3 flex flex-wrap gap-2">
           <Pill>{availableConnectorCount} wallet path(s) ready</Pill>
           <Pill>Next: {nextPath}</Pill>
           {connectedWalletChainLabel ? (
@@ -384,59 +406,61 @@ export function SignInClient({ initialSession }: SignInClientProps) {
           ) : null}
         </div>
         {notice ? (
-          <div className={`notice-banner notice-banner--${notice.tone}`}>
+          <div
+            className={`mt-3 rounded-xl border p-2.5 text-sm ${formatNoticeToneClass(
+              notice?.tone ?? null
+            )}`}
+          >
             {notice.message}
           </div>
         ) : null}
-        <div className="studio-action-row">
-          <button
-            className="button-action button-action--accent"
+        <div className="mt-4 flex flex-wrap gap-2">
+          <ActionButton
             disabled={!baseAccountConnector || activeAction !== null}
             onClick={() => {
               void handleBaseAccountSignIn();
             }}
+            tone="accent"
             type="button"
           >
             {activeAction === "base"
               ? "Signing in…"
               : "Sign in with Base Account"}
-          </button>
-          <button
-            className="button-action"
+          </ActionButton>
+          <ActionButton
             disabled={!browserWalletConnector || activeAction !== null}
             onClick={() => {
               void handleBrowserWalletSignIn();
             }}
+            tone="primary"
             type="button"
           >
             {activeAction === "browser"
               ? "Signing in…"
               : "Sign in with browser wallet"}
-          </button>
+          </ActionButton>
           {session ? (
-            <button
-              className="button-action"
+            <ActionButton
               disabled={activeAction !== null}
               onClick={() => {
                 void handleLogout();
               }}
+              tone="secondary"
               type="button"
             >
               {activeAction === "logout" ? "Signing out…" : "Sign out"}
-            </button>
+            </ActionButton>
           ) : null}
-          <Link className="action-link" href={nextPath}>
-            Continue
-          </Link>
+          <ActionLink href={nextPath}>Continue</ActionLink>
         </div>
       </SurfaceCard>
       <SurfaceCard
-        body="The authenticated studio session remains server-owned. Wallet connection state is purely a client convenience layer for sign-in and later onchain actions."
+        body="The authenticated studio session remains server-owned. Wallet connection state is a client convenience for sign-in and later onchain actions."
         eyebrow="Current state"
         span={4}
         title={session ? "Authenticated session detected" : "No session yet"}
       >
-        <div className="metric-list metric-list--single-column">
+        <div className="grid gap-3">
           <MetricTile label="Authenticated" value={session ? "Yes" : "No"} />
           <MetricTile
             label="Session wallet"

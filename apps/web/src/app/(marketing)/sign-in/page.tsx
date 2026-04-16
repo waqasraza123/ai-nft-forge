@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { PageShell, Pill, SurfaceCard, SurfaceGrid } from "@ai-nft-forge/ui";
+import { ActionLink, PageShell, Pill, SurfaceCard, SurfaceGrid } from "@ai-nft-forge/ui";
 
 import { getCurrentAuthSession } from "../../../server/auth/session";
 
@@ -16,12 +16,12 @@ export default async function SignInPage() {
       lead="Phase 8 turns the wallet-auth placeholder into a real sign-in surface. Base Account now uses a SIWE-capable flow on top of the existing server nonce and session contract, while standard injected wallets still work through the same backend boundary."
       actions={
         <>
-          <Link className="action-link" href="/api/auth/session">
+          <ActionLink href="/api/auth/session">
             Session endpoint
-          </Link>
-          <Link className="inline-link" href="/">
+          </ActionLink>
+          <ActionLink href="/" tone="inline">
             Back to marketing
-          </Link>
+          </ActionLink>
         </>
       }
       tone="default"
@@ -34,7 +34,7 @@ export default async function SignInPage() {
           span={6}
           title="Server auth contract"
         >
-          <div className="pill-row">
+          <div className="mt-2 flex flex-wrap gap-2">
             <Pill>POST /api/auth/nonce</Pill>
             <Pill>POST /api/auth/verify</Pill>
             <Pill>GET /api/auth/session</Pill>
@@ -47,7 +47,7 @@ export default async function SignInPage() {
           span={6}
           title="Shared wallet UX"
         >
-          <div className="pill-row">
+          <div className="mt-2 flex flex-wrap gap-2">
             <Pill>Base Account</Pill>
             <Pill>Injected wallet</Pill>
             <Pill>/studio/collections</Pill>

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import {
   MetricTile,
+  ActionLink,
   PageShell,
   Pill,
   SurfaceCard,
@@ -44,21 +45,21 @@ export default async function StudioCommerceFleetPage() {
       lead="This view keeps commerce rollups explicit at the workspace layer instead of silently flattening multiple stores into the selected workspace dashboard."
       actions={
         <>
-          <Link className="action-link" href="/studio/commerce">
+          <ActionLink href="/studio/commerce" tone="action">
             Current workspace commerce
-          </Link>
-          <a
-            className="action-link"
+          </ActionLink>
+          <ActionLink
             href="/api/studio/commerce/fleet/report?format=csv"
+            tone="action"
           >
             Export CSV
-          </a>
-          <a className="action-link" href="/api/studio/commerce/fleet/report">
+          </ActionLink>
+          <ActionLink href="/api/studio/commerce/fleet/report" tone="action">
             JSON snapshot
-          </a>
-          <Link className="inline-link" href="/studio">
+          </ActionLink>
+          <ActionLink href="/studio" tone="inline">
             Back to studio
-          </Link>
+          </ActionLink>
         </>
       }
       tone="studio"
@@ -70,7 +71,7 @@ export default async function StudioCommerceFleetPage() {
           span={12}
           title="Accessible workspace commerce fleet"
         >
-          <div className="metric-row">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <MetricTile
               label="Workspaces"
               value={report.report.summary.totalWorkspaceCount.toString()}
@@ -88,27 +89,28 @@ export default async function StudioCommerceFleetPage() {
               value={report.report.summary.unfulfilledCheckoutCount.toString()}
             />
           </div>
-          <div className="pill-row">
+          <div className="flex flex-wrap gap-2">
             <Pill>{report.report.scopeLabel}</Pill>
             <Pill>{report.report.generatedAt}</Pill>
           </div>
         </SurfaceCard>
-        <div className="surface-card surface-card--span-12">
-          <div className="surface-card__content">
-            <div className="surface-card__header">
-              <p className="surface-card__eyebrow">Workspace rollups</p>
-              <h2 className="surface-card__title">
-                Cross-workspace commerce status
-              </h2>
-            </div>
-            <div className="collection-item-list">
+        <div className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 md:col-span-12">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-accent)]">
+              Workspace rollups
+            </p>
+            <h2 className="text-xl font-semibold">
+              Cross-workspace commerce status
+            </h2>
+          </div>
+            <div className="mt-3 space-y-2">
               {report.report.workspaces.length ? (
                 report.report.workspaces.map((workspace) => (
                   <div
-                    className="collection-item-card"
+                    className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3"
                     key={workspace.workspace.id}
                   >
-                    <div className="collection-item-card__copy">
+                    <div className="grid gap-1 text-sm text-[color:var(--color-muted)]">
                       <strong>
                         {workspace.workspace.name} · /{workspace.workspace.slug}
                       </strong>
@@ -136,13 +138,12 @@ export default async function StudioCommerceFleetPage() {
                   </div>
                 ))
               ) : (
-                <div className="collection-empty-state">
+                <div className="rounded-xl border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] p-4 text-sm text-[color:var(--color-muted)]">
                   No accessible workspaces are available for fleet commerce
                   reporting.
                 </div>
               )}
             </div>
-          </div>
         </div>
       </SurfaceGrid>
     </PageShell>

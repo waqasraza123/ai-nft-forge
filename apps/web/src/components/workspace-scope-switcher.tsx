@@ -9,11 +9,11 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 
+import { ActionButton, Pill } from "@ai-nft-forge/ui";
 import {
   studioWorkspaceSelectionResponseSchema,
   type StudioWorkspaceScopeSummary
 } from "@ai-nft-forge/shared";
-import { Pill } from "@ai-nft-forge/ui";
 
 type WorkspaceScopeSwitcherProps = {
   currentWorkspaceSlug: string | null;
@@ -23,7 +23,7 @@ type WorkspaceScopeSwitcherProps = {
 type NoticeState = {
   message: string;
   tone: "error" | "info" | "success";
-} | null;
+};
 
 function createFallbackErrorMessage(response: Response) {
   switch (response.status) {
@@ -36,6 +36,18 @@ function createFallbackErrorMessage(response: Response) {
   }
 }
 
+function getNoticeToneClass(tone: NoticeState["tone"]) {
+  if (tone === "error") {
+    return "border-red-400/45 bg-red-500/10 text-red-100";
+  }
+
+  if (tone === "success") {
+    return "border-emerald-400/35 bg-emerald-500/15 text-emerald-100";
+  }
+
+  return "border-cyan-400/35 bg-cyan-500/12 text-cyan-100";
+}
+
 export function WorkspaceScopeSwitcher({
   currentWorkspaceSlug,
   workspaces
@@ -45,7 +57,7 @@ export function WorkspaceScopeSwitcher({
     currentWorkspaceSlug ?? ""
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [notice, setNotice] = useState<NoticeState>(null);
+  const [notice, setNotice] = useState<NoticeState | null>(null);
   const activeWorkspace = useMemo(
     () =>
       workspaces.find((workspace) => workspace.slug === currentWorkspaceSlug) ??
@@ -123,11 +135,13 @@ export function WorkspaceScopeSwitcher({
   }
 
   return (
-    <div className="studio-form">
-      <label className="field-stack">
-        <span className="field-label">Active workspace</span>
+    <section className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)]/70 p-4">
+      <label className="grid gap-2">
+        <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--color-muted)]">
+          Active workspace
+        </span>
         <select
-          className="input-field"
+          className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] px-3 py-2 text-sm text-[color:var(--color-text)]"
           onChange={handleChange}
           value={selectedWorkspaceSlug}
         >
@@ -141,9 +155,8 @@ export function WorkspaceScopeSwitcher({
           ))}
         </select>
       </label>
-      <div className="studio-action-row">
-        <button
-          className="button-action"
+      <div className="mt-3">
+        <ActionButton
           disabled={
             isSubmitting ||
             selectedWorkspaceSlug === (currentWorkspaceSlug ?? "") ||
@@ -152,27 +165,22 @@ export function WorkspaceScopeSwitcher({
           onClick={() => {
             void handleSubmit();
           }}
+          tone="primary"
           type="button"
         >
           {isSubmitting ? "Switching…" : "Switch workspace"}
-        </button>
+        </ActionButton>
       </div>
-      <div className="pill-row">
+      <div className="mt-3 flex flex-wrap gap-2">
         <Pill>{activeWorkspace?.slug ?? "no workspace"}</Pill>
         <Pill>{activeWorkspace?.role ?? "owner"}</Pill>
         <Pill>{workspaces.length} accessible</Pill>
       </div>
       {notice ? (
         <div
-          className={`status-banner ${
-            notice.tone === "error"
-              ? "status-banner--error"
-              : notice.tone === "success"
-                ? "status-banner--success"
-                : ""
-          }`}
+          className={`mt-3 rounded-xl border p-3 text-sm ${getNoticeToneClass(notice.tone)}`}
         >
-          <strong>
+          <strong className="block font-semibold">
             {notice.tone === "error"
               ? "Workspace error"
               : notice.tone === "success"
@@ -182,6 +190,6 @@ export function WorkspaceScopeSwitcher({
           <span>{notice.message}</span>
         </div>
       ) : null}
-    </div>
+    </section>
   );
 }

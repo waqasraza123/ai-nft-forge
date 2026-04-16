@@ -10,7 +10,15 @@ import {
   type WorkspaceFleetOverviewResponse,
   type WorkspaceFleetWorkspaceSummary
 } from "@ai-nft-forge/shared";
-import { MetricTile, Pill, SurfaceCard, SurfaceGrid } from "@ai-nft-forge/ui";
+import {
+  ActionButton,
+  cn,
+  MetricTile,
+  Pill,
+  StatusBanner,
+  SurfaceCard,
+  SurfaceGrid
+} from "@ai-nft-forge/ui";
 import { useRouter } from "next/navigation";
 import { startTransition, useEffectEvent, useState } from "react";
 
@@ -309,13 +317,13 @@ export function OpsFleetClient({
         span={8}
         title="Cross-workspace risk map"
       >
-        <div className="ops-fleet-hero">
-          <p className="ops-fleet-hero__detail">
+        <div className="space-y-4">
+          <p className="text-sm leading-6 text-[color:var(--color-muted)]">
             The current workspace stays explicit, but the comparison stays
             estate-wide so pressure is visible before it becomes a workflow
             blocker.
           </p>
-          <div className="pill-row">
+          <div className="flex flex-wrap gap-2">
             <Pill>
               {currentWorkspace?.workspace.slug ?? "no active workspace"}
             </Pill>
@@ -324,14 +332,17 @@ export function OpsFleetClient({
             <Pill>{pressuredWorkspaceCount} pressured</Pill>
             <Pill>{formatTimestamp(fleet.summary.generatedAt)}</Pill>
           </div>
-          <div className="ops-fleet-hero__leaders">
-            <span className="ops-fleet-hero__leaders-label">
+          <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3">
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--color-muted)]">
               Top pressure
             </span>
-            <div className="ops-fleet-hero__leaders-list">
+            <div className="mt-3 grid gap-2 md:grid-cols-2">
               {attentionWorkspaces.map((workspace, index) => (
-                <div className="ops-fleet-hero__leader" key={workspace.workspace.id}>
-                  <div className="ops-fleet-hero__leader-copy">
+                <article
+                  className="rounded-lg border border-[color:var(--color-line)] p-3"
+                  key={workspace.workspace.id}
+                >
+                  <div className="space-y-1">
                     <strong>
                       {index + 1}. {workspace.workspace.name}
                     </strong>
@@ -340,45 +351,45 @@ export function OpsFleetClient({
                       {formatWorkspaceStatus(workspace.workspace.status)}
                     </span>
                   </div>
-                  <div className="ops-fleet-hero__leader-meta">
-                    <span>{getWorkspacePressureScore(workspace)} pressure</span>
-                    <span>{workspace.ops.activeAlertCount} alerts</span>
-                    <span>{workspace.ops.openReconciliationIssueCount} recon</span>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-[color:var(--color-muted)]">
+                    <Pill>{getWorkspacePressureScore(workspace)} pressure</Pill>
+                    <Pill>{workspace.ops.activeAlertCount} alerts</Pill>
+                    <Pill>{workspace.ops.openReconciliationIssueCount} recon</Pill>
                   </div>
-                </div>
+                </article>
               ))}
             </div>
           </div>
-          <div className="ops-fleet-hero__notice">
-            <div className="pill-row">
+          <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] p-3">
+            <div className="flex flex-wrap gap-2">
               <Pill>{pressuredWorkspaceCount} pressured</Pill>
               <Pill>{alertPressureWorkspaceCount} with alerts</Pill>
               <Pill>
                 {reconciliationPressureWorkspaceCount} with recon issues
               </Pill>
             </div>
-            <div className="ops-fleet-hero__refresh-row">
-              <button
-                className="button-action button-action--secondary"
+            <div className="mt-3 flex justify-end">
+              <ActionButton
                 disabled={isRefreshing}
                 onClick={() => {
                   void refreshFleet();
                 }}
+                tone="secondary"
                 type="button"
               >
                 {isRefreshing ? "Refreshing…" : "Refresh fleet"}
-              </button>
+              </ActionButton>
             </div>
           </div>
           {notice ? (
-            <div
-              className={`status-banner ${
+            <StatusBanner
+              tone={
                 notice.tone === "error"
-                  ? "status-banner--error"
+                  ? "error"
                   : notice.tone === "success"
-                    ? "status-banner--success"
-                    : ""
-              }`}
+                    ? "success"
+                    : "info"
+              }
             >
               <strong>
                 {notice.tone === "error"
@@ -388,7 +399,7 @@ export function OpsFleetClient({
                     : "Working"}
               </strong>
               <span>{notice.message}</span>
-            </div>
+            </StatusBanner>
           ) : null}
         </div>
       </SurfaceCard>
@@ -409,7 +420,7 @@ export function OpsFleetClient({
         span={12}
         title="Fleet-wide pressure band"
       >
-        <div className="ops-fleet-signal-band">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           <MetricTile
             label="Workspaces"
             value={fleet.summary.totalWorkspaceCount.toString()}
@@ -435,7 +446,7 @@ export function OpsFleetClient({
             value={fleet.summary.unfulfilledCheckoutCount.toString()}
           />
         </div>
-        <div className="pill-row ops-fleet-signal-band__context">
+        <div className="mt-3 flex flex-wrap gap-2">
           <Pill>{pressuredWorkspaceCount} pressured workspaces</Pill>
           <Pill>{alertPressureWorkspaceCount} alert-bearing workspaces</Pill>
           <Pill>
@@ -450,7 +461,7 @@ export function OpsFleetClient({
         span={12}
         title="Most at-risk workspaces"
       >
-        <div className="ops-fleet-attention-grid">
+        <div className="grid gap-3 xl:grid-cols-2">
           {attentionWorkspaces.map((workspace, index) => (
             <OpsFleetWorkspaceCard
               busyKey={busyKey}
@@ -482,7 +493,7 @@ export function OpsFleetClient({
             />
           ))}
           {attentionWorkspaces.length === 0 ? (
-            <div className="ops-fleet-empty-state">
+            <div className="col-span-full rounded-lg border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 text-sm text-[color:var(--color-muted)]">
               No workspace pressure is currently standing out across the
               accessible fleet.
             </div>
@@ -495,18 +506,20 @@ export function OpsFleetClient({
         span={6}
         title="Alert concentration"
       >
-        <div className="ops-fleet-pressure-summary">
+        <div className="space-y-2">
           {alertPressureLeaders.length ? (
             alertPressureLeaders.map((workspace, index) => (
               <article
-                className="ops-fleet-pressure-summary__row"
+                className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3"
                 key={workspace.workspace.id}
               >
-                <div className="ops-fleet-pressure-summary__copy">
-                  <span className="ops-fleet-pressure-summary__rank">
-                    {index + 1}
-                  </span>
-                  <strong>{workspace.workspace.name}</strong>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] text-xs font-semibold text-[color:var(--color-muted)]">
+                      {index + 1}
+                    </span>
+                    <strong>{workspace.workspace.name}</strong>
+                  </div>
                   <span>
                     /{workspace.workspace.slug} · {workspace.workspace.role} ·{" "}
                     {formatWorkspaceStatus(workspace.workspace.status)}
@@ -518,7 +531,7 @@ export function OpsFleetClient({
                     {workspace.ops.warningAlertCount} warning
                   </span>
                 </div>
-                <div className="ops-fleet-pressure-summary__metrics">
+                <div className="mt-2 flex flex-wrap gap-2">
                   <Pill>
                     {workspace.ops.openReconciliationIssueCount} recon
                   </Pill>
@@ -532,13 +545,13 @@ export function OpsFleetClient({
               </article>
             ))
           ) : (
-            <div className="ops-fleet-empty-state">
+            <div className="rounded-lg border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 text-sm text-[color:var(--color-muted)]">
               No workspace is carrying active alerts across the accessible
               fleet.
             </div>
           )}
         </div>
-        <div className="ops-fleet-alert-list">
+        <div className="mt-4 space-y-2">
           {fleet.alertQueue.length ? (
             fleet.alertQueue.map((alert) => {
               const acknowledgeBusyKey = `ack:${alert.alertStateId}`;
@@ -547,10 +560,15 @@ export function OpsFleetClient({
 
               return (
                 <article
-                  className={`ops-fleet-alert-item ops-fleet-alert-item--${resolveAlertTone(alert.severity)}`}
+                  className={cn(
+                    "rounded-xl border p-4",
+                    resolveAlertTone(alert.severity) === "critical"
+                      ? "border-rose-300/45 bg-rose-500/10"
+                      : "border-amber-300/40 bg-amber-500/10"
+                  )}
                   key={alert.alertStateId}
                 >
-                  <div className="ops-fleet-alert-item__copy">
+                  <div className="space-y-2">
                     <strong>
                       {alert.title} · {alert.workspace.name}
                     </strong>
@@ -564,9 +582,9 @@ export function OpsFleetClient({
                       seen {formatTimestamp(alert.lastObservedAt)}
                     </span>
                   </div>
-                  <div className="ops-fleet-alert-item__actions">
-                    <button
-                      className="button-action button-action--secondary"
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <ActionButton
+                      tone="secondary"
                       disabled={
                         !workspaceIsActive || busyKey === acknowledgeBusyKey
                       }
@@ -604,9 +622,9 @@ export function OpsFleetClient({
                         : busyKey === acknowledgeBusyKey
                           ? "Acknowledging…"
                           : "Acknowledge"}
-                    </button>
-                    <button
-                      className="button-action button-action--secondary"
+                    </ActionButton>
+                    <ActionButton
+                      tone="secondary"
                       disabled={!workspaceIsActive || busyKey === muteBusyKey}
                       onClick={() => {
                         void runAction({
@@ -643,13 +661,13 @@ export function OpsFleetClient({
                         : busyKey === muteBusyKey
                           ? "Muting…"
                           : "Mute 4h"}
-                    </button>
+                    </ActionButton>
                   </div>
                 </article>
               );
             })
           ) : (
-            <div className="ops-fleet-empty-state">
+            <div className="rounded-lg border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 text-sm text-[color:var(--color-muted)]">
               No active alerts are queued across the accessible workspace fleet.
             </div>
           )}
@@ -661,18 +679,20 @@ export function OpsFleetClient({
         span={6}
         title="Reconciliation backlog"
       >
-        <div className="ops-fleet-pressure-summary">
+        <div className="space-y-2">
           {reconciliationPressureLeaders.length ? (
             reconciliationPressureLeaders.map((workspace, index) => (
               <article
-                className="ops-fleet-pressure-summary__row"
+                className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3"
                 key={workspace.workspace.id}
               >
-                <div className="ops-fleet-pressure-summary__copy">
-                  <span className="ops-fleet-pressure-summary__rank">
-                    {index + 1}
-                  </span>
-                  <strong>{workspace.workspace.name}</strong>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] text-xs font-semibold text-[color:var(--color-muted)]">
+                      {index + 1}
+                    </span>
+                    <strong>{workspace.workspace.name}</strong>
+                  </div>
                   <span>
                     /{workspace.workspace.slug} · {workspace.workspace.role} ·{" "}
                     {formatWorkspaceStatus(workspace.workspace.status)}
@@ -684,22 +704,20 @@ export function OpsFleetClient({
                     checkouts
                   </span>
                 </div>
-                <div className="ops-fleet-pressure-summary__metrics">
+                <div className="mt-2 flex flex-wrap gap-2">
                   <Pill>{workspace.ops.criticalAlertCount} critical</Pill>
                   <Pill>{workspace.ops.activeAlertCount} alerts</Pill>
-                  <Pill>
-                    {formatTimestamp(workspace.directory.lastActivityAt)}
-                  </Pill>
+                  <Pill>{formatTimestamp(workspace.directory.lastActivityAt)}</Pill>
                 </div>
               </article>
             ))
           ) : (
-            <div className="ops-fleet-empty-state">
+            <div className="rounded-lg border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 text-sm text-[color:var(--color-muted)]">
               No workspace currently has an open reconciliation issue.
             </div>
           )}
         </div>
-        <div className="ops-fleet-pressure-list">
+        <div className="mt-4">
           {reconciliationWorkspaces.length ? (
             reconciliationWorkspaces.map((workspace, index) => (
               <OpsFleetWorkspaceCard
@@ -732,7 +750,7 @@ export function OpsFleetClient({
               />
             ))
           ) : (
-            <div className="ops-fleet-empty-state">
+            <div className="rounded-lg border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 text-sm text-[color:var(--color-muted)]">
               No workspace currently has an open reconciliation issue.
             </div>
           )}
@@ -744,119 +762,132 @@ export function OpsFleetClient({
         span={12}
         title="Comparative workspace map"
       >
-        <div className="ops-fleet-board">
-          <div className="ops-fleet-board__header">
-            <span>Workspace</span>
-            <span>Pressure</span>
-            <span>Alerts</span>
-            <span>Reconciliation</span>
-            <span>Commerce</span>
-            <span>Publications</span>
-            <span>Last activity</span>
-            <span>Actions</span>
+        <div className="overflow-x-auto">
+          <div className="min-w-[860px] rounded-xl border border-[color:var(--color-line)] overflow-hidden">
+            <div className="grid grid-cols-[2fr,0.85fr,0.85fr,1fr,0.95fr,1fr,1fr,0.95fr] items-center gap-4 border-b border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] px-4 py-3 text-xs font-semibold uppercase tracking-[0.1em] text-[color:var(--color-muted)]">
+              <span>Workspace</span>
+              <span>Pressure</span>
+              <span>Alerts</span>
+              <span>Reconciliation</span>
+              <span>Commerce</span>
+              <span>Publications</span>
+              <span>Last activity</span>
+              <span>Actions</span>
+            </div>
+            {rankedWorkspaces.map((workspace, index) => {
+              const score = getWorkspacePressureScore(workspace);
+              const reconciliationBusyKey = `reconcile:${workspace.workspace.id}`;
+              const workspaceIsActive = workspace.workspace.status === "active";
+
+              return (
+                <div
+                  className={cn(
+                    "grid grid-cols-[2fr,0.85fr,0.85fr,1fr,0.95fr,1fr,1fr,0.95fr] items-center gap-4 border-b border-[color:var(--color-line)] px-4 py-3 text-sm last:border-b-0",
+                    workspace.directory.current
+                      ? "bg-[color:var(--color-surface-strong)]"
+                      : "bg-transparent"
+                  )}
+                  key={workspace.workspace.id}
+                >
+                  <div className="space-y-1">
+                    <strong>
+                      {index + 1}. {workspace.workspace.name}
+                    </strong>
+                    <span>
+                      /{workspace.workspace.slug} · {workspace.workspace.role} ·{" "}
+                      {formatWorkspaceStatus(workspace.workspace.status)}
+                      {workspace.directory.current ? " · current" : ""}
+                    </span>
+                    <span className="text-xs text-[color:var(--color-muted)]">
+                      {workspace.directory.brandCount} brands
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-[color:var(--color-muted)]">
+                      Pressure
+                    </span>
+                    <strong>{score}</strong>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-[color:var(--color-muted)]">
+                      Alerts
+                    </span>
+                    <span>{workspace.ops.criticalAlertCount} critical</span>
+                    <span>{workspace.ops.warningAlertCount} warning</span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-[color:var(--color-muted)]">
+                      Reconciliation
+                    </span>
+                    <span>{workspace.ops.openReconciliationIssueCount} open</span>
+                    <span>
+                      {workspace.commerce.automationFailedCheckoutCount} failed
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-[color:var(--color-muted)]">
+                      Commerce
+                    </span>
+                    <span>{workspace.commerce.openCheckoutCount} open</span>
+                    <span>
+                      {workspace.commerce.unfulfilledCheckoutCount} unfulfilled
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-[color:var(--color-muted)]">
+                      Publications
+                    </span>
+                    <span>{workspace.publications.livePublicationCount} live</span>
+                    <span>{workspace.publications.totalPublicationCount} total</span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-[color:var(--color-muted)]">
+                      Last activity
+                    </span>
+                    <strong>
+                      {formatTimestamp(workspace.directory.lastActivityAt)}
+                    </strong>
+                  </div>
+                  <div className="flex justify-end">
+                    <ActionButton
+                      disabled={
+                        !workspaceIsActive || busyKey === reconciliationBusyKey
+                      }
+                      onClick={() => {
+                        void runAction({
+                          busyKey: reconciliationBusyKey,
+                          request: async () => {
+                            const response = await fetch(
+                              `/api/ops/fleet/workspaces/${encodeURIComponent(
+                                workspace.workspace.id
+                              )}/reconciliation/run`,
+                              {
+                                method: "POST"
+                              }
+                            );
+
+                            await parseJsonResponse({
+                              response,
+                              schema: opsReconciliationRunResponseSchema
+                            });
+                          },
+                          successMessage: `Reconciliation started for ${workspace.workspace.name}.`
+                        });
+                      }}
+                      tone="secondary"
+                      type="button"
+                    >
+                      {!workspaceIsActive
+                        ? "Workspace inactive"
+                        : busyKey === reconciliationBusyKey
+                          ? "Running…"
+                          : "Run"}
+                    </ActionButton>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          {rankedWorkspaces.map((workspace, index) => {
-            const score = getWorkspacePressureScore(workspace);
-            const reconciliationBusyKey = `reconcile:${workspace.workspace.id}`;
-            const workspaceIsActive = workspace.workspace.status === "active";
-
-            return (
-              <div
-                className={`ops-fleet-board__row ${
-                  workspace.directory.current
-                    ? "ops-fleet-board__row--current"
-                    : ""
-                }`}
-                key={workspace.workspace.id}
-              >
-                <div className="ops-fleet-board__workspace">
-                  <strong>
-                    {index + 1}. {workspace.workspace.name}
-                  </strong>
-                  <span>
-                    /{workspace.workspace.slug} · {workspace.workspace.role} ·{" "}
-                    {formatWorkspaceStatus(workspace.workspace.status)}
-                    {workspace.directory.current ? " · current" : ""}
-                  </span>
-                  <span>{workspace.directory.brandCount} brands</span>
-                </div>
-                <div className="ops-fleet-board__pressure">
-                  <span className="ops-fleet-board__label">Pressure</span>
-                  <strong>{score}</strong>
-                </div>
-                <div className="ops-fleet-board__stats">
-                  <span className="ops-fleet-board__label">Alerts</span>
-                  <span>{workspace.ops.criticalAlertCount} critical</span>
-                  <span>{workspace.ops.warningAlertCount} warning</span>
-                </div>
-                <div className="ops-fleet-board__stats">
-                  <span className="ops-fleet-board__label">Reconciliation</span>
-                  <span>{workspace.ops.openReconciliationIssueCount} open</span>
-                  <span>
-                    {workspace.commerce.automationFailedCheckoutCount} failed
-                  </span>
-                </div>
-                <div className="ops-fleet-board__stats">
-                  <span className="ops-fleet-board__label">Commerce</span>
-                  <span>{workspace.commerce.openCheckoutCount} open</span>
-                  <span>
-                    {workspace.commerce.unfulfilledCheckoutCount} unfulfilled
-                  </span>
-                </div>
-                <div className="ops-fleet-board__stats">
-                  <span className="ops-fleet-board__label">Publications</span>
-                  <span>
-                    {workspace.publications.livePublicationCount} live
-                  </span>
-                  <span>
-                    {workspace.publications.totalPublicationCount} total
-                  </span>
-                </div>
-                <div className="ops-fleet-board__activity">
-                  <span>Last activity</span>
-                  <strong>
-                    {formatTimestamp(workspace.directory.lastActivityAt)}
-                  </strong>
-                </div>
-                <div className="ops-fleet-board__actions">
-                  <button
-                    className="button-action button-action--secondary"
-                    disabled={
-                      !workspaceIsActive || busyKey === reconciliationBusyKey
-                    }
-                    onClick={() => {
-                      void runAction({
-                        busyKey: reconciliationBusyKey,
-                        request: async () => {
-                          const response = await fetch(
-                            `/api/ops/fleet/workspaces/${encodeURIComponent(
-                              workspace.workspace.id
-                            )}/reconciliation/run`,
-                            {
-                              method: "POST"
-                            }
-                          );
-
-                          await parseJsonResponse({
-                            response,
-                            schema: opsReconciliationRunResponseSchema
-                          });
-                        },
-                        successMessage: `Reconciliation started for ${workspace.workspace.name}.`
-                      });
-                    }}
-                    type="button"
-                  >
-                    {!workspaceIsActive
-                      ? "Workspace inactive"
-                      : busyKey === reconciliationBusyKey
-                        ? "Running…"
-                        : "Run"}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
         </div>
       </SurfaceCard>
     </SurfaceGrid>

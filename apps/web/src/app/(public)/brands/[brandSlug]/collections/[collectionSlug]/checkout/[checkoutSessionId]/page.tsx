@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { CSSProperties } from "react";
 
 import { createRuntimeCollectionCommerceService } from "../../../../../../../../server/commerce/runtime";
 import { createRuntimePublicCollectionService } from "../../../../../../../../server/collections/runtime";
+import { createStorefrontThemeStyle } from "../../../../../../../../lib/ui/storefront-theme";
 
 import { CheckoutClient } from "./checkout-client";
 
@@ -31,16 +31,14 @@ const checkoutStatusCopy: Record<CheckoutStatus, CheckoutStatusCopy> = {
     heroLead:
       "This item is reserved and awaiting finalization. Reserve ownership is active and can still be claimed.",
     actionTitle: "Complete your claim now",
-    actionSubtext:
-      "Press forward to finish the checkout flow and mint this edition.",
+    actionSubtext: "Press forward to finish the checkout flow and mint this edition.",
     stateTone: "open"
   },
   completed: {
     heroLead:
       "This reservation is complete. Your claim has been finalized and the edition is marked as fulfilled in the hosted reservation flow.",
     actionTitle: "Checkout completed",
-    actionSubtext:
-      "This checkout has already been completed. No additional action is required.",
+    actionSubtext: "This checkout has already been completed. No additional action is required.",
     stateTone: "positive"
   },
   expired: {
@@ -77,49 +75,6 @@ const providerModeCopy: Record<
     shortTitle: "Stripe"
   }
 };
-
-function createStorefrontThemeStyle(theme: {
-  accentColor: string;
-  themePreset: "editorial_warm" | "gallery_mono" | "midnight_launch";
-}) {
-  const presetTokens: Record<
-    typeof theme.themePreset,
-    Record<string, string>
-  > = {
-    editorial_warm: {
-      "--storefront-bg":
-        "linear-gradient(180deg, rgba(255, 249, 240, 0.98) 0%, rgba(245, 236, 219, 0.96) 100%)",
-      "--storefront-panel": "rgba(255, 252, 247, 0.74)",
-      "--storefront-panel-strong": "rgba(255, 249, 241, 0.9)",
-      "--storefront-text": "#201711",
-      "--storefront-muted": "#6f5e51",
-      "--storefront-border": "rgba(80, 48, 26, 0.12)"
-    },
-    gallery_mono: {
-      "--storefront-bg":
-        "linear-gradient(180deg, rgba(244, 244, 241, 0.98) 0%, rgba(228, 229, 225, 0.94) 100%)",
-      "--storefront-panel": "rgba(255, 255, 255, 0.7)",
-      "--storefront-panel-strong": "rgba(255, 255, 255, 0.88)",
-      "--storefront-text": "#111315",
-      "--storefront-muted": "#565d63",
-      "--storefront-border": "rgba(17, 19, 21, 0.1)"
-    },
-    midnight_launch: {
-      "--storefront-bg":
-        "radial-gradient(circle at top left, rgba(255, 143, 78, 0.16), transparent 34%), linear-gradient(180deg, rgba(13, 18, 28, 0.98) 0%, rgba(23, 31, 48, 0.95) 100%)",
-      "--storefront-panel": "rgba(14, 20, 34, 0.7)",
-      "--storefront-panel-strong": "rgba(22, 29, 47, 0.84)",
-      "--storefront-text": "#f3f2ed",
-      "--storefront-muted": "#b5bac7",
-      "--storefront-border": "rgba(243, 242, 237, 0.12)"
-    }
-  };
-
-  return {
-    ...presetTokens[theme.themePreset],
-    "--storefront-accent": theme.accentColor
-  } as CSSProperties;
-}
 
 function formatTimestamp(value: string | null) {
   if (!value) {
@@ -173,7 +128,7 @@ function buildActionCopy(input: {
   if (input.isStripeOpen) {
     return {
       providerLead:
-        "Stripe is handling this payment step. Continue to the hosted checkout to finalize.",
+        "Stripe is handling this payment step. Continue to hosted checkout to finalize.",
       buttonLabel: "Continue to secure payment",
       secondaryLabel: "Refresh payment status"
     };
@@ -186,17 +141,20 @@ function buildActionCopy(input: {
   };
 }
 
-function buildCheckoutStatusClass(status: CheckoutStatus) {
-  return checkoutStatusCopy[status].stateTone;
-}
+function statusToneClass(status: CheckoutStatus) {
+  if (status === "open") {
+    return "border-emerald-400/45 bg-emerald-400/12 text-emerald-100";
+  }
 
-function buildStatusChip(status: CheckoutStatus) {
-  return {
-    label: formatCheckoutStatus(status),
-    className: `storefront-checkout-status-pill storefront-checkout-status-pill--${buildCheckoutStatusClass(
-      status
-    )}`
-  };
+  if (status === "completed") {
+    return "border-emerald-400/45 bg-emerald-400/12 text-emerald-100";
+  }
+
+  if (status === "expired") {
+    return "border-amber-400/45 bg-amber-400/12 text-amber-100";
+  }
+
+  return "border-rose-400/45 bg-rose-400/12 text-rose-100";
 }
 
 export default async function CheckoutPage({ params }: CheckoutPageProps) {
@@ -221,7 +179,6 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
   if (!collection) {
     notFound();
   }
-
   const reservedItem =
     collection.collection.items.find(
       (item) => item.position === checkout.checkout.reservation.editionNumber
@@ -233,13 +190,11 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
     checkout.checkout.status === "open";
   const canCancel =
     checkout.checkout.providerKind === "manual" &&
-    (checkout.checkout.status === "open" ||
-      checkout.checkout.status === "expired");
+    (checkout.checkout.status === "open" || checkout.checkout.status === "expired");
   const isStripeOpen =
     checkout.checkout.providerKind === "stripe" &&
     checkout.checkout.status === "open";
   const statusCopy = checkoutStatusCopy[checkout.checkout.status];
-  const statusChip = buildStatusChip(checkout.checkout.status);
   const statusProviderCopy = providerModeCopy[checkout.checkout.providerKind];
   const actionCopy = buildActionCopy({
     isStripeOpen,
@@ -250,162 +205,187 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
 
   return (
     <div
-      className={`storefront-shell storefront-shell--${collection.collection.brandTheme.themePreset}`}
+      className="min-h-screen bg-[var(--storefront-bg)] text-[color:var(--storefront-text)]"
       style={createStorefrontThemeStyle(collection.collection.brandTheme)}
     >
-      <section className="storefront-checkout-layout">
-        <article className="storefront-panel storefront-checkout-hero">
-          <div className="storefront-checkout-status-row">
-            <span className={statusChip.className}>{statusChip.label}</span>
-            <span className="storefront-checkout-provider-pill">
-              {statusProviderCopy.title}
-            </span>
-          </div>
-          <span className="storefront-section-kicker">Hosted checkout</span>
-          <h1 className="storefront-checkout-hero__title">
-            {checkout.checkout.title}
-          </h1>
-          <p className="storefront-checkout-hero__edition">{editionIdentity}</p>
-          <div className="storefront-checkout-hero__media">
+      <main className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-8 md:px-6 lg:px-8">
+        <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+          <article className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/70 p-6">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <span
+                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${statusToneClass(checkout.checkout.status)} uppercase`}
+              >
+                {formatCheckoutStatus(checkout.checkout.status)}
+              </span>
+              <span className="rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] px-3 py-1 text-xs text-[color:var(--storefront-muted)]">
+                {statusProviderCopy.shortTitle}
+              </span>
+              <span className="rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] px-3 py-1 text-xs text-[color:var(--storefront-muted)]">
+                Live storefront
+              </span>
+            </div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--storefront-accent)]">
+              Hosted checkout session
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold leading-tight font-[var(--font-display)]">
+              {checkout.checkout.title}
+            </h1>
+            <p className="mt-2 text-sm text-[color:var(--storefront-muted)]">
+              {editionIdentity}
+            </p>
             {reservedItem ? (
               <img
                 alt={`${checkout.checkout.title} ${editionIdentity}`}
-                className="storefront-checkout-artwork-image"
+                className="mt-5 h-auto w-full rounded-2xl border border-[color:var(--storefront-border)] object-cover"
                 src={reservedItem.imageUrl}
               />
             ) : (
-              <div className="storefront-checkout-artwork-placeholder">
+              <div className="mt-5 flex h-64 items-center justify-center rounded-2xl border border-dashed border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-4 text-sm text-[color:var(--storefront-muted)]">
                 Reserved artwork preview is unavailable.
               </div>
             )}
-          </div>
-          <p className="storefront-hero__lead">{checkoutLead}</p>
-          <div className="storefront-checkout-hero__meta">
-            {checkout.checkout.priceLabel ? (
-              <span className="storefront-chip storefront-chip--accent">
-                {checkout.checkout.priceLabel}
+            <p className="mt-5 text-sm leading-7 text-[color:var(--storefront-muted)]">
+              {checkoutLead}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {checkout.checkout.priceLabel ? (
+                <span className="inline-flex items-center rounded-full border border-[color:var(--storefront-accent)]/45 bg-[color:var(--storefront-accent)]/15 px-3 py-1 text-xs font-semibold text-[color:var(--storefront-accent)]">
+                  {checkout.checkout.priceLabel}
+                </span>
+              ) : null}
+              <span className="rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] px-3 py-1 text-xs text-[color:var(--storefront-muted)]">
+                {statusProviderCopy.title}
               </span>
-            ) : null}
-            <span>{statusProviderCopy.shortTitle} provider</span>
-            <span>Launch checkpoint in public storefront</span>
-          </div>
-        </article>
+            </div>
+          </article>
 
-        <article className="storefront-panel storefront-checkout-summary">
-          <span className="storefront-section-kicker">Reservation summary</span>
-          <h2>Collector checkpoint</h2>
-          <div className="storefront-checkout-summary-grid">
-            <div className="storefront-stat">
-              <span>Checkout status</span>
-              <strong>{formatCheckoutStatus(checkout.checkout.status)}</strong>
-            </div>
-            <div className="storefront-stat">
-              <span>Reserved edition</span>
-              <strong>
-                {reservedItem?.sourceAssetOriginalFilename
-                  ? `${reservedItem.sourceAssetOriginalFilename} · v${reservedItem.variantIndex}`
-                  : editionIdentity}
-              </strong>
-            </div>
-            <div className="storefront-stat">
-              <span>Buyer email</span>
-              <strong>{checkout.checkout.reservation.buyerEmail}</strong>
-            </div>
-            <div className="storefront-stat">
-              <span>Wallet</span>
-              <strong>
-                {formatWalletAddress(
-                  checkout.checkout.reservation.buyerWalletAddress
+          <div className="grid gap-4 self-start">
+            <article className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/70 p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
+                Reservation summary
+              </p>
+              <h2 className="mt-1 text-xl font-semibold">
+                Collector checkpoint
+              </h2>
+              <div className="mt-3 space-y-3 text-sm">
+                <div className="grid gap-1">
+                  <span className="text-xs text-[color:var(--storefront-muted)]">Checkout status</span>
+                  <strong>{formatCheckoutStatus(checkout.checkout.status)}</strong>
+                </div>
+                <div className="grid gap-1">
+                  <span className="text-xs text-[color:var(--storefront-muted)]">Reserved edition</span>
+                  <strong>
+                    {reservedItem?.sourceAssetOriginalFilename
+                      ? `${reservedItem.sourceAssetOriginalFilename} · v${reservedItem.variantIndex}`
+                      : editionIdentity}
+                  </strong>
+                </div>
+                <div className="grid gap-1">
+                  <span className="text-xs text-[color:var(--storefront-muted)]">Buyer email</span>
+                  <strong>{checkout.checkout.reservation.buyerEmail}</strong>
+                </div>
+                <div className="grid gap-1">
+                  <span className="text-xs text-[color:var(--storefront-muted)]">Wallet</span>
+                  <strong>{formatWalletAddress(checkout.checkout.reservation.buyerWalletAddress)}</strong>
+                </div>
+                <div className="grid gap-1">
+                  <span className="text-xs text-[color:var(--storefront-muted)]">Reservation expires</span>
+                  <strong>{formatTimestamp(checkout.checkout.expiresAt)}</strong>
+                </div>
+                <div className="grid gap-1">
+                  <span className="text-xs text-[color:var(--storefront-muted)]">Completed at</span>
+                  <strong>{formatTimestamp(checkout.checkout.completedAt)}</strong>
+                </div>
+                <div className="grid gap-1">
+                  <span className="text-xs text-[color:var(--storefront-muted)]">Provider session</span>
+                  <strong>{checkout.checkout.providerSessionId ?? "N/A"}</strong>
+                </div>
+                <div className="grid gap-1">
+                  <span className="text-xs text-[color:var(--storefront-muted)]">Reservation status</span>
+                  <strong>{checkout.checkout.reservation.status}</strong>
+                </div>
+              </div>
+            </article>
+            <article className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/70 p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
+                Collector action
+              </p>
+              <h2 className="mt-1 text-xl font-semibold">
+                {statusCopy.actionTitle}
+              </h2>
+              <p className="mt-2 text-sm leading-7 text-[color:var(--storefront-muted)]">
+                {statusCopy.actionSubtext}
+              </p>
+              <p className="mt-2 text-sm text-[color:var(--storefront-text)]">
+                {actionCopy.providerLead}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                {checkout.checkout.providerKind === "manual" ? (
+                  <CheckoutClient
+                    brandSlug={brandSlug}
+                    canCancel={canCancel}
+                    canComplete={canComplete}
+                    checkoutSessionId={checkoutSessionId}
+                    collectionSlug={collectionSlug}
+                  />
+                ) : isStripeOpen ? (
+                  <>
+                    <Link
+                      className="inline-flex items-center rounded-full border border-[color:var(--storefront-accent)] bg-[color:var(--storefront-accent)]/15 px-4 py-2 text-sm font-semibold text-[color:var(--storefront-accent)]"
+                      href={checkout.checkout.checkoutUrl}
+                    >
+                      {actionCopy.buttonLabel}
+                    </Link>
+                    <Link
+                      className="inline-flex items-center rounded-full border border-[color:var(--storefront-border)] bg-transparent px-4 py-2 text-sm font-semibold"
+                      href={`/brands/${brandSlug}/collections/${collectionSlug}/checkout/${checkoutSessionId}`}
+                    >
+                      {actionCopy.secondaryLabel}
+                    </Link>
+                  </>
+                ) : (
+                  <Link
+                    className="inline-flex items-center rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] px-4 py-2 text-sm font-semibold"
+                    href={releasePath}
+                  >
+                    Start a fresh checkout
+                  </Link>
                 )}
-              </strong>
-            </div>
-            <div className="storefront-stat">
-              <span>Reservation expires</span>
-              <strong>{formatTimestamp(checkout.checkout.expiresAt)}</strong>
-            </div>
-            <div className="storefront-stat">
-              <span>Completed at</span>
-              <strong>{formatTimestamp(checkout.checkout.completedAt)}</strong>
-            </div>
-            <div className="storefront-stat">
-              <span>Provider session</span>
-              <strong>{checkout.checkout.providerSessionId ?? "N/A"}</strong>
-            </div>
-            <div className="storefront-stat">
-              <span>Reservation status</span>
-              <strong>{checkout.checkout.reservation.status}</strong>
-            </div>
+              </div>
+            </article>
+            <article className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/70 p-5 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
+                Release continuity
+              </p>
+              <h2 className="text-xl font-semibold">
+                Claim context
+              </h2>
+              <p className="text-sm leading-7 text-[color:var(--storefront-muted)]">
+                This checkpoint is part of the active collectible launch flow for{" "}
+                <strong>{checkout.checkout.title}</strong> and remains tied to that
+                release context.
+              </p>
+              <p className="text-sm text-[color:var(--storefront-muted)]">
+                Use the links below to review release details and related campaigns.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  className="inline-flex items-center rounded-full border border-[color:var(--storefront-accent)]/45 bg-[color:var(--storefront-accent)]/15 px-4 py-2 text-sm font-semibold text-[color:var(--storefront-accent)]"
+                  href={releasePath}
+                >
+                  Back to release page
+                </Link>
+                <Link
+                  className="inline-flex items-center rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] px-4 py-2 text-sm font-semibold"
+                  href={`/brands/${brandSlug}`}
+                >
+                  Back to brand landing
+                </Link>
+              </div>
+            </article>
           </div>
-        </article>
-
-        <article className="storefront-panel storefront-checkout-trust">
-          <span className="storefront-section-kicker">Release continuity</span>
-          <h2>Claim context</h2>
-          <p className="storefront-hero__lead">
-            This checkpoint is part of the active collectible launch flow for{" "}
-            <strong>{checkout.checkout.title}</strong> and remains tied to that
-            release context.
-          </p>
-          <p className="storefront-checkout-trust-list">
-            Use the route below to review the release details, remaining
-            inventory, and related campaign information.
-          </p>
-          <Link
-            className="storefront-button storefront-button--secondary"
-            href={releasePath}
-          >
-            Back to release page
-          </Link>
-          <Link
-            className="storefront-button storefront-button--ghost"
-            href={`/brands/${brandSlug}`}
-          >
-            Back to brand landing
-          </Link>
-        </article>
-
-        <article className="storefront-panel storefront-checkout-actions-panel">
-          <span className="storefront-section-kicker">Collector action</span>
-          <h2>{statusCopy.actionTitle}</h2>
-          <p className="storefront-hero__lead">{statusCopy.actionSubtext}</p>
-          <p className="storefront-checkout-action-copy">
-            {actionCopy.providerLead}
-          </p>
-          {checkout.checkout.providerKind === "manual" ? (
-            <CheckoutClient
-              brandSlug={brandSlug}
-              canCancel={canCancel}
-              canComplete={canComplete}
-              checkoutSessionId={checkoutSessionId}
-              collectionSlug={collectionSlug}
-            />
-          ) : isStripeOpen ? (
-            <div className="storefront-checkout-actions">
-              <Link
-                className="storefront-button storefront-button--primary"
-                href={checkout.checkout.checkoutUrl}
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                {actionCopy.buttonLabel}
-              </Link>
-              <Link
-                className="storefront-button storefront-button--ghost"
-                href={`/brands/${brandSlug}/collections/${collectionSlug}/checkout/${checkoutSessionId}`}
-              >
-                {actionCopy.secondaryLabel}
-              </Link>
-            </div>
-          ) : (
-            <Link
-              className="storefront-button storefront-button--secondary"
-              href={releasePath}
-            >
-              Start a fresh checkout
-            </Link>
-          )}
-        </article>
-      </section>
+        </section>
+      </main>
     </div>
   );
 }

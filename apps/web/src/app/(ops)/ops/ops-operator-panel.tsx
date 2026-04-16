@@ -9,7 +9,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useState } from "react";
 
-import { MetricTile, Pill } from "@ai-nft-forge/ui";
+import {
+  StatusBanner,
+  cn,
+  MetricTile,
+  Pill
+} from "@ai-nft-forge/ui";
 
 import type {
   OpsAlertDeliverySummary,
@@ -62,8 +67,96 @@ const alertScheduleDayLabelByValue: Record<OpsAlertScheduleDay, string> = {
   wed: "Wed"
 };
 
-function joinClassNames(...values: Array<string | false | null | undefined>) {
-  return values.filter(Boolean).join(" ");
+function formatBannerToneClass(tone: "error" | "info" | "success") {
+  if (tone === "error") {
+    return "border-red-500/45 bg-red-500/12 text-red-50";
+  }
+
+  if (tone === "success") {
+    return "border-emerald-500/45 bg-emerald-500/12 text-emerald-50";
+  }
+
+  return "border-blue-500/35 bg-blue-500/12 text-blue-50";
+}
+
+function resolveOpsStatusBannerToneClass(tone: string) {
+  if (tone === "error" || tone === "critical") {
+    return formatBannerToneClass("error");
+  }
+
+  if (tone === "success") {
+    return formatBannerToneClass("success");
+  }
+
+  if (tone === "warning") {
+    return "border-amber-400/45 bg-amber-400/12 text-amber-100";
+  }
+
+  return formatBannerToneClass("info");
+}
+
+function resolveOpsGridClass() {
+  return "grid gap-4 xl:grid-cols-6";
+}
+
+function resolveOpsSettingsGridClass() {
+  return "grid gap-3 md:grid-cols-2 xl:grid-cols-4";
+}
+
+function resolveOpsActionButtonClass() {
+  return "inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-text)] hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]";
+}
+
+function resolveOpsFieldClass() {
+  return "grid gap-1.5 text-sm";
+}
+
+function resolveOpsInputClass() {
+  return "w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30";
+}
+
+function resolveOpsCheckboxClass() {
+  return "flex items-center gap-2.5 text-sm text-[color:var(--color-text)]";
+}
+
+function resolveOpsCheckboxInputClass() {
+  return "size-4 rounded border border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]";
+}
+
+function resolveOpsActionLinkClass() {
+  return "inline-flex items-center rounded-full border border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)] px-3 py-1.5 text-sm font-semibold text-[color:var(--color-text)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] hover:bg-[color:var(--color-accent)] hover:text-white";
+}
+
+function resolveOpsInlineLinkClass() {
+  return "text-sm font-semibold text-[color:var(--color-accent)] underline underline-offset-4 hover:opacity-90";
+}
+
+function resolveOpsPillRowClass() {
+  return "flex flex-wrap gap-2";
+}
+
+function resolveOpsCommandSignalTone(tone: OpsCommandTone) {
+  if (tone === "critical") {
+    return "border-rose-400/45 bg-rose-500/12 text-rose-100";
+  }
+
+  if (tone === "warning") {
+    return "border-amber-400/35 bg-amber-500/12 text-amber-100";
+  }
+
+  if (tone === "healthy") {
+    return "border-emerald-400/35 bg-emerald-500/12 text-emerald-100";
+  }
+
+  return "border-[color:var(--color-line)] bg-[color:var(--color-surface)]/65 text-[color:var(--color-text)]";
+}
+
+function resolveOpsActionRowClass() {
+  return "mt-2 flex flex-wrap gap-2";
+}
+
+function resolveOpsCommandSignalGridClass() {
+  return "grid gap-4 xl:grid-cols-3";
 }
 
 function formatDateTime(value: string) {
@@ -475,15 +568,25 @@ function OpsCommandSection({
   title: string;
 }) {
   return (
-    <section className="ops-command-section">
-      <div className="ops-command-section__header">
-        <span className="ops-command-section__eyebrow">{eyebrow}</span>
-        <h2 className="ops-command-section__title">{title}</h2>
-        <p className="ops-command-section__description">{description}</p>
+    <section className={resolveOpsCommandSectionClass()}>
+      <div className="space-y-1">
+        <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--color-accent)]">
+          {eyebrow}
+        </span>
+        <h2 className="text-2xl font-semibold text-[color:var(--color-text)]">
+          {title}
+        </h2>
+        <p className="text-sm leading-7 text-[color:var(--color-muted)]">
+          {description}
+        </p>
       </div>
       {children}
     </section>
   );
+}
+
+function resolveOpsCommandSectionClass() {
+  return "space-y-3 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-background)] p-4";
 }
 
 function OpsCommandModule({
@@ -505,26 +608,44 @@ function OpsCommandModule({
 }) {
   return (
     <article
-      className={joinClassNames(
-        "ops-command-module",
-        `ops-command-module--${tone}`,
-        span === "wide" && "ops-command-module--wide",
-        span === "full" && "ops-command-module--full"
+      className={cn(
+        "rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 shadow-[var(--shadow-surface)]",
+        resolveOpsCommandToneClasses(tone),
+        span === "wide" && "xl:col-span-2",
+        span === "full" && "xl:col-span-6",
+        span === "standard" && "xl:col-span-3",
+        "space-y-3"
       )}
     >
-      <div className="ops-command-module__header">
-        <div className="ops-command-module__copy">
-          <span className="ops-command-module__eyebrow">{eyebrow}</span>
-          <h3 className="ops-command-module__title">{title}</h3>
-          <p className="ops-command-module__description">{description}</p>
-        </div>
-        {actions ? (
-          <div className="ops-command-module__actions">{actions}</div>
-        ) : null}
+      <div className="grid gap-1">
+        <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--color-muted)]">
+          {eyebrow}
+        </span>
+        <h3 className="text-lg font-semibold text-[color:var(--color-text)]">
+          {title}
+        </h3>
+        <p className="text-sm text-[color:var(--color-muted)]">{description}</p>
       </div>
-      <div className="ops-command-module__content">{children}</div>
+      {actions ? <div className="mt-2 flex flex-wrap gap-2">{actions}</div> : null}
+      <div className="space-y-3">{children}</div>
     </article>
   );
+}
+
+function resolveOpsCommandToneClasses(tone: OpsCommandTone) {
+  if (tone === "critical") {
+    return "ring-1 ring-rose-400/20";
+  }
+
+  if (tone === "warning") {
+    return "ring-1 ring-amber-400/20";
+  }
+
+  if (tone === "healthy") {
+    return "ring-1 ring-emerald-400/20";
+  }
+
+  return "ring-1 ring-transparent";
 }
 
 function OpsCommandSignal({
@@ -542,17 +663,38 @@ function OpsCommandSignal({
 }) {
   return (
     <article
-      className={joinClassNames(
-        "ops-command-signal",
-        `ops-command-signal--${tone}`
+      className={cn(
+        "rounded-2xl border p-4 text-sm",
+        resolveOpsCommandSignalClass(tone),
+        "space-y-1 border-[color:var(--color-line)] bg-[color:var(--color-surface)]"
       )}
     >
-      <span className="ops-command-signal__label">{label}</span>
-      <strong className="ops-command-signal__value">{value}</strong>
-      <span className="ops-command-signal__detail">{detail}</span>
-      <span className="ops-command-signal__meta">{meta}</span>
+      <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--color-muted)]">
+        {label}
+      </span>
+      <strong className="text-2xl text-[color:var(--color-text)]">
+        {value}
+      </strong>
+      <span className="text-sm text-[color:var(--color-muted)]">{detail}</span>
+      <span className="text-xs text-[color:var(--color-muted)]">{meta}</span>
     </article>
   );
+}
+
+function resolveOpsCommandSignalClass(tone: OpsCommandTone) {
+  if (tone === "critical") {
+    return "border-rose-400/40";
+  }
+
+  if (tone === "warning") {
+    return "border-amber-400/35";
+  }
+
+  if (tone === "healthy") {
+    return "border-emerald-400/30";
+  }
+
+  return "border-[color:var(--color-line)] bg-[color:var(--color-surface)]";
 }
 
 function ActivityItem({
@@ -573,25 +715,25 @@ function ActivityItem({
 
   return (
     <div
-      className={joinClassNames(
-        "ops-activity-item",
-        `ops-activity-item--${itemTone}`
+      className={cn(
+        "rounded-2xl border p-4",
+        resolveOpsActivityItemTone(itemTone)
       )}
     >
-      <div className="ops-activity-item__header">
-        <div className="ops-activity-item__copy">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="grid gap-1">
           <strong>{activity.sourceAsset.originalFilename}</strong>
           <span>{renderActivityTiming(activity)}</span>
         </div>
         <Pill>{activity.status}</Pill>
       </div>
-      <div className="pill-row">
+      <div className="flex flex-wrap gap-2">
         <Pill>{activity.pipelineKey}</Pill>
         <Pill>{activity.requestedVariantCount} variants</Pill>
         <Pill>{activity.generatedAssetCount} stored rows</Pill>
         <Pill>{activity.queueJobId ?? "No queue job id"}</Pill>
       </div>
-      <div className="ops-activity-meta">
+      <div className="mt-2 grid gap-1 text-xs text-[color:var(--color-muted)] sm:grid-cols-2">
         <span>Requested {formatDateTime(activity.createdAt)}</span>
         {activity.startedAt ? (
           <span>Started {formatDateTime(activity.startedAt)}</span>
@@ -604,15 +746,20 @@ function ActivityItem({
         ) : null}
       </div>
       {activity.failureMessage ? (
-        <div className="status-banner status-banner--error">
+        <div
+          className={cn(
+            "rounded-xl border border-red-500/45 bg-red-500/12 p-3 text-sm text-red-50",
+            "leading-tight"
+          )}
+        >
           <strong>{activity.failureCode ?? "GENERATION_FAILED"}</strong>
           <span>{activity.failureMessage}</span>
         </div>
       ) : null}
       {onRetry ? (
-        <div className="studio-action-row ops-command-actions">
+        <div className={resolveOpsActionRowClass()}>
           <button
-            className="button-action"
+            className={resolveOpsActionButtonClass()}
             disabled={retrying}
             onClick={() => {
               void onRetry(activity.id);
@@ -629,15 +776,20 @@ function ActivityItem({
 
 function WindowSummary({ window }: { window: OpsGenerationWindowSummary }) {
   return (
-    <div className="ops-window-item">
-      <div className="ops-activity-item__header">
-        <div className="ops-activity-item__copy">
+    <div
+      className={cn(
+        "rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)]/80 p-3",
+        resolveOpsCaptureWindowTone("neutral")
+      )}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="grid gap-1">
           <strong>{window.label}</strong>
           <span>From {formatDateTime(window.from)}</span>
         </div>
         <Pill>{window.windowKey}</Pill>
       </div>
-      <div className="metric-list">
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <MetricTile label="Requests" value={String(window.totalCount)} />
         <MetricTile label="Queued" value={String(window.queuedCount)} />
         <MetricTile label="Running" value={String(window.runningCount)} />
@@ -678,19 +830,19 @@ function PersistedCaptureItem({
 
   return (
     <div
-      className={joinClassNames(
-        "ops-window-item",
-        `ops-window-item--${itemTone}`
+      className={cn(
+        "rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)]/80 p-3",
+        resolveOpsCaptureWindowTone(itemTone)
       )}
     >
-      <div className="ops-activity-item__header">
-        <div className="ops-activity-item__copy">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="grid gap-1">
           <strong>{formatDateTime(capture.capturedAt)}</strong>
           <span>{capture.observabilityMessage}</span>
         </div>
         <Pill>{capture.observabilityStatus}</Pill>
       </div>
-      <div className="pill-row">
+      <div className="flex flex-wrap gap-2">
         <Pill>{capture.backendReadinessStatus}</Pill>
         <Pill>{capture.queueStatus}</Pill>
         <Pill>{capture.workerAdapter ?? "Unknown adapter"}</Pill>
@@ -704,13 +856,13 @@ function PersistedCaptureItem({
           {formatDurationSeconds(capture.oldestRunningAgeSeconds)}
         </Pill>
       </div>
-      <div className="pill-row">
+      <div className="mt-2 flex flex-wrap gap-2">
         <Pill>Waiting {capture.queueCounts.waiting ?? "n/a"}</Pill>
         <Pill>Active {capture.queueCounts.active ?? "n/a"}</Pill>
         <Pill>Failed {capture.queueCounts.failed ?? "n/a"}</Pill>
         <Pill>Completed {capture.queueCounts.completed ?? "n/a"}</Pill>
       </div>
-      <div className="ops-window-list">
+      <div className="mt-2 grid gap-2">
         {capture.windows.map((window) => (
           <WindowSummary
             key={`${capture.id}-${window.windowKey}`}
@@ -736,31 +888,32 @@ function AlertDeliveryItem({
 
   return (
     <div
-      className={joinClassNames(
-        "ops-activity-item",
-        `ops-activity-item--${tone}`
+      className={cn(
+        "rounded-2xl border p-4",
+        resolveOpsActivityItemTone(tone)
       )}
     >
-      <div className="ops-activity-item__header">
-        <div className="ops-activity-item__copy">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="grid gap-1">
           <strong>{delivery.title}</strong>
           <span>{delivery.message}</span>
         </div>
         <Pill>{delivery.deliveryState}</Pill>
       </div>
-      <div className="pill-row">
+      <div className="flex flex-wrap gap-2">
         <Pill>{delivery.code}</Pill>
         <Pill>{delivery.severity}</Pill>
         <Pill>{delivery.deliveryChannel}</Pill>
       </div>
       <div
-        className={`status-banner status-banner--${
+        className={cn(
+          "rounded-xl border p-3 text-sm",
           delivery.deliveryState === "failed"
-            ? "error"
+            ? "border-red-500/45 bg-red-500/12 text-red-50"
             : delivery.severity === "critical"
-              ? "info"
-              : "success"
-        }`}
+              ? "border-blue-500/35 bg-blue-500/12 text-blue-50"
+              : "border-emerald-500/45 bg-emerald-500/12 text-emerald-50"
+        )}
       >
         <strong>
           {delivery.deliveredAt
@@ -797,19 +950,19 @@ function ActiveAlertItem({
 
   return (
     <div
-      className={joinClassNames(
-        "ops-activity-item",
-        `ops-activity-item--${tone}`
+      className={cn(
+        "rounded-2xl border p-4",
+        resolveOpsActivityItemTone(tone)
       )}
     >
-      <div className="ops-activity-item__header">
-        <div className="ops-activity-item__copy">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="grid gap-1">
           <strong>{alert.title}</strong>
           <span>{alert.message}</span>
         </div>
         <Pill>{alert.severity}</Pill>
       </div>
-      <div className="pill-row">
+      <div className="flex flex-wrap gap-2">
         <Pill>{alert.code}</Pill>
         <Pill>{alert.status}</Pill>
         <Pill>
@@ -824,9 +977,12 @@ function ActiveAlertItem({
         </Pill>
       </div>
       <div
-        className={`status-banner status-banner--${
-          alert.severity === "critical" ? "error" : "info"
-        }`}
+        className={cn(
+          "rounded-xl border p-3 text-sm",
+          alert.severity === "critical"
+            ? "border-red-500/45 bg-red-500/12 text-red-50"
+            : "border-blue-500/35 bg-blue-500/12 text-blue-50"
+        )}
       >
         <strong>First seen {formatDateTime(alert.firstObservedAt)}</strong>
         <span>Last seen {formatDateTime(alert.lastObservedAt)}</span>
@@ -837,10 +993,10 @@ function ActiveAlertItem({
             : "not recorded"}
         </span>
       </div>
-      <div className="studio-action-row ops-command-actions">
+      <div className={resolveOpsActionRowClass()}>
         {!alert.acknowledgedAt ? (
           <button
-            className="button-action"
+            className={resolveOpsActionButtonClass()}
             disabled={acknowledging}
             onClick={() => {
               void onAcknowledge(alert.id);
@@ -851,7 +1007,7 @@ function ActiveAlertItem({
           </button>
         ) : null}
         <button
-          className="button-action"
+          className={resolveOpsActionButtonClass()}
           disabled={muting || clearingMute}
           onClick={() => {
             void onMute(alert.id, 1);
@@ -861,7 +1017,7 @@ function ActiveAlertItem({
           {muting ? "Saving mute…" : "Mute 1h"}
         </button>
         <button
-          className="button-action"
+          className={resolveOpsActionButtonClass()}
           disabled={muting || clearingMute}
           onClick={() => {
             void onMute(alert.id, 24);
@@ -871,7 +1027,7 @@ function ActiveAlertItem({
           {muting ? "Saving mute…" : "Mute 1d"}
         </button>
         <button
-          className="button-action"
+          className={resolveOpsActionButtonClass()}
           disabled={muting || clearingMute}
           onClick={() => {
             void onMute(alert.id, 24 * 7);
@@ -882,7 +1038,7 @@ function ActiveAlertItem({
         </button>
         {alert.mutedUntil ? (
           <button
-            className="button-action"
+            className={resolveOpsActionButtonClass()}
             disabled={muting || clearingMute}
             onClick={() => {
               void onClearMute(alert.id);
@@ -907,17 +1063,17 @@ function ActiveMuteItem({
   onClear: (code: string) => Promise<void>;
 }) {
   return (
-    <div className="ops-activity-item ops-activity-item--neutral">
-      <div className="ops-activity-item__header">
-        <div className="ops-activity-item__copy">
+    <div className={cn("rounded-2xl border p-4", resolveOpsActivityItemTone("neutral"))}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="grid gap-1">
           <strong>{mute.code}</strong>
           <span>Muted until {formatDateTime(mute.mutedUntil)}</span>
         </div>
         <Pill>mute</Pill>
       </div>
-      <div className="studio-action-row ops-command-actions">
+      <div className={resolveOpsActionRowClass()}>
         <button
-          className="button-action"
+          className={resolveOpsActionButtonClass()}
           disabled={clearing}
           onClick={() => {
             void onClear(mute.code);
@@ -932,7 +1088,43 @@ function ActiveMuteItem({
 }
 
 function EmptyState({ children }: { children: ReactNode }) {
-  return <div className="ops-command-empty-state">{children}</div>;
+  return (
+    <div className="rounded-2xl border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface)]/40 p-4 text-sm text-[color:var(--color-muted)]">
+      {children}
+    </div>
+  );
+}
+
+function resolveOpsActivityItemTone(tone: OpsCommandTone) {
+  if (tone === "critical") {
+    return "border-rose-400/30 bg-[color:var(--color-surface)]";
+  }
+
+  if (tone === "warning") {
+    return "border-amber-400/30 bg-[color:var(--color-surface)]/85";
+  }
+
+  if (tone === "healthy") {
+    return "border-emerald-400/20 bg-[color:var(--color-surface)]/90";
+  }
+
+  return "border-[color:var(--color-line)] bg-[color:var(--color-surface)]";
+}
+
+function resolveOpsCaptureWindowTone(tone: OpsCommandTone) {
+  if (tone === "critical") {
+    return "border-rose-400/35";
+  }
+
+  if (tone === "warning") {
+    return "border-amber-400/30";
+  }
+
+  return "border-[color:var(--color-line)]";
+}
+
+function resolveOpsCommandWindowClass() {
+  return "grid gap-2";
 }
 
 export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
@@ -1601,27 +1793,27 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
 
   if (!operator.session) {
     return (
-      <div className="ops-command-center">
+      <div className="space-y-6">
         <OpsCommandSection
           description="Public runtime health is still visible above, but live queue state, alert controls, reconciliation, and generation recovery stay behind the authenticated operator boundary."
           eyebrow="Operator access"
           title="Authentication unlocks command actions"
         >
-          <div className="ops-command-grid ops-command-grid--two">
+          <div className="grid gap-4 xl:grid-cols-2">
             <OpsCommandModule
               description="Use a studio session to move from passive runtime checks into queue triage, alert handling, reconciliation repair, and retry control."
               eyebrow="Sign-in required"
               title="Operator command surface"
               tone="warning"
             >
-              <div className="pill-row">
+              <div className="flex flex-wrap gap-2">
                 <Pill>Queue depth hidden</Pill>
                 <Pill>Active alerts hidden</Pill>
                 <Pill>Reconciliation hidden</Pill>
                 <Pill>Retry actions disabled</Pill>
               </div>
-              <div className="surface-card__footer">
-                <Link className="action-link" href="/sign-in?next=%2Fops">
+              <div className="mt-3">
+                <Link className={resolveOpsActionLinkClass()} href="/sign-in?next=%2Fops">
                   Sign in to /ops
                 </Link>
               </div>
@@ -1631,7 +1823,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
               eyebrow="Available after sign-in"
               title="What the locked view omits"
             >
-              <div className="pill-row">
+              <div className="flex flex-wrap gap-2">
                 <Pill>Workspace-scoped queue metrics</Pill>
                 <Pill>Persisted alerts and mutes</Pill>
                 <Pill>Reconciliation issues and repairs</Pill>
@@ -1752,16 +1944,12 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
       : "healthy";
 
   return (
-    <div className="ops-command-center">
+    <div className="space-y-6">
       {notice ? (
         <div
-          className={joinClassNames(
-            "notice-banner",
-            notice.tone === "error"
-              ? "notice-banner--error"
-              : notice.tone === "success"
-                ? "notice-banner--success"
-                : "notice-banner--info"
+          className={cn(
+            "rounded-xl border p-3 text-sm text-[color:var(--color-text)]",
+            resolveOpsStatusBannerToneClass(notice.tone)
           )}
         >
           <strong>
@@ -1774,7 +1962,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
           <span>{notice.message}</span>
         </div>
       ) : null}
-      <div className="ops-command-signal-grid">
+      <div className={resolveOpsCommandSignalGridClass()}>
         <OpsCommandSignal
           detail={`${activeAlerts.length} persisted alerts · ${openIssues.length} reconciliation issues`}
           label="Needs attention"
@@ -1883,7 +2071,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
         eyebrow="Attention now"
         title="Triage and remediation"
       >
-        <div className="ops-command-columns">
+        <div className={resolveOpsGridClass()}>
           <OpsCommandModule
             description={
               observability
@@ -1904,14 +2092,12 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
           >
             {observability ? (
               <>
-                <div
-                  className={`status-banner status-banner--${observabilityTone}`}
-                >
+                <StatusBanner tone={observabilityTone}>
                   <strong>{observability.status}</strong>
                   <span>{observability.message}</span>
                   <span>Checked {formatDateTime(observability.checkedAt)}</span>
-                </div>
-                <div className="metric-list">
+                </StatusBanner>
+                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
                   <MetricTile
                     label="Critical alerts"
                     value={String(criticalActiveAlertCount)}
@@ -1934,12 +2120,12 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                   />
                 </div>
                 {derivedAlerts.length ? (
-                  <div className="ops-alert-list">
+                  <div className="space-y-2.5">
                     {derivedAlerts.map((alert) => (
                       <div
-                        className={`status-banner status-banner--${
+                        className={resolveOpsStatusBannerToneClass(
                           alert.severity === "critical" ? "error" : "info"
-                        }`}
+                        )}
                         key={alert.code}
                       >
                         <strong>{alert.title}</strong>
@@ -1956,7 +2142,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
               </>
             ) : null}
             {activeAlerts.length ? (
-              <div className="ops-activity-list">
+              <div className="space-y-2.5">
                 {activeAlerts.map((alert) => (
                   <ActiveAlertItem
                     acknowledging={acknowledgingAlertStateId === alert.id}
@@ -1979,7 +2165,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
           <OpsCommandModule
             actions={
               <button
-                className="button-action"
+                className={resolveOpsActionButtonClass()}
                 disabled={runningReconciliation}
                 onClick={() => {
                   void runReconciliation();
@@ -2004,9 +2190,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
           >
             {reconciliation ? (
               <>
-                <div
-                  className={`status-banner status-banner--${reconciliationTone}`}
-                >
+                <StatusBanner tone={reconciliationTone}>
                   <strong>{reconciliation.status}</strong>
                   <span>{reconciliation.message}</span>
                   <span>
@@ -2015,8 +2199,8 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       ? formatDateTime(reconciliation.lastRun.completedAt)
                       : "not recorded"}
                   </span>
-                </div>
-                <div className="metric-list">
+                </StatusBanner>
+                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
                   <MetricTile
                     label="Critical open"
                     value={String(reconciliation.openCriticalIssueCount)}
@@ -2041,25 +2225,25 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
               </>
             ) : null}
             {openIssues.length ? (
-              <div className="ops-activity-list">
+              <div className="space-y-2.5">
                 {openIssues.map((issue) => (
                   <div
-                    className={joinClassNames(
-                      "ops-activity-item",
-                      `ops-activity-item--${
+                    className={cn(
+                      "rounded-2xl border p-4",
+                      resolveOpsActivityItemTone(
                         issue.severity === "critical" ? "critical" : "warning"
-                      }`
+                      )
                     )}
                     key={issue.id}
                   >
-                    <div className="ops-activity-item__header">
-                      <div className="ops-activity-item__copy">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="grid gap-1">
                         <strong>{issue.title}</strong>
                         <span>{issue.message}</span>
                       </div>
                       <Pill>{issue.severity}</Pill>
                     </div>
-                    <div className="pill-row">
+                    <div className={resolveOpsPillRowClass()}>
                       <Pill>{issue.kind}</Pill>
                       <Pill>
                         Detected {formatDateTime(issue.lastDetectedAt)}
@@ -2068,16 +2252,16 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                         {issue.repairable ? "Repairable" : "Manual only"}
                       </Pill>
                     </div>
-                    <div className="ops-activity-meta">
+                    <div className="grid gap-1 text-xs text-[color:var(--color-muted)] md:grid-cols-2">
                       {Object.entries(issue.detail).map(([key, value]) => (
                         <span key={key}>
                           {key}: {String(value)}
                         </span>
                       ))}
                     </div>
-                    <div className="studio-action-row ops-command-actions">
+                    <div className={resolveOpsActionRowClass()}>
                       <button
-                        className="button-action"
+                        className={resolveOpsActionButtonClass()}
                         disabled={
                           !issue.repairable ||
                           repairingReconciliationIssueId === issue.id
@@ -2092,7 +2276,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                           : "Repair issue"}
                       </button>
                       <button
-                        className="button-action"
+                        className={resolveOpsActionButtonClass()}
                         disabled={ignoringReconciliationIssueId === issue.id}
                         onClick={() => {
                           void ignoreReconciliationIssue(issue.id);
@@ -2120,7 +2304,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
         eyebrow="Current system state"
         title="Runtime and automation"
       >
-        <div className="ops-command-grid">
+        <div className={resolveOpsGridClass()}>
           <OpsCommandModule
             description={
               queue?.status === "ok"
@@ -2135,15 +2319,15 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
             {queue ? (
               <>
                 <div
-                  className={`status-banner status-banner--${
+                  className={resolveOpsStatusBannerToneClass(
                     queue.status === "ok" ? "info" : "error"
-                  }`}
+                  )}
                 >
                   <strong>{queue.queueName}</strong>
                   <span>{queue.message}</span>
                   <span>Checked {formatDateTime(queue.checkedAt)}</span>
                 </div>
-                <div className="pill-row">
+                <div className={resolveOpsPillRowClass()}>
                   <Pill>{queue.service ?? "Worker service unavailable"}</Pill>
                   <Pill>{queue.workerAdapter ?? "Unknown adapter"}</Pill>
                   <Pill>
@@ -2153,7 +2337,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                   </Pill>
                 </div>
                 {queue.counts ? (
-                  <div className="metric-list">
+                  <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
                     <MetricTile
                       label="Waiting"
                       value={String(queue.counts.waiting)}
@@ -2195,7 +2379,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
             tone={activeRequests.length > 0 ? "neutral" : "healthy"}
           >
             {activeRequests.length ? (
-              <div className="ops-activity-list">
+              <div className="space-y-2.5">
                 {activeRequests.map((entry) => (
                   <ActivityItem activity={entry} key={entry.id} />
                 ))}
@@ -2219,7 +2403,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
             tone={retryableFailures.length > 0 ? "warning" : "healthy"}
           >
             {retryableFailures.length ? (
-              <div className="ops-activity-list">
+              <div className="space-y-2.5">
                 {retryableFailures.map((entry) => (
                   <ActivityItem
                     activity={entry}
@@ -2251,13 +2435,11 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
           >
             {captureAutomation ? (
               <>
-                <div
-                  className={`status-banner status-banner--${captureAutomationTone}`}
-                >
+                <div className={resolveOpsStatusBannerToneClass(captureAutomationTone)}>
                   <strong>{captureAutomation.status}</strong>
                   <span>{captureAutomation.message}</span>
                 </div>
-                <div className="pill-row">
+                <div className={resolveOpsPillRowClass()}>
                   <Pill>
                     {captureAutomation.enabled
                       ? "Scheduler enabled"
@@ -2300,7 +2482,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
           </OpsCommandModule>
           <OpsCommandModule
             actions={
-              <Link className="inline-link" href="/ops/fleet">
+              <Link className={resolveOpsInlineLinkClass()} href="/ops/fleet">
                 Fleet triage
               </Link>
             }
@@ -2318,12 +2500,14 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
             {reconciliationAutomation ? (
               <>
                 <div
-                  className={`status-banner status-banner--${reconciliationAutomationTone}`}
+                  className={resolveOpsStatusBannerToneClass(
+                    reconciliationAutomationTone
+                  )}
                 >
                   <strong>{reconciliationAutomation.status}</strong>
                   <span>{reconciliationAutomation.message}</span>
                 </div>
-                <div className="pill-row">
+                <div className={resolveOpsPillRowClass()}>
                   <Pill>
                     Interval{" "}
                     {reconciliationAutomation.intervalSeconds !== null
@@ -2380,7 +2564,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
             tone={resolveOpsCommandToneFromObservability(observability?.status)}
           >
             {observability?.windows.length ? (
-              <div className="ops-window-list">
+                <div className="space-y-2.5">
                 {observability.windows.map((window) => (
                   <WindowSummary key={window.windowKey} window={window} />
                 ))}
@@ -2398,7 +2582,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
         eyebrow="Control and policy"
         title="Alert delivery controls"
       >
-        <div className="ops-command-grid">
+        <div className={resolveOpsGridClass()}>
           <OpsCommandModule
             description={
               alertRouting?.message ??
@@ -2411,21 +2595,19 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
             {alertRouting ? (
               <>
                 {!canManageOpsPolicy ? (
-                  <div className="status-banner status-banner--info">
+                  <StatusBanner tone="info">
                     <strong>Operator read-only</strong>
                     <span>
                       {operatorRoleLabel} access can inspect routing state, but
                       only workspace owners can change delivery policy.
                     </span>
-                  </div>
+                  </StatusBanner>
                 ) : null}
-                <div
-                  className={`status-banner status-banner--${alertRoutingTone}`}
-                >
+                  <div className={resolveOpsStatusBannerToneClass(alertRoutingTone)}>
                   <strong>{alertRouting.status}</strong>
                   <span>{alertRouting.message}</span>
                 </div>
-                <div className="pill-row">
+                <div className={resolveOpsPillRowClass()}>
                   <Pill>
                     {alertRouting.webhookConfigured
                       ? "Webhook configured"
@@ -2440,9 +2622,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       : "default"}
                   </Pill>
                 </div>
-                <div className="studio-action-row ops-command-actions">
+                <div className={resolveOpsActionRowClass()}>
                   <button
-                    className="button-action"
+                    className={resolveOpsActionButtonClass()}
                     disabled={
                       !canManageOpsPolicy ||
                       savingAlertRoutingAction !== null ||
@@ -2458,7 +2640,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       : "Route all alerts"}
                   </button>
                   <button
-                    className="button-action"
+                    className={resolveOpsActionButtonClass()}
                     disabled={
                       !canManageOpsPolicy ||
                       savingAlertRoutingAction !== null ||
@@ -2474,7 +2656,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       : "Critical only"}
                   </button>
                   <button
-                    className="button-action"
+                    className={resolveOpsActionButtonClass()}
                     disabled={
                       !canManageOpsPolicy ||
                       savingAlertRoutingAction !== null ||
@@ -2491,7 +2673,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                   </button>
                   {alertRouting.policy.source === "owner_override" ? (
                     <button
-                      className="button-action"
+                      className={resolveOpsActionButtonClass()}
                       disabled={
                         !canManageOpsPolicy || savingAlertRoutingAction !== null
                       }
@@ -2521,21 +2703,19 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
             {alertSchedule ? (
               <>
                 {!canManageOpsPolicy ? (
-                  <div className="status-banner status-banner--info">
+                  <StatusBanner tone="info">
                     <strong>Operator read-only</strong>
                     <span>
                       {operatorRoleLabel} access can inspect schedule state, but
                       only workspace owners can change alert hours.
                     </span>
-                  </div>
+                  </StatusBanner>
                 ) : null}
-                <div
-                  className={`status-banner status-banner--${alertScheduleTone}`}
-                >
+                <div className={resolveOpsStatusBannerToneClass(alertScheduleTone)}>
                   <strong>{alertSchedule.status}</strong>
                   <span>{alertSchedule.message}</span>
                 </div>
-                <div className="pill-row">
+                <div className={resolveOpsPillRowClass()}>
                   <Pill>
                     {alertSchedule.webhookConfigured
                       ? "Webhook configured"
@@ -2566,11 +2746,11 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                   </Pill>
                   <Pill>Local now {alertSchedule.localTimeLabel ?? "n/a"}</Pill>
                 </div>
-                <div className="ops-settings-grid">
-                  <label className="studio-field">
+                <div className={resolveOpsSettingsGridClass()}>
+                  <label className={resolveOpsFieldClass()}>
                     <span>Timezone</span>
                     <input
-                      className="studio-input"
+                      className={resolveOpsInputClass()}
                       disabled={
                         !canManageOpsPolicy ||
                         savingAlertScheduleAction !== null
@@ -2585,10 +2765,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       value={alertScheduleDraft.timezone}
                     />
                   </label>
-                  <label className="studio-field">
+                  <label className={resolveOpsFieldClass()}>
                     <span>Start</span>
                     <input
-                      className="studio-input"
+                      className={resolveOpsInputClass()}
                       disabled={
                         !canManageOpsPolicy ||
                         savingAlertScheduleAction !== null ||
@@ -2605,10 +2785,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       value={alertScheduleDraft.startTime}
                     />
                   </label>
-                  <label className="studio-field">
+                  <label className={resolveOpsFieldClass()}>
                     <span>End</span>
                     <input
-                      className="studio-input"
+                      className={resolveOpsInputClass()}
                       disabled={
                         !canManageOpsPolicy ||
                         savingAlertScheduleAction !== null ||
@@ -2625,8 +2805,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       value={alertScheduleDraft.endTime}
                     />
                   </label>
-                  <label className="studio-checkbox">
+                  <label className={resolveOpsCheckboxClass()}>
                     <input
+                      className={resolveOpsCheckboxInputClass()}
                       checked={alertScheduleDraft.allDay}
                       disabled={
                         !canManageOpsPolicy ||
@@ -2643,7 +2824,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                     <span>All day on active days</span>
                   </label>
                 </div>
-                <div className="pill-row">
+                <div className={resolveOpsPillRowClass()}>
                   {opsAlertScheduleDayValues.map((activeDay) => {
                     const selected =
                       alertScheduleDraft.activeDays.includes(activeDay);
@@ -2651,7 +2832,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                     return (
                       <button
                         aria-pressed={selected}
-                        className="button-action"
+                        className={resolveOpsActionButtonClass()}
                         disabled={
                           !canManageOpsPolicy ||
                           savingAlertScheduleAction !== null
@@ -2683,9 +2864,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                     );
                   })}
                 </div>
-                <div className="studio-action-row ops-command-actions">
+                <div className={resolveOpsActionRowClass()}>
                   <button
-                    className="button-action"
+                    className={resolveOpsActionButtonClass()}
                     disabled={
                       !canManageOpsPolicy || savingAlertScheduleAction !== null
                     }
@@ -2700,7 +2881,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                   </button>
                   {alertSchedule.policy.source === "owner_override" ? (
                     <button
-                      className="button-action"
+                      className={resolveOpsActionButtonClass()}
                       disabled={
                         !canManageOpsPolicy ||
                         savingAlertScheduleAction !== null
@@ -2731,21 +2912,19 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
             {alertEscalation ? (
               <>
                 {!canManageOpsPolicy ? (
-                  <div className="status-banner status-banner--info">
+                  <StatusBanner tone="info">
                     <strong>Operator read-only</strong>
                     <span>
                       {operatorRoleLabel} access can inspect escalation state,
                       but only workspace owners can change reminder policy.
                     </span>
-                  </div>
+                  </StatusBanner>
                 ) : null}
-                <div
-                  className={`status-banner status-banner--${alertEscalationTone}`}
-                >
+                <div className={resolveOpsStatusBannerToneClass(alertEscalationTone)}>
                   <strong>{alertEscalation.status}</strong>
                   <span>{alertEscalation.message}</span>
                 </div>
-                <div className="pill-row">
+                <div className={resolveOpsPillRowClass()}>
                   <Pill>
                     {alertEscalation.webhookConfigured
                       ? "Webhook configured"
@@ -2777,11 +2956,11 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       : "default"}
                   </Pill>
                 </div>
-                <div className="ops-settings-grid">
-                  <label className="studio-field">
+                <div className={resolveOpsSettingsGridClass()}>
+                  <label className={resolveOpsFieldClass()}>
                     <span>First reminder (minutes)</span>
                     <input
-                      className="studio-input"
+                      className={resolveOpsInputClass()}
                       disabled={
                         !canManageOpsPolicy ||
                         savingAlertEscalationAction !== null
@@ -2798,10 +2977,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       value={alertEscalationDraft.firstReminderDelayMinutes}
                     />
                   </label>
-                  <label className="studio-field">
+                  <label className={resolveOpsFieldClass()}>
                     <span>Repeat interval (minutes)</span>
                     <input
-                      className="studio-input"
+                      className={resolveOpsInputClass()}
                       disabled={
                         !canManageOpsPolicy ||
                         savingAlertEscalationAction !== null
@@ -2819,9 +2998,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                     />
                   </label>
                 </div>
-                <div className="studio-action-row ops-command-actions">
+                <div className={resolveOpsActionRowClass()}>
                   <button
-                    className="button-action"
+                    className={resolveOpsActionButtonClass()}
                     disabled={
                       !canManageOpsPolicy ||
                       savingAlertEscalationAction !== null
@@ -2837,7 +3016,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                   </button>
                   {alertEscalation.policy.source === "owner_override" ? (
                     <button
-                      className="button-action"
+                      className={resolveOpsActionButtonClass()}
                       disabled={
                         !canManageOpsPolicy ||
                         savingAlertEscalationAction !== null
@@ -2868,7 +3047,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
             tone={activeMutes.length > 0 ? "warning" : "healthy"}
           >
             {activeMutes.length ? (
-              <div className="ops-activity-list">
+              <div className="space-y-2.5">
                 {activeMutes.map((mute) => (
                   <ActiveMuteItem
                     clearing={clearingMuteCode === mute.code}
@@ -2891,7 +3070,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
         eyebrow="Evidence and history"
         title="Operational trail"
       >
-        <div className="ops-command-grid">
+        <div className={resolveOpsGridClass()}>
           <OpsCommandModule
             description={
               history?.status === "ok"
@@ -2905,7 +3084,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
             tone={persistedCaptures.length > 0 ? "neutral" : "healthy"}
           >
             {persistedCaptures.length ? (
-              <div className="ops-window-list">
+              <div className="space-y-2.5">
                 {persistedCaptures.map((capture) => (
                   <PersistedCaptureItem capture={capture} key={capture.id} />
                 ))}
@@ -2937,7 +3116,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
             }
           >
             {alertDeliveries.length ? (
-              <div className="ops-activity-list">
+              <div className="space-y-2.5">
                 {alertDeliveries.map((delivery) => (
                   <AlertDeliveryItem delivery={delivery} key={delivery.id} />
                 ))}

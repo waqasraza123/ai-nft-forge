@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { WorkspaceScopeSwitcher } from "../../../components/workspace-scope-switcher";
+import { SidebarThemeSwitcher } from "../../../components/sidebar-theme-switcher";
+import { ActionLink } from "@ai-nft-forge/ui";
 import { requireStudioSession } from "../../../server/auth/guard";
 import { getCurrentStudioAccess } from "../../../server/studio/access";
 
@@ -59,56 +61,70 @@ export default async function StudioLayout({ children }: StudioLayoutProps) {
   const workspaceStatus = workspace?.status ?? "active";
 
   return (
-    <div className="studio-shell">
-      <header className="studio-shell__top">
-        <div className="studio-shell__identity">
-          <p className="studio-shell__kicker">Workspace control plane</p>
-          <h1 className="studio-shell__title">Studio operations</h1>
-          <p className="studio-shell__lead">
+    <div className="rounded-3xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)]/80 p-4 sm:p-6 backdrop-blur-sm">
+      <header className="grid gap-4 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-bg)]/60 p-4 sm:grid-cols-[1.2fr_0.8fr]">
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-accent)]">
+            Workspace control plane
+          </p>
+          <h1 className="text-3xl font-semibold font-[var(--font-display)]">
+            Studio operations
+          </h1>
+          <p className="max-w-3xl text-sm leading-7 text-[color:var(--color-muted)]">
             All protected studio routes inherit one workspace-scoped operator
             rhythm: intake, curation, publication controls, and commerce
             administration.
           </p>
-          <div className="studio-shell__workspace">
-            <span className="studio-shell__meta-label">Current workspace</span>
-            <span className="studio-shell__workspace-name">
+          <div className="mt-3 grid gap-1">
+            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+              Current workspace
+            </span>
+            <span className="text-lg font-semibold text-[color:var(--app-sidebar-ink)]">
               {workspaceName}
             </span>
-            <span className="studio-shell__workspace-meta">
+            <span className="text-sm text-[color:var(--color-muted)]">
               {workspaceRole} · {workspaceStatus} ·{" "}
               {shortenWalletAddress(access?.owner.walletAddress ?? null)}
             </span>
           </div>
         </div>
-        <div className="studio-shell__scope">
-          <h2 className="studio-shell__section-title">Accessible workspace</h2>
+        <div className="rounded-2xl border border-[color:var(--app-sidebar-border)] bg-[color:var(--app-surface)] p-4 text-[color:var(--app-sidebar-ink)]">
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-[0.14em] text-[color:var(--app-sidebar-muted)]">
+            Accessible workspace
+          </h2>
           <WorkspaceScopeSwitcher
             currentWorkspaceSlug={workspace?.slug ?? null}
             workspaces={access?.availableWorkspaces ?? []}
           />
+          <SidebarThemeSwitcher className="mt-4" />
         </div>
       </header>
-      <nav className="studio-shell__nav" aria-label="Studio routes">
+      <nav
+        className="mt-4 grid gap-2 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)]/70 p-3 sm:grid-cols-4"
+        aria-label="Studio routes"
+      >
         {studioNavigationItems.map((item) => (
           <Link
-            className="studio-shell__nav-link"
+            className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 transition hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-soft)]"
             href={item.href}
             key={item.href}
           >
             <span>{item.label}</span>
-            <small>{item.description}</small>
+            <small className="mt-2 block text-xs text-[color:var(--color-muted)]">
+              {item.description}
+            </small>
           </Link>
         ))}
       </nav>
-      <section className="studio-shell__content">{children}</section>
-      <footer className="studio-shell__breadcrumb">
-        <Link className="inline-link" href="/studio">
+      <section className="mt-5">{children}</section>
+      <footer className="mt-4 flex flex-wrap items-center gap-3 text-sm">
+        <ActionLink href="/studio" tone="inline">
           Studio home
-        </Link>
-        <span>→</span>
-        <Link className="inline-link" href="/">
+        </ActionLink>
+        <span className="text-[color:var(--color-muted)]">→</span>
+        <ActionLink href="/" tone="inline">
           Platform root
-        </Link>
+        </ActionLink>
       </footer>
     </div>
   );

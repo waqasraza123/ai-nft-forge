@@ -1,9 +1,14 @@
 import Link from "next/link";
 
-import { PageShell, Pill } from "@ai-nft-forge/ui";
+import {
+  ActionLink,
+  PageShell,
+  Pill
+} from "@ai-nft-forge/ui";
 
 import { WorkspaceDirectoryPanel } from "../../../components/workspace-directory-panel";
 import { WorkspaceScopeSwitcher } from "../../../components/workspace-scope-switcher";
+import { SidebarThemeSwitcher } from "../../../components/sidebar-theme-switcher";
 import { loadOpsRuntime } from "../../../server/ops/runtime";
 import { createRuntimeWorkspaceDirectoryService } from "../../../server/workspaces/directory-service";
 
@@ -16,10 +21,6 @@ function formatDateTime(value: string) {
     dateStyle: "medium",
     timeStyle: "short"
   }).format(new Date(value));
-}
-
-function joinClassNames(...values: Array<string | false | null | undefined>) {
-  return values.filter(Boolean).join(" ");
 }
 
 function resolveTone(
@@ -46,6 +47,24 @@ function resolveTone(
   return "neutral";
 }
 
+function summaryToneClasses(
+  tone: OpsPageTone
+) {
+  if (tone === "critical") {
+    return "border-rose-400/45 bg-rose-500/12 text-rose-100";
+  }
+
+  if (tone === "warning") {
+    return "border-amber-400/45 bg-amber-500/12 text-amber-100";
+  }
+
+  if (tone === "healthy") {
+    return "border-emerald-400/45 bg-emerald-500/12 text-emerald-100";
+  }
+
+  return "border-[color:var(--color-line)] bg-[color:var(--color-surface)]/60 text-[color:var(--color-muted)]";
+}
+
 function OpsCommandSummaryCard({
   detail,
   label,
@@ -61,16 +80,45 @@ function OpsCommandSummaryCard({
 }) {
   return (
     <article
-      className={joinClassNames(
-        "ops-command-signal",
-        `ops-command-signal--${tone}`
-      )}
+      className={`rounded-2xl border p-4 ${summaryToneClasses(tone)}`}
     >
-      <span className="ops-command-signal__label">{label}</span>
-      <strong className="ops-command-signal__value">{value}</strong>
-      <span className="ops-command-signal__detail">{detail}</span>
-      <span className="ops-command-signal__meta">{meta}</span>
+      <div className="space-y-1 text-xs font-semibold uppercase tracking-[0.15em]">
+        <span>{label}</span>
+      </div>
+      <p className="mt-2 text-xl font-semibold text-[color:var(--color-text)]">
+        {value}
+      </p>
+      <p className="mt-2 text-sm">{detail}</p>
+      <p className="mt-3 text-xs text-[color:var(--color-muted)]">{meta}</p>
     </article>
+  );
+}
+
+function opsActions(runtimeBackendHealthUrl: string | null) {
+  return (
+    <>
+      <ActionLink href="/ops/audit">Audit</ActionLink>
+      <ActionLink href="/ops/fleet">Fleet</ActionLink>
+      <ActionLink href="/ops/retention">Retention</ActionLink>
+      <ActionLink href="/ops/workspaces">Directory</ActionLink>
+      <ActionLink href="/api/health">Web health</ActionLink>
+      {runtimeBackendHealthUrl ? (
+        <a
+          className="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold text-[color:var(--color-accent)] transition hover:underline hover:underline-offset-4"
+          href={runtimeBackendHealthUrl}
+          rel="noreferrer"
+          target="_blank"
+        >
+          Backend health
+        </a>
+      ) : null}
+      <Link
+        className="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold text-[color:var(--color-muted)] transition hover:text-[color:var(--color-text)]"
+        href="/"
+      >
+        Back to marketing
+      </Link>
+    </>
   );
 }
 
@@ -103,57 +151,26 @@ export default async function OpsPage() {
       eyebrow="Ops Command"
       title="Workspace command center"
       lead="Scan current workspace health, act on alerts and reconciliation, verify queue and automation state, and review operational evidence without leaving the selected ops scope."
-      actions={
-        <>
-          <Link className="action-link" href="/ops/audit">
-            Audit
-          </Link>
-          <Link className="action-link" href="/ops/fleet">
-            Fleet
-          </Link>
-          <Link className="action-link" href="/ops/retention">
-            Retention
-          </Link>
-          <Link className="action-link" href="/ops/workspaces">
-            Directory
-          </Link>
-          <Link className="action-link" href="/api/health">
-            Web health
-          </Link>
-          {runtime.generationBackend.endpoints.healthUrl ? (
-            <a
-              className="action-link"
-              href={runtime.generationBackend.endpoints.healthUrl}
-              rel="noreferrer"
-              target="_blank"
-            >
-              Backend health
-            </a>
-          ) : null}
-          <Link className="inline-link" href="/">
-            Back to marketing
-          </Link>
-        </>
-      }
+      actions={opsActions(runtime.generationBackend.endpoints.healthUrl ?? null)}
       tone="ops"
     >
-      <div className="ops-command-page">
-        <section className="ops-command-launchpad">
-          <div className="ops-command-launchpad__primary">
-            <div className="ops-command-launchpad__copy">
-              <span className="ops-command-launchpad__eyebrow">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_1fr] xl:items-start">
+        <section className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-5 shadow-[var(--shadow-surface)]">
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">
                 Selected workspace
               </span>
-              <h2 className="ops-command-launchpad__title">
+              <h2 className="text-2xl font-semibold">
                 {currentWorkspace?.name ?? "Sign in to load operator scope"}
               </h2>
-              <p className="ops-command-launchpad__lead">
+              <p className="text-sm leading-7 text-[color:var(--color-muted)]">
                 {currentWorkspace
                   ? `${currentWorkspace.slug} is the active operational boundary. Alert policy, reconciliation controls, deliveries, and runtime history below stay locked to this workspace.`
                   : "Public runtime health remains visible here, but queue depth, alert controls, reconciliation, and retry actions only load after an authenticated studio session selects an accessible workspace."}
               </p>
             </div>
-            <div className="pill-row">
+            <div className="flex flex-wrap gap-2">
               <Pill>{runtime.web.service}</Pill>
               <Pill>{runtime.web.phase}</Pill>
               <Pill>{formatDateTime(runtime.web.timestamp)}</Pill>
@@ -163,7 +180,7 @@ export default async function OpsPage() {
               <Pill>{runtime.operator.access?.role ?? "unauthenticated"}</Pill>
               <Pill>{availableWorkspaceCount} accessible</Pill>
             </div>
-            <div className="ops-command-signal-grid ops-command-signal-grid--page">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <OpsCommandSummaryCard
                 detail="Web control plane"
                 label="Control plane"
@@ -208,70 +225,73 @@ export default async function OpsPage() {
               />
             </div>
           </div>
-          <div className="ops-command-launchpad__rail">
-            <article className="ops-command-module ops-command-module--neutral">
-              <div className="ops-command-module__header">
-                <div className="ops-command-module__copy">
-                  <span className="ops-command-module__eyebrow">
-                    Workspace scope
-                  </span>
-                  <h3 className="ops-command-module__title">
-                    Controlled workspace selection
-                  </h3>
-                  <p className="ops-command-module__description">
-                    Keep the current workspace explicit before acting on alerts,
-                    policies, reconciliation, or queue-owned evidence.
-                  </p>
-                </div>
-              </div>
+        </section>
+
+        <aside className="grid gap-5">
+          <section className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-5 shadow-[var(--shadow-surface)]">
+            <div className="space-y-1">
+              <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--color-accent)]">
+                Workspace scope
+              </span>
+              <h3 className="text-xl font-semibold">
+                Controlled workspace selection
+              </h3>
+              <p className="text-sm text-[color:var(--color-muted)]">
+                Keep the current workspace explicit before acting on alerts,
+                policies, reconciliation, or queue-owned evidence.
+              </p>
+            </div>
+            <div className="mt-4">
               <WorkspaceScopeSwitcher
                 currentWorkspaceSlug={currentWorkspace?.slug ?? null}
                 workspaces={runtime.operator.access?.availableWorkspaces ?? []}
               />
-            </article>
-            <article className="ops-command-module ops-command-module--neutral">
-              <div className="ops-command-module__header">
-                <div className="ops-command-module__copy">
-                  <span className="ops-command-module__eyebrow">
-                    Route deck
-                  </span>
-                  <h3 className="ops-command-module__title">
-                    Adjacent ops surfaces
-                  </h3>
-                  <p className="ops-command-module__description">
-                    Use dedicated routes for fleet triage, audit evidence,
-                    retention review, and workspace estate context.
-                  </p>
-                </div>
-              </div>
-              <div className="ops-command-link-list">
-                <Link className="action-link" href="/ops/audit">
-                  Review audit evidence
-                </Link>
-                <Link className="action-link" href="/ops/fleet">
-                  Open fleet triage
-                </Link>
-                <Link className="action-link" href="/ops/retention">
-                  Open retention review
-                </Link>
-                <Link className="action-link" href="/ops/workspaces">
-                  Browse workspace directory
-                </Link>
-              </div>
-            </article>
-          </div>
-        </section>
-        <OpsOperatorPanel operator={runtime.operator} />
-        <div className="ops-command-support">
-          <WorkspaceDirectoryPanel
-            body="Accessible workspace summaries remain available as supporting context below the live command surface so operators can confirm where they can move next without crowding the active attention zones."
-            entries={workspaceDirectory.workspaces}
-            eyebrow="Workspace directory"
-            span={12}
-            title="Accessible operator estate"
-          />
-        </div>
+            </div>
+          </section>
+          <section className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-5 shadow-[var(--shadow-surface)]">
+            <div className="space-y-1">
+              <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--color-accent)]">
+                Route deck
+              </span>
+              <h3 className="text-xl font-semibold">Adjacent ops surfaces</h3>
+              <p className="text-sm text-[color:var(--color-muted)]">
+                Use dedicated routes for fleet triage, audit evidence,
+                retention review, and workspace estate context.
+              </p>
+            </div>
+            <div className="mt-4 grid gap-2">
+              <ActionLink href="/ops/audit">Review audit evidence</ActionLink>
+              <ActionLink href="/ops/fleet">Open fleet triage</ActionLink>
+              <ActionLink href="/ops/retention">Open retention review</ActionLink>
+              <ActionLink href="/ops/workspaces">Browse workspace directory</ActionLink>
+            </div>
+          </section>
+          <section className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-5 shadow-[var(--shadow-surface)]">
+            <div className="space-y-1">
+              <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--color-accent)]">
+                Internal chrome
+              </span>
+              <h3 className="text-xl font-semibold">
+                Internal sidebar theme
+              </h3>
+              <p className="text-sm text-[color:var(--color-muted)]">
+                Choose one of five premium themes to change sidebar chrome, focus, and key accent language across Studio and Ops surfaces.
+              </p>
+            </div>
+            <div className="mt-4">
+              <SidebarThemeSwitcher />
+            </div>
+          </section>
+        </aside>
       </div>
+      <OpsOperatorPanel operator={runtime.operator} />
+      <WorkspaceDirectoryPanel
+        body="Accessible workspace summaries remain available as supporting context below the live command surface so operators can confirm where they can move next without crowding the active attention zones."
+        entries={workspaceDirectory.workspaces}
+        eyebrow="Workspace directory"
+        span={12}
+        title="Accessible operator estate"
+      />
     </PageShell>
   );
 }
