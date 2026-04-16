@@ -3797,6 +3797,257 @@ select {
   );
 }
 
+.ops-fleet-hero {
+  display: grid;
+  gap: 14px;
+}
+
+.ops-fleet-hero__notice {
+  display: grid;
+  gap: 14px;
+}
+
+.ops-fleet-hero__refresh-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.ops-fleet-signal-band {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ops-fleet-attention-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ops-fleet-pressure-list,
+.ops-fleet-alert-list {
+  display: grid;
+  gap: 12px;
+}
+
+.ops-fleet-empty-state {
+  padding: 16px 18px;
+  border: 1px dashed rgba(88, 106, 120, 0.22);
+  border-radius: 20px;
+  background: rgba(248, 251, 253, 0.76);
+  color: #5a6f7d;
+  line-height: 1.6;
+}
+
+.ops-fleet-workspace-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(70, 92, 108, 0.14);
+  border-radius: 22px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.84),
+    rgba(244, 248, 251, 0.92)
+  );
+}
+
+.ops-fleet-workspace-card__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+}
+
+.ops-fleet-workspace-card__copy {
+  display: grid;
+  gap: 6px;
+}
+
+.ops-fleet-workspace-card__rank {
+  color: #486171;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.ops-fleet-workspace-card__title {
+  font-size: 1.08rem;
+  line-height: 1.18;
+}
+
+.ops-fleet-workspace-card__meta,
+.ops-fleet-workspace-card__summary {
+  color: #5a6f7d;
+  line-height: 1.55;
+}
+
+.ops-fleet-workspace-card__summary {
+  display: grid;
+  gap: 4px;
+  font-size: 0.94rem;
+}
+
+.ops-fleet-workspace-card__score {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+}
+
+.ops-fleet-workspace-card__score-label,
+.ops-fleet-board__label {
+  color: #486171;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ops-fleet-workspace-card__score-value {
+  color: #10212c;
+  font-size: 1.6rem;
+  letter-spacing: -0.03em;
+}
+
+.ops-fleet-workspace-card__pills {
+  align-items: flex-start;
+}
+
+.ops-fleet-workspace-card__footer {
+  display: grid;
+  gap: 12px;
+}
+
+.ops-fleet-workspace-card--critical {
+  border-color: rgba(153, 68, 59, 0.18);
+  background:
+    radial-gradient(circle at top right, rgba(195, 104, 92, 0.12), transparent 38%),
+    linear-gradient(180deg, rgba(255, 244, 242, 0.94), rgba(255, 255, 255, 0.92));
+}
+
+.ops-fleet-workspace-card--warning {
+  border-color: rgba(170, 130, 56, 0.18);
+  background:
+    radial-gradient(circle at top right, rgba(210, 167, 84, 0.12), transparent 38%),
+    linear-gradient(180deg, rgba(255, 249, 236, 0.94), rgba(255, 255, 255, 0.92));
+}
+
+.ops-fleet-workspace-card--healthy {
+  border-color: rgba(53, 111, 83, 0.18);
+  background:
+    radial-gradient(circle at top right, rgba(74, 154, 112, 0.12), transparent 38%),
+    linear-gradient(180deg, rgba(239, 249, 244, 0.94), rgba(255, 255, 255, 0.92));
+}
+
+.ops-fleet-alert-item {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid rgba(70, 92, 108, 0.14);
+  border-radius: 20px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.84),
+    rgba(244, 248, 251, 0.92)
+  );
+}
+
+.ops-fleet-alert-item--critical {
+  border-color: rgba(153, 68, 59, 0.18);
+  background:
+    radial-gradient(circle at top right, rgba(195, 104, 92, 0.12), transparent 38%),
+    linear-gradient(180deg, rgba(255, 244, 242, 0.94), rgba(255, 255, 255, 0.92));
+}
+
+.ops-fleet-alert-item--warning {
+  border-color: rgba(170, 130, 56, 0.18);
+  background:
+    radial-gradient(circle at top right, rgba(210, 167, 84, 0.12), transparent 38%),
+    linear-gradient(180deg, rgba(255, 249, 236, 0.94), rgba(255, 255, 255, 0.92));
+}
+
+.ops-fleet-alert-item__copy {
+  display: grid;
+  gap: 6px;
+}
+
+.ops-fleet-alert-item__copy span {
+  color: #5a6f7d;
+  line-height: 1.55;
+}
+
+.ops-fleet-alert-item__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.ops-fleet-board {
+  display: grid;
+  gap: 10px;
+}
+
+.ops-fleet-board__header,
+.ops-fleet-board__row {
+  display: grid;
+  grid-template-columns:
+    minmax(220px, 1.35fr)
+    minmax(88px, 0.55fr)
+    minmax(110px, 0.65fr)
+    minmax(128px, 0.75fr)
+    minmax(120px, 0.75fr)
+    minmax(120px, 0.75fr)
+    minmax(170px, 0.95fr)
+    minmax(120px, auto);
+  gap: 12px;
+  align-items: start;
+}
+
+.ops-fleet-board__header {
+  padding: 0 4px;
+  color: #486171;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ops-fleet-board__row {
+  padding: 14px 16px;
+  border: 1px solid rgba(70, 92, 108, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.ops-fleet-board__workspace,
+.ops-fleet-board__pressure,
+.ops-fleet-board__stats,
+.ops-fleet-board__activity,
+.ops-fleet-board__actions {
+  display: grid;
+  gap: 4px;
+}
+
+.ops-fleet-board__workspace span,
+.ops-fleet-board__stats span,
+.ops-fleet-board__activity span {
+  color: #5a6f7d;
+  line-height: 1.45;
+}
+
+.ops-fleet-board__pressure strong {
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+}
+
+.ops-fleet-board__actions {
+  justify-items: start;
+}
+
 .progress-track {
   width: 100%;
   height: 10px;
@@ -4796,6 +5047,16 @@ select {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .ops-fleet-signal-band,
+  .ops-fleet-attention-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ops-fleet-board__header,
+  .ops-fleet-board__row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .ops-command-module--wide {
     grid-column: auto;
   }
@@ -4849,6 +5110,28 @@ select {
   .ops-command-launchpad__primary,
   .ops-command-launchpad__rail {
     padding: 22px;
+  }
+
+  .ops-fleet-signal-band,
+  .ops-fleet-attention-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ops-fleet-workspace-card__header {
+    grid-template-columns: 1fr;
+  }
+
+  .ops-fleet-workspace-card__score,
+  .ops-fleet-board__actions {
+    justify-items: start;
+  }
+
+  .ops-fleet-board__header {
+    display: none;
+  }
+
+  .ops-fleet-board__row {
+    grid-template-columns: 1fr;
   }
 
   .studio-action-row {

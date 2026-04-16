@@ -5,14 +5,22 @@ import {
   opsAlertMuteResponseSchema,
   opsReconciliationRunResponseSchema,
   workspaceFleetOverviewResponseSchema,
-  type WorkspaceFleetOverviewResponse
+  type StudioWorkspaceScopeSummary,
+  type WorkspaceFleetAlertSummary,
+  type WorkspaceFleetOverviewResponse,
+  type WorkspaceFleetWorkspaceSummary
 } from "@ai-nft-forge/shared";
 import { MetricTile, Pill, SurfaceCard, SurfaceGrid } from "@ai-nft-forge/ui";
 import { useRouter } from "next/navigation";
 import { startTransition, useEffectEvent, useState } from "react";
 
+import { WorkspaceScopeSwitcher } from "../../../../components/workspace-scope-switcher";
+import { OpsFleetWorkspaceCard } from "../../../../components/ops/ops-fleet-workspace-card";
+
 type OpsFleetClientProps = {
+  currentWorkspaceSlug: string | null;
   initialFleet: WorkspaceFleetOverviewResponse["fleet"];
+  workspaces: StudioWorkspaceScopeSummary[];
 };
 
 type NoticeState = {
@@ -77,7 +85,62 @@ async function parseJsonResponse<T>(input: {
   return input.schema.parse(payload);
 }
 
-export function OpsFleetClient({ initialFleet }: OpsFleetClientProps) {
+function getWorkspacePressureScore(workspace: WorkspaceFleetWorkspaceSummary) {
+  return (
+    workspace.ops.criticalAlertCount * 60 +
+    workspace.ops.activeAlertCount * 18 +
+    workspace.ops.openReconciliationIssueCount * 36 +
+    workspace.commerce.automationFailedCheckoutCount * 24 +
+    workspace.commerce.unfulfilledCheckoutCount * 18 +
+    workspace.commerce.openCheckoutCount * 6
+  );
+}
+
+function compareWorkspacesByPressure(
+  left: WorkspaceFleetWorkspaceSummary,
+  right: WorkspaceFleetWorkspaceSummary
+) {
+  const scoreDifference =
+    getWorkspacePressureScore(right) - getWorkspacePressureScore(left);
+
+  if (scoreDifference !== 0) {
+    return scoreDifference;
+  }
+
+  if (right.ops.criticalAlertCount !== left.ops.criticalAlertCount) {
+    return right.ops.criticalAlertCount - left.ops.criticalAlertCount;
+  }
+
+  if (right.ops.openReconciliationIssueCount !== left.ops.openReconciliationIssueCount) {
+    return (
+      right.ops.openReconciliationIssueCount -
+      left.ops.openReconciliationIssueCount
+    );
+  }
+
+  const leftLastActivity = left.directory.lastActivityAt
+    ? new Date(left.directory.lastActivityAt).getTime()
+    : 0;
+  const rightLastActivity = right.directory.lastActivityAt
+    ? new Date(right.directory.lastActivityAt).getTime()
+    : 0;
+
+  if (leftLastActivity !== rightLastActivity) {
+    return leftLastActivity - rightLastActivity;
+  }
+
+  return left.workspace.name.localeCompare(right.workspace.name);
+}
+
+function resolveAlertTone(severity: WorkspaceFleetAlertSummary["severity"]) {
+  return severity === "critical" ? "critical" : "warning";
+}
+
+export function OpsFleetClient({
+  currentWorkspaceSlug,
+  initialFleet,
+  workspaces
+}: OpsFleetClientProps) {
   const router = useRouter();
   const [fleet, setFleet] = useState(initialFleet);
   const [notice, setNotice] = useState<NoticeState>(null);
@@ -136,15 +199,95 @@ export function OpsFleetClient({ initialFleet }: OpsFleetClientProps) {
     }
   }
 
+  const rankedWorkspaces = [...fleet.workspaces].sort(compareWorkspacesByPressure);
+  const attentionWorkspaces = rankedWorkspaces.slice(0, 3);
+  const reconciliationWorkspaces = rankedWorkspaces.filter(
+    (workspace) => workspace.ops.openReconciliationIssueCount > 0
+  );
+  const pressuredWorkspaceCount = rankedWorkspaces.filter(
+    (workspace) => getWorkspacePressureScore(workspace) > 0
+  ).length;
+  const alertPressureWorkspaceCount = rankedWorkspaces.filter(
+    (workspace) => workspace.ops.activeAlertCount > 0
+  ).length;
+  const reconciliationPressureWorkspaceCount = reconciliationWorkspaces.length;
+  const currentWorkspace =
+    fleet.workspaces.find((workspace) => workspace.directory.current) ?? null;
+
   return (
     <SurfaceGrid>
       <SurfaceCard
-        body="Fleet review keeps the selected workspace runtime isolated while exposing cross-workspace backlog and alert pressure explicitly."
-        eyebrow="Fleet summary"
-        span={12}
-        title="Workspace health overview"
+        body="Compare alert concentration, reconciliation backlog, and checkout friction across the accessible estate before drilling into a single workspace."
+        eyebrow="Fleet triage"
+        span={8}
+        title="Cross-workspace risk map"
       >
-        <div className="metric-row">
+        <div className="ops-fleet-hero">
+          <div className="pill-row">
+            <Pill>{currentWorkspace?.workspace.slug ?? "no active workspace"}</Pill>
+            <Pill>{currentWorkspace?.workspace.role ?? "owner"}</Pill>
+            <Pill>{workspaces.length} accessible</Pill>
+            <Pill>{formatTimestamp(fleet.summary.generatedAt)}</Pill>
+          </div>
+          <div className="ops-fleet-hero__notice">
+            <div className="pill-row">
+              <Pill>{pressuredWorkspaceCount} pressured</Pill>
+              <Pill>{alertPressureWorkspaceCount} with alerts</Pill>
+              <Pill>{reconciliationPressureWorkspaceCount} with recon issues</Pill>
+            </div>
+            <div className="ops-fleet-hero__refresh-row">
+              <button
+                className="button-action button-action--secondary"
+                disabled={isRefreshing}
+                onClick={() => {
+                  void refreshFleet();
+                }}
+                type="button"
+              >
+                {isRefreshing ? "Refreshing…" : "Refresh fleet"}
+              </button>
+            </div>
+          </div>
+          {notice ? (
+            <div
+              className={`status-banner ${
+                notice.tone === "error"
+                  ? "status-banner--error"
+                  : notice.tone === "success"
+                    ? "status-banner--success"
+                    : ""
+              }`}
+            >
+              <strong>
+                {notice.tone === "error"
+                  ? "Fleet error"
+                  : notice.tone === "success"
+                    ? "Fleet updated"
+                    : "Working"}
+              </strong>
+              <span>{notice.message}</span>
+            </div>
+          ) : null}
+        </div>
+      </SurfaceCard>
+      <SurfaceCard
+        body="Keep the current workspace explicit while reviewing the estate. This selector still drives the rest of the studio and ops surfaces."
+        eyebrow="Workspace scope"
+        span={4}
+        title="Selected workspace boundary"
+      >
+        <WorkspaceScopeSwitcher
+          currentWorkspaceSlug={currentWorkspaceSlug}
+          workspaces={workspaces}
+        />
+      </SurfaceCard>
+      <SurfaceCard
+        body="These counts update from the same fleet contract but are arranged to spotlight estate pressure at a glance."
+        eyebrow="Estate signal"
+        span={12}
+        title="Fleet-wide pressure band"
+      >
+        <div className="ops-fleet-signal-band">
           <MetricTile
             label="Workspaces"
             value={fleet.summary.totalWorkspaceCount.toString()}
@@ -158,7 +301,7 @@ export function OpsFleetClient({ initialFleet }: OpsFleetClientProps) {
             value={fleet.summary.activeAlertCount.toString()}
           />
           <MetricTile
-            label="Open reconciliation"
+            label="Reconciliation issues"
             value={fleet.summary.openReconciliationIssueCount.toString()}
           />
           <MetricTile
@@ -166,262 +309,339 @@ export function OpsFleetClient({ initialFleet }: OpsFleetClientProps) {
             value={fleet.summary.openCheckoutCount.toString()}
           />
           <MetricTile
-            label="Unfulfilled"
+            label="Unfulfilled checkouts"
             value={fleet.summary.unfulfilledCheckoutCount.toString()}
           />
         </div>
-        <div className="pill-row">
-          <Pill>{fleet.summary.activeWorkspaceCount} active</Pill>
-          <Pill>{fleet.summary.archivedWorkspaceCount} archived</Pill>
-          <Pill>{formatTimestamp(fleet.summary.generatedAt)}</Pill>
-          <button
-            className="button-action button-action--secondary"
-            disabled={isRefreshing}
-            onClick={() => {
-              void refreshFleet();
-            }}
-            type="button"
-          >
-            {isRefreshing ? "Refreshing…" : "Refresh fleet"}
-          </button>
-        </div>
-        {notice ? (
-          <div
-            className={`status-banner ${
-              notice.tone === "error"
-                ? "status-banner--error"
-                : notice.tone === "success"
-                  ? "status-banner--success"
-                  : ""
-            }`}
-          >
-            <strong>
-              {notice.tone === "error"
-                ? "Fleet error"
-                : notice.tone === "success"
-                  ? "Fleet updated"
-                  : "Working"}
-            </strong>
-            <span>{notice.message}</span>
-          </div>
-        ) : null}
       </SurfaceCard>
-      <div className="surface-card surface-card--span-12">
-        <div className="surface-card__content">
-          <div className="surface-card__header">
-            <p className="surface-card__eyebrow">Workspaces</p>
-            <h2 className="surface-card__title">Per-workspace backlog</h2>
-          </div>
-          <div className="collection-item-list">
-            {fleet.workspaces.map((workspace) => {
-              const reconciliationBusyKey = `reconcile:${workspace.workspace.id}`;
-              const workspaceIsActive = workspace.workspace.status === "active";
+      <SurfaceCard
+        body="The most pressured workspaces float to the top using a derived pressure score based on alerts, reconciliation issues, and checkout friction."
+        eyebrow="Needs attention now"
+        span={12}
+        title="Most at-risk workspaces"
+      >
+        <div className="ops-fleet-attention-grid">
+          {attentionWorkspaces.map((workspace, index) => (
+            <OpsFleetWorkspaceCard
+              busyKey={busyKey}
+              key={workspace.workspace.id}
+              onRunReconciliation={(selectedWorkspace) => {
+                void runAction({
+                  busyKey: `reconcile:${selectedWorkspace.workspace.id}`,
+                  request: async () => {
+                    const response = await fetch(
+                      `/api/ops/fleet/workspaces/${encodeURIComponent(
+                        selectedWorkspace.workspace.id
+                      )}/reconciliation/run`,
+                      {
+                        method: "POST"
+                      }
+                    );
+
+                    await parseJsonResponse({
+                      response,
+                      schema: opsReconciliationRunResponseSchema
+                    });
+                  },
+                  successMessage: `Reconciliation started for ${selectedWorkspace.workspace.name}.`
+                });
+              }}
+              pressureScore={getWorkspacePressureScore(workspace)}
+              rank={index + 1}
+              workspace={workspace}
+            />
+          ))}
+          {attentionWorkspaces.length === 0 ? (
+            <div className="ops-fleet-empty-state">
+              No workspace pressure is currently standing out across the
+              accessible fleet.
+            </div>
+          ) : null}
+        </div>
+      </SurfaceCard>
+      <SurfaceCard
+        body="Alert pressure remains actionable by workspace, but the list is ordered to surface the highest-severity items first."
+        eyebrow="Alert pressure"
+        span={6}
+        title="Cross-workspace alert queue"
+      >
+        <div className="ops-fleet-alert-list">
+          {fleet.alertQueue.length ? (
+            fleet.alertQueue.map((alert) => {
+              const acknowledgeBusyKey = `ack:${alert.alertStateId}`;
+              const muteBusyKey = `mute:${alert.alertStateId}`;
+              const workspaceIsActive = alert.workspace.status === "active";
 
               return (
-                <div
-                  className="collection-item-card"
-                  key={workspace.workspace.id}
+                <article
+                  className={`ops-fleet-alert-item ops-fleet-alert-item--${resolveAlertTone(alert.severity)}`}
+                  key={alert.alertStateId}
                 >
-                  <div className="collection-item-card__copy">
+                  <div className="ops-fleet-alert-item__copy">
                     <strong>
-                      {workspace.workspace.name} · /{workspace.workspace.slug}
+                      {alert.title} · {alert.workspace.name}
                     </strong>
                     <span>
-                      {workspace.workspace.role} ·{" "}
-                      {formatWorkspaceStatus(workspace.workspace.status)}
-                      {workspace.directory.current
-                        ? " · current selection"
-                        : ""}
+                      {alert.severity} · {alert.code} · /{alert.workspace.slug} ·{" "}
+                      {formatWorkspaceStatus(alert.workspace.status)}
                     </span>
+                    <span>{alert.message}</span>
                     <span>
-                      {workspace.ops.criticalAlertCount} critical alerts ·{" "}
-                      {workspace.ops.warningAlertCount} warning alerts ·{" "}
-                      {workspace.ops.openReconciliationIssueCount} open
-                      reconciliation issues
-                    </span>
-                    <span>
-                      {workspace.commerce.openCheckoutCount} open checkouts ·{" "}
-                      {workspace.commerce.unfulfilledCheckoutCount} unfulfilled
-                      · {workspace.publications.livePublicationCount} live
-                      publications
-                    </span>
-                    <span>
-                      Last activity{" "}
-                      {formatTimestamp(workspace.directory.lastActivityAt)}
+                      First seen {formatTimestamp(alert.firstObservedAt)} · last
+                      seen {formatTimestamp(alert.lastObservedAt)}
                     </span>
                   </div>
-                  <div className="studio-action-row">
+                  <div className="ops-fleet-alert-item__actions">
                     <button
                       className="button-action button-action--secondary"
                       disabled={
                         !workspaceIsActive ||
-                        busyKey === reconciliationBusyKey
+                        busyKey === acknowledgeBusyKey
                       }
                       onClick={() => {
                         void runAction({
-                          busyKey: reconciliationBusyKey,
+                          busyKey: acknowledgeBusyKey,
                           request: async () => {
                             const response = await fetch(
-                              `/api/ops/fleet/workspaces/${encodeURIComponent(
-                                workspace.workspace.id
-                              )}/reconciliation/run`,
+                              `/api/ops/fleet/alerts/${encodeURIComponent(
+                                alert.alertStateId
+                              )}/acknowledge`,
                               {
+                                body: JSON.stringify({
+                                  workspaceId: alert.workspace.id
+                                }),
+                                headers: {
+                                  "Content-Type": "application/json"
+                                },
                                 method: "POST"
                               }
                             );
 
                             await parseJsonResponse({
                               response,
-                              schema: opsReconciliationRunResponseSchema
+                              schema: opsAlertAcknowledgeResponseSchema
                             });
                           },
-                          successMessage: `Reconciliation started for ${workspace.workspace.name}.`
+                          successMessage: `Acknowledged ${alert.title}.`
                         });
                       }}
                       type="button"
                     >
                       {!workspaceIsActive
                         ? "Workspace inactive"
-                        : busyKey === reconciliationBusyKey
-                        ? "Running…"
-                        : "Run reconciliation"}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-      <div className="surface-card surface-card--span-12">
-        <div className="surface-card__content">
-          <div className="surface-card__header">
-            <p className="surface-card__eyebrow">Alert queue</p>
-            <h2 className="surface-card__title">
-              Cross-workspace alert triage
-            </h2>
-          </div>
-          <div className="collection-item-list">
-            {fleet.alertQueue.length ? (
-              fleet.alertQueue.map((alert) => {
-                const acknowledgeBusyKey = `ack:${alert.alertStateId}`;
-                const muteBusyKey = `mute:${alert.alertStateId}`;
-                const workspaceIsActive = alert.workspace.status === "active";
-
-                return (
-                  <div
-                    className="collection-item-card"
-                    key={alert.alertStateId}
-                  >
-                    <div className="collection-item-card__copy">
-                      <strong>
-                        {alert.title} · {alert.workspace.name}
-                      </strong>
-                      <span>
-                        {alert.severity} · {alert.code} · /
-                        {alert.workspace.slug} ·{" "}
-                        {formatWorkspaceStatus(alert.workspace.status)}
-                      </span>
-                      <span>{alert.message}</span>
-                      <span>
-                        First seen {formatTimestamp(alert.firstObservedAt)} ·
-                        last seen {formatTimestamp(alert.lastObservedAt)}
-                      </span>
-                    </div>
-                    <div className="studio-action-row">
-                      <button
-                        className="button-action button-action--secondary"
-                        disabled={
-                          !workspaceIsActive ||
-                          busyKey === acknowledgeBusyKey
-                        }
-                        onClick={() => {
-                          void runAction({
-                            busyKey: acknowledgeBusyKey,
-                            request: async () => {
-                              const response = await fetch(
-                                `/api/ops/fleet/alerts/${encodeURIComponent(
-                                  alert.alertStateId
-                                )}/acknowledge`,
-                                {
-                                  body: JSON.stringify({
-                                    workspaceId: alert.workspace.id
-                                  }),
-                                  headers: {
-                                    "Content-Type": "application/json"
-                                  },
-                                  method: "POST"
-                                }
-                              );
-
-                              await parseJsonResponse({
-                                response,
-                                schema: opsAlertAcknowledgeResponseSchema
-                              });
-                            },
-                            successMessage: `Acknowledged ${alert.title}.`
-                          });
-                        }}
-                        type="button"
-                      >
-                        {!workspaceIsActive
-                          ? "Workspace inactive"
-                          : busyKey === acknowledgeBusyKey
+                        : busyKey === acknowledgeBusyKey
                           ? "Acknowledging…"
                           : "Acknowledge"}
-                      </button>
-                      <button
-                        className="button-action button-action--secondary"
-                        disabled={!workspaceIsActive || busyKey === muteBusyKey}
-                        onClick={() => {
-                          void runAction({
-                            busyKey: muteBusyKey,
-                            request: async () => {
-                              const response = await fetch(
-                                `/api/ops/fleet/alerts/${encodeURIComponent(
-                                  alert.alertStateId
-                                )}/mute`,
-                                {
-                                  body: JSON.stringify({
-                                    durationHours: 4,
-                                    workspaceId: alert.workspace.id
-                                  }),
-                                  headers: {
-                                    "Content-Type": "application/json"
-                                  },
-                                  method: "POST"
-                                }
-                              );
+                    </button>
+                    <button
+                      className="button-action button-action--secondary"
+                      disabled={!workspaceIsActive || busyKey === muteBusyKey}
+                      onClick={() => {
+                        void runAction({
+                          busyKey: muteBusyKey,
+                          request: async () => {
+                            const response = await fetch(
+                              `/api/ops/fleet/alerts/${encodeURIComponent(
+                                alert.alertStateId
+                              )}/mute`,
+                              {
+                                body: JSON.stringify({
+                                  durationHours: 4,
+                                  workspaceId: alert.workspace.id
+                                }),
+                                headers: {
+                                  "Content-Type": "application/json"
+                                },
+                                method: "POST"
+                              }
+                            );
 
-                              await parseJsonResponse({
-                                response,
-                                schema: opsAlertMuteResponseSchema
-                              });
-                            },
-                            successMessage: `Muted ${alert.title} for 4 hours.`
-                          });
-                        }}
-                        type="button"
-                      >
-                        {!workspaceIsActive
-                          ? "Workspace inactive"
-                          : busyKey === muteBusyKey
-                            ? "Muting…"
-                            : "Mute 4h"}
-                      </button>
-                    </div>
+                            await parseJsonResponse({
+                              response,
+                              schema: opsAlertMuteResponseSchema
+                            });
+                          },
+                          successMessage: `Muted ${alert.title} for 4 hours.`
+                        });
+                      }}
+                      type="button"
+                    >
+                      {!workspaceIsActive
+                        ? "Workspace inactive"
+                        : busyKey === muteBusyKey
+                          ? "Muting…"
+                          : "Mute 4h"}
+                    </button>
                   </div>
-                );
-              })
-            ) : (
-              <div className="collection-empty-state">
-                No active alerts are queued across the accessible workspace
-                fleet.
-              </div>
-            )}
-          </div>
+                </article>
+              );
+            })
+          ) : (
+            <div className="ops-fleet-empty-state">
+              No active alerts are queued across the accessible workspace
+              fleet.
+            </div>
+          )}
         </div>
-      </div>
+      </SurfaceCard>
+      <SurfaceCard
+        body="Workspaces with reconciliation backlog stay separate from the alert queue so operators can move directly to the repair path."
+        eyebrow="Reconciliation pressure"
+        span={6}
+        title="Workspaces needing a run"
+      >
+        <div className="ops-fleet-pressure-list">
+          {reconciliationWorkspaces.length ? (
+            reconciliationWorkspaces.map((workspace, index) => (
+              <OpsFleetWorkspaceCard
+                busyKey={busyKey}
+                key={workspace.workspace.id}
+                onRunReconciliation={(selectedWorkspace) => {
+                  void runAction({
+                    busyKey: `reconcile:${selectedWorkspace.workspace.id}`,
+                    request: async () => {
+                      const response = await fetch(
+                        `/api/ops/fleet/workspaces/${encodeURIComponent(
+                          selectedWorkspace.workspace.id
+                        )}/reconciliation/run`,
+                        {
+                          method: "POST"
+                        }
+                      );
+
+                      await parseJsonResponse({
+                        response,
+                        schema: opsReconciliationRunResponseSchema
+                      });
+                    },
+                    successMessage: `Reconciliation started for ${selectedWorkspace.workspace.name}.`
+                  });
+                }}
+                pressureScore={getWorkspacePressureScore(workspace)}
+                rank={index + 1}
+                workspace={workspace}
+              />
+            ))
+          ) : (
+            <div className="ops-fleet-empty-state">
+              No workspace currently has an open reconciliation issue.
+            </div>
+          )}
+        </div>
+      </SurfaceCard>
+      <SurfaceCard
+        body="This board keeps the whole estate visible with compact comparisons instead of repeating the same summary card for every workspace."
+        eyebrow="Fleet board"
+        span={12}
+        title="Comparative workspace map"
+      >
+        <div className="ops-fleet-board">
+          <div className="ops-fleet-board__header">
+            <span>Workspace</span>
+            <span>Pressure</span>
+            <span>Alerts</span>
+            <span>Reconciliation</span>
+            <span>Commerce</span>
+            <span>Publications</span>
+            <span>Last activity</span>
+            <span>Actions</span>
+          </div>
+          {rankedWorkspaces.map((workspace, index) => {
+            const score = getWorkspacePressureScore(workspace);
+            const reconciliationBusyKey = `reconcile:${workspace.workspace.id}`;
+            const workspaceIsActive = workspace.workspace.status === "active";
+
+            return (
+              <div className="ops-fleet-board__row" key={workspace.workspace.id}>
+                <div className="ops-fleet-board__workspace">
+                  <strong>
+                    {index + 1}. {workspace.workspace.name}
+                  </strong>
+                  <span>
+                    /{workspace.workspace.slug} · {workspace.workspace.role} ·{" "}
+                    {formatWorkspaceStatus(workspace.workspace.status)}
+                    {workspace.directory.current ? " · current" : ""}
+                  </span>
+                  <span>{workspace.directory.brandCount} brands</span>
+                </div>
+                <div className="ops-fleet-board__pressure">
+                  <span className="ops-fleet-board__label">Pressure</span>
+                  <strong>{score}</strong>
+                </div>
+                <div className="ops-fleet-board__stats">
+                  <span className="ops-fleet-board__label">Alerts</span>
+                  <span>{workspace.ops.criticalAlertCount} critical</span>
+                  <span>{workspace.ops.warningAlertCount} warning</span>
+                </div>
+                <div className="ops-fleet-board__stats">
+                  <span className="ops-fleet-board__label">
+                    Reconciliation
+                  </span>
+                  <span>{workspace.ops.openReconciliationIssueCount} open</span>
+                  <span>
+                    {workspace.commerce.automationFailedCheckoutCount} failed
+                  </span>
+                </div>
+                <div className="ops-fleet-board__stats">
+                  <span className="ops-fleet-board__label">Commerce</span>
+                  <span>{workspace.commerce.openCheckoutCount} open</span>
+                  <span>
+                    {workspace.commerce.unfulfilledCheckoutCount} unfulfilled
+                  </span>
+                </div>
+                <div className="ops-fleet-board__stats">
+                  <span className="ops-fleet-board__label">Publications</span>
+                  <span>{workspace.publications.livePublicationCount} live</span>
+                  <span>{workspace.publications.totalPublicationCount} total</span>
+                </div>
+                <div className="ops-fleet-board__activity">
+                  <span>Last activity</span>
+                  <strong>
+                    {formatTimestamp(workspace.directory.lastActivityAt)}
+                  </strong>
+                </div>
+                <div className="ops-fleet-board__actions">
+                  <button
+                    className="button-action button-action--secondary"
+                    disabled={
+                      !workspaceIsActive ||
+                      busyKey === reconciliationBusyKey
+                    }
+                    onClick={() => {
+                      void runAction({
+                        busyKey: reconciliationBusyKey,
+                        request: async () => {
+                          const response = await fetch(
+                            `/api/ops/fleet/workspaces/${encodeURIComponent(
+                              workspace.workspace.id
+                            )}/reconciliation/run`,
+                            {
+                              method: "POST"
+                            }
+                          );
+
+                          await parseJsonResponse({
+                            response,
+                            schema: opsReconciliationRunResponseSchema
+                          });
+                        },
+                        successMessage: `Reconciliation started for ${workspace.workspace.name}.`
+                      });
+                    }}
+                    type="button"
+                  >
+                    {!workspaceIsActive
+                      ? "Workspace inactive"
+                      : busyKey === reconciliationBusyKey
+                        ? "Running…"
+                        : "Run"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </SurfaceCard>
     </SurfaceGrid>
   );
 }
