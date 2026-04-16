@@ -7,6 +7,7 @@ import {
   type FormEvent,
   useEffect,
   useEffectEvent,
+  useMemo,
   useState
 } from "react";
 
@@ -15,17 +16,19 @@ import {
   studioCommerceCheckoutActionResponseSchema,
   studioCommerceDashboardResponseSchema,
   type CommerceCheckoutFulfillmentStatus,
-  type CommerceFulfillmentAutomationStatus,
+  type StudioCommerceBrandSummary,
   type StudioCommerceCheckoutSummary,
+  type StudioCommerceCollectionSummary,
   type StudioCommerceDashboardResponse
 } from "@ai-nft-forge/shared";
+import { PageShell, Pill } from "@ai-nft-forge/ui";
+
 import {
-  MetricTile,
-  PageShell,
-  Pill,
-  SurfaceCard,
-  SurfaceGrid
-} from "@ai-nft-forge/ui";
+  StudioCommerceSessionCard,
+  type StudioCommerceSessionActionRequest,
+  type StudioCommerceSessionEditor,
+  type StudioCommerceSessionEmphasisTone
+} from "../../../../components/studio/studio-commerce-session-card";
 
 type StudioCommerceClientProps = {
   initialDashboard: StudioCommerceDashboardResponse["dashboard"];
@@ -37,13 +40,9 @@ type NoticeState = {
   tone: "error" | "info" | "success";
 } | null;
 
-type FulfillmentEditorState = Record<
-  string,
-  {
-    fulfillmentNotes: string;
-    fulfillmentStatus: CommerceCheckoutFulfillmentStatus;
-  }
->;
+type FulfillmentEditorState = Record<string, StudioCommerceSessionEditor>;
+
+type CommerceSignalTone = "critical" | "warning" | "success" | "neutral";
 
 function createFallbackErrorMessage(response: Response) {
   switch (response.status) {
@@ -96,52 +95,16 @@ function formatTimestamp(value: string | null) {
   }).format(new Date(value));
 }
 
-function formatCheckoutStatus(status: StudioCommerceCheckoutSummary["status"]) {
-  switch (status) {
-    case "completed":
-      return "Completed";
-    case "expired":
-      return "Expired";
-    case "canceled":
-      return "Canceled";
-    case "open":
-    default:
-      return "Open";
-  }
-}
-
-function formatFulfillmentStatus(
-  status: StudioCommerceCheckoutSummary["fulfillmentStatus"]
-) {
-  return status === "fulfilled" ? "Fulfilled" : "Unfulfilled";
-}
-
-function formatAutomationStatus(status: CommerceFulfillmentAutomationStatus) {
-  switch (status) {
-    case "queued":
-      return "Queued";
-    case "processing":
-      return "Dispatching";
-    case "submitted":
-      return "Submitted";
-    case "completed":
-      return "Completed";
-    case "failed":
-      return "Failed";
-    case "idle":
-    default:
-      return "Idle";
-  }
-}
-
-function formatProviderKind(
-  providerKind: StudioCommerceCheckoutSummary["providerKind"]
-) {
-  return providerKind === "stripe" ? "Stripe" : "Manual";
-}
-
 function formatPercent(value: number) {
   return `${value.toFixed(1)}%`;
+}
+
+function shortenWalletAddress(input: string) {
+  if (input.length <= 18) {
+    return input;
+  }
+
+  return `${input.slice(0, 10)}…${input.slice(-6)}`;
 }
 
 function createCommerceDashboardPath(brandSlug: string | null) {
@@ -199,6 +162,174 @@ function createInitialFulfillmentEditors(
   );
 }
 
+function getAutomationInFlightCount(
+  checkouts: StudioCommerceCheckoutSummary[]
+) {
+  return checkouts.filter(
+    (checkout) =>
+      checkout.fulfillmentAutomationStatus === "queued" ||
+      checkout.fulfillmentAutomationStatus === "processing" ||
+      checkout.fulfillmentAutomationStatus === "submitted"
+  ).length;
+}
+
+function compareIsoTimestampDescending(
+  left: string | null,
+  right: string | null
+) {
+  if (left === right) {
+    return 0;
+  }
+
+  if (left === null) {
+    return 1;
+  }
+
+  if (right === null) {
+    return -1;
+  }
+
+  return right.localeCompare(left);
+}
+
+function getCollectionPressureScore(
+  collection: StudioCommerceCollectionSummary
+) {
+  return (
+    collection.unfulfilledCheckoutCount * 4 +
+    collection.openCheckoutCount * 3 +
+    collection.completedCheckoutCount
+  );
+}
+
+function getBrandPressureScore(brand: StudioCommerceBrandSummary) {
+  return (
+    brand.unfulfilledCheckoutCount * 4 +
+    brand.openCheckoutCount * 3 +
+    brand.completedCheckoutCount
+  );
+}
+
+function getSessionEmphasis(input: {
+  checkout: StudioCommerceCheckoutSummary;
+}): {
+  label: string;
+  rank: number;
+  tone: StudioCommerceSessionEmphasisTone;
+} {
+  const { checkout } = input;
+
+  if (checkout.fulfillmentAutomationStatus === "failed") {
+    return {
+      label: "Automation failed",
+      rank: 0,
+      tone: "critical"
+    };
+  }
+
+  if (
+    checkout.status === "completed" &&
+    checkout.fulfillmentStatus === "unfulfilled"
+  ) {
+    if (
+      checkout.fulfillmentAutomationStatus === "queued" ||
+      checkout.fulfillmentAutomationStatus === "processing" ||
+      checkout.fulfillmentAutomationStatus === "submitted"
+    ) {
+      return {
+        label: "Automation in flight",
+        rank: 1,
+        tone: "warning"
+      };
+    }
+
+    return {
+      label:
+        checkout.fulfillmentProviderKind === "manual"
+          ? "Manual fulfillment"
+          : "Fulfill now",
+      rank: 2,
+      tone: "warning"
+    };
+  }
+
+  if (checkout.status === "open") {
+    return {
+      label:
+        checkout.providerKind === "manual"
+          ? "Awaiting payment"
+          : "Active reservation",
+      rank: 3,
+      tone: "warning"
+    };
+  }
+
+  if (checkout.status === "expired") {
+    return {
+      label: "Expired",
+      rank: 4,
+      tone: "neutral"
+    };
+  }
+
+  if (checkout.status === "canceled") {
+    return {
+      label: "Released",
+      rank: 5,
+      tone: "neutral"
+    };
+  }
+
+  return {
+    label: "Settled",
+    rank: 6,
+    tone: "success"
+  };
+}
+
+function compareCheckoutPriority(
+  left: StudioCommerceCheckoutSummary,
+  right: StudioCommerceCheckoutSummary
+) {
+  const leftPriority = getSessionEmphasis({
+    checkout: left
+  });
+  const rightPriority = getSessionEmphasis({
+    checkout: right
+  });
+
+  if (leftPriority.rank !== rightPriority.rank) {
+    return leftPriority.rank - rightPriority.rank;
+  }
+
+  const latestTimeComparison = compareIsoTimestampDescending(
+    left.completedAt ?? left.createdAt,
+    right.completedAt ?? right.createdAt
+  );
+
+  if (latestTimeComparison !== 0) {
+    return latestTimeComparison;
+  }
+
+  return right.checkoutSessionId.localeCompare(left.checkoutSessionId);
+}
+
+function getSignalTone(input: {
+  neutralWhenZero?: boolean;
+  warningWhenPositive?: boolean;
+  value: number;
+}): CommerceSignalTone {
+  if (input.value === 0) {
+    return input.neutralWhenZero ? "neutral" : "success";
+  }
+
+  if (input.warningWhenPositive) {
+    return "warning";
+  }
+
+  return "critical";
+}
+
 export function StudioCommerceClient({
   initialDashboard,
   ownerWalletAddress
@@ -222,6 +353,7 @@ export function StudioCommerceClient({
     dashboard.brands.find(
       (brand) => brand.brandSlug === dashboard.activeBrandSlug
     ) ?? null;
+
   const completionRate =
     dashboard.summary.totalCheckoutCount === 0
       ? 0
@@ -234,22 +366,32 @@ export function StudioCommerceClient({
       : (dashboard.summary.fulfilledCheckoutCount /
           dashboard.summary.completedCheckoutCount) *
         100;
-  const latestCompletedCheckoutAt = dashboard.checkouts.reduce<string | null>(
-    (latest, checkout) =>
-      checkout.completedAt !== null &&
-      (latest === null || checkout.completedAt > latest)
-        ? checkout.completedAt
-        : latest,
-    null
+
+  const latestCompletedCheckoutAt = useMemo(
+    () =>
+      dashboard.checkouts.reduce<string | null>(
+        (latest, checkout) =>
+          checkout.completedAt !== null &&
+          (latest === null || checkout.completedAt > latest)
+            ? checkout.completedAt
+            : latest,
+        null
+      ),
+    [dashboard.checkouts]
   );
-  const latestFulfilledCheckoutAt = dashboard.checkouts.reduce<string | null>(
-    (latest, checkout) =>
-      checkout.fulfilledAt !== null &&
-      (latest === null || checkout.fulfilledAt > latest)
-        ? checkout.fulfilledAt
-        : latest,
-    null
+  const latestFulfilledCheckoutAt = useMemo(
+    () =>
+      dashboard.checkouts.reduce<string | null>(
+        (latest, checkout) =>
+          checkout.fulfilledAt !== null &&
+          (latest === null || checkout.fulfilledAt > latest)
+            ? checkout.fulfilledAt
+            : latest,
+        null
+      ),
+    [dashboard.checkouts]
   );
+
   const commerceReportPath = createCommerceReportPath(
     dashboard.activeBrandSlug
   );
@@ -257,6 +399,172 @@ export function StudioCommerceClient({
     dashboard.activeBrandSlug,
     "csv"
   );
+
+  const automationInFlightCount = useMemo(
+    () => getAutomationInFlightCount(dashboard.checkouts),
+    [dashboard.checkouts]
+  );
+
+  const prioritizedCheckouts = useMemo(
+    () => [...dashboard.checkouts].sort(compareCheckoutPriority),
+    [dashboard.checkouts]
+  );
+
+  const attentionCheckouts = useMemo(
+    () =>
+      prioritizedCheckouts.filter((checkout) => {
+        const emphasis = getSessionEmphasis({
+          checkout
+        });
+
+        return emphasis.tone === "critical" || emphasis.tone === "warning";
+      }),
+    [prioritizedCheckouts]
+  );
+
+  const sortedBrands = useMemo(
+    () =>
+      [...dashboard.brands].sort((left, right) => {
+        const pressureDifference =
+          getBrandPressureScore(right) - getBrandPressureScore(left);
+
+        if (pressureDifference !== 0) {
+          return pressureDifference;
+        }
+
+        return right.totalCheckoutCount - left.totalCheckoutCount;
+      }),
+    [dashboard.brands]
+  );
+
+  const sortedCollections = useMemo(
+    () =>
+      [...dashboard.collections].sort((left, right) => {
+        const pressureDifference =
+          getCollectionPressureScore(right) - getCollectionPressureScore(left);
+
+        if (pressureDifference !== 0) {
+          return pressureDifference;
+        }
+
+        return right.totalCheckoutCount - left.totalCheckoutCount;
+      }),
+    [dashboard.collections]
+  );
+
+  const activeScopeLabel = activeBrand ? activeBrand.brandName : "All brands";
+  const scopeCheckoutCount = activeBrand
+    ? activeBrand.totalCheckoutCount
+    : dashboard.summary.totalCheckoutCount;
+  const scopeBrandCount = activeBrand ? 1 : dashboard.brands.length;
+
+  const overviewSignals = [
+    {
+      detail:
+        attentionCheckouts.length > 0
+          ? "Payment or fulfillment needs operator review."
+          : "No active checkout or fulfillment exceptions.",
+      label: "Needs action",
+      tone: getSignalTone({
+        value: attentionCheckouts.length
+      }),
+      value: attentionCheckouts.length
+    },
+    {
+      detail: "Reservations still holding an edition or payment window.",
+      label: "Open reservations",
+      tone: getSignalTone({
+        value: dashboard.summary.openCheckoutCount,
+        warningWhenPositive: true
+      }),
+      value: dashboard.summary.openCheckoutCount
+    },
+    {
+      detail: "Paid sessions recorded in durable commerce history.",
+      label: "Completed sales",
+      tone: "success" as const,
+      value: dashboard.summary.completedCheckoutCount
+    },
+    {
+      detail: "Completed sessions still awaiting final delivery.",
+      label: "Unfulfilled",
+      tone: getSignalTone({
+        value: dashboard.summary.unfulfilledCheckoutCount
+      }),
+      value: dashboard.summary.unfulfilledCheckoutCount
+    },
+    {
+      detail:
+        dashboard.summary.automationFailedCheckoutCount > 0
+          ? "Failed automation needs recovery."
+          : "Queued or submitted automation still in flight.",
+      label: "Automation watch",
+      tone:
+        dashboard.summary.automationFailedCheckoutCount > 0
+          ? "critical"
+          : getSignalTone({
+              neutralWhenZero: true,
+              value: automationInFlightCount,
+              warningWhenPositive: true
+            }),
+      value:
+        dashboard.summary.automationFailedCheckoutCount +
+        automationInFlightCount
+    },
+    {
+      detail: "Sessions closed without a completed purchase.",
+      label: "Expired or released",
+      tone: getSignalTone({
+        neutralWhenZero: true,
+        value:
+          dashboard.summary.expiredCheckoutCount +
+          dashboard.summary.canceledCheckoutCount,
+        warningWhenPositive: true
+      }),
+      value:
+        dashboard.summary.expiredCheckoutCount +
+        dashboard.summary.canceledCheckoutCount
+    }
+  ];
+
+  const queueSignals = [
+    {
+      description:
+        dashboard.summary.unfulfilledCheckoutCount > 0
+          ? "Completed orders still need delivery confirmation."
+          : "Every paid checkout in scope is currently fulfilled.",
+      label: "Fulfill now",
+      tone: getSignalTone({
+        value: dashboard.summary.unfulfilledCheckoutCount
+      }),
+      value: dashboard.summary.unfulfilledCheckoutCount
+    },
+    {
+      description:
+        dashboard.summary.automationFailedCheckoutCount > 0
+          ? "Webhook automation failed and can be retried."
+          : "No failed automation runs are currently blocking fulfillment.",
+      label: "Automation recovery",
+      tone: getSignalTone({
+        neutralWhenZero: true,
+        value: dashboard.summary.automationFailedCheckoutCount
+      }),
+      value: dashboard.summary.automationFailedCheckoutCount
+    },
+    {
+      description:
+        dashboard.summary.openCheckoutCount > 0
+          ? "Reservations are still open across hosted or manual checkouts."
+          : "No sessions are currently holding open reservations.",
+      label: "Open sessions",
+      tone: getSignalTone({
+        neutralWhenZero: true,
+        value: dashboard.summary.openCheckoutCount,
+        warningWhenPositive: true
+      }),
+      value: dashboard.summary.openCheckoutCount
+    }
+  ];
 
   const refreshDashboard = useEffectEvent(
     async (input?: { silent?: boolean }) => {
@@ -332,14 +640,7 @@ export function StudioCommerceClient({
     }
   }
 
-  async function runCheckoutAction(input: {
-    checkoutSessionId: string;
-    message: string;
-    method?: "PATCH" | "POST";
-    path: string;
-    payload?: unknown;
-    successMessage: string;
-  }) {
+  async function runCheckoutAction(input: StudioCommerceSessionActionRequest) {
     setBusyCheckoutAction(input.checkoutSessionId);
     setNotice({
       message: input.message,
@@ -384,6 +685,26 @@ export function StudioCommerceClient({
     }
   }
 
+  function handleEditorChange(input: {
+    checkoutSessionId: string;
+    fulfillmentNotes?: string;
+    fulfillmentStatus?: CommerceCheckoutFulfillmentStatus;
+  }) {
+    setFulfillmentEditors((current) => ({
+      ...current,
+      [input.checkoutSessionId]: {
+        fulfillmentNotes:
+          input.fulfillmentNotes ??
+          current[input.checkoutSessionId]?.fulfillmentNotes ??
+          "",
+        fulfillmentStatus:
+          input.fulfillmentStatus ??
+          current[input.checkoutSessionId]?.fulfillmentStatus ??
+          "unfulfilled"
+      }
+    }));
+  }
+
   async function handleFulfillmentSubmit(
     event: FormEvent<HTMLFormElement>,
     checkout: StudioCommerceCheckoutSummary
@@ -411,25 +732,25 @@ export function StudioCommerceClient({
   return (
     <PageShell
       eyebrow="Commerce"
-      title="Review reservations, payments, and fulfillment"
-      lead="This protected studio surface is the owner control plane for live commerce sessions. It tracks provider-specific checkout state, lets manual deployments confirm payment, lets owners release stale reservations, and records fulfillment separately from payment completion."
+      title="Operate live checkout and fulfillment"
+      lead="Use this workspace to supervise reservations, payment completion, automation handoff, and final fulfillment without leaving the Studio scope boundary."
       actions={
         <>
           <button
-            className="button-action"
+            className="button-action button-action--accent"
             disabled={isRefreshing}
             onClick={() => {
               void refreshDashboard();
             }}
             type="button"
           >
-            {isRefreshing ? "Refreshing…" : "Refresh data"}
+            {isRefreshing ? "Refreshing…" : "Refresh workspace"}
           </button>
           <Link className="action-link" href="/studio/collections">
-            Open collections
+            Collections
           </Link>
           <Link className="action-link" href="/studio/commerce/fleet">
-            Commerce fleet
+            Fleet view
           </Link>
           <Link className="inline-link" href="/studio">
             Back to studio
@@ -438,526 +759,406 @@ export function StudioCommerceClient({
       }
       tone="studio"
     >
-      <SurfaceGrid>
-        <SurfaceCard
-          body="Checkout volume, provider mix, and fulfillment backlog are derived from durable commerce session records. Completed sales remain separate from fulfillment so payment and delivery workflows do not get conflated."
-          eyebrow="Overview"
-          span={12}
-          title="Owner-side commerce operations"
-        >
-          <div className="metric-list">
-            <MetricTile label="Owner" value={ownerWalletAddress} />
-            <MetricTile
-              label="Scope"
-              value={activeBrand?.brandSlug ?? "all brands"}
-            />
-            <MetricTile
-              label="Checkouts"
-              value={dashboard.summary.totalCheckoutCount.toString()}
-            />
-            <MetricTile
-              label="Open"
-              value={dashboard.summary.openCheckoutCount.toString()}
-            />
-            <MetricTile
-              label="Completed"
-              value={dashboard.summary.completedCheckoutCount.toString()}
-            />
-            <MetricTile
-              label="Unfulfilled"
-              value={dashboard.summary.unfulfilledCheckoutCount.toString()}
-            />
-            <MetricTile
-              label="Automation queued"
-              value={dashboard.summary.automationQueuedCheckoutCount.toString()}
-            />
-            <MetricTile
-              label="Stripe"
-              value={dashboard.summary.stripeCheckoutCount.toString()}
-            />
+      <div className="studio-commerce">
+        <section className="studio-commerce__hero">
+          <div className="studio-commerce__hero-copy">
+            <p className="studio-commerce__hero-kicker">
+              Transaction control room
+            </p>
+            <h2 className="studio-commerce__hero-title">
+              {attentionCheckouts.length > 0
+                ? `${attentionCheckouts.length.toString()} sessions need attention in ${activeScopeLabel}.`
+                : `Checkout and fulfillment are stable in ${activeScopeLabel}.`}
+            </h2>
+            <p className="studio-commerce__hero-lead">
+              Scope, backlog, automation state, and release context stay visible
+              together so payment recovery and fulfillment verification do not
+              drift apart.
+            </p>
+            <div className="pill-row">
+              <Pill>{activeBrand?.brandSlug ?? "all-brands"}</Pill>
+              <Pill>{scopeCheckoutCount.toString()} sessions in scope</Pill>
+              <Pill>{dashboard.collections.length.toString()} releases</Pill>
+              <Pill>{scopeBrandCount.toString()} brand scope</Pill>
+              <Pill>
+                {dashboard.summary.manualCheckoutCount.toString()} manual
+              </Pill>
+              <Pill>
+                {dashboard.summary.stripeCheckoutCount.toString()} stripe
+              </Pill>
+            </div>
           </div>
-          <label className="field-stack">
-            <span className="field-label">Commerce scope</span>
-            <select
-              className="input-field"
-              onChange={(event) => {
-                void handleBrandScopeChange(event.target.value || null);
-              }}
-              value={dashboard.activeBrandSlug ?? ""}
-            >
-              <option value="">All brands</option>
-              {dashboard.brands.map((brand) => (
-                <option key={brand.brandSlug} value={brand.brandSlug}>
-                  {brand.brandName} · {brand.totalCheckoutCount} checkouts
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="pill-row">
-            <Pill>/studio/commerce</Pill>
-            <Pill>{dashboard.brands.length} brands</Pill>
-            <Pill>{dashboard.summary.manualCheckoutCount} manual</Pill>
-            <Pill>{dashboard.summary.stripeCheckoutCount} stripe</Pill>
-            <Pill>{dashboard.summary.fulfilledCheckoutCount} fulfilled</Pill>
-            <Pill>
-              {dashboard.summary.automationFailedCheckoutCount} automation
-              failed
-            </Pill>
-            <Pill>{dashboard.summary.expiredCheckoutCount} expired</Pill>
-            <Pill>{dashboard.summary.canceledCheckoutCount} canceled</Pill>
+          <div className="studio-commerce__hero-panel">
+            <div className="studio-commerce__hero-stat">
+              <span>Operator authority</span>
+              <strong>{shortenWalletAddress(ownerWalletAddress)}</strong>
+              <small>
+                Workspace owner wallet currently supervising this scope
+              </small>
+            </div>
+            <div className="studio-commerce__hero-stat">
+              <span>Latest paid</span>
+              <strong>{formatTimestamp(latestCompletedCheckoutAt)}</strong>
+              <small>
+                {formatPercent(completionRate)} payment completion rate
+              </small>
+            </div>
+            <div className="studio-commerce__hero-stat">
+              <span>Latest fulfilled</span>
+              <strong>{formatTimestamp(latestFulfilledCheckoutAt)}</strong>
+              <small>
+                {formatPercent(fulfillmentRate)} fulfillment completion rate
+              </small>
+            </div>
           </div>
-        </SurfaceCard>
+        </section>
 
-        <SurfaceCard
-          body="Brand partitions keep workspace-level commerce from flattening multi-brand performance. Switch scope at the top to review one storefront without losing the cross-brand backlog picture."
-          eyebrow="Brands"
-          span={4}
-          title="Commerce partitions"
+        <section
+          className="studio-commerce__metrics"
+          aria-label="Commerce overview"
         >
-          {dashboard.brands.length === 0 ? (
-            <div className="empty-state">No brands are configured yet.</div>
-          ) : (
-            <div className="stack-list">
-              <button
-                className="status-banner"
-                onClick={() => {
-                  void handleBrandScopeChange(null);
-                }}
-                type="button"
-              >
-                <strong>All brands</strong>
-                <span>
-                  {dashboard.brands.reduce(
-                    (total, brand) => total + brand.totalCheckoutCount,
-                    0
-                  )}{" "}
-                  total checkouts across the workspace
-                </span>
-                <div className="pill-row">
-                  <Pill>
-                    {dashboard.activeBrandSlug === null
-                      ? "active"
-                      : "workspace"}
-                  </Pill>
+          {overviewSignals.map((signal) => (
+            <article
+              className={`studio-commerce-metric studio-commerce-metric--${signal.tone}`}
+              key={signal.label}
+            >
+              <span className="studio-commerce-metric__label">
+                {signal.label}
+              </span>
+              <strong className="studio-commerce-metric__value">
+                {signal.value.toString()}
+              </strong>
+              <p className="studio-commerce-metric__detail">{signal.detail}</p>
+            </article>
+          ))}
+        </section>
+
+        {notice ? (
+          <div
+            className={`status-banner ${
+              notice.tone === "error"
+                ? "status-banner--error"
+                : notice.tone === "success"
+                  ? "status-banner--success"
+                  : "status-banner--info"
+            }`}
+          >
+            <strong>
+              {notice.tone === "error"
+                ? "Commerce error"
+                : notice.tone === "success"
+                  ? "Commerce updated"
+                  : "Working"}
+            </strong>
+            <span>{notice.message}</span>
+          </div>
+        ) : null}
+
+        <div className="studio-commerce__layout">
+          <div className="studio-commerce__main">
+            <section className="studio-commerce-panel">
+              <div className="studio-commerce-panel__header">
+                <div>
+                  <p className="studio-commerce-panel__eyebrow">
+                    Attention queue
+                  </p>
+                  <h3 className="studio-commerce-panel__title">
+                    What needs action now
+                  </h3>
                 </div>
-              </button>
-              {dashboard.brands.map((brand) => (
+                <p className="studio-commerce-panel__body">
+                  Separate manual fulfillment, automation recovery, and open
+                  reservations before reviewing the full session ledger.
+                </p>
+              </div>
+              <div className="studio-commerce-priority-grid">
+                {queueSignals.map((signal) => (
+                  <article
+                    className={`studio-commerce-priority-card studio-commerce-priority-card--${signal.tone}`}
+                    key={signal.label}
+                  >
+                    <span className="studio-commerce-priority-card__label">
+                      {signal.label}
+                    </span>
+                    <strong className="studio-commerce-priority-card__value">
+                      {signal.value.toString()}
+                    </strong>
+                    <p className="studio-commerce-priority-card__detail">
+                      {signal.description}
+                    </p>
+                  </article>
+                ))}
+              </div>
+              {attentionCheckouts.length === 0 ? (
+                <div className="empty-state">
+                  No sessions currently require intervention in this scope.
+                </div>
+              ) : (
+                <div className="studio-commerce-session-list">
+                  {attentionCheckouts.slice(0, 6).map((checkout) => {
+                    const emphasis = getSessionEmphasis({
+                      checkout
+                    });
+
+                    return (
+                      <StudioCommerceSessionCard
+                        checkout={checkout}
+                        editor={
+                          fulfillmentEditors[checkout.checkoutSessionId] ?? {
+                            fulfillmentNotes: checkout.fulfillmentNotes ?? "",
+                            fulfillmentStatus: checkout.fulfillmentStatus
+                          }
+                        }
+                        emphasisLabel={emphasis.label}
+                        emphasisTone={emphasis.tone}
+                        isBusy={
+                          busyCheckoutAction === checkout.checkoutSessionId
+                        }
+                        key={checkout.checkoutSessionId}
+                        onEditorChange={handleEditorChange}
+                        onRunAction={runCheckoutAction}
+                        onSubmitFulfillment={handleFulfillmentSubmit}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            <section className="studio-commerce-panel">
+              <div className="studio-commerce-panel__header">
+                <div>
+                  <p className="studio-commerce-panel__eyebrow">
+                    Session workspace
+                  </p>
+                  <h3 className="studio-commerce-panel__title">
+                    Full transaction ledger
+                  </h3>
+                </div>
+                <p className="studio-commerce-panel__body">
+                  Every session remains available for payment recovery, release,
+                  fulfillment updates, and provider verification.
+                </p>
+              </div>
+              {prioritizedCheckouts.length === 0 ? (
+                <div className="empty-state">
+                  Buyer-facing checkout has not produced any sessions yet.
+                </div>
+              ) : (
+                <div className="studio-commerce-session-list">
+                  {prioritizedCheckouts.map((checkout) => {
+                    const emphasis = getSessionEmphasis({
+                      checkout
+                    });
+
+                    return (
+                      <StudioCommerceSessionCard
+                        checkout={checkout}
+                        editor={
+                          fulfillmentEditors[checkout.checkoutSessionId] ?? {
+                            fulfillmentNotes: checkout.fulfillmentNotes ?? "",
+                            fulfillmentStatus: checkout.fulfillmentStatus
+                          }
+                        }
+                        emphasisLabel={emphasis.label}
+                        emphasisTone={emphasis.tone}
+                        isBusy={
+                          busyCheckoutAction === checkout.checkoutSessionId
+                        }
+                        key={checkout.checkoutSessionId}
+                        onEditorChange={handleEditorChange}
+                        onRunAction={runCheckoutAction}
+                        onSubmitFulfillment={handleFulfillmentSubmit}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          </div>
+
+          <aside className="studio-commerce__rail">
+            <section className="studio-commerce-panel">
+              <div className="studio-commerce-panel__header">
+                <div>
+                  <p className="studio-commerce-panel__eyebrow">Scope</p>
+                  <h3 className="studio-commerce-panel__title">
+                    Brand and workspace context
+                  </h3>
+                </div>
+                <p className="studio-commerce-panel__body">
+                  Make the current commerce boundary explicit before exporting,
+                  retrying automation, or reviewing buyer sessions.
+                </p>
+              </div>
+              <label className="field-stack">
+                <span className="field-label">Active commerce scope</span>
+                <select
+                  className="input-field"
+                  onChange={(event) => {
+                    void handleBrandScopeChange(event.target.value || null);
+                  }}
+                  value={dashboard.activeBrandSlug ?? ""}
+                >
+                  <option value="">All brands</option>
+                  {sortedBrands.map((brand) => (
+                    <option key={brand.brandSlug} value={brand.brandSlug}>
+                      {brand.brandName} · {brand.totalCheckoutCount} sessions
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="studio-commerce-brand-list">
                 <button
-                  className="status-banner"
-                  key={brand.brandSlug}
+                  className={`studio-commerce-brand-button ${
+                    dashboard.activeBrandSlug === null
+                      ? "studio-commerce-brand-button--active"
+                      : ""
+                  }`}
                   onClick={() => {
-                    void handleBrandScopeChange(brand.brandSlug);
+                    void handleBrandScopeChange(null);
                   }}
                   type="button"
                 >
-                  <strong>{brand.brandName}</strong>
+                  <strong>All brands</strong>
                   <span>
-                    {brand.totalCheckoutCount} total, {brand.openCheckoutCount}{" "}
-                    open, {brand.unfulfilledCheckoutCount} unfulfilled
+                    {dashboard.summary.totalCheckoutCount.toString()} sessions
+                    across the workspace
                   </span>
-                  <div className="pill-row">
-                    <Pill>{brand.brandSlug}</Pill>
-                    <Pill>
-                      {dashboard.activeBrandSlug === brand.brandSlug
-                        ? "active"
-                        : "view brand"}
-                    </Pill>
-                  </div>
                 </button>
-              ))}
-            </div>
-          )}
-        </SurfaceCard>
-
-        <SurfaceCard
-          body="These collection-level aggregates make it obvious where the active queue or fulfillment backlog sits before drilling into individual sessions."
-          eyebrow="Collections"
-          span={4}
-          title={
-            activeBrand
-              ? `Checkout backlog in ${activeBrand.brandName}`
-              : "Checkout backlog by release"
-          }
-        >
-          {dashboard.collections.length === 0 ? (
-            <div className="empty-state">No checkout sessions exist yet.</div>
-          ) : (
-            <div className="stack-list">
-              {dashboard.collections.map((collection) => (
-                <div
-                  className="status-banner"
-                  key={collection.collectionPublicPath}
-                >
-                  <strong>{collection.title}</strong>
-                  <span>
-                    {collection.openCheckoutCount} open,{" "}
-                    {collection.unfulfilledCheckoutCount} unfulfilled,{" "}
-                    {collection.completedCheckoutCount} completed
-                  </span>
-                  <div className="pill-row">
-                    <Pill>{collection.storefrontStatus}</Pill>
-                    <Link
-                      className="inline-link"
-                      href={collection.collectionPublicPath}
-                      target="_blank"
-                    >
-                      Public page
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </SurfaceCard>
-
-        <SurfaceCard
-          body="Export the current workspace or brand scope as a durable checkout-session report. The CSV export uses the same active brand filter as the dashboard so handoffs and offline review do not drift from what operators are seeing live."
-          eyebrow="Reports"
-          span={4}
-          title={
-            activeBrand
-              ? `Reporting for ${activeBrand.brandName}`
-              : "Reporting across all brands"
-          }
-        >
-          <div className="metric-list">
-            <MetricTile
-              label="Completion rate"
-              value={formatPercent(completionRate)}
-            />
-            <MetricTile
-              label="Fulfillment rate"
-              value={formatPercent(fulfillmentRate)}
-            />
-            <MetricTile
-              label="Last paid"
-              value={formatTimestamp(latestCompletedCheckoutAt)}
-            />
-            <MetricTile
-              label="Last fulfilled"
-              value={formatTimestamp(latestFulfilledCheckoutAt)}
-            />
-          </div>
-          <div className="studio-action-row">
-            <a className="action-link" href={commerceReportCsvPath}>
-              Export CSV
-            </a>
-            <a
-              className="inline-link"
-              href={commerceReportPath}
-              rel="noreferrer"
-              target="_blank"
-            >
-              Open report JSON
-            </a>
-          </div>
-          <div className="pill-row">
-            <Pill>{dashboard.activeBrandSlug ?? "all-brands"}</Pill>
-            <Pill>{dashboard.checkouts.length} rows in scope</Pill>
-            <Pill>{dashboard.collections.length} collections</Pill>
-          </div>
-        </SurfaceCard>
-
-        <SurfaceCard
-          body="Each session card exposes the current payment state, owner recovery actions, and fulfillment controls for completed sales."
-          eyebrow="Sessions"
-          span={8}
-          title={
-            activeBrand
-              ? `Recent checkout sessions in ${activeBrand.brandName}`
-              : "Recent checkout sessions"
-          }
-        >
-          {notice ? (
-            <div
-              className={`status-banner ${
-                notice.tone === "error"
-                  ? "status-banner--error"
-                  : notice.tone === "success"
-                    ? "status-banner--success"
-                    : ""
-              }`}
-            >
-              <strong>
-                {notice.tone === "error"
-                  ? "Commerce error"
-                  : notice.tone === "success"
-                    ? "Commerce updated"
-                    : "Working"}
-              </strong>
-              <span>{notice.message}</span>
-            </div>
-          ) : null}
-          {dashboard.checkouts.length === 0 ? (
-            <div className="empty-state">
-              Buyer-facing checkout has not produced any sessions yet.
-            </div>
-          ) : (
-            <div className="stack-list">
-              {dashboard.checkouts.map((checkout) => {
-                const editor = fulfillmentEditors[
-                  checkout.checkoutSessionId
-                ] ?? {
-                  fulfillmentNotes: checkout.fulfillmentNotes ?? "",
-                  fulfillmentStatus: checkout.fulfillmentStatus
-                };
-                const actionBusy =
-                  busyCheckoutAction === checkout.checkoutSessionId;
-                const canCompleteManually =
-                  checkout.providerKind === "manual" &&
-                  checkout.status === "open";
-                const canCancel =
-                  checkout.status === "open" || checkout.status === "expired";
-                const canEditFulfillment = checkout.status === "completed";
-                const canRetryAutomation =
-                  checkout.fulfillmentProviderKind === "webhook" &&
-                  checkout.status === "completed" &&
-                  checkout.fulfillmentStatus === "unfulfilled" &&
-                  (checkout.fulfillmentAutomationStatus === "failed" ||
-                    checkout.fulfillmentAutomationStatus === "idle");
-
-                return (
-                  <article
-                    className="status-banner"
-                    key={checkout.checkoutSessionId}
+                {sortedBrands.map((brand) => (
+                  <button
+                    className={`studio-commerce-brand-button ${
+                      dashboard.activeBrandSlug === brand.brandSlug
+                        ? "studio-commerce-brand-button--active"
+                        : ""
+                    }`}
+                    key={brand.brandSlug}
+                    onClick={() => {
+                      void handleBrandScopeChange(brand.brandSlug);
+                    }}
+                    type="button"
                   >
-                    <strong>{checkout.title}</strong>
+                    <strong>{brand.brandName}</strong>
                     <span>
-                      {checkout.buyerDisplayName
-                        ? `${checkout.buyerDisplayName} · `
-                        : ""}
-                      {checkout.buyerEmail} · edition #{checkout.editionNumber}
+                      {brand.openCheckoutCount.toString()} open ·{" "}
+                      {brand.unfulfilledCheckoutCount.toString()} unfulfilled ·{" "}
+                      {brand.completedCheckoutCount.toString()} completed
                     </span>
-                    <div className="pill-row">
-                      <Pill>{checkout.brandSlug}</Pill>
-                      <Pill>{formatCheckoutStatus(checkout.status)}</Pill>
-                      <Pill>{formatProviderKind(checkout.providerKind)}</Pill>
-                      <Pill>
-                        {formatFulfillmentStatus(checkout.fulfillmentStatus)}
-                      </Pill>
-                      <Pill>
-                        {formatAutomationStatus(
-                          checkout.fulfillmentAutomationStatus
-                        )}
-                      </Pill>
-                      <Pill>{checkout.storefrontStatus}</Pill>
-                      {checkout.priceLabel ? (
-                        <Pill>{checkout.priceLabel}</Pill>
-                      ) : null}
-                    </div>
-                    <div className="metric-list">
-                      <MetricTile
-                        label="Created"
-                        value={formatTimestamp(checkout.createdAt)}
-                      />
-                      <MetricTile
-                        label="Expires"
-                        value={formatTimestamp(checkout.expiresAt)}
-                      />
-                      <MetricTile
-                        label="Completed"
-                        value={formatTimestamp(checkout.completedAt)}
-                      />
-                      <MetricTile
-                        label="Fulfilled"
-                        value={formatTimestamp(checkout.fulfilledAt)}
-                      />
-                      <MetricTile
-                        label="Last automation"
-                        value={formatTimestamp(
-                          checkout.fulfillmentAutomationLastAttemptedAt
-                        )}
-                      />
-                      <MetricTile
-                        label="Webhook accepted"
-                        value={formatTimestamp(
-                          checkout.fulfillmentAutomationLastSucceededAt
-                        )}
-                      />
-                    </div>
-                    <div className="pill-row">
-                      <Link
-                        className="inline-link"
-                        href={checkout.collectionPublicPath}
-                        target="_blank"
-                      >
-                        Public release
-                      </Link>
-                      <Link
-                        className="inline-link"
-                        href={`/brands/${checkout.brandSlug}/collections/${checkout.collectionSlug}/checkout/${checkout.checkoutSessionId}`}
-                        target="_blank"
-                      >
-                        Hosted checkout
-                      </Link>
-                      {checkout.providerKind === "stripe" ? (
-                        <Link
-                          className="inline-link"
-                          href={checkout.checkoutUrl}
-                          target="_blank"
-                        >
-                          Stripe session
-                        </Link>
-                      ) : null}
-                    </div>
-                    {checkout.providerSessionId ? (
-                      <div className="pill-row">
-                        <Pill>{checkout.providerSessionId}</Pill>
-                      </div>
-                    ) : null}
-                    {checkout.fulfillmentProviderKind === "webhook" ? (
-                      <div className="pill-row">
-                        <Pill>fulfillment webhook</Pill>
-                        <Pill>
-                          {checkout.fulfillmentAutomationAttemptCount.toString()}{" "}
-                          attempts
-                        </Pill>
-                        {checkout.fulfillmentAutomationExternalReference ? (
-                          <Pill>
-                            {checkout.fulfillmentAutomationExternalReference}
-                          </Pill>
-                        ) : null}
-                      </div>
-                    ) : null}
-                    {checkout.fulfillmentAutomationErrorMessage ? (
-                      <div className="status-banner status-banner--error">
-                        <strong>
-                          {checkout.fulfillmentAutomationErrorCode ??
-                            "Automation failure"}
-                        </strong>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section className="studio-commerce-panel">
+              <div className="studio-commerce-panel__header">
+                <div>
+                  <p className="studio-commerce-panel__eyebrow">Releases</p>
+                  <h3 className="studio-commerce-panel__title">
+                    Collection pressure
+                  </h3>
+                </div>
+                <p className="studio-commerce-panel__body">
+                  Focus on the live or recently active releases carrying the
+                  most open checkout and fulfillment backlog.
+                </p>
+              </div>
+              {sortedCollections.length === 0 ? (
+                <div className="empty-state">
+                  No checkout sessions exist yet.
+                </div>
+              ) : (
+                <div className="studio-commerce-collection-list">
+                  {sortedCollections.map((collection) => (
+                    <article
+                      className="studio-commerce-collection-card"
+                      key={collection.collectionPublicPath}
+                    >
+                      <div className="studio-commerce-collection-card__copy">
+                        <strong>{collection.title}</strong>
                         <span>
-                          {checkout.fulfillmentAutomationErrorMessage}
+                          {collection.brandName} · {collection.storefrontStatus}
+                        </span>
+                        <span>
+                          {collection.openCheckoutCount.toString()} open ·{" "}
+                          {collection.unfulfilledCheckoutCount.toString()}{" "}
+                          unfulfilled
                         </span>
                       </div>
-                    ) : null}
-                    {canCompleteManually || canCancel ? (
-                      <div className="pill-row">
-                        {canCompleteManually ? (
-                          <button
-                            className="button-action"
-                            disabled={actionBusy}
-                            onClick={() => {
-                              void runCheckoutAction({
-                                checkoutSessionId: checkout.checkoutSessionId,
-                                message: "Recording manual payment…",
-                                path: `/api/studio/commerce/checkouts/${checkout.checkoutSessionId}/complete`,
-                                successMessage:
-                                  "Manual checkout marked completed."
-                              });
-                            }}
-                            type="button"
-                          >
-                            {actionBusy ? "Working…" : "Mark paid"}
-                          </button>
-                        ) : null}
-                        {canCancel ? (
-                          <button
-                            className="button-action"
-                            disabled={actionBusy}
-                            onClick={() => {
-                              void runCheckoutAction({
-                                checkoutSessionId: checkout.checkoutSessionId,
-                                message: "Releasing checkout session…",
-                                path: `/api/studio/commerce/checkouts/${checkout.checkoutSessionId}/cancel`,
-                                successMessage: "Checkout session released."
-                              });
-                            }}
-                            type="button"
-                          >
-                            {actionBusy ? "Working…" : "Release session"}
-                          </button>
-                        ) : null}
-                      </div>
-                    ) : null}
-                    {canRetryAutomation ? (
-                      <div className="pill-row">
-                        <button
-                          className="button-action"
-                          disabled={actionBusy}
-                          onClick={() => {
-                            void runCheckoutAction({
-                              checkoutSessionId: checkout.checkoutSessionId,
-                              message: "Requeueing fulfillment automation…",
-                              path: `/api/studio/commerce/checkouts/${checkout.checkoutSessionId}/fulfillment/retry`,
-                              payload: {
-                                reason: null
-                              },
-                              successMessage: "Fulfillment automation requeued."
-                            });
-                          }}
-                          type="button"
-                        >
-                          {actionBusy ? "Working…" : "Retry automation"}
-                        </button>
-                      </div>
-                    ) : null}
-                    {canEditFulfillment ? (
-                      <form
-                        className="studio-form"
-                        onSubmit={(event) => {
-                          void handleFulfillmentSubmit(event, checkout);
-                        }}
+                      <Link
+                        className="inline-link"
+                        href={collection.collectionPublicPath}
+                        rel="noreferrer"
+                        target="_blank"
                       >
-                        <label className="field-stack">
-                          <span className="field-label">
-                            Fulfillment status
-                          </span>
-                          <select
-                            className="input-field"
-                            onChange={(event) => {
-                              const nextStatus = event.target
-                                .value as CommerceCheckoutFulfillmentStatus;
+                        Public page
+                      </Link>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
 
-                              setFulfillmentEditors((current) => ({
-                                ...current,
-                                [checkout.checkoutSessionId]: {
-                                  ...(current[checkout.checkoutSessionId] ??
-                                    editor),
-                                  fulfillmentStatus: nextStatus
-                                }
-                              }));
-                            }}
-                            value={editor.fulfillmentStatus}
-                          >
-                            <option value="unfulfilled">Unfulfilled</option>
-                            <option value="fulfilled">Fulfilled</option>
-                          </select>
-                        </label>
-                        <label className="field-stack">
-                          <span className="field-label">Fulfillment notes</span>
-                          <textarea
-                            className="input-field"
-                            onChange={(event) => {
-                              setFulfillmentEditors((current) => ({
-                                ...current,
-                                [checkout.checkoutSessionId]: {
-                                  ...(current[checkout.checkoutSessionId] ??
-                                    editor),
-                                  fulfillmentNotes: event.target.value
-                                }
-                              }));
-                            }}
-                            placeholder="Delivery, wallet handoff, tracking, or internal notes"
-                            rows={3}
-                            value={editor.fulfillmentNotes}
-                          />
-                        </label>
-                        <button
-                          className="button-action"
-                          disabled={actionBusy}
-                          type="submit"
-                        >
-                          {actionBusy ? "Saving…" : "Save fulfillment"}
-                        </button>
-                      </form>
-                    ) : null}
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </SurfaceCard>
-      </SurfaceGrid>
+            <section className="studio-commerce-panel">
+              <div className="studio-commerce-panel__header">
+                <div>
+                  <p className="studio-commerce-panel__eyebrow">Reports</p>
+                  <h3 className="studio-commerce-panel__title">
+                    Export and verify
+                  </h3>
+                </div>
+                <p className="studio-commerce-panel__body">
+                  Export the same filtered session scope you are reviewing live,
+                  or verify timing and automation cadence before a handoff.
+                </p>
+              </div>
+              <div className="studio-commerce-report-grid">
+                <div className="studio-commerce-report-item">
+                  <span>Completion rate</span>
+                  <strong>{formatPercent(completionRate)}</strong>
+                </div>
+                <div className="studio-commerce-report-item">
+                  <span>Fulfillment rate</span>
+                  <strong>{formatPercent(fulfillmentRate)}</strong>
+                </div>
+                <div className="studio-commerce-report-item">
+                  <span>Last paid</span>
+                  <strong>{formatTimestamp(latestCompletedCheckoutAt)}</strong>
+                </div>
+                <div className="studio-commerce-report-item">
+                  <span>Last fulfilled</span>
+                  <strong>{formatTimestamp(latestFulfilledCheckoutAt)}</strong>
+                </div>
+              </div>
+              <div className="studio-action-row">
+                <a className="action-link" href={commerceReportCsvPath}>
+                  Export CSV
+                </a>
+                <a
+                  className="inline-link"
+                  href={commerceReportPath}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  Open report JSON
+                </a>
+              </div>
+              <div className="pill-row">
+                <Pill>
+                  {automationInFlightCount.toString()} automation in flight
+                </Pill>
+                <Pill>
+                  {dashboard.summary.automationFailedCheckoutCount.toString()}{" "}
+                  failed
+                </Pill>
+                <Pill>
+                  {prioritizedCheckouts.length.toString()} sessions listed
+                </Pill>
+              </div>
+            </section>
+          </aside>
+        </div>
+      </div>
     </PageShell>
   );
 }
