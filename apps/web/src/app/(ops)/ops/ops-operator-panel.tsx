@@ -7,9 +7,9 @@ import {
 } from "@ai-nft-forge/shared";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
-import { MetricTile, Pill, SurfaceCard, SurfaceGrid } from "@ai-nft-forge/ui";
+import { MetricTile, Pill } from "@ai-nft-forge/ui";
 
 import type {
   OpsAlertDeliverySummary,
@@ -19,8 +19,9 @@ import type {
   OpsAlertSchedule,
   OpsAlertStateSummary,
   OpsCaptureAutomation,
-  OpsGenerationWindowSummary,
   OpsGenerationActivitySummary,
+  OpsGenerationWindowSummary,
+  OpsOperatorObservability,
   OpsPersistedCaptureSummary,
   OpsReconciliationAutomation,
   OpsReconciliationSummary,
@@ -49,6 +50,8 @@ type AlertEscalationDraft = {
   repeatReminderIntervalMinutes: string;
 };
 
+type OpsCommandTone = "critical" | "healthy" | "neutral" | "warning";
+
 const alertScheduleDayLabelByValue: Record<OpsAlertScheduleDay, string> = {
   fri: "Fri",
   mon: "Mon",
@@ -58,6 +61,10 @@ const alertScheduleDayLabelByValue: Record<OpsAlertScheduleDay, string> = {
   tue: "Tue",
   wed: "Wed"
 };
+
+function joinClassNames(...values: Array<string | false | null | undefined>) {
+  return values.filter(Boolean).join(" ");
+}
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat(undefined, {
@@ -226,6 +233,118 @@ function resolveAlertScheduleTone(status: OpsAlertSchedule["status"]) {
   return "error";
 }
 
+function resolveOpsCommandToneFromObservability(
+  status: OpsOperatorObservability["status"] | null | undefined
+): OpsCommandTone {
+  if (status === "critical" || status === "unreachable") {
+    return "critical";
+  }
+
+  if (status === "warning") {
+    return "warning";
+  }
+
+  if (status === "ok") {
+    return "healthy";
+  }
+
+  return "neutral";
+}
+
+function resolveOpsCommandToneFromRouting(
+  status: OpsAlertRouting["status"] | null | undefined
+): OpsCommandTone {
+  if (status === "unreachable") {
+    return "critical";
+  }
+
+  if (status === "unconfigured") {
+    return "warning";
+  }
+
+  if (status === "configured") {
+    return "healthy";
+  }
+
+  return "neutral";
+}
+
+function resolveOpsCommandToneFromEscalation(
+  status: OpsAlertEscalation["status"] | null | undefined
+): OpsCommandTone {
+  if (status === "unreachable") {
+    return "critical";
+  }
+
+  if (status === "disabled" || status === "unconfigured") {
+    return "warning";
+  }
+
+  if (status === "configured") {
+    return "healthy";
+  }
+
+  return "neutral";
+}
+
+function resolveOpsCommandToneFromSchedule(
+  status: OpsAlertSchedule["status"] | null | undefined
+): OpsCommandTone {
+  if (status === "inactive" || status === "unreachable") {
+    return "critical";
+  }
+
+  if (status === "unconfigured") {
+    return "warning";
+  }
+
+  if (status === "active") {
+    return "healthy";
+  }
+
+  return "neutral";
+}
+
+function resolveOpsCommandToneFromReconciliation(
+  status: OpsReconciliationSummary["status"] | null | undefined
+): OpsCommandTone {
+  if (status === "warning" || status === "unreachable") {
+    return "critical";
+  }
+
+  if (status === "stale") {
+    return "warning";
+  }
+
+  if (status === "healthy") {
+    return "healthy";
+  }
+
+  return "neutral";
+}
+
+function resolveOpsCommandToneFromAutomation(
+  status:
+    | OpsCaptureAutomation["status"]
+    | OpsReconciliationAutomation["status"]
+    | null
+    | undefined
+): OpsCommandTone {
+  if (status === "stale" || status === "unreachable" || status === "warning") {
+    return "critical";
+  }
+
+  if (status === "disabled") {
+    return "warning";
+  }
+
+  if (status === "healthy") {
+    return "healthy";
+  }
+
+  return "neutral";
+}
+
 function formatAlertScheduleDayList(activeDays: OpsAlertScheduleDay[]) {
   if (activeDays.length === 0) {
     return "Always";
@@ -242,7 +361,9 @@ function formatAlertScheduleDayList(activeDays: OpsAlertScheduleDay[]) {
     return "Weekdays";
   }
 
-  return activeDays.map((activeDay) => alertScheduleDayLabelByValue[activeDay]).join(", ");
+  return activeDays
+    .map((activeDay) => alertScheduleDayLabelByValue[activeDay])
+    .join(", ");
 }
 
 function minuteOfDayToTimeValue(minuteOfDay: number) {
@@ -282,8 +403,8 @@ function createAlertScheduleDraft(
 ): AlertScheduleDraft {
   const policy = alertSchedule?.policy;
   const hasOverride = policy?.source === "owner_override";
-  const startMinuteOfDay = hasOverride ? policy.startMinuteOfDay ?? 540 : 540;
-  const endMinuteOfDay = hasOverride ? policy.endMinuteOfDay ?? 1020 : 1020;
+  const startMinuteOfDay = hasOverride ? (policy.startMinuteOfDay ?? 540) : 540;
+  const endMinuteOfDay = hasOverride ? (policy.endMinuteOfDay ?? 1020) : 1020;
 
   return {
     activeDays: hasOverride
@@ -300,8 +421,7 @@ function createAlertScheduleDraft(
       hasOverride && startMinuteOfDay !== null
         ? minuteOfDayToTimeValue(startMinuteOfDay)
         : "09:00",
-    timezone:
-      hasOverride && policy.timezone !== null ? policy.timezone : "UTC"
+    timezone: hasOverride && policy.timezone !== null ? policy.timezone : "UTC"
   };
 }
 
@@ -343,6 +463,98 @@ function renderActivityTiming(activity: OpsGenerationActivitySummary) {
   return `Created ${formatRelativeDuration(activity.createdAt)} ago`;
 }
 
+function OpsCommandSection({
+  children,
+  description,
+  eyebrow,
+  title
+}: {
+  children: ReactNode;
+  description: string;
+  eyebrow: string;
+  title: string;
+}) {
+  return (
+    <section className="ops-command-section">
+      <div className="ops-command-section__header">
+        <span className="ops-command-section__eyebrow">{eyebrow}</span>
+        <h2 className="ops-command-section__title">{title}</h2>
+        <p className="ops-command-section__description">{description}</p>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function OpsCommandModule({
+  actions,
+  children,
+  description,
+  eyebrow,
+  span = "standard",
+  tone = "neutral",
+  title
+}: {
+  actions?: ReactNode;
+  children: ReactNode;
+  description: string;
+  eyebrow: string;
+  span?: "full" | "standard" | "wide";
+  tone?: OpsCommandTone;
+  title: string;
+}) {
+  return (
+    <article
+      className={joinClassNames(
+        "ops-command-module",
+        `ops-command-module--${tone}`,
+        span === "wide" && "ops-command-module--wide",
+        span === "full" && "ops-command-module--full"
+      )}
+    >
+      <div className="ops-command-module__header">
+        <div className="ops-command-module__copy">
+          <span className="ops-command-module__eyebrow">{eyebrow}</span>
+          <h3 className="ops-command-module__title">{title}</h3>
+          <p className="ops-command-module__description">{description}</p>
+        </div>
+        {actions ? (
+          <div className="ops-command-module__actions">{actions}</div>
+        ) : null}
+      </div>
+      <div className="ops-command-module__content">{children}</div>
+    </article>
+  );
+}
+
+function OpsCommandSignal({
+  detail,
+  label,
+  meta,
+  tone,
+  value
+}: {
+  detail: string;
+  label: string;
+  meta: string;
+  tone: OpsCommandTone;
+  value: string;
+}) {
+  return (
+    <article
+      className={joinClassNames(
+        "ops-command-signal",
+        `ops-command-signal--${tone}`
+      )}
+    >
+      <span className="ops-command-signal__label">{label}</span>
+      <strong className="ops-command-signal__value">{value}</strong>
+      <span className="ops-command-signal__detail">{detail}</span>
+      <span className="ops-command-signal__meta">{meta}</span>
+    </article>
+  );
+}
+
 function ActivityItem({
   activity,
   onRetry,
@@ -352,8 +564,20 @@ function ActivityItem({
   onRetry?: (generationRequestId: string) => Promise<void>;
   retrying?: boolean;
 }) {
+  const itemTone: OpsCommandTone =
+    activity.status === "failed"
+      ? "warning"
+      : activity.status === "running" || activity.status === "queued"
+        ? "neutral"
+        : "healthy";
+
   return (
-    <div className="ops-activity-item">
+    <div
+      className={joinClassNames(
+        "ops-activity-item",
+        `ops-activity-item--${itemTone}`
+      )}
+    >
       <div className="ops-activity-item__header">
         <div className="ops-activity-item__copy">
           <strong>{activity.sourceAsset.originalFilename}</strong>
@@ -386,7 +610,7 @@ function ActivityItem({
         </div>
       ) : null}
       {onRetry ? (
-        <div className="studio-action-row">
+        <div className="studio-action-row ops-command-actions">
           <button
             className="button-action"
             disabled={retrying}
@@ -445,8 +669,20 @@ function PersistedCaptureItem({
 }: {
   capture: OpsPersistedCaptureSummary;
 }) {
+  const itemTone =
+    capture.observabilityStatus === "critical"
+      ? "critical"
+      : capture.observabilityStatus === "warning"
+        ? "warning"
+        : "neutral";
+
   return (
-    <div className="ops-window-item">
+    <div
+      className={joinClassNames(
+        "ops-window-item",
+        `ops-window-item--${itemTone}`
+      )}
+    >
       <div className="ops-activity-item__header">
         <div className="ops-activity-item__copy">
           <strong>{formatDateTime(capture.capturedAt)}</strong>
@@ -493,13 +729,18 @@ function AlertDeliveryItem({
 }) {
   const tone =
     delivery.deliveryState === "failed"
-      ? "error"
+      ? "critical"
       : delivery.severity === "critical"
-        ? "error"
-        : "info";
+        ? "warning"
+        : "neutral";
 
   return (
-    <div className="ops-activity-item">
+    <div
+      className={joinClassNames(
+        "ops-activity-item",
+        `ops-activity-item--${tone}`
+      )}
+    >
       <div className="ops-activity-item__header">
         <div className="ops-activity-item__copy">
           <strong>{delivery.title}</strong>
@@ -512,7 +753,15 @@ function AlertDeliveryItem({
         <Pill>{delivery.severity}</Pill>
         <Pill>{delivery.deliveryChannel}</Pill>
       </div>
-      <div className={`status-banner status-banner--${tone}`}>
+      <div
+        className={`status-banner status-banner--${
+          delivery.deliveryState === "failed"
+            ? "error"
+            : delivery.severity === "critical"
+              ? "info"
+              : "success"
+        }`}
+      >
         <strong>
           {delivery.deliveredAt
             ? `Delivered ${formatDateTime(delivery.deliveredAt)}`
@@ -544,10 +793,15 @@ function ActiveAlertItem({
   onClearMute: (alertStateId: string) => Promise<void>;
   onMute: (alertStateId: string, durationHours: number) => Promise<void>;
 }) {
-  const tone = alert.severity === "critical" ? "error" : "info";
+  const tone = alert.severity === "critical" ? "critical" : "warning";
 
   return (
-    <div className="ops-activity-item">
+    <div
+      className={joinClassNames(
+        "ops-activity-item",
+        `ops-activity-item--${tone}`
+      )}
+    >
       <div className="ops-activity-item__header">
         <div className="ops-activity-item__copy">
           <strong>{alert.title}</strong>
@@ -569,7 +823,11 @@ function ActiveAlertItem({
             : "Delivery active"}
         </Pill>
       </div>
-      <div className={`status-banner status-banner--${tone}`}>
+      <div
+        className={`status-banner status-banner--${
+          alert.severity === "critical" ? "error" : "info"
+        }`}
+      >
         <strong>First seen {formatDateTime(alert.firstObservedAt)}</strong>
         <span>Last seen {formatDateTime(alert.lastObservedAt)}</span>
         <span>
@@ -579,7 +837,7 @@ function ActiveAlertItem({
             : "not recorded"}
         </span>
       </div>
-      <div className="studio-action-row">
+      <div className="studio-action-row ops-command-actions">
         {!alert.acknowledgedAt ? (
           <button
             className="button-action"
@@ -649,7 +907,7 @@ function ActiveMuteItem({
   onClear: (code: string) => Promise<void>;
 }) {
   return (
-    <div className="ops-activity-item">
+    <div className="ops-activity-item ops-activity-item--neutral">
       <div className="ops-activity-item__header">
         <div className="ops-activity-item__copy">
           <strong>{mute.code}</strong>
@@ -657,7 +915,7 @@ function ActiveMuteItem({
         </div>
         <Pill>mute</Pill>
       </div>
-      <div className="studio-action-row">
+      <div className="studio-action-row ops-command-actions">
         <button
           className="button-action"
           disabled={clearing}
@@ -671,6 +929,10 @@ function ActiveMuteItem({
       </div>
     </div>
   );
+}
+
+function EmptyState({ children }: { children: ReactNode }) {
+  return <div className="ops-command-empty-state">{children}</div>;
 }
 
 export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
@@ -711,7 +973,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
     operator.access?.role === "owner" ? "Owner" : "Operator";
 
   useEffect(() => {
-    setAlertEscalationDraft(createAlertEscalationDraft(operator.alertEscalation));
+    setAlertEscalationDraft(
+      createAlertEscalationDraft(operator.alertEscalation)
+    );
   }, [operator.alertEscalation]);
 
   useEffect(() => {
@@ -1212,7 +1476,8 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
       }
 
       setNotice({
-        message: "Webhook alert escalation policy was reset to the default policy.",
+        message:
+          "Webhook alert escalation policy was reset to the default policy.",
         tone: "success"
       });
       router.refresh();
@@ -1316,7 +1581,8 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
       }
 
       setNotice({
-        message: "Webhook alert delivery schedule was reset to the default policy.",
+        message:
+          "Webhook alert delivery schedule was reset to the default policy.",
         tone: "success"
       });
       router.refresh();
@@ -1335,25 +1601,46 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
 
   if (!operator.session) {
     return (
-      <SurfaceGrid>
-        <SurfaceCard
-          body="Sign in with a studio session to inspect queue depth, review your active or failed generation requests, and trigger owner-scoped retries from this surface."
-          eyebrow="Operator session"
-          span={12}
-          title="Authentication unlocks queue and retry controls"
+      <div className="ops-command-center">
+        <OpsCommandSection
+          description="Public runtime health is still visible above, but live queue state, alert controls, reconciliation, and generation recovery stay behind the authenticated operator boundary."
+          eyebrow="Operator access"
+          title="Authentication unlocks command actions"
         >
-          <div className="pill-row">
-            <Pill>Queue depth hidden</Pill>
-            <Pill>Recent failures hidden</Pill>
-            <Pill>Retry actions disabled</Pill>
+          <div className="ops-command-grid ops-command-grid--two">
+            <OpsCommandModule
+              description="Use a studio session to move from passive runtime checks into queue triage, alert handling, reconciliation repair, and retry control."
+              eyebrow="Sign-in required"
+              title="Operator command surface"
+              tone="warning"
+            >
+              <div className="pill-row">
+                <Pill>Queue depth hidden</Pill>
+                <Pill>Active alerts hidden</Pill>
+                <Pill>Reconciliation hidden</Pill>
+                <Pill>Retry actions disabled</Pill>
+              </div>
+              <div className="surface-card__footer">
+                <Link className="action-link" href="/sign-in?next=%2Fops">
+                  Sign in to /ops
+                </Link>
+              </div>
+            </OpsCommandModule>
+            <OpsCommandModule
+              description="Workspace-aware commands stay protected so alert policy and remediation actions remain scoped to a real owner or operator session."
+              eyebrow="Available after sign-in"
+              title="What the locked view omits"
+            >
+              <div className="pill-row">
+                <Pill>Workspace-scoped queue metrics</Pill>
+                <Pill>Persisted alerts and mutes</Pill>
+                <Pill>Reconciliation issues and repairs</Pill>
+                <Pill>Owner retry controls</Pill>
+              </div>
+            </OpsCommandModule>
           </div>
-          <div className="surface-card__footer">
-            <Link className="action-link" href="/sign-in?next=%2Fops">
-              Sign in to /ops
-            </Link>
-          </div>
-        </SurfaceCard>
-      </SurfaceGrid>
+        </OpsCommandSection>
+      </div>
     );
   }
 
@@ -1388,697 +1675,309 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
   const reconciliationAutomationTone = resolveReconciliationAutomationTone(
     reconciliationAutomation?.status ?? "unreachable"
   );
+  const activeAlerts = history?.activeAlerts ?? [];
+  const activeMutes = history?.activeMutes ?? [];
+  const alertDeliveries = history?.deliveries ?? [];
+  const persistedCaptures = history?.captures ?? [];
+  const derivedAlerts = observability?.alerts ?? [];
+  const activeRequests = activity?.active ?? [];
+  const retryableFailures = activity?.retryableFailures ?? [];
+  const openIssues = reconciliation?.openIssues ?? [];
+  const criticalActiveAlertCount = activeAlerts.filter(
+    (alert) => alert.severity === "critical"
+  ).length;
+  const warningActiveAlertCount =
+    activeAlerts.length - criticalActiveAlertCount;
+  const criticalDerivedAlertCount = derivedAlerts.filter(
+    (alert) => alert.severity === "critical"
+  ).length;
+  const attentionCriticalCount =
+    criticalActiveAlertCount + (reconciliation?.openCriticalIssueCount ?? 0);
+  const attentionWarningCount =
+    warningActiveAlertCount +
+    (reconciliation?.openWarningIssueCount ?? 0) +
+    (criticalDerivedAlertCount > 0 ? 0 : derivedAlerts.length);
+  const attentionTone: OpsCommandTone =
+    attentionCriticalCount > 0
+      ? "critical"
+      : attentionWarningCount > 0 ||
+          observability?.status === "warning" ||
+          observability?.status === "critical"
+        ? "warning"
+        : "healthy";
+  const queueTone: OpsCommandTone =
+    queue?.status === "unreachable"
+      ? "critical"
+      : queue?.counts?.failed && queue.counts.failed > 0
+        ? "warning"
+        : queue?.status === "ok"
+          ? "healthy"
+          : "neutral";
+  const automationTone: OpsCommandTone =
+    resolveOpsCommandToneFromAutomation(captureAutomation?.status) ===
+      "critical" ||
+    resolveOpsCommandToneFromAutomation(reconciliationAutomation?.status) ===
+      "critical"
+      ? "critical"
+      : resolveOpsCommandToneFromAutomation(captureAutomation?.status) ===
+            "warning" ||
+          resolveOpsCommandToneFromAutomation(
+            reconciliationAutomation?.status
+          ) === "warning"
+        ? "warning"
+        : captureAutomation || reconciliationAutomation
+          ? "healthy"
+          : "neutral";
+  const policyToneCandidates: OpsCommandTone[] = [
+    resolveOpsCommandToneFromRouting(alertRouting?.status),
+    resolveOpsCommandToneFromSchedule(alertSchedule?.status),
+    resolveOpsCommandToneFromEscalation(alertEscalation?.status)
+  ];
+  const policyTone = policyToneCandidates.includes("critical")
+    ? "critical"
+    : policyToneCandidates.includes("warning")
+      ? "warning"
+      : policyToneCandidates.includes("healthy")
+        ? "healthy"
+        : "neutral";
+  const activityTone: OpsCommandTone =
+    retryableFailures.length > 0
+      ? "warning"
+      : activeRequests.length > 0
+        ? "neutral"
+        : "healthy";
+  const historyTone: OpsCommandTone =
+    persistedCaptures.length > 0 || alertDeliveries.length > 0
+      ? "neutral"
+      : "healthy";
 
   return (
-    <SurfaceGrid>
+    <div className="ops-command-center">
       {notice ? (
-        <SurfaceCard
-          body={notice.message}
-          eyebrow="Operator status"
-          span={12}
-          title="Latest operator action"
+        <div
+          className={joinClassNames(
+            "notice-banner",
+            notice.tone === "error"
+              ? "notice-banner--error"
+              : notice.tone === "success"
+                ? "notice-banner--success"
+                : "notice-banner--info"
+          )}
         >
-          <div className={`status-banner status-banner--${notice.tone}`}>
-            <strong>{notice.tone}</strong>
-            <span>{notice.message}</span>
-          </div>
-        </SurfaceCard>
+          <strong>
+            {notice.tone === "error"
+              ? "Operator action failed"
+              : notice.tone === "success"
+                ? "Operator action recorded"
+                : "Operator action in progress"}
+          </strong>
+          <span>{notice.message}</span>
+        </div>
       ) : null}
-      <SurfaceCard
-        body={
-          observability?.message ??
-          "Operational alerts are only loaded after the operator session resolves."
-        }
-        eyebrow={observability?.status ?? "hidden"}
-        span={12}
-        title="Operational alerts"
+      <div className="ops-command-signal-grid">
+        <OpsCommandSignal
+          detail={`${activeAlerts.length} persisted alerts · ${openIssues.length} reconciliation issues`}
+          label="Needs attention"
+          meta={`${criticalDerivedAlertCount} critical derived alerts in the latest runtime snapshot`}
+          tone={attentionTone}
+          value={
+            attentionCriticalCount > 0
+              ? `${attentionCriticalCount} critical`
+              : attentionWarningCount > 0
+                ? `${attentionWarningCount} warning`
+                : "Stable"
+          }
+        />
+        <OpsCommandSignal
+          detail={
+            queue?.status === "ok"
+              ? `Waiting ${queue.counts.waiting} · Active ${queue.counts.active} · Failed ${queue.counts.failed}`
+              : (queue?.message ??
+                "Queue depth is unavailable for the current session.")
+          }
+          label="Queue runtime"
+          meta={
+            queue?.status === "ok"
+              ? `${queue.workerAdapter ?? "Unknown adapter"} · ${queue.concurrency}x concurrency`
+              : `Checked ${queue ? formatDateTime(queue.checkedAt) : "n/a"}`
+          }
+          tone={queueTone}
+          value={
+            queue?.status === "ok"
+              ? queue.queueName
+              : (queue?.status ?? "unavailable")
+          }
+        />
+        <OpsCommandSignal
+          detail={
+            captureAutomation || reconciliationAutomation
+              ? `Capture ${captureAutomation?.status ?? "n/a"} · Reconciliation ${reconciliationAutomation?.status ?? "n/a"}`
+              : "Automation health is unavailable for the current session."
+          }
+          label="Automation"
+          meta={
+            captureAutomation?.lastCapturedAt ||
+            reconciliationAutomation?.lastRunAt
+              ? `Last capture ${captureAutomation?.lastCapturedAt ? formatDateTime(captureAutomation.lastCapturedAt) : "n/a"} · Last run ${reconciliationAutomation?.lastRunAt ? formatDateTime(reconciliationAutomation.lastRunAt) : "n/a"}`
+              : "No recent automation evidence reported"
+          }
+          tone={automationTone}
+          value={
+            captureAutomation?.status === "healthy" &&
+            reconciliationAutomation?.status === "healthy"
+              ? "Healthy"
+              : captureAutomation || reconciliationAutomation
+                ? "Review"
+                : "Unavailable"
+          }
+        />
+        <OpsCommandSignal
+          detail={
+            alertRouting || alertSchedule || alertEscalation
+              ? `${alertRouting?.policy.webhookMode ?? "n/a"} routing · ${alertSchedule?.status ?? "n/a"} schedule · ${alertEscalation?.status ?? "n/a"} escalation`
+              : "Alert policy modules are unavailable for the current session."
+          }
+          label="Delivery policy"
+          meta={
+            canManageOpsPolicy
+              ? "Owner controls available in policy modules"
+              : "Operator access is read-only for policy modules"
+          }
+          tone={policyTone}
+          value={
+            alertRouting?.webhookConfigured
+              ? "Configured"
+              : alertRouting
+                ? "No webhook"
+                : "Unavailable"
+          }
+        />
+        <OpsCommandSignal
+          detail={`${activeRequests.length} active requests · ${retryableFailures.length} retryable failures`}
+          label="Operator workload"
+          meta={`${activeMutes.length} active mutes · ${alertDeliveries.length} recent deliveries`}
+          tone={activityTone}
+          value={
+            retryableFailures.length > 0
+              ? `${retryableFailures.length} retries`
+              : activeRequests.length > 0
+                ? `${activeRequests.length} active`
+                : "Clear"
+          }
+        />
+        <OpsCommandSignal
+          detail={`${persistedCaptures.length} persisted captures · ${alertDeliveries.length} recorded deliveries`}
+          label="Evidence trail"
+          meta={
+            history?.status === "ok"
+              ? history.message
+              : (history?.message ??
+                "Historical evidence is unavailable for the current session.")
+          }
+          tone={historyTone}
+          value={history?.status ?? "unavailable"}
+        />
+      </div>
+      <OpsCommandSection
+        description="Critical alerts and open reconciliation drift stay at the top of the command surface so an operator can see what is broken and act immediately."
+        eyebrow="Attention now"
+        title="Triage and remediation"
       >
-        {observability ? (
-          <>
-            <div
-              className={`status-banner status-banner--${observabilityTone}`}
-            >
-              <strong>{observability.status}</strong>
-              <span>{observability.message}</span>
-              <span>Checked {formatDateTime(observability.checkedAt)}</span>
-            </div>
-            <div className="pill-row">
-              <Pill>
-                Oldest queued{" "}
-                {formatDurationSeconds(observability.oldestQueuedAgeSeconds)}
-              </Pill>
-              <Pill>
-                Oldest running{" "}
-                {formatDurationSeconds(observability.oldestRunningAgeSeconds)}
-              </Pill>
-            </div>
-            {observability.alerts.length ? (
-              <div className="ops-alert-list">
-                {observability.alerts.map((alert) => (
-                  <div
-                    className={`status-banner status-banner--${
-                      alert.severity === "critical" ? "error" : "info"
-                    }`}
-                    key={alert.code}
-                  >
-                    <strong>{alert.title}</strong>
-                    <span>{alert.message}</span>
+        <div className="ops-command-columns">
+          <OpsCommandModule
+            description={
+              observability
+                ? observability.message
+                : "Operational alerts are only loaded after the operator session resolves."
+            }
+            eyebrow="Alert posture"
+            span="wide"
+            title="Active alerts and latest runtime signals"
+            tone={
+              resolveOpsCommandToneFromObservability(observability?.status) ===
+              "critical"
+                ? "critical"
+                : activeAlerts.length > 0
+                  ? attentionTone
+                  : "neutral"
+            }
+          >
+            {observability ? (
+              <>
+                <div
+                  className={`status-banner status-banner--${observabilityTone}`}
+                >
+                  <strong>{observability.status}</strong>
+                  <span>{observability.message}</span>
+                  <span>Checked {formatDateTime(observability.checkedAt)}</span>
+                </div>
+                <div className="metric-list">
+                  <MetricTile
+                    label="Critical alerts"
+                    value={String(criticalActiveAlertCount)}
+                  />
+                  <MetricTile
+                    label="Warning alerts"
+                    value={String(warningActiveAlertCount)}
+                  />
+                  <MetricTile
+                    label="Oldest queued"
+                    value={formatDurationSeconds(
+                      observability.oldestQueuedAgeSeconds
+                    )}
+                  />
+                  <MetricTile
+                    label="Oldest running"
+                    value={formatDurationSeconds(
+                      observability.oldestRunningAgeSeconds
+                    )}
+                  />
+                </div>
+                {derivedAlerts.length ? (
+                  <div className="ops-alert-list">
+                    {derivedAlerts.map((alert) => (
+                      <div
+                        className={`status-banner status-banner--${
+                          alert.severity === "critical" ? "error" : "info"
+                        }`}
+                        key={alert.code}
+                      >
+                        <strong>{alert.title}</strong>
+                        <span>{alert.message}</span>
+                      </div>
+                    ))}
                   </div>
+                ) : (
+                  <EmptyState>
+                    No active operator alerts were derived from the latest
+                    queue, backend, and rolling-window signals.
+                  </EmptyState>
+                )}
+              </>
+            ) : null}
+            {activeAlerts.length ? (
+              <div className="ops-activity-list">
+                {activeAlerts.map((alert) => (
+                  <ActiveAlertItem
+                    acknowledging={acknowledgingAlertStateId === alert.id}
+                    alert={alert}
+                    clearingMute={clearingMuteCode === alert.code}
+                    key={alert.id}
+                    muting={mutingAlertStateId === alert.id}
+                    onAcknowledge={acknowledgeAlertState}
+                    onClearMute={clearAlertMuteByAlertStateId}
+                    onMute={muteAlertState}
+                  />
                 ))}
               </div>
             ) : (
-              <div className="asset-placeholder">
-                No active operator alerts were derived from the latest queue,
-                backend, and rolling-window signals.
-              </div>
+              <EmptyState>
+                No persisted active alerts are currently open for this operator.
+              </EmptyState>
             )}
-          </>
-        ) : null}
-      </SurfaceCard>
-      <SurfaceCard
-        body={
-          observability?.status === "ok" ||
-          observability?.status === "warning" ||
-          observability?.status === "critical"
-            ? "Rolling windows summarize recent owner-scoped request volume, success rate, and completion duration so operator checks no longer depend on point-in-time queue depth alone."
-            : (observability?.message ??
-              "Rolling generation metrics could not be loaded for this operator.")
-        }
-        eyebrow={observability?.status ?? "unreachable"}
-        span={12}
-        title="Rolling generation metrics"
-      >
-        {observability?.windows.length ? (
-          <div className="ops-window-list">
-            {observability.windows.map((window) => (
-              <WindowSummary key={window.windowKey} window={window} />
-            ))}
-          </div>
-        ) : (
-          <div className="asset-placeholder">
-            Rolling generation windows are not available for this operator.
-          </div>
-        )}
-      </SurfaceCard>
-      <SurfaceCard
-        body={
-          alertRouting?.message ??
-          "Alert routing policy is only loaded after the operator session resolves."
-        }
-        eyebrow={alertRouting?.status ?? "unreachable"}
-        span={12}
-        title="Alert routing policy"
-      >
-        {alertRouting ? (
-          <>
-            {!canManageOpsPolicy ? (
-              <div className="status-banner status-banner--info">
-                <strong>Operator read-only</strong>
-                <span>
-                  {operatorRoleLabel} access can inspect routing state, but only
-                  workspace owners can change delivery policy.
-                </span>
-              </div>
-            ) : null}
-            <div className={`status-banner status-banner--${alertRoutingTone}`}>
-              <strong>{alertRouting.status}</strong>
-              <span>{alertRouting.message}</span>
-            </div>
-            <div className="pill-row">
-              <Pill>
-                {alertRouting.webhookConfigured
-                  ? "Webhook configured"
-                  : "Webhook not configured"}
-              </Pill>
-              <Pill>{alertRouting.policy.webhookMode}</Pill>
-              <Pill>{alertRouting.policy.source}</Pill>
-              <Pill>
-                Updated{" "}
-                {alertRouting.policy.updatedAt
-                  ? formatDateTime(alertRouting.policy.updatedAt)
-                  : "default"}
-              </Pill>
-            </div>
-            <div className="studio-action-row">
-              <button
-                className="button-action"
-                disabled={
-                  !canManageOpsPolicy ||
-                  savingAlertRoutingAction !== null ||
-                  alertRouting.policy.webhookMode === "all"
-                }
-                onClick={() => {
-                  void updateAlertRoutingPolicy("all");
-                }}
-                type="button"
-              >
-                {savingAlertRoutingAction === "all"
-                  ? "Saving…"
-                  : "Route all alerts"}
-              </button>
-              <button
-                className="button-action"
-                disabled={
-                  !canManageOpsPolicy ||
-                  savingAlertRoutingAction !== null ||
-                  alertRouting.policy.webhookMode === "critical_only"
-                }
-                onClick={() => {
-                  void updateAlertRoutingPolicy("critical_only");
-                }}
-                type="button"
-              >
-                {savingAlertRoutingAction === "critical_only"
-                  ? "Saving…"
-                  : "Critical only"}
-              </button>
-              <button
-                className="button-action"
-                disabled={
-                  !canManageOpsPolicy ||
-                  savingAlertRoutingAction !== null ||
-                  alertRouting.policy.webhookMode === "disabled"
-                }
-                onClick={() => {
-                  void updateAlertRoutingPolicy("disabled");
-                }}
-                type="button"
-              >
-                {savingAlertRoutingAction === "disabled"
-                  ? "Saving…"
-                  : "Disable webhook"}
-              </button>
-              {alertRouting.policy.source === "owner_override" ? (
-                <button
-                  className="button-action"
-                  disabled={
-                    !canManageOpsPolicy || savingAlertRoutingAction !== null
-                  }
-                  onClick={() => {
-                    void resetAlertRoutingPolicy();
-                  }}
-                  type="button"
-                >
-                  {savingAlertRoutingAction === "default"
-                    ? "Resetting…"
-                    : "Use default"}
-                </button>
-              ) : null}
-            </div>
-          </>
-        ) : null}
-      </SurfaceCard>
-      <SurfaceCard
-        body={
-          alertSchedule?.message ??
-          "Alert delivery schedule is only loaded after the operator session resolves."
-        }
-        eyebrow={alertSchedule?.status ?? "unreachable"}
-        span={12}
-        title="Alert delivery schedule"
-      >
-        {alertSchedule ? (
-          <>
-            {!canManageOpsPolicy ? (
-              <div className="status-banner status-banner--info">
-                <strong>Operator read-only</strong>
-                <span>
-                  {operatorRoleLabel} access can inspect schedule state, but
-                  only workspace owners can change alert hours.
-                </span>
-              </div>
-            ) : null}
-            <div className={`status-banner status-banner--${alertScheduleTone}`}>
-              <strong>{alertSchedule.status}</strong>
-              <span>{alertSchedule.message}</span>
-            </div>
-            <div className="pill-row">
-              <Pill>
-                {alertSchedule.webhookConfigured
-                  ? "Webhook configured"
-                  : "Webhook not configured"}
-              </Pill>
-              <Pill>{alertSchedule.policy.source}</Pill>
-              <Pill>
-                {alertSchedule.policy.source === "owner_override"
-                  ? formatAlertScheduleDayList(alertSchedule.policy.activeDays)
-                  : "Always"}
-              </Pill>
-              <Pill>
-                {alertSchedule.policy.source === "owner_override" &&
-                alertSchedule.policy.startMinuteOfDay !== null &&
-                alertSchedule.policy.endMinuteOfDay !== null
-                  ? `${formatOpsAlertScheduleMinuteOfDay(
-                      alertSchedule.policy.startMinuteOfDay
-                    )}-${formatOpsAlertScheduleMinuteOfDay(
-                      alertSchedule.policy.endMinuteOfDay
-                    )}`
-                  : "All hours"}
-              </Pill>
-              <Pill>
-                {alertSchedule.policy.timezone ?? alertScheduleDraft.timezone}
-              </Pill>
-              <Pill>
-                Local now {alertSchedule.localTimeLabel ?? "n/a"}
-              </Pill>
-            </div>
-            <div className="ops-settings-grid">
-              <label className="studio-field">
-                <span>Timezone</span>
-                <input
-                  className="studio-input"
-                  disabled={
-                    !canManageOpsPolicy || savingAlertScheduleAction !== null
-                  }
-                  onChange={(event) => {
-                    setAlertScheduleDraft((currentDraft) => ({
-                      ...currentDraft,
-                      timezone: event.target.value
-                    }));
-                  }}
-                  type="text"
-                  value={alertScheduleDraft.timezone}
-                />
-              </label>
-              <label className="studio-field">
-                <span>Start</span>
-                <input
-                  className="studio-input"
-                  disabled={
-                    !canManageOpsPolicy ||
-                    savingAlertScheduleAction !== null ||
-                    alertScheduleDraft.allDay
-                  }
-                  onChange={(event) => {
-                    setAlertScheduleDraft((currentDraft) => ({
-                      ...currentDraft,
-                      startTime: event.target.value
-                    }));
-                  }}
-                  step={60}
-                  type="time"
-                  value={alertScheduleDraft.startTime}
-                />
-              </label>
-              <label className="studio-field">
-                <span>End</span>
-                <input
-                  className="studio-input"
-                  disabled={
-                    !canManageOpsPolicy ||
-                    savingAlertScheduleAction !== null ||
-                    alertScheduleDraft.allDay
-                  }
-                  onChange={(event) => {
-                    setAlertScheduleDraft((currentDraft) => ({
-                      ...currentDraft,
-                      endTime: event.target.value
-                    }));
-                  }}
-                  step={60}
-                  type="time"
-                  value={alertScheduleDraft.endTime}
-                />
-              </label>
-              <label className="studio-checkbox">
-                <input
-                  checked={alertScheduleDraft.allDay}
-                  disabled={
-                    !canManageOpsPolicy || savingAlertScheduleAction !== null
-                  }
-                  onChange={(event) => {
-                    setAlertScheduleDraft((currentDraft) => ({
-                      ...currentDraft,
-                      allDay: event.target.checked
-                    }));
-                  }}
-                  type="checkbox"
-                />
-                <span>All day on active days</span>
-              </label>
-            </div>
-            <div className="pill-row">
-              {opsAlertScheduleDayValues.map((activeDay) => {
-                const selected =
-                  alertScheduleDraft.activeDays.includes(activeDay);
-
-                return (
-                  <button
-                    aria-pressed={selected}
-                    className="button-action"
-                    disabled={
-                      !canManageOpsPolicy || savingAlertScheduleAction !== null
-                    }
-                    key={activeDay}
-                    onClick={() => {
-                      setAlertScheduleDraft((currentDraft) => ({
-                        ...currentDraft,
-                        activeDays: currentDraft.activeDays.includes(activeDay)
-                          ? currentDraft.activeDays.filter(
-                              (scheduleDay) => scheduleDay !== activeDay
-                            )
-                          : opsAlertScheduleDayValues.filter(
-                              (scheduleDay) =>
-                                scheduleDay === activeDay ||
-                                currentDraft.activeDays.includes(scheduleDay)
-                            )
-                      }));
-                    }}
-                    type="button"
-                  >
-                    {alertScheduleDayLabelByValue[activeDay]}
-                    {selected ? " on" : ""}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="studio-action-row">
-              <button
-                className="button-action"
-                disabled={
-                  !canManageOpsPolicy || savingAlertScheduleAction !== null
-                }
-                onClick={() => {
-                  void updateAlertSchedulePolicy();
-                }}
-                type="button"
-              >
-                {savingAlertScheduleAction === "save"
-                  ? "Saving…"
-                  : "Save schedule"}
-              </button>
-              {alertSchedule.policy.source === "owner_override" ? (
-                <button
-                  className="button-action"
-                  disabled={
-                    !canManageOpsPolicy || savingAlertScheduleAction !== null
-                  }
-                  onClick={() => {
-                    void resetAlertSchedulePolicy();
-                  }}
-                  type="button"
-                >
-                  {savingAlertScheduleAction === "default"
-                    ? "Resetting…"
-                    : "Use default"}
-                </button>
-              ) : null}
-            </div>
-          </>
-        ) : null}
-      </SurfaceCard>
-      <SurfaceCard
-        body={
-          alertEscalation?.message ??
-          "Alert escalation policy is only loaded after the operator session resolves."
-        }
-        eyebrow={alertEscalation?.status ?? "unreachable"}
-        span={12}
-        title="Alert escalation policy"
-      >
-        {alertEscalation ? (
-          <>
-            {!canManageOpsPolicy ? (
-              <div className="status-banner status-banner--info">
-                <strong>Operator read-only</strong>
-                <span>
-                  {operatorRoleLabel} access can inspect escalation state, but
-                  only workspace owners can change reminder policy.
-                </span>
-              </div>
-            ) : null}
-            <div
-              className={`status-banner status-banner--${alertEscalationTone}`}
-            >
-              <strong>{alertEscalation.status}</strong>
-              <span>{alertEscalation.message}</span>
-            </div>
-            <div className="pill-row">
-              <Pill>
-                {alertEscalation.webhookConfigured
-                  ? "Webhook configured"
-                  : "Webhook not configured"}
-              </Pill>
-              <Pill>{alertEscalation.policy.source}</Pill>
-              <Pill>
-                First reminder{" "}
-                {alertEscalation.policy.firstReminderDelayMinutes !== null
-                  ? formatDurationSeconds(
-                      alertEscalation.policy.firstReminderDelayMinutes * 60
-                    )
-                  : "disabled"}
-              </Pill>
-              <Pill>
-                Repeat every{" "}
-                {alertEscalation.policy.repeatReminderIntervalMinutes !== null
-                  ? formatDurationSeconds(
-                      alertEscalation.policy.repeatReminderIntervalMinutes * 60
-                    )
-                  : "disabled"}
-              </Pill>
-              <Pill>
-                Updated{" "}
-                {alertEscalation.policy.updatedAt
-                  ? formatDateTime(alertEscalation.policy.updatedAt)
-                  : "default"}
-              </Pill>
-            </div>
-            <div className="ops-settings-grid">
-              <label className="studio-field">
-                <span>First reminder (minutes)</span>
-                <input
-                  className="studio-input"
-                  disabled={
-                    !canManageOpsPolicy ||
-                    savingAlertEscalationAction !== null
-                  }
-                  min={1}
-                  onChange={(event) => {
-                    setAlertEscalationDraft((currentDraft) => ({
-                      ...currentDraft,
-                      firstReminderDelayMinutes: event.target.value
-                    }));
-                  }}
-                  step={1}
-                  type="number"
-                  value={alertEscalationDraft.firstReminderDelayMinutes}
-                />
-              </label>
-              <label className="studio-field">
-                <span>Repeat interval (minutes)</span>
-                <input
-                  className="studio-input"
-                  disabled={
-                    !canManageOpsPolicy ||
-                    savingAlertEscalationAction !== null
-                  }
-                  min={1}
-                  onChange={(event) => {
-                    setAlertEscalationDraft((currentDraft) => ({
-                      ...currentDraft,
-                      repeatReminderIntervalMinutes: event.target.value
-                    }));
-                  }}
-                  step={1}
-                  type="number"
-                  value={alertEscalationDraft.repeatReminderIntervalMinutes}
-                />
-              </label>
-            </div>
-            <div className="studio-action-row">
-              <button
-                className="button-action"
-                disabled={
-                  !canManageOpsPolicy ||
-                  savingAlertEscalationAction !== null
-                }
-                onClick={() => {
-                  void updateAlertEscalationPolicy();
-                }}
-                type="button"
-              >
-                {savingAlertEscalationAction === "save"
-                  ? "Saving…"
-                  : "Save escalation"}
-              </button>
-              {alertEscalation.policy.source === "owner_override" ? (
-                <button
-                  className="button-action"
-                  disabled={
-                    !canManageOpsPolicy ||
-                    savingAlertEscalationAction !== null
-                  }
-                  onClick={() => {
-                    void resetAlertEscalationPolicy();
-                  }}
-                  type="button"
-                >
-                  {savingAlertEscalationAction === "default"
-                    ? "Resetting…"
-                    : "Use default"}
-                </button>
-              ) : null}
-            </div>
-          </>
-        ) : null}
-      </SurfaceCard>
-      <SurfaceCard
-        body={
-          captureAutomation?.status === "healthy"
-            ? "Worker-owned automation now persists observability captures on a recurring cadence while Redis lease coordination suppresses duplicate runs across replicas."
-            : (captureAutomation?.message ??
-              "Ops capture automation is only evaluated after the operator session resolves.")
-        }
-        eyebrow={captureAutomation?.status ?? "unreachable"}
-        span={12}
-        title="Capture automation"
-      >
-        {captureAutomation ? (
-          <>
-            <div
-              className={`status-banner status-banner--${captureAutomationTone}`}
-            >
-              <strong>{captureAutomation.status}</strong>
-              <span>{captureAutomation.message}</span>
-            </div>
-            <div className="pill-row">
-              <Pill>
-                {captureAutomation.enabled
-                  ? "Scheduler enabled"
-                  : "Manual only"}
-              </Pill>
-              <Pill>
-                Interval{" "}
-                {captureAutomation.intervalSeconds !== null
-                  ? formatDurationSeconds(captureAutomation.intervalSeconds)
-                  : "n/a"}
-              </Pill>
-              <Pill>
-                Jitter{" "}
-                {captureAutomation.jitterSeconds !== null
-                  ? formatDurationSeconds(captureAutomation.jitterSeconds)
-                  : "n/a"}
-              </Pill>
-              <Pill>
-                Lock TTL{" "}
-                {captureAutomation.lockTtlSeconds !== null
-                  ? formatDurationSeconds(captureAutomation.lockTtlSeconds)
-                  : "n/a"}
-              </Pill>
-              <Pill>
-                {captureAutomation.runOnStart === null
-                  ? "Run-on-start n/a"
-                  : captureAutomation.runOnStart
-                    ? "Runs on startup"
-                    : "Startup capture disabled"}
-              </Pill>
-              <Pill>
-                Last capture{" "}
-                {captureAutomation.lastCaptureAgeSeconds !== null
-                  ? `${formatDurationSeconds(captureAutomation.lastCaptureAgeSeconds)} ago`
-                  : "n/a"}
-              </Pill>
-            </div>
-            <div className="ops-activity-meta">
-              <span>
-                Latest persisted capture{" "}
-                {captureAutomation.lastCapturedAt
-                  ? formatDateTime(captureAutomation.lastCapturedAt)
-                  : "not available"}
-              </span>
-            </div>
-          </>
-        ) : null}
-      </SurfaceCard>
-      <SurfaceCard
-        body={
-          reconciliationAutomation
-            ? "Worker-owned reconciliation now tracks missing private/public objects and moderation-driven draft drift on a recurring cadence with the same lease-protected automation model."
-            : "Reconciliation automation is only evaluated after the operator session resolves."
-        }
-        eyebrow={reconciliationAutomation?.status ?? "unreachable"}
-        span={6}
-        title="Reconciliation automation"
-      >
-        {reconciliationAutomation ? (
-          <>
-            <div
-              className={`status-banner status-banner--${reconciliationAutomationTone}`}
-            >
-              <strong>{reconciliationAutomation.status}</strong>
-              <span>{reconciliationAutomation.message}</span>
-            </div>
-            <div className="pill-row">
-              <Pill>
-                Interval{" "}
-                {reconciliationAutomation.intervalSeconds !== null
-                  ? formatDurationSeconds(reconciliationAutomation.intervalSeconds)
-                  : "n/a"}
-              </Pill>
-              <Pill>
-                Jitter{" "}
-                {reconciliationAutomation.jitterSeconds !== null
-                  ? formatDurationSeconds(reconciliationAutomation.jitterSeconds)
-                  : "n/a"}
-              </Pill>
-              <Pill>
-                Lock TTL{" "}
-                {reconciliationAutomation.lockTtlSeconds !== null
-                  ? formatDurationSeconds(reconciliationAutomation.lockTtlSeconds)
-                  : "n/a"}
-              </Pill>
-              <Pill>
-                {reconciliationAutomation.runOnStart === null
-                  ? "Run-on-start n/a"
-                  : reconciliationAutomation.runOnStart
-                    ? "Runs on startup"
-                    : "Startup reconciliation disabled"}
-              </Pill>
-            </div>
-            <div className="ops-activity-meta">
-              <span>
-                Latest run{" "}
-                {reconciliationAutomation.lastRunAt
-                  ? formatDateTime(reconciliationAutomation.lastRunAt)
-                  : "not available"}
-              </span>
-              <span>
-                Age{" "}
-                {reconciliationAutomation.lastRunAgeSeconds !== null
-                  ? `${formatDurationSeconds(reconciliationAutomation.lastRunAgeSeconds)} ago`
-                  : "n/a"}
-              </span>
-            </div>
-          </>
-        ) : null}
-      </SurfaceCard>
-      <SurfaceCard
-        body={
-          reconciliation
-            ? "Open issues here represent persisted publication drift, missing storage objects, and moderation invalidation that can be repaired or explicitly ignored."
-            : "Reconciliation state is only loaded after the operator session resolves."
-        }
-        eyebrow={reconciliation?.status ?? "unreachable"}
-        span={6}
-        title="Reconciliation status"
-      >
-        {reconciliation ? (
-          <>
-            <div className={`status-banner status-banner--${reconciliationTone}`}>
-              <strong>{reconciliation.status}</strong>
-              <span>{reconciliation.message}</span>
-            </div>
-            <div className="pill-row">
-              <Pill>Critical open {reconciliation.openCriticalIssueCount}</Pill>
-              <Pill>Warning open {reconciliation.openWarningIssueCount}</Pill>
-              <Pill>
-                Last run{" "}
-                {reconciliation.lastRun
-                  ? formatDateTime(reconciliation.lastRun.completedAt)
-                  : "n/a"}
-              </Pill>
-            </div>
-            <div className="studio-action-row">
+          </OpsCommandModule>
+          <OpsCommandModule
+            actions={
               <button
                 className="button-action"
                 disabled={runningReconciliation}
@@ -2091,302 +1990,967 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                   ? "Running reconciliation…"
                   : "Run reconciliation"}
               </button>
-            </div>
-          </>
-        ) : null}
-      </SurfaceCard>
-      <SurfaceCard
-        body={
-          reconciliation
-            ? "Repairable issues can be resolved directly here; non-repairable issues stay visible for operator investigation."
-            : "Reconciliation issues are only loaded after the operator session resolves."
-        }
-        eyebrow={reconciliation?.status ?? "unreachable"}
-        span={12}
-        title="Open reconciliation issues"
-      >
-        {reconciliation?.openIssues.length ? (
-          <div className="ops-activity-list">
-            {reconciliation.openIssues.map((issue) => (
-              <div className="ops-activity-item" key={issue.id}>
-                <div className="ops-activity-item__header">
-                  <div className="ops-activity-item__copy">
-                    <strong>{issue.title}</strong>
-                    <span>{issue.message}</span>
+            }
+            description={
+              reconciliation
+                ? reconciliation.message
+                : "Reconciliation state is only loaded after the operator session resolves."
+            }
+            eyebrow="Reconciliation"
+            title="Open drift and repairable issues"
+            tone={resolveOpsCommandToneFromReconciliation(
+              reconciliation?.status
+            )}
+          >
+            {reconciliation ? (
+              <>
+                <div
+                  className={`status-banner status-banner--${reconciliationTone}`}
+                >
+                  <strong>{reconciliation.status}</strong>
+                  <span>{reconciliation.message}</span>
+                  <span>
+                    Last run{" "}
+                    {reconciliation.lastRun
+                      ? formatDateTime(reconciliation.lastRun.completedAt)
+                      : "not recorded"}
+                  </span>
+                </div>
+                <div className="metric-list">
+                  <MetricTile
+                    label="Critical open"
+                    value={String(reconciliation.openCriticalIssueCount)}
+                  />
+                  <MetricTile
+                    label="Warning open"
+                    value={String(reconciliation.openWarningIssueCount)}
+                  />
+                  <MetricTile
+                    label="Latest run"
+                    value={
+                      reconciliation.lastRun
+                        ? reconciliation.lastRun.status
+                        : "n/a"
+                    }
+                  />
+                  <MetricTile
+                    label="Issues recorded"
+                    value={String(openIssues.length)}
+                  />
+                </div>
+              </>
+            ) : null}
+            {openIssues.length ? (
+              <div className="ops-activity-list">
+                {openIssues.map((issue) => (
+                  <div
+                    className={joinClassNames(
+                      "ops-activity-item",
+                      `ops-activity-item--${
+                        issue.severity === "critical" ? "critical" : "warning"
+                      }`
+                    )}
+                    key={issue.id}
+                  >
+                    <div className="ops-activity-item__header">
+                      <div className="ops-activity-item__copy">
+                        <strong>{issue.title}</strong>
+                        <span>{issue.message}</span>
+                      </div>
+                      <Pill>{issue.severity}</Pill>
+                    </div>
+                    <div className="pill-row">
+                      <Pill>{issue.kind}</Pill>
+                      <Pill>
+                        Detected {formatDateTime(issue.lastDetectedAt)}
+                      </Pill>
+                      <Pill>
+                        {issue.repairable ? "Repairable" : "Manual only"}
+                      </Pill>
+                    </div>
+                    <div className="ops-activity-meta">
+                      {Object.entries(issue.detail).map(([key, value]) => (
+                        <span key={key}>
+                          {key}: {String(value)}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="studio-action-row ops-command-actions">
+                      <button
+                        className="button-action"
+                        disabled={
+                          !issue.repairable ||
+                          repairingReconciliationIssueId === issue.id
+                        }
+                        onClick={() => {
+                          void repairReconciliationIssue(issue.id);
+                        }}
+                        type="button"
+                      >
+                        {repairingReconciliationIssueId === issue.id
+                          ? "Repairing…"
+                          : "Repair issue"}
+                      </button>
+                      <button
+                        className="button-action"
+                        disabled={ignoringReconciliationIssueId === issue.id}
+                        onClick={() => {
+                          void ignoreReconciliationIssue(issue.id);
+                        }}
+                        type="button"
+                      >
+                        {ignoringReconciliationIssueId === issue.id
+                          ? "Ignoring…"
+                          : "Ignore issue"}
+                      </button>
+                    </div>
                   </div>
-                  <Pill>{issue.severity}</Pill>
+                ))}
+              </div>
+            ) : (
+              <EmptyState>
+                No open reconciliation issues are recorded for this operator.
+              </EmptyState>
+            )}
+          </OpsCommandModule>
+        </div>
+      </OpsCommandSection>
+      <OpsCommandSection
+        description="Queue state, active generation work, retryable failures, and recurring automation health stay grouped together for rapid operational scanning."
+        eyebrow="Current system state"
+        title="Runtime and automation"
+      >
+        <div className="ops-command-grid">
+          <OpsCommandModule
+            description={
+              queue?.status === "ok"
+                ? queue.message
+                : (queue?.message ??
+                  "Queue diagnostics are only loaded after the operator session resolves.")
+            }
+            eyebrow="Queue health"
+            title="Generation dispatch queue"
+            tone={queueTone}
+          >
+            {queue ? (
+              <>
+                <div
+                  className={`status-banner status-banner--${
+                    queue.status === "ok" ? "info" : "error"
+                  }`}
+                >
+                  <strong>{queue.queueName}</strong>
+                  <span>{queue.message}</span>
+                  <span>Checked {formatDateTime(queue.checkedAt)}</span>
                 </div>
                 <div className="pill-row">
-                  <Pill>{issue.kind}</Pill>
-                  <Pill>Detected {formatDateTime(issue.lastDetectedAt)}</Pill>
-                  <Pill>{issue.repairable ? "Repairable" : "Manual only"}</Pill>
+                  <Pill>{queue.service ?? "Worker service unavailable"}</Pill>
+                  <Pill>{queue.workerAdapter ?? "Unknown adapter"}</Pill>
+                  <Pill>
+                    {queue.concurrency !== null
+                      ? `${queue.concurrency}x concurrency`
+                      : "No concurrency signal"}
+                  </Pill>
                 </div>
-                <div className="ops-activity-meta">
-                  {Object.entries(issue.detail).map(([key, value]) => (
-                    <span key={key}>
-                      {key}: {String(value)}
+                {queue.counts ? (
+                  <div className="metric-list">
+                    <MetricTile
+                      label="Waiting"
+                      value={String(queue.counts.waiting)}
+                    />
+                    <MetricTile
+                      label="Active"
+                      value={String(queue.counts.active)}
+                    />
+                    <MetricTile
+                      label="Delayed"
+                      value={String(queue.counts.delayed)}
+                    />
+                    <MetricTile
+                      label="Failed"
+                      value={String(queue.counts.failed)}
+                    />
+                    <MetricTile
+                      label="Completed"
+                      value={String(queue.counts.completed)}
+                    />
+                    <MetricTile
+                      label="Paused"
+                      value={String(queue.counts.paused)}
+                    />
+                  </div>
+                ) : null}
+              </>
+            ) : null}
+          </OpsCommandModule>
+          <OpsCommandModule
+            description={
+              activity?.status === "ok"
+                ? "Queued and running generation requests stay grouped here while attention modules above summarize immediate risk."
+                : (activity?.message ??
+                  "Recent activity could not be loaded for this operator.")
+            }
+            eyebrow="Active work"
+            title="Current generation requests"
+            tone={activeRequests.length > 0 ? "neutral" : "healthy"}
+          >
+            {activeRequests.length ? (
+              <div className="ops-activity-list">
+                {activeRequests.map((entry) => (
+                  <ActivityItem activity={entry} key={entry.id} />
+                ))}
+              </div>
+            ) : (
+              <EmptyState>
+                No queued or running generation requests are owned by this
+                session.
+              </EmptyState>
+            )}
+          </OpsCommandModule>
+          <OpsCommandModule
+            description={
+              activity?.status === "ok"
+                ? "Failed owner-scoped generation requests can be retried here without returning to the studio asset browser."
+                : (activity?.message ??
+                  "Retryable failure history could not be loaded for this operator.")
+            }
+            eyebrow="Recovery queue"
+            title="Retryable failures"
+            tone={retryableFailures.length > 0 ? "warning" : "healthy"}
+          >
+            {retryableFailures.length ? (
+              <div className="ops-activity-list">
+                {retryableFailures.map((entry) => (
+                  <ActivityItem
+                    activity={entry}
+                    key={entry.id}
+                    onRetry={retryGenerationRequest}
+                    retrying={retryingGenerationRequestId === entry.id}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyState>
+                No failed generation requests are currently retryable for this
+                session.
+              </EmptyState>
+            )}
+          </OpsCommandModule>
+          <OpsCommandModule
+            description={
+              captureAutomation?.status === "healthy"
+                ? "Worker-owned automation now persists observability captures on a recurring cadence while lease coordination suppresses duplicate runs."
+                : (captureAutomation?.message ??
+                  "Ops capture automation is only evaluated after the operator session resolves.")
+            }
+            eyebrow="Automation"
+            title="Capture automation"
+            tone={resolveOpsCommandToneFromAutomation(
+              captureAutomation?.status
+            )}
+          >
+            {captureAutomation ? (
+              <>
+                <div
+                  className={`status-banner status-banner--${captureAutomationTone}`}
+                >
+                  <strong>{captureAutomation.status}</strong>
+                  <span>{captureAutomation.message}</span>
+                </div>
+                <div className="pill-row">
+                  <Pill>
+                    {captureAutomation.enabled
+                      ? "Scheduler enabled"
+                      : "Manual only"}
+                  </Pill>
+                  <Pill>
+                    Interval{" "}
+                    {captureAutomation.intervalSeconds !== null
+                      ? formatDurationSeconds(captureAutomation.intervalSeconds)
+                      : "n/a"}
+                  </Pill>
+                  <Pill>
+                    Jitter{" "}
+                    {captureAutomation.jitterSeconds !== null
+                      ? formatDurationSeconds(captureAutomation.jitterSeconds)
+                      : "n/a"}
+                  </Pill>
+                  <Pill>
+                    Lock TTL{" "}
+                    {captureAutomation.lockTtlSeconds !== null
+                      ? formatDurationSeconds(captureAutomation.lockTtlSeconds)
+                      : "n/a"}
+                  </Pill>
+                  <Pill>
+                    {captureAutomation.runOnStart === null
+                      ? "Run-on-start n/a"
+                      : captureAutomation.runOnStart
+                        ? "Runs on startup"
+                        : "Startup capture disabled"}
+                  </Pill>
+                  <Pill>
+                    Last capture{" "}
+                    {captureAutomation.lastCaptureAgeSeconds !== null
+                      ? `${formatDurationSeconds(captureAutomation.lastCaptureAgeSeconds)} ago`
+                      : "n/a"}
+                  </Pill>
+                </div>
+              </>
+            ) : null}
+          </OpsCommandModule>
+          <OpsCommandModule
+            actions={
+              <Link className="inline-link" href="/ops/fleet">
+                Fleet triage
+              </Link>
+            }
+            description={
+              reconciliationAutomation
+                ? "Recurring reconciliation health stays visible here while repair and ignore actions remain in the attention zone above."
+                : "Reconciliation automation is only evaluated after the operator session resolves."
+            }
+            eyebrow="Automation"
+            title="Reconciliation automation"
+            tone={resolveOpsCommandToneFromAutomation(
+              reconciliationAutomation?.status
+            )}
+          >
+            {reconciliationAutomation ? (
+              <>
+                <div
+                  className={`status-banner status-banner--${reconciliationAutomationTone}`}
+                >
+                  <strong>{reconciliationAutomation.status}</strong>
+                  <span>{reconciliationAutomation.message}</span>
+                </div>
+                <div className="pill-row">
+                  <Pill>
+                    Interval{" "}
+                    {reconciliationAutomation.intervalSeconds !== null
+                      ? formatDurationSeconds(
+                          reconciliationAutomation.intervalSeconds
+                        )
+                      : "n/a"}
+                  </Pill>
+                  <Pill>
+                    Jitter{" "}
+                    {reconciliationAutomation.jitterSeconds !== null
+                      ? formatDurationSeconds(
+                          reconciliationAutomation.jitterSeconds
+                        )
+                      : "n/a"}
+                  </Pill>
+                  <Pill>
+                    Lock TTL{" "}
+                    {reconciliationAutomation.lockTtlSeconds !== null
+                      ? formatDurationSeconds(
+                          reconciliationAutomation.lockTtlSeconds
+                        )
+                      : "n/a"}
+                  </Pill>
+                  <Pill>
+                    {reconciliationAutomation.runOnStart === null
+                      ? "Run-on-start n/a"
+                      : reconciliationAutomation.runOnStart
+                        ? "Runs on startup"
+                        : "Startup reconciliation disabled"}
+                  </Pill>
+                  <Pill>
+                    Last run{" "}
+                    {reconciliationAutomation.lastRunAgeSeconds !== null
+                      ? `${formatDurationSeconds(reconciliationAutomation.lastRunAgeSeconds)} ago`
+                      : "n/a"}
+                  </Pill>
+                </div>
+              </>
+            ) : null}
+          </OpsCommandModule>
+          <OpsCommandModule
+            description={
+              observability?.status === "ok" ||
+              observability?.status === "warning" ||
+              observability?.status === "critical"
+                ? "Rolling windows summarize recent request volume, success rate, and completion duration."
+                : (observability?.message ??
+                  "Rolling generation metrics could not be loaded for this operator.")
+            }
+            eyebrow="Runtime history"
+            span="wide"
+            title="Rolling generation metrics"
+            tone={resolveOpsCommandToneFromObservability(observability?.status)}
+          >
+            {observability?.windows.length ? (
+              <div className="ops-window-list">
+                {observability.windows.map((window) => (
+                  <WindowSummary key={window.windowKey} window={window} />
+                ))}
+              </div>
+            ) : (
+              <EmptyState>
+                Rolling generation windows are not available for this operator.
+              </EmptyState>
+            )}
+          </OpsCommandModule>
+        </div>
+      </OpsCommandSection>
+      <OpsCommandSection
+        description="Alert routing, schedule, escalation, and mute state remain grouped as trustworthy control modules rather than scattered diagnostic cards."
+        eyebrow="Control and policy"
+        title="Alert delivery controls"
+      >
+        <div className="ops-command-grid">
+          <OpsCommandModule
+            description={
+              alertRouting?.message ??
+              "Alert routing policy is only loaded after the operator session resolves."
+            }
+            eyebrow="Routing"
+            title="Webhook alert routing"
+            tone={resolveOpsCommandToneFromRouting(alertRouting?.status)}
+          >
+            {alertRouting ? (
+              <>
+                {!canManageOpsPolicy ? (
+                  <div className="status-banner status-banner--info">
+                    <strong>Operator read-only</strong>
+                    <span>
+                      {operatorRoleLabel} access can inspect routing state, but
+                      only workspace owners can change delivery policy.
                     </span>
-                  ))}
+                  </div>
+                ) : null}
+                <div
+                  className={`status-banner status-banner--${alertRoutingTone}`}
+                >
+                  <strong>{alertRouting.status}</strong>
+                  <span>{alertRouting.message}</span>
                 </div>
-                <div className="studio-action-row">
+                <div className="pill-row">
+                  <Pill>
+                    {alertRouting.webhookConfigured
+                      ? "Webhook configured"
+                      : "Webhook not configured"}
+                  </Pill>
+                  <Pill>{alertRouting.policy.webhookMode}</Pill>
+                  <Pill>{alertRouting.policy.source}</Pill>
+                  <Pill>
+                    Updated{" "}
+                    {alertRouting.policy.updatedAt
+                      ? formatDateTime(alertRouting.policy.updatedAt)
+                      : "default"}
+                  </Pill>
+                </div>
+                <div className="studio-action-row ops-command-actions">
                   <button
                     className="button-action"
                     disabled={
-                      !issue.repairable ||
-                      repairingReconciliationIssueId === issue.id
+                      !canManageOpsPolicy ||
+                      savingAlertRoutingAction !== null ||
+                      alertRouting.policy.webhookMode === "all"
                     }
                     onClick={() => {
-                      void repairReconciliationIssue(issue.id);
+                      void updateAlertRoutingPolicy("all");
                     }}
                     type="button"
                   >
-                    {repairingReconciliationIssueId === issue.id
-                      ? "Repairing…"
-                      : "Repair issue"}
+                    {savingAlertRoutingAction === "all"
+                      ? "Saving…"
+                      : "Route all alerts"}
                   </button>
                   <button
                     className="button-action"
-                    disabled={ignoringReconciliationIssueId === issue.id}
+                    disabled={
+                      !canManageOpsPolicy ||
+                      savingAlertRoutingAction !== null ||
+                      alertRouting.policy.webhookMode === "critical_only"
+                    }
                     onClick={() => {
-                      void ignoreReconciliationIssue(issue.id);
+                      void updateAlertRoutingPolicy("critical_only");
                     }}
                     type="button"
                   >
-                    {ignoringReconciliationIssueId === issue.id
-                      ? "Ignoring…"
-                      : "Ignore issue"}
+                    {savingAlertRoutingAction === "critical_only"
+                      ? "Saving…"
+                      : "Critical only"}
                   </button>
+                  <button
+                    className="button-action"
+                    disabled={
+                      !canManageOpsPolicy ||
+                      savingAlertRoutingAction !== null ||
+                      alertRouting.policy.webhookMode === "disabled"
+                    }
+                    onClick={() => {
+                      void updateAlertRoutingPolicy("disabled");
+                    }}
+                    type="button"
+                  >
+                    {savingAlertRoutingAction === "disabled"
+                      ? "Saving…"
+                      : "Disable webhook"}
+                  </button>
+                  {alertRouting.policy.source === "owner_override" ? (
+                    <button
+                      className="button-action"
+                      disabled={
+                        !canManageOpsPolicy || savingAlertRoutingAction !== null
+                      }
+                      onClick={() => {
+                        void resetAlertRoutingPolicy();
+                      }}
+                      type="button"
+                    >
+                      {savingAlertRoutingAction === "default"
+                        ? "Resetting…"
+                        : "Use default"}
+                    </button>
+                  ) : null}
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="asset-placeholder">
-            No open reconciliation issues are recorded for this operator.
-          </div>
-        )}
-      </SurfaceCard>
-      <SurfaceCard
-        body={
-          history?.status === "ok"
-            ? "Persisted active alerts survive beyond one page load, carry explicit acknowledgment state, and clear automatically when the underlying worker-owned alert condition resolves or materially changes."
-            : (history?.message ??
-              "Persisted active alerts are only loaded after the operator session resolves.")
-        }
-        eyebrow={history?.status ?? "unreachable"}
-        span={12}
-        title="Active persisted alerts"
-      >
-        {history?.activeAlerts.length ? (
-          <div className="ops-activity-list">
-            {history.activeAlerts.map((alert) => (
-              <ActiveAlertItem
-                acknowledging={acknowledgingAlertStateId === alert.id}
-                clearingMute={clearingMuteCode === alert.code}
-                alert={alert}
-                key={alert.id}
-                onAcknowledge={acknowledgeAlertState}
-                onClearMute={clearAlertMuteByAlertStateId}
-                onMute={muteAlertState}
-                muting={mutingAlertStateId === alert.id}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="asset-placeholder">
-            No persisted active alerts are currently open for this operator.
-          </div>
-        )}
-      </SurfaceCard>
-      <SurfaceCard
-        body={
-          history?.status === "ok"
-            ? "Owner-scoped mute policy suppresses alert delivery for a bounded duration without hiding the underlying persisted alert state from `/ops`."
-            : (history?.message ??
-              "Muted alert policy is only loaded after the operator session resolves.")
-        }
-        eyebrow={history?.status ?? "unreachable"}
-        span={12}
-        title="Muted alert policy"
-      >
-        {history?.activeMutes.length ? (
-          <div className="ops-activity-list">
-            {history.activeMutes.map((mute) => (
-              <ActiveMuteItem
-                clearing={clearingMuteCode === mute.code}
-                key={mute.id}
-                mute={mute}
-                onClear={clearAlertMuteByCode}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="asset-placeholder">
-            No active alert mutes are configured for this operator.
-          </div>
-        )}
-      </SurfaceCard>
-      <SurfaceCard
-        body={
-          history?.status === "ok"
-            ? "Persisted captures retain multi-day observability checkpoints so operators can review how alert state, queue pressure, and recent generation windows changed over time."
-            : (history?.message ??
-              "Persisted observability history is only loaded after the operator session resolves.")
-        }
-        eyebrow={history?.status ?? "unreachable"}
-        span={12}
-        title="Persisted observability history"
-      >
-        {history?.captures.length ? (
-          <div className="ops-window-list">
-            {history.captures.map((capture) => (
-              <PersistedCaptureItem capture={capture} key={capture.id} />
-            ))}
-          </div>
-        ) : (
-          <div className="asset-placeholder">
-            No persisted observability captures are available for this operator
-            yet.
-          </div>
-        )}
-      </SurfaceCard>
-      <SurfaceCard
-        body={
-          history?.status === "ok"
-            ? "Delivered alert records persist the operator-facing alert timeline across internal audit-log and external webhook channels instead of limiting diagnosis to whatever is active on the current request."
-            : (history?.message ??
-              "Recent alert delivery history could not be loaded for this operator.")
-        }
-        eyebrow={history?.status ?? "unreachable"}
-        span={12}
-        title="Recent alert deliveries"
-      >
-        {history?.deliveries.length ? (
-          <div className="ops-activity-list">
-            {history.deliveries.map((delivery) => (
-              <AlertDeliveryItem delivery={delivery} key={delivery.id} />
-            ))}
-          </div>
-        ) : (
-          <div className="asset-placeholder">
-            No persisted alert deliveries are available for this operator yet.
-          </div>
-        )}
-      </SurfaceCard>
-      <SurfaceCard
-        body={
-          queue?.status === "ok"
-            ? queue.message
-            : (queue?.message ??
-              "Queue diagnostics are only loaded after the operator session resolves.")
-        }
-        eyebrow={queue?.status ?? "hidden"}
-        span={12}
-        title="Generation dispatch queue"
-      >
-        {queue ? (
-          <>
-            <div
-              className={`status-banner status-banner--${
-                queue.status === "ok" ? "info" : "error"
-              }`}
-            >
-              <strong>{queue.queueName}</strong>
-              <span>{queue.message}</span>
-              <span>Checked {formatDateTime(queue.checkedAt)}</span>
-            </div>
-            <div className="pill-row">
-              <Pill>{queue.service ?? "Worker service unavailable"}</Pill>
-              <Pill>{queue.workerAdapter ?? "Unknown adapter"}</Pill>
-              <Pill>
-                {queue.concurrency !== null
-                  ? `${queue.concurrency}x concurrency`
-                  : "No concurrency signal"}
-              </Pill>
-            </div>
-            {queue.counts ? (
-              <div className="metric-list">
-                <MetricTile
-                  label="Waiting"
-                  value={String(queue.counts.waiting)}
-                />
-                <MetricTile
-                  label="Active"
-                  value={String(queue.counts.active)}
-                />
-                <MetricTile
-                  label="Delayed"
-                  value={String(queue.counts.delayed)}
-                />
-                <MetricTile
-                  label="Failed"
-                  value={String(queue.counts.failed)}
-                />
-                <MetricTile
-                  label="Completed"
-                  value={String(queue.counts.completed)}
-                />
-                <MetricTile
-                  label="Paused"
-                  value={String(queue.counts.paused)}
-                />
-              </div>
+              </>
             ) : null}
-          </>
-        ) : null}
-      </SurfaceCard>
-      <SurfaceCard
-        body={
-          activity?.status === "ok"
-            ? "Queued and running generation requests stay grouped here while the alert and rolling-window panels above summarize trend health."
-            : (activity?.message ??
-              "Recent activity could not be loaded for this operator.")
-        }
-        eyebrow={activity?.status ?? "unreachable"}
-        span={6}
-        title="Active generation requests"
+          </OpsCommandModule>
+          <OpsCommandModule
+            description={
+              alertSchedule?.message ??
+              "Alert delivery schedule is only loaded after the operator session resolves."
+            }
+            eyebrow="Schedule"
+            title="Webhook delivery window"
+            tone={resolveOpsCommandToneFromSchedule(alertSchedule?.status)}
+          >
+            {alertSchedule ? (
+              <>
+                {!canManageOpsPolicy ? (
+                  <div className="status-banner status-banner--info">
+                    <strong>Operator read-only</strong>
+                    <span>
+                      {operatorRoleLabel} access can inspect schedule state, but
+                      only workspace owners can change alert hours.
+                    </span>
+                  </div>
+                ) : null}
+                <div
+                  className={`status-banner status-banner--${alertScheduleTone}`}
+                >
+                  <strong>{alertSchedule.status}</strong>
+                  <span>{alertSchedule.message}</span>
+                </div>
+                <div className="pill-row">
+                  <Pill>
+                    {alertSchedule.webhookConfigured
+                      ? "Webhook configured"
+                      : "Webhook not configured"}
+                  </Pill>
+                  <Pill>{alertSchedule.policy.source}</Pill>
+                  <Pill>
+                    {alertSchedule.policy.source === "owner_override"
+                      ? formatAlertScheduleDayList(
+                          alertSchedule.policy.activeDays
+                        )
+                      : "Always"}
+                  </Pill>
+                  <Pill>
+                    {alertSchedule.policy.source === "owner_override" &&
+                    alertSchedule.policy.startMinuteOfDay !== null &&
+                    alertSchedule.policy.endMinuteOfDay !== null
+                      ? `${formatOpsAlertScheduleMinuteOfDay(
+                          alertSchedule.policy.startMinuteOfDay
+                        )}-${formatOpsAlertScheduleMinuteOfDay(
+                          alertSchedule.policy.endMinuteOfDay
+                        )}`
+                      : "All hours"}
+                  </Pill>
+                  <Pill>
+                    {alertSchedule.policy.timezone ??
+                      alertScheduleDraft.timezone}
+                  </Pill>
+                  <Pill>Local now {alertSchedule.localTimeLabel ?? "n/a"}</Pill>
+                </div>
+                <div className="ops-settings-grid">
+                  <label className="studio-field">
+                    <span>Timezone</span>
+                    <input
+                      className="studio-input"
+                      disabled={
+                        !canManageOpsPolicy ||
+                        savingAlertScheduleAction !== null
+                      }
+                      onChange={(event) => {
+                        setAlertScheduleDraft((currentDraft) => ({
+                          ...currentDraft,
+                          timezone: event.target.value
+                        }));
+                      }}
+                      type="text"
+                      value={alertScheduleDraft.timezone}
+                    />
+                  </label>
+                  <label className="studio-field">
+                    <span>Start</span>
+                    <input
+                      className="studio-input"
+                      disabled={
+                        !canManageOpsPolicy ||
+                        savingAlertScheduleAction !== null ||
+                        alertScheduleDraft.allDay
+                      }
+                      onChange={(event) => {
+                        setAlertScheduleDraft((currentDraft) => ({
+                          ...currentDraft,
+                          startTime: event.target.value
+                        }));
+                      }}
+                      step={60}
+                      type="time"
+                      value={alertScheduleDraft.startTime}
+                    />
+                  </label>
+                  <label className="studio-field">
+                    <span>End</span>
+                    <input
+                      className="studio-input"
+                      disabled={
+                        !canManageOpsPolicy ||
+                        savingAlertScheduleAction !== null ||
+                        alertScheduleDraft.allDay
+                      }
+                      onChange={(event) => {
+                        setAlertScheduleDraft((currentDraft) => ({
+                          ...currentDraft,
+                          endTime: event.target.value
+                        }));
+                      }}
+                      step={60}
+                      type="time"
+                      value={alertScheduleDraft.endTime}
+                    />
+                  </label>
+                  <label className="studio-checkbox">
+                    <input
+                      checked={alertScheduleDraft.allDay}
+                      disabled={
+                        !canManageOpsPolicy ||
+                        savingAlertScheduleAction !== null
+                      }
+                      onChange={(event) => {
+                        setAlertScheduleDraft((currentDraft) => ({
+                          ...currentDraft,
+                          allDay: event.target.checked
+                        }));
+                      }}
+                      type="checkbox"
+                    />
+                    <span>All day on active days</span>
+                  </label>
+                </div>
+                <div className="pill-row">
+                  {opsAlertScheduleDayValues.map((activeDay) => {
+                    const selected =
+                      alertScheduleDraft.activeDays.includes(activeDay);
+
+                    return (
+                      <button
+                        aria-pressed={selected}
+                        className="button-action"
+                        disabled={
+                          !canManageOpsPolicy ||
+                          savingAlertScheduleAction !== null
+                        }
+                        key={activeDay}
+                        onClick={() => {
+                          setAlertScheduleDraft((currentDraft) => ({
+                            ...currentDraft,
+                            activeDays: currentDraft.activeDays.includes(
+                              activeDay
+                            )
+                              ? currentDraft.activeDays.filter(
+                                  (scheduleDay) => scheduleDay !== activeDay
+                                )
+                              : opsAlertScheduleDayValues.filter(
+                                  (scheduleDay) =>
+                                    scheduleDay === activeDay ||
+                                    currentDraft.activeDays.includes(
+                                      scheduleDay
+                                    )
+                                )
+                          }));
+                        }}
+                        type="button"
+                      >
+                        {alertScheduleDayLabelByValue[activeDay]}
+                        {selected ? " on" : ""}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="studio-action-row ops-command-actions">
+                  <button
+                    className="button-action"
+                    disabled={
+                      !canManageOpsPolicy || savingAlertScheduleAction !== null
+                    }
+                    onClick={() => {
+                      void updateAlertSchedulePolicy();
+                    }}
+                    type="button"
+                  >
+                    {savingAlertScheduleAction === "save"
+                      ? "Saving…"
+                      : "Save schedule"}
+                  </button>
+                  {alertSchedule.policy.source === "owner_override" ? (
+                    <button
+                      className="button-action"
+                      disabled={
+                        !canManageOpsPolicy ||
+                        savingAlertScheduleAction !== null
+                      }
+                      onClick={() => {
+                        void resetAlertSchedulePolicy();
+                      }}
+                      type="button"
+                    >
+                      {savingAlertScheduleAction === "default"
+                        ? "Resetting…"
+                        : "Use default"}
+                    </button>
+                  ) : null}
+                </div>
+              </>
+            ) : null}
+          </OpsCommandModule>
+          <OpsCommandModule
+            description={
+              alertEscalation?.message ??
+              "Alert escalation policy is only loaded after the operator session resolves."
+            }
+            eyebrow="Escalation"
+            title="Reminder policy"
+            tone={resolveOpsCommandToneFromEscalation(alertEscalation?.status)}
+          >
+            {alertEscalation ? (
+              <>
+                {!canManageOpsPolicy ? (
+                  <div className="status-banner status-banner--info">
+                    <strong>Operator read-only</strong>
+                    <span>
+                      {operatorRoleLabel} access can inspect escalation state,
+                      but only workspace owners can change reminder policy.
+                    </span>
+                  </div>
+                ) : null}
+                <div
+                  className={`status-banner status-banner--${alertEscalationTone}`}
+                >
+                  <strong>{alertEscalation.status}</strong>
+                  <span>{alertEscalation.message}</span>
+                </div>
+                <div className="pill-row">
+                  <Pill>
+                    {alertEscalation.webhookConfigured
+                      ? "Webhook configured"
+                      : "Webhook not configured"}
+                  </Pill>
+                  <Pill>{alertEscalation.policy.source}</Pill>
+                  <Pill>
+                    First reminder{" "}
+                    {alertEscalation.policy.firstReminderDelayMinutes !== null
+                      ? formatDurationSeconds(
+                          alertEscalation.policy.firstReminderDelayMinutes * 60
+                        )
+                      : "disabled"}
+                  </Pill>
+                  <Pill>
+                    Repeat every{" "}
+                    {alertEscalation.policy.repeatReminderIntervalMinutes !==
+                    null
+                      ? formatDurationSeconds(
+                          alertEscalation.policy.repeatReminderIntervalMinutes *
+                            60
+                        )
+                      : "disabled"}
+                  </Pill>
+                  <Pill>
+                    Updated{" "}
+                    {alertEscalation.policy.updatedAt
+                      ? formatDateTime(alertEscalation.policy.updatedAt)
+                      : "default"}
+                  </Pill>
+                </div>
+                <div className="ops-settings-grid">
+                  <label className="studio-field">
+                    <span>First reminder (minutes)</span>
+                    <input
+                      className="studio-input"
+                      disabled={
+                        !canManageOpsPolicy ||
+                        savingAlertEscalationAction !== null
+                      }
+                      min={1}
+                      onChange={(event) => {
+                        setAlertEscalationDraft((currentDraft) => ({
+                          ...currentDraft,
+                          firstReminderDelayMinutes: event.target.value
+                        }));
+                      }}
+                      step={1}
+                      type="number"
+                      value={alertEscalationDraft.firstReminderDelayMinutes}
+                    />
+                  </label>
+                  <label className="studio-field">
+                    <span>Repeat interval (minutes)</span>
+                    <input
+                      className="studio-input"
+                      disabled={
+                        !canManageOpsPolicy ||
+                        savingAlertEscalationAction !== null
+                      }
+                      min={1}
+                      onChange={(event) => {
+                        setAlertEscalationDraft((currentDraft) => ({
+                          ...currentDraft,
+                          repeatReminderIntervalMinutes: event.target.value
+                        }));
+                      }}
+                      step={1}
+                      type="number"
+                      value={alertEscalationDraft.repeatReminderIntervalMinutes}
+                    />
+                  </label>
+                </div>
+                <div className="studio-action-row ops-command-actions">
+                  <button
+                    className="button-action"
+                    disabled={
+                      !canManageOpsPolicy ||
+                      savingAlertEscalationAction !== null
+                    }
+                    onClick={() => {
+                      void updateAlertEscalationPolicy();
+                    }}
+                    type="button"
+                  >
+                    {savingAlertEscalationAction === "save"
+                      ? "Saving…"
+                      : "Save escalation"}
+                  </button>
+                  {alertEscalation.policy.source === "owner_override" ? (
+                    <button
+                      className="button-action"
+                      disabled={
+                        !canManageOpsPolicy ||
+                        savingAlertEscalationAction !== null
+                      }
+                      onClick={() => {
+                        void resetAlertEscalationPolicy();
+                      }}
+                      type="button"
+                    >
+                      {savingAlertEscalationAction === "default"
+                        ? "Resetting…"
+                        : "Use default"}
+                    </button>
+                  ) : null}
+                </div>
+              </>
+            ) : null}
+          </OpsCommandModule>
+          <OpsCommandModule
+            description={
+              history?.status === "ok"
+                ? "Mute policy suppresses alert delivery for bounded durations without hiding the underlying alert state."
+                : (history?.message ??
+                  "Muted alert policy is only loaded after the operator session resolves.")
+            }
+            eyebrow="Noise control"
+            title="Active mutes"
+            tone={activeMutes.length > 0 ? "warning" : "healthy"}
+          >
+            {activeMutes.length ? (
+              <div className="ops-activity-list">
+                {activeMutes.map((mute) => (
+                  <ActiveMuteItem
+                    clearing={clearingMuteCode === mute.code}
+                    key={mute.id}
+                    mute={mute}
+                    onClear={clearAlertMuteByCode}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyState>
+                No active alert mutes are configured for this operator.
+              </EmptyState>
+            )}
+          </OpsCommandModule>
+        </div>
+      </OpsCommandSection>
+      <OpsCommandSection
+        description="Historical captures and delivery records stay lower on the page to support diagnosis without crowding the live attention and control zones."
+        eyebrow="Evidence and history"
+        title="Operational trail"
       >
-        {activity?.active.length ? (
-          <div className="ops-activity-list">
-            {activity.active.map((entry) => (
-              <ActivityItem activity={entry} key={entry.id} />
-            ))}
-          </div>
-        ) : (
-          <div className="asset-placeholder">
-            No queued or running generation requests are owned by this session.
-          </div>
-        )}
-      </SurfaceCard>
-      <SurfaceCard
-        body={
-          activity?.status === "ok"
-            ? "Failed owner-scoped generation requests can be retried here without returning to the studio asset browser, even when alerts or rolling metrics indicate degradation."
-            : (activity?.message ??
-              "Retryable failure history could not be loaded for this operator.")
-        }
-        eyebrow={activity?.status ?? "unreachable"}
-        span={6}
-        title="Retryable failures"
-      >
-        {activity?.retryableFailures.length ? (
-          <div className="ops-activity-list">
-            {activity.retryableFailures.map((entry) => (
-              <ActivityItem
-                activity={entry}
-                key={entry.id}
-                onRetry={retryGenerationRequest}
-                retrying={retryingGenerationRequestId === entry.id}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="asset-placeholder">
-            No failed generation requests are currently retryable for this
-            session.
-          </div>
-        )}
-      </SurfaceCard>
-    </SurfaceGrid>
+        <div className="ops-command-grid">
+          <OpsCommandModule
+            description={
+              history?.status === "ok"
+                ? "Persisted captures retain multi-day observability checkpoints so operators can review how alert state and queue pressure changed over time."
+                : (history?.message ??
+                  "Persisted observability history is only loaded after the operator session resolves.")
+            }
+            eyebrow="Observability history"
+            span="wide"
+            title="Persisted runtime captures"
+            tone={persistedCaptures.length > 0 ? "neutral" : "healthy"}
+          >
+            {persistedCaptures.length ? (
+              <div className="ops-window-list">
+                {persistedCaptures.map((capture) => (
+                  <PersistedCaptureItem capture={capture} key={capture.id} />
+                ))}
+              </div>
+            ) : (
+              <EmptyState>
+                No persisted observability captures are available for this
+                operator yet.
+              </EmptyState>
+            )}
+          </OpsCommandModule>
+          <OpsCommandModule
+            description={
+              history?.status === "ok"
+                ? "Delivered alert records persist the operator-facing alert timeline across audit-log and webhook channels."
+                : (history?.message ??
+                  "Recent alert delivery history could not be loaded for this operator.")
+            }
+            eyebrow="Delivery evidence"
+            title="Recent alert deliveries"
+            tone={
+              alertDeliveries.some(
+                (delivery) => delivery.deliveryState === "failed"
+              )
+                ? "warning"
+                : alertDeliveries.length > 0
+                  ? "neutral"
+                  : "healthy"
+            }
+          >
+            {alertDeliveries.length ? (
+              <div className="ops-activity-list">
+                {alertDeliveries.map((delivery) => (
+                  <AlertDeliveryItem delivery={delivery} key={delivery.id} />
+                ))}
+              </div>
+            ) : (
+              <EmptyState>
+                No persisted alert deliveries are available for this operator
+                yet.
+              </EmptyState>
+            )}
+          </OpsCommandModule>
+        </div>
+      </OpsCommandSection>
+    </div>
   );
 }

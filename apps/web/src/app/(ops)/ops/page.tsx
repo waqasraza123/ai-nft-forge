@@ -1,18 +1,77 @@
 import Link from "next/link";
 
-import { PageShell, Pill, SurfaceCard, SurfaceGrid } from "@ai-nft-forge/ui";
+import { PageShell, Pill } from "@ai-nft-forge/ui";
 
 import { WorkspaceDirectoryPanel } from "../../../components/workspace-directory-panel";
 import { WorkspaceScopeSwitcher } from "../../../components/workspace-scope-switcher";
-import { OpsOperatorPanel } from "./ops-operator-panel";
 import { loadOpsRuntime } from "../../../server/ops/runtime";
 import { createRuntimeWorkspaceDirectoryService } from "../../../server/workspaces/directory-service";
+
+import { OpsOperatorPanel } from "./ops-operator-panel";
+
+type OpsPageTone = "critical" | "healthy" | "neutral" | "warning";
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
     timeStyle: "short"
   }).format(new Date(value));
+}
+
+function joinClassNames(...values: Array<string | false | null | undefined>) {
+  return values.filter(Boolean).join(" ");
+}
+
+function resolveTone(
+  status:
+    | "not_ready"
+    | "ok"
+    | "ready"
+    | "unconfigured"
+    | "unreachable"
+    | undefined
+): OpsPageTone {
+  if (status === "ok" || status === "ready") {
+    return "healthy";
+  }
+
+  if (status === "not_ready" || status === "unreachable") {
+    return "critical";
+  }
+
+  if (status === "unconfigured") {
+    return "warning";
+  }
+
+  return "neutral";
+}
+
+function OpsCommandSummaryCard({
+  detail,
+  label,
+  meta,
+  tone,
+  value
+}: {
+  detail: string;
+  label: string;
+  meta: string;
+  tone: OpsPageTone;
+  value: string;
+}) {
+  return (
+    <article
+      className={joinClassNames(
+        "ops-command-signal",
+        `ops-command-signal--${tone}`
+      )}
+    >
+      <span className="ops-command-signal__label">{label}</span>
+      <strong className="ops-command-signal__value">{value}</strong>
+      <span className="ops-command-signal__detail">{detail}</span>
+      <span className="ops-command-signal__meta">{meta}</span>
+    </article>
+  );
 }
 
 export default async function OpsPage() {
@@ -27,37 +86,36 @@ export default async function OpsPage() {
     : {
         workspaces: []
       };
+  const currentWorkspace = runtime.operator.access?.workspace ?? null;
+  const availableWorkspaceCount =
+    runtime.operator.access?.availableWorkspaces.length ?? 0;
   const generationBackendProvider =
     runtime.generationBackend.health.payload?.provider ??
     runtime.generationBackend.readiness.payload?.provider ??
     null;
   const readinessPayload = runtime.generationBackend.readiness.payload;
-  const readinessStatus = runtime.generationBackend.readiness.status;
-  const readinessTone =
-    readinessStatus === "ready"
-      ? "success"
-      : readinessStatus === "not_ready" || readinessStatus === "unreachable"
-        ? "error"
-        : "info";
+  const readinessTone = resolveTone(runtime.generationBackend.readiness.status);
+  const healthTone = resolveTone(runtime.generationBackend.health.status);
+  const controlPlaneTone = resolveTone(runtime.web.status);
 
   return (
     <PageShell
-      eyebrow="Ops"
-      title="Live runtime, alerts, and queue diagnostics for the generation path"
-      lead="This surface now carries public runtime health plus authenticated queue depth, rolling generation metrics, synthesized operator alerts, persisted observability history, active-alert acknowledgment and mute controls, owner-scoped webhook routing and delivery-schedule policy, capture-automation status, multi-channel alert-delivery records, recent generation activity, and owner-scoped retry controls so operator checks do not depend on a single request window or the studio asset browser alone."
+      eyebrow="Ops Command"
+      title="Workspace command center"
+      lead="Scan current workspace health, act on alerts and reconciliation, verify queue and automation state, and review operational evidence without leaving the selected ops scope."
       actions={
         <>
           <Link className="action-link" href="/ops/audit">
-            Audit activity
+            Audit
           </Link>
           <Link className="action-link" href="/ops/fleet">
-            Fleet triage
+            Fleet
           </Link>
           <Link className="action-link" href="/ops/retention">
-            Retention review
+            Retention
           </Link>
           <Link className="action-link" href="/ops/workspaces">
-            Workspace directory
+            Directory
           </Link>
           <Link className="action-link" href="/api/health">
             Web health
@@ -79,128 +137,141 @@ export default async function OpsPage() {
       }
       tone="ops"
     >
-      <SurfaceGrid>
-        <SurfaceCard
-          body="The web app remains the operator control plane and now reports runtime timestamps directly on this route."
-          eyebrow={runtime.web.status}
-          title="Web runtime"
-        >
-          <div className="pill-row">
-            <Pill>{runtime.web.service}</Pill>
-            <Pill>{runtime.web.phase}</Pill>
-            <Pill>{formatDateTime(runtime.web.timestamp)}</Pill>
-          </div>
-        </SurfaceCard>
-        <SurfaceCard
-          body={
-            runtime.generationBackend.health.status === "ok"
-              ? "The generation backend is reachable and exposes provider configuration plus liveness details."
-              : runtime.generationBackend.health.message
-          }
-          eyebrow={runtime.generationBackend.health.status}
-          title="Generation backend liveness"
-        >
-          <div className="pill-row">
-            <Pill>
-              {generationBackendProvider?.kind ?? "backend unavailable"}
-            </Pill>
-            <Pill>
-              {generationBackendProvider?.checkpointName ?? "no checkpoint"}
-            </Pill>
-            <Pill>
-              {generationBackendProvider?.workflowSource ?? "no workflow file"}
-            </Pill>
-            <Pill>
-              {runtime.generationBackend.health.payload
-                ? `${runtime.generationBackend.health.payload.uptimeSeconds}s uptime`
-                : formatDateTime(runtime.generationBackend.health.checkedAt)}
-            </Pill>
-          </div>
-        </SurfaceCard>
-        <SurfaceCard
-          body={runtime.generationBackend.readiness.message}
-          eyebrow={runtime.generationBackend.readiness.status}
-          title="Generation backend readiness"
-        />
-        <SurfaceCard
-          body="These are the current operator-facing probe targets for the generation path."
-          eyebrow="Endpoints"
-          title="Probe targets"
-        >
-          <div className="pill-row">
-            <Pill>
-              {runtime.generationBackend.endpoints.generateUrl ??
-                "No generate URL"}
-            </Pill>
-            <Pill>
-              {runtime.generationBackend.endpoints.healthUrl ?? "No health URL"}
-            </Pill>
-            <Pill>
-              {runtime.generationBackend.endpoints.readinessUrl ??
-                "No readiness URL"}
-            </Pill>
-          </div>
-        </SurfaceCard>
-        <SurfaceCard
-          body="Readiness now reflects the active provider path instead of only confirming the HTTP process is alive."
-          eyebrow="Diagnostics"
-          span={8}
-          title="Provider probe summary"
-        >
-          <div className={`status-banner status-banner--${readinessTone}`}>
-            <strong>{runtime.generationBackend.readiness.status}</strong>
-            <span>{runtime.generationBackend.readiness.message}</span>
-            {readinessPayload ? (
-              <span>
-                Checked {formatDateTime(readinessPayload.probe.checkedAt)}
+      <div className="ops-command-page">
+        <section className="ops-command-launchpad">
+          <div className="ops-command-launchpad__primary">
+            <div className="ops-command-launchpad__copy">
+              <span className="ops-command-launchpad__eyebrow">
+                Selected workspace
               </span>
-            ) : (
-              <span>
-                Checked{" "}
-                {formatDateTime(runtime.generationBackend.readiness.checkedAt)}
-              </span>
-            )}
-            {readinessPayload && readinessPayload.probe.latencyMs !== null ? (
-              <span>{readinessPayload.probe.latencyMs}ms</span>
-            ) : null}
+              <h2 className="ops-command-launchpad__title">
+                {currentWorkspace?.name ?? "Sign in to load operator scope"}
+              </h2>
+              <p className="ops-command-launchpad__lead">
+                {currentWorkspace
+                  ? `${currentWorkspace.slug} is the active operational boundary. Alert policy, reconciliation controls, deliveries, and runtime history below stay locked to this workspace.`
+                  : "Public runtime health remains visible here, but queue depth, alert controls, reconciliation, and retry actions only load after an authenticated studio session selects an accessible workspace."}
+              </p>
+            </div>
+            <div className="pill-row">
+              <Pill>{runtime.web.service}</Pill>
+              <Pill>{runtime.web.phase}</Pill>
+              <Pill>{formatDateTime(runtime.web.timestamp)}</Pill>
+              <Pill>
+                {currentWorkspace?.slug ?? "workspace selection required"}
+              </Pill>
+              <Pill>{runtime.operator.access?.role ?? "unauthenticated"}</Pill>
+              <Pill>{availableWorkspaceCount} accessible</Pill>
+            </div>
+            <div className="ops-command-signal-grid ops-command-signal-grid--page">
+              <OpsCommandSummaryCard
+                detail="Web control plane"
+                label="Control plane"
+                meta={`Reported ${formatDateTime(runtime.web.timestamp)}`}
+                tone={controlPlaneTone}
+                value={runtime.web.status}
+              />
+              <OpsCommandSummaryCard
+                detail={runtime.generationBackend.readiness.message}
+                label="Backend readiness"
+                meta={`Checked ${formatDateTime(runtime.generationBackend.readiness.checkedAt)}`}
+                tone={readinessTone}
+                value={runtime.generationBackend.readiness.status}
+              />
+              <OpsCommandSummaryCard
+                detail={
+                  generationBackendProvider?.checkpointName ??
+                  "No checkpoint reported"
+                }
+                label="Provider path"
+                meta={
+                  generationBackendProvider?.workflowSource ??
+                  "No workflow source reported"
+                }
+                tone={healthTone}
+                value={generationBackendProvider?.kind ?? "backend unavailable"}
+              />
+              <OpsCommandSummaryCard
+                detail={
+                  currentWorkspace
+                    ? `${runtime.operator.access?.role ?? "operator"} access for ${currentWorkspace.slug}`
+                    : "Operator scope not loaded"
+                }
+                label="Workspace scope"
+                meta={
+                  readinessPayload
+                    ? `Probe ${readinessPayload.probe.latencyMs ?? "n/a"}ms`
+                    : `${availableWorkspaceCount} accessible workspaces`
+                }
+                tone={currentWorkspace ? "healthy" : "neutral"}
+                value={currentWorkspace?.status ?? "session required"}
+              />
+            </div>
           </div>
-        </SurfaceCard>
-        <SurfaceCard
-          body="The public portion of this route stays focused on liveness and readiness. Deeper queue and retry controls only appear for authenticated operators."
-          eyebrow="Access boundary"
-          span={4}
-          title="Operator controls"
-        >
-          <WorkspaceScopeSwitcher
-            currentWorkspaceSlug={
-              runtime.operator.access?.workspace?.slug ?? null
-            }
-            workspaces={runtime.operator.access?.availableWorkspaces ?? []}
+          <div className="ops-command-launchpad__rail">
+            <article className="ops-command-module ops-command-module--neutral">
+              <div className="ops-command-module__header">
+                <div className="ops-command-module__copy">
+                  <span className="ops-command-module__eyebrow">
+                    Workspace scope
+                  </span>
+                  <h3 className="ops-command-module__title">
+                    Controlled workspace selection
+                  </h3>
+                  <p className="ops-command-module__description">
+                    Keep the current workspace explicit before acting on alerts,
+                    policies, reconciliation, or queue-owned evidence.
+                  </p>
+                </div>
+              </div>
+              <WorkspaceScopeSwitcher
+                currentWorkspaceSlug={currentWorkspace?.slug ?? null}
+                workspaces={runtime.operator.access?.availableWorkspaces ?? []}
+              />
+            </article>
+            <article className="ops-command-module ops-command-module--neutral">
+              <div className="ops-command-module__header">
+                <div className="ops-command-module__copy">
+                  <span className="ops-command-module__eyebrow">
+                    Route deck
+                  </span>
+                  <h3 className="ops-command-module__title">
+                    Adjacent ops surfaces
+                  </h3>
+                  <p className="ops-command-module__description">
+                    Use dedicated routes for fleet triage, audit evidence,
+                    retention review, and workspace estate context.
+                  </p>
+                </div>
+              </div>
+              <div className="ops-command-link-list">
+                <Link className="action-link" href="/ops/audit">
+                  Review audit evidence
+                </Link>
+                <Link className="action-link" href="/ops/fleet">
+                  Open fleet triage
+                </Link>
+                <Link className="action-link" href="/ops/retention">
+                  Open retention review
+                </Link>
+                <Link className="action-link" href="/ops/workspaces">
+                  Browse workspace directory
+                </Link>
+              </div>
+            </article>
+          </div>
+        </section>
+        <OpsOperatorPanel operator={runtime.operator} />
+        <div className="ops-command-support">
+          <WorkspaceDirectoryPanel
+            body="Accessible workspace summaries remain available as supporting context below the live command surface so operators can confirm where they can move next without crowding the active attention zones."
+            entries={workspaceDirectory.workspaces}
+            eyebrow="Workspace directory"
+            span={12}
+            title="Accessible operator estate"
           />
-        </SurfaceCard>
-        <SurfaceCard
-          body="Workspace activity audit now lives on a dedicated ops route with filters and CSV export, so invitation, membership, and ownership-transfer review no longer depends on the shorter settings history list."
-          eyebrow="Audit"
-          span={12}
-          title="Workspace audit review"
-        >
-          <div className="pill-row">
-            <Pill>Workspace activity</Pill>
-            <Pill>CSV export</Pill>
-            <Link className="inline-link" href="/ops/audit">
-              /ops/audit
-            </Link>
-          </div>
-        </SurfaceCard>
-        <WorkspaceDirectoryPanel
-          body="Accessible workspace summaries now expose current member, brand, invite, escalation, and recent-activity counts from workspace-native tables, so operators can see the estate they can act in before switching scope."
-          entries={workspaceDirectory.workspaces}
-          eyebrow="Workspace directory"
-          span={12}
-          title="Accessible operator estate"
-        />
-      </SurfaceGrid>
-      <OpsOperatorPanel operator={runtime.operator} />
+        </div>
+      </div>
     </PageShell>
   );
 }

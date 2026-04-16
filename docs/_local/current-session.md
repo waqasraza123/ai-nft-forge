@@ -4,51 +4,41 @@
 2026-04-16
 
 ## Current Objective
-Fix repo-root env loading for workspace-invoked Node service commands.
+Implement Ops redesign Step 1 command-center composition on `/ops`.
 
 ## Current Step
-Shared env bootstrap fix complete for generation backend and worker.
+Ops Step 1 complete: `/ops` now uses a command-center layout with a command header, top signal band, attention zone, control modules, and lower evidence/history sections.
 
 ## Changes Applied
-- Added `packages/shared/src/env/load-repository-environment.ts` to resolve the monorepo root from `pnpm-workspace.yaml` and load `.env.local` plus `.env` with `override: false`.
-- Switched `apps/generation-backend/src/index.ts` and `apps/worker/src/index.ts` from `import "dotenv/config"` to the shared repo-root env bootstrap.
-- Moved the `dotenv` dependency from the app packages into `packages/shared` so env loading lives with the shared bootstrap utility.
-- Updated durable repo memory to record repo-root env fallback behavior for workspace-invoked service commands.
+- Rebuilt `apps/web/src/app/(ops)/ops/page.tsx` into a tighter command header with workspace scope, route deck, and top runtime summaries.
+- Reorganized `apps/web/src/app/(ops)/ops/ops-operator-panel.tsx` around signal, attention, runtime, control, and evidence zones while preserving existing actions and API behavior.
+- Added an Ops-only presentation section to `apps/web/src/app/globals.css` for command-center hierarchy, urgency styling, and responsive layout.
 
 ## Notes
-- The startup failure was not caused by missing S3 variables in the repo root `.env`; it was caused by `dotenv/config` resolving from the package working directory when `pnpm --filter ...` launched the app from inside its workspace.
-- The new loader preserves production-safe behavior by preferring already-exported environment variables and only using repo-root `.env.local` or `.env` as a local fallback.
-- Existing unrelated working-tree edits remain in `README.md` and the Studio settings files and were not changed for this task.
+- The redesign is presentational only for Ops Step 1; alert actions, reconciliation actions, queue/runtime loading, and workspace scoping behavior were not changed.
+- `pnpm lint` still fails only on the known pre-existing unused `WorkspaceDecommissionRequestStatus` import in `packages/database/src/repositories/workspace-decommission-request-repository.ts`.
+- Unrelated existing worktree changes outside this step remain and were not modified.
 
 ## Verification
-- `pnpm --filter @ai-nft-forge/shared build` ✅
-- `pnpm --filter @ai-nft-forge/generation-backend build` ✅
-- `pnpm generation-backend:health` ✅
-- `pnpm --filter @ai-nft-forge/worker build` ✅
-- `pnpm worker:health` ✅
+- `pnpm typecheck` ✅
+- `pnpm build` ✅
+- `pnpm lint` ❌ known pre-existing database lint failure only
 
 ## Changed Files
-- `packages/shared/src/env/load-repository-environment.ts`
-- `packages/shared/src/index.ts`
-- `packages/shared/package.json`
-- `apps/generation-backend/src/index.ts`
-- `apps/generation-backend/package.json`
-- `apps/worker/src/index.ts`
-- `apps/worker/package.json`
-- `pnpm-lock.yaml`
-- `docs/project-state.md`
+- `apps/web/src/app/(ops)/ops/page.tsx`
+- `apps/web/src/app/(ops)/ops/ops-operator-panel.tsx`
+- `apps/web/src/app/globals.css`
 - `docs/_local/current-session.md`
 
 ## Verification Commands
-- `pnpm --filter @ai-nft-forge/shared build`
-- `pnpm --filter @ai-nft-forge/generation-backend build`
-- `pnpm generation-backend:health`
-- `pnpm --filter @ai-nft-forge/worker build`
-- `pnpm worker:health`
+- `pnpm typecheck`
+- `pnpm build`
+- `pnpm lint`
 
 ## Verification Results
-- `pnpm generation-backend:health`: returns `status: "ok"` with the expected local provider and bind settings, confirming S3-related env values are now loaded before validation.
-- `pnpm worker:health`: returns `status: "ok"`, confirming the same repo-root env fallback works for the worker.
+- Typecheck passed across the repo.
+- Build passed across the repo, including `@ai-nft-forge/web`.
+- Lint failed only in `packages/database/src/repositories/workspace-decommission-request-repository.ts` for the pre-existing unused `WorkspaceDecommissionRequestStatus` symbol.
 
 ## Next Action
-- Start the generation backend and worker normally from the repo root after infra is up; env loading should no longer depend on the current package directory.
+- Proceed to Ops redesign Step 2 without changing current alert/reconciliation behavior established in Step 1.
