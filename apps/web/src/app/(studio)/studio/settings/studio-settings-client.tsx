@@ -2214,7 +2214,7 @@ export function StudioSettingsClient({
                 value={pendingRoleEscalationCount.toString()}
               />
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <ActionRow compact>
               <Pill>/studio/settings</Pill>
               <Pill>
                 {selectedBrand?.publicBrandPath ?? "/brands/[brandSlug]"}
@@ -2228,7 +2228,7 @@ export function StudioSettingsClient({
               <Pill>
                 {selectedBrand?.themePreset ?? defaultStudioBrandThemePreset}
               </Pill>
-            </div>
+            </ActionRow>
             {inactiveWorkspaceMessage && settings?.workspace ? (
               <SettingsStatusMessage
                 title={formatWorkspaceStatus(settings.workspace.status)}
@@ -2255,7 +2255,7 @@ export function StudioSettingsClient({
               currentWorkspaceSlug={currentWorkspaceSlug}
               workspaces={availableWorkspaces}
             />
-            <div className="flex flex-wrap items-center gap-3">
+            <ActionRow>
               <ActionLink href="/studio/assets" tone="inline">
                 Open assets
               </ActionLink>
@@ -2265,7 +2265,7 @@ export function StudioSettingsClient({
               <ActionLink href="/studio/commerce" tone="inline">
                 Open commerce
               </ActionLink>
-            </div>
+            </ActionRow>
           </section>
         </div>
         <StudioSettingsSectionNav items={sectionNavItems} />
@@ -2648,7 +2648,7 @@ export function StudioSettingsClient({
                   ) : null}
                   {offboardingSummary ? (
                     <>
-                      <div className="flex flex-wrap items-center gap-2">
+                      <ActionRow compact>
                         <Pill>
                           {formatWorkspaceOffboardingCode(
                             offboardingSummary.readiness
@@ -2664,7 +2664,7 @@ export function StudioSettingsClient({
                           {offboardingSummary.openReconciliationIssueCount} open
                           reconciliation
                         </Pill>
-                      </div>
+                      </ActionRow>
                       {offboardingSummary.blockerCodes.length ? (
                         <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-red-500/45 bg-red-500/12 text-red-50">
                           <strong>Archive blocked</strong>
@@ -2701,7 +2701,7 @@ export function StudioSettingsClient({
                         </div>
                       ) : null}
                       {canManageWorkspace ? (
-                        <div className="flex flex-wrap items-center gap-3 pt-2">
+                        <ActionRow padTop>
                           <ActionLink
                             className="px-3 py-1.5"
                             href={`/api/studio/workspaces/${exportWorkspaceId ?? ""}/export?format=json`}
@@ -2715,7 +2715,7 @@ export function StudioSettingsClient({
                           >
                             Export CSV
                           </ActionLink>
-                        </div>
+                        </ActionRow>
                       ) : (
                         <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                           <strong>Owner only</strong>
@@ -3041,7 +3041,7 @@ export function StudioSettingsClient({
                               value={editorState.secondaryCtaLabel}
                             />
                           </FieldStack>
-                          <div className="flex flex-wrap items-center gap-2">
+                          <ActionRow compact>
                             <Pill>
                               {editorState.brandSlug
                                 ? `/brands/${editorState.brandSlug}`
@@ -3054,10 +3054,10 @@ export function StudioSettingsClient({
                             <Pill>
                               {editorState.themePreset.replaceAll("_", " ")}
                             </Pill>
-                          </div>
+                          </ActionRow>
                         </section>
                       </div>
-                      <div className="flex flex-wrap items-center gap-3 pt-2">
+                      <ActionRow padTop>
                         <ActionButton
                           disabled={!canManageWorkspace || isSaving}
                           type="submit"
@@ -3068,7 +3068,7 @@ export function StudioSettingsClient({
                               ? "Save brand profile"
                               : "Create settings"}
                         </ActionButton>
-                      </div>
+                      </ActionRow>
                     </fieldset>
                   </form>
                 </SurfaceCard>
@@ -3129,7 +3129,7 @@ export function StudioSettingsClient({
                       </span>
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
+                  <ActionRow compact>
                     <Pill>{editorState.workspaceSlug || "workspace-slug"}</Pill>
                     <Pill>{editorState.brandSlug || "brand-slug"}</Pill>
                     <Pill>{editorState.accentColor}</Pill>
@@ -3138,7 +3138,7 @@ export function StudioSettingsClient({
                       {editorState.featuredReleaseLabel ||
                         defaultStudioFeaturedReleaseLabel}
                     </Pill>
-                  </div>
+                  </ActionRow>
                   <div className="flex flex-col gap-2">
                     <ActionLink href="/studio/collections" tone="inline">
                       Collections publish from this profile
@@ -3260,7 +3260,7 @@ export function StudioSettingsClient({
                           </div>
                         </FieldStack>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
+                      <ActionRow compact>
                         <Pill>
                           {settings?.workspace.slug ??
                             editorState.workspaceSlug ??
@@ -3274,8 +3274,8 @@ export function StudioSettingsClient({
                         <Pill>
                           {newBrandState.themePreset.replaceAll("_", " ")}
                         </Pill>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-3 pt-2">
+                      </ActionRow>
+                      <ActionRow padTop>
                         <ActionButton
                           disabled={
                             !canEditCurrentWorkspace ||
@@ -3286,7 +3286,7 @@ export function StudioSettingsClient({
                         >
                           {isCreatingBrand ? "Creating…" : "Add brand"}
                         </ActionButton>
-                      </div>
+                      </ActionRow>
                     </fieldset>
                   </form>
                 </SurfaceCard>
@@ -3306,10 +3306,10 @@ export function StudioSettingsClient({
                   span={6}
                   title="Team access"
                 >
-                  <div className="flex flex-wrap items-center gap-2">
+                  <ActionRow compact>
                     <Pill>{access.role}</Pill>
                     <Pill>{settings?.members.length ?? 1} total members</Pill>
-                  </div>
+                  </ActionRow>
                   {!canManageMembers ? (
                     <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>Operator read-only</strong>
@@ -3375,13 +3375,13 @@ export function StudioSettingsClient({
                   span={6}
                   title="Invitation queue"
                 >
-                  <div className="flex flex-wrap items-center gap-2">
+                  <ActionRow compact>
                     <Pill>{pendingInvitationCount} pending invites</Pill>
                     <Pill>{expiringInvitationCount} expiring</Pill>
                     <Pill>
                       {settings?.invitations.length ?? 0} total invitation rows
                     </Pill>
-                  </div>
+                  </ActionRow>
                   {!canManageMembers ? (
                     <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>Operator read-only</strong>
@@ -3484,7 +3484,7 @@ export function StudioSettingsClient({
                           value={memberState.walletAddress}
                         />
                       </FieldStack>
-                      <div className="flex flex-wrap items-center gap-3 pt-2">
+                      <ActionRow padTop>
                         <ActionButton
                           disabled={!canMutateMembers || isCreatingInvitation}
                           type="submit"
@@ -3493,7 +3493,7 @@ export function StudioSettingsClient({
                             ? "Inviting…"
                             : "Send invitation"}
                         </ActionButton>
-                      </div>
+                      </ActionRow>
                     </fieldset>
                   </form>
                 </SurfaceCard>
@@ -3513,7 +3513,7 @@ export function StudioSettingsClient({
                   span={12}
                   title="Role escalation"
                 >
-                  <div className="flex flex-wrap items-center gap-2">
+                  <ActionRow compact>
                     <Pill>
                       {settings?.roleEscalationRequests.length ?? 0} requests
                     </Pill>
@@ -3527,7 +3527,7 @@ export function StudioSettingsClient({
                         ? "owner review"
                         : "operator request"}
                     </Pill>
-                  </div>
+                  </ActionRow>
                   {inactiveWorkspaceMessage && settings?.workspace ? (
                     <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                       <strong>Workspace read-only</strong>
@@ -3610,7 +3610,7 @@ export function StudioSettingsClient({
                                 value={roleEscalationJustification}
                               />
                             </FieldStack>
-                            <div className="flex flex-wrap items-center gap-3 pt-2">
+                            <ActionRow padTop>
                               <ActionButton
                                 disabled={
                                   !canRequestRoleEscalation ||
@@ -3623,7 +3623,7 @@ export function StudioSettingsClient({
                                   ? "Submitting…"
                                   : "Request ownership transfer"}
                               </ActionButton>
-                            </div>
+                            </ActionRow>
                           </fieldset>
                         </form>
                       </>
@@ -3844,7 +3844,7 @@ export function StudioSettingsClient({
                             <option value="disabled">Disabled</option>
                           </SelectField>
                         </FieldStack>
-                        <div className="flex flex-wrap items-center gap-2">
+                        <ActionRow compact>
                           <Pill>
                             Current{" "}
                             {lifecycleAutomationPolicy.enabled
@@ -3863,7 +3863,7 @@ export function StudioSettingsClient({
                               ? "enabled"
                               : "disabled"}
                           </Pill>
-                        </div>
+                        </ActionRow>
                         <ActionButton type="submit">
                           {isSavingLifecycleAutomationPolicy
                             ? "Saving…"
@@ -3991,7 +3991,7 @@ export function StudioSettingsClient({
                               "Lifecycle SLA summary is not available on this service instance."}
                           </span>
                         </StatusBanner>
-                        <div className="flex flex-wrap items-center gap-2">
+                        <ActionRow compact>
                           <Pill>
                             Current{" "}
                             {lifecycleSlaPolicy.enabled
@@ -4016,9 +4016,9 @@ export function StudioSettingsClient({
                               lifecycleSlaSummary?.lastAutomationRunAt ?? null
                             ) ?? "n/a"}
                           </Pill>
-                        </div>
+                        </ActionRow>
                         {lifecycleSlaSummary?.reasonCodes.length ? (
-                          <div className="flex flex-wrap items-center gap-2">
+                          <ActionRow compact>
                             {lifecycleSlaSummary.reasonCodes.map(
                               (reasonCode) => (
                                 <Pill key={reasonCode}>
@@ -4026,7 +4026,7 @@ export function StudioSettingsClient({
                                 </Pill>
                               )
                             )}
-                          </div>
+                          </ActionRow>
                         ) : null}
                         <ActionButton type="submit">
                           {isSavingLifecycleSlaPolicy
@@ -4064,7 +4064,7 @@ export function StudioSettingsClient({
                         <strong>{lifecycleAutomationHealth.status}</strong>
                         <span>{lifecycleAutomationHealth.message}</span>
                       </StatusBanner>
-                      <div className="flex flex-wrap items-center gap-2">
+                      <ActionRow compact>
                         <Pill>
                           {lifecycleAutomationHealth.enabled
                             ? "Scheduler enabled"
@@ -4096,7 +4096,7 @@ export function StudioSettingsClient({
                               )} ago`
                             : "n/a"}
                         </Pill>
-                      </div>
+                      </ActionRow>
                       <SettingsRecordList>
                         {recentLifecycleAutomationRuns.length ? (
                           recentLifecycleAutomationRuns.map((run) => (
@@ -4163,7 +4163,7 @@ export function StudioSettingsClient({
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="flex flex-wrap items-center gap-2">
+                      <ActionRow compact>
                         <Pill>
                           Audit-log delivered {recentAuditLogDeliveryCount}
                         </Pill>
@@ -4196,7 +4196,7 @@ export function StudioSettingsClient({
                             {provider.enabled ? "configured" : "disabled"}
                           </Pill>
                         ))}
-                      </div>
+                      </ActionRow>
                       <SettingsRecordList>
                         {recentLifecycleDeliveries.length ? (
                           recentLifecycleDeliveries.map((delivery) => (
@@ -4298,7 +4298,7 @@ export function StudioSettingsClient({
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="flex flex-wrap items-center gap-2">
+                      <ActionRow compact>
                         <Pill>
                           {formatWorkspaceOffboardingCode(
                             currentWorkspaceOffboardingState.summary.readiness
@@ -4325,7 +4325,7 @@ export function StudioSettingsClient({
                           }{" "}
                           live releases
                         </Pill>
-                      </div>
+                      </ActionRow>
                       {currentWorkspaceOffboardingState.summary.blockerCodes
                         .length ? (
                         <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-red-500/45 bg-red-500/12 text-red-50">
@@ -4348,7 +4348,7 @@ export function StudioSettingsClient({
                           </span>
                         </div>
                       ) : null}
-                      <div className="flex flex-wrap items-center gap-2">
+                      <ActionRow compact>
                         <Pill>
                           {
                             currentWorkspaceOffboardingState.lifecycleDelivery
@@ -4370,7 +4370,7 @@ export function StudioSettingsClient({
                               .status
                           )}
                         </Pill>
-                      </div>
+                      </ActionRow>
                     </div>
                   )}
                 </SurfaceCard>
@@ -4401,7 +4401,7 @@ export function StudioSettingsClient({
                           </span>
                         </div>
                       ) : null}
-                      <div className="flex flex-wrap items-center gap-2">
+                      <ActionRow compact>
                         <Pill>
                           Default{" "}
                           {retentionPolicy.defaultDecommissionRetentionDays}{" "}
@@ -4418,10 +4418,10 @@ export function StudioSettingsClient({
                             ? "required"
                             : "optional"}
                         </Pill>
-                      </div>
+                      </ActionRow>
                       {canManageWorkspace && scheduledDecommission ? (
                         <>
-                          <div className="flex flex-wrap items-center gap-2">
+                          <ActionRow compact>
                             <Pill>{scheduledDecommission.status}</Pill>
                             <Pill>
                               {scheduledDecommission.retentionDays} day
@@ -4431,7 +4431,7 @@ export function StudioSettingsClient({
                               {decommissionWorkflow?.notificationCount ?? 0}{" "}
                               notices
                             </Pill>
-                          </div>
+                          </ActionRow>
                           <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                             <strong>Scheduled</strong>
                             <span>
@@ -4537,7 +4537,7 @@ export function StudioSettingsClient({
                               </span>
                             </div>
                           ) : null}
-                          <div className="flex flex-wrap items-center gap-3 pt-2">
+                          <ActionRow padTop>
                             <ActionButton
                               tone="secondary"
                               disabled={
@@ -4569,7 +4569,7 @@ export function StudioSettingsClient({
                                 ? "Decommissioning…"
                                 : "Execute decommission"}
                             </ActionButton>
-                          </div>
+                          </ActionRow>
                         </>
                       ) : null}
                       {canManageWorkspace &&
@@ -4838,7 +4838,7 @@ export function StudioSettingsClient({
                           </option>
                         </SelectField>
                       </FieldStack>
-                      <div className="flex flex-wrap items-center gap-3 pt-2">
+                      <ActionRow padTop>
                         <ActionButton type="submit">
                           {isCreatingWorkspace
                             ? "Provisioning…"
@@ -4847,7 +4847,7 @@ export function StudioSettingsClient({
                         <ActionLink href="/studio/commerce/fleet" tone="inline">
                           Open commerce fleet
                         </ActionLink>
-                      </div>
+                      </ActionRow>
                     </fieldset>
                   </form>
                 </SurfaceCard>
@@ -4874,7 +4874,7 @@ export function StudioSettingsClient({
                   span={12}
                   title="Member lifecycle history"
                 >
-                  <div className="flex flex-wrap items-center gap-2">
+                  <ActionRow compact>
                     <Pill>
                       {settings?.auditEntries.length ?? 0} recent events
                     </Pill>
@@ -4882,7 +4882,7 @@ export function StudioSettingsClient({
                     <ActionLink href="/ops/audit" tone="inline">
                       Open full audit
                     </ActionLink>
-                  </div>
+                  </ActionRow>
                   {settings?.auditEntries.length ? (
                     <SettingsRecordList>
                       {settings.auditEntries.map((entry) => (
@@ -4919,7 +4919,7 @@ export function StudioSettingsClient({
               eyebrow="Control context"
               title="Current workspace frame"
             >
-              <div className="flex flex-wrap items-center gap-2">
+              <ActionRow compact>
                 <Pill>
                   {workspaceStatus
                     ? formatWorkspaceStatus(workspaceStatus)
@@ -4927,9 +4927,9 @@ export function StudioSettingsClient({
                 </Pill>
                 <Pill>{settings?.workspace.slug ?? "no-workspace"}</Pill>
                 <Pill>{access.role}</Pill>
-              </div>
+              </ActionRow>
               {canManageWorkspace && exportWorkspaceId ? (
-                <div className="flex flex-wrap items-center gap-3">
+                <ActionRow>
                   <ActionLink
                     href={`/api/studio/workspaces/${exportWorkspaceId}/export?format=json`}
                     tone="inline"
@@ -4942,7 +4942,7 @@ export function StudioSettingsClient({
                   >
                     Export CSV
                   </ActionLink>
-                </div>
+                </ActionRow>
               ) : null}
             </SettingsRailCard>
             <SettingsRailCard
@@ -4985,13 +4985,13 @@ export function StudioSettingsClient({
               eyebrow="Lifecycle posture"
               title="Automation and SLA"
             >
-              <div className="flex flex-wrap items-center gap-2">
+              <ActionRow compact>
                 <Pill>
                   {lifecycleAutomationHealth?.status ?? "unreachable"}
                 </Pill>
                 <Pill>{lifecycleSlaSummary?.status ?? "unreachable"}</Pill>
                 <Pill>Failed webhooks {recentWebhookFailedCount}</Pill>
-              </div>
+              </ActionRow>
               <StatusBanner
                 tone={
                   getSlaTone(
@@ -5041,14 +5041,14 @@ export function StudioSettingsClient({
               eyebrow="Public presence"
               title="Selected brand target"
             >
-              <div className="flex flex-wrap items-center gap-2">
+              <ActionRow compact>
                 <Pill>
                   {selectedBrand?.themePreset ?? editorState.themePreset}
                 </Pill>
                 <Pill>
                   {selectedBrand?.accentColor ?? editorState.accentColor}
                 </Pill>
-              </div>
+              </ActionRow>
             </SettingsRailCard>
           </aside>
         </div>

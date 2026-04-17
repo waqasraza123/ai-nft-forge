@@ -3,6 +3,19 @@
 ## Date
 2026-04-17
 
+## Latest Checkpoint (Studio Settings Row Finalization)
+- Completed the final `studio-settings` row-standardization step in `apps/web/src/app/(studio)/studio/settings/studio-settings-client.tsx`:
+  - Replaced the remaining `div` rows using `flex flex-wrap items-center` variants with shared `ActionRow` (`compact`, `padTop`, and default variants) in all remaining workspace, brand, membership, lifecycle, offboarding, role escalation, decommission, and sidebar rail action clusters.
+  - Kept form behavior, permissions, API calls, and success/error states unchanged.
+- Verification:
+  - `pnpm exec prettier --write apps/web/src/app/'(studio)'/studio/settings/studio-settings-client.tsx`
+  - `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+  - `pnpm --filter @ai-nft-forge/web build`
+
+## Current Objective
+- Shared UI Primitive Consolidation
+- Current step: close out phase-acceptance by running one global responsive/consistency audit over all remaining Studio/Ops route-local wrappers and lock the migration as production-complete before the next optional art-direction tuning wave.
+
 ## Latest Checkpoint (Collections and Retention Row Standardization)
 - Completed the next production-grade consistency pass in Studio/Ops high-traffic rails:
   - `apps/web/src/app/(studio)/studio/collections/studio-collections-client.tsx`
