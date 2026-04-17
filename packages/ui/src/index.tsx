@@ -325,6 +325,15 @@ type OpsPanelCardProps = PropsWithChildren<{
   tone?: "critical" | "healthy" | "neutral" | "warning";
 }>;
 
+type OpsSummaryCardProps = PropsWithChildren<{
+  className?: string;
+  detail: string;
+  label: string;
+  meta: string;
+  tone?: "critical" | "healthy" | "neutral" | "warning";
+  value: string;
+}>;
+
 type ActionRowProps = PropsWithChildren<{
   className?: string;
   compact?: boolean;
@@ -601,6 +610,28 @@ export function OpsPanelCard({
     <article className={cn(opsPanelCardVariants({ tone }), className)}>
       {children}
     </article>
+  );
+}
+
+export function OpsSummaryCard({
+  className,
+  detail,
+  label,
+  meta,
+  tone = "neutral",
+  value
+}: OpsSummaryCardProps) {
+  return (
+    <OpsPanelCard className={cn("space-y-1", className)} tone={tone}>
+      <div className="space-y-1 text-xs font-semibold uppercase tracking-[0.15em]">
+        <span>{label}</span>
+      </div>
+      <p className="mt-2 text-xl font-semibold text-[color:var(--color-text)]">
+        {value}
+      </p>
+      <p className="mt-2 text-sm text-[color:var(--color-muted)]">{detail}</p>
+      <p className="mt-3 text-xs text-[color:var(--color-muted)]">{meta}</p>
+    </OpsPanelCard>
   );
 }
 

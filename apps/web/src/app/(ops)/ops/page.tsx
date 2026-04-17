@@ -1,6 +1,6 @@
 import {
   OpsQuickActions,
-  OpsPanelCard,
+  OpsSummaryCard,
   PageShell,
   Pill,
   SurfaceCard
@@ -45,33 +45,6 @@ function resolveTone(
   }
 
   return "neutral";
-}
-
-function OpsCommandSummaryCard({
-  detail,
-  label,
-  meta,
-  tone,
-  value
-}: {
-  detail: string;
-  label: string;
-  meta: string;
-  tone: OpsPageTone;
-  value: string;
-}) {
-  return (
-    <OpsPanelCard tone={tone} className="space-y-1">
-      <div className="space-y-1 text-xs font-semibold uppercase tracking-[0.15em]">
-        <span>{label}</span>
-      </div>
-      <p className="mt-2 text-xl font-semibold text-[color:var(--color-text)]">
-        {value}
-      </p>
-      <p className="mt-2 text-sm">{detail}</p>
-      <p className="mt-3 text-xs text-[color:var(--color-muted)]">{meta}</p>
-    </OpsPanelCard>
-  );
 }
 
 function opsActions(runtimeBackendHealthUrl: string | null) {
@@ -177,21 +150,21 @@ export default async function OpsPage() {
               <Pill>{availableWorkspaceCount} accessible</Pill>
             </div>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <OpsCommandSummaryCard
+              <OpsSummaryCard
                 detail="Web control plane"
                 label="Control plane"
                 meta={`Reported ${formatDateTime(runtime.web.timestamp)}`}
                 tone={controlPlaneTone}
                 value={runtime.web.status}
               />
-              <OpsCommandSummaryCard
+              <OpsSummaryCard
                 detail={runtime.generationBackend.readiness.message}
                 label="Backend readiness"
                 meta={`Checked ${formatDateTime(runtime.generationBackend.readiness.checkedAt)}`}
                 tone={readinessTone}
                 value={runtime.generationBackend.readiness.status}
               />
-              <OpsCommandSummaryCard
+              <OpsSummaryCard
                 detail={
                   generationBackendProvider?.checkpointName ??
                   "No checkpoint reported"
@@ -204,7 +177,7 @@ export default async function OpsPage() {
                 tone={healthTone}
                 value={generationBackendProvider?.kind ?? "backend unavailable"}
               />
-              <OpsCommandSummaryCard
+              <OpsSummaryCard
                 detail={
                   currentWorkspace
                     ? `${runtime.operator.access?.role ?? "operator"} access for ${currentWorkspace.slug}`

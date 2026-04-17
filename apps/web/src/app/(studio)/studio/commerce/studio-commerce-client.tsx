@@ -27,6 +27,8 @@ import {
   EmptyState,
   FieldLabel,
   FieldStack,
+  SectionHeading,
+  SignalCard,
   SelectField,
   InsetMetric as CommerceInsetMetric,
   PageShell,
@@ -77,42 +79,6 @@ const listCardBaseClasses =
 
 const commerceHeroMetricClasses =
   "rounded-[1.5rem] border border-white/10 bg-black/25 p-4 text-white shadow-[0_18px_40px_rgba(15,23,42,0.18)] backdrop-blur-xl";
-
-function CommerceHeroMetric(input: {
-  detail: string;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className={commerceHeroMetricClasses}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/60">
-        {input.label}
-      </p>
-      <p className="mt-2 text-lg font-semibold text-white">{input.value}</p>
-      <p className="mt-2 text-sm leading-6 text-white/72">{input.detail}</p>
-    </div>
-  );
-}
-
-function CommerceSectionHeading(input: {
-  body: string;
-  eyebrow: string;
-  title: string;
-}) {
-  return (
-    <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
-          {input.eyebrow}
-        </p>
-        <h3 className="mt-1 text-xl font-semibold">{input.title}</h3>
-      </div>
-      <p className="max-w-xs text-sm leading-6 text-[color:var(--color-muted)]">
-        {input.body}
-      </p>
-    </div>
-  );
-}
 
 function createFallbackErrorMessage(response: Response) {
   switch (response.status) {
@@ -890,19 +856,34 @@ export function StudioCommerceClient({
                   </Pill>
                 </div>
                 <div className="grid gap-3 md:grid-cols-3">
-                  <CommerceHeroMetric
+                  <SignalCard
+                    className={cn(
+                      commerceHeroMetricClasses,
+                      "text-white/80 [&>strong]:text-white [&>strong]:text-lg"
+                    )}
                     detail="Workspace owner wallet currently supervising this commerce scope."
                     label="Operator authority"
+                    tone="default"
                     value={shortenWalletAddress(ownerWalletAddress)}
                   />
-                  <CommerceHeroMetric
+                  <SignalCard
+                    className={cn(
+                      commerceHeroMetricClasses,
+                      "text-white/80 [&>strong]:text-white [&>strong]:text-lg"
+                    )}
                     detail={`${formatPercent(completionRate)} payment completion rate.`}
                     label="Latest paid"
+                    tone="default"
                     value={formatTimestamp(latestCompletedCheckoutAt)}
                   />
-                  <CommerceHeroMetric
+                  <SignalCard
+                    className={cn(
+                      commerceHeroMetricClasses,
+                      "text-white/80 [&>strong]:text-white [&>strong]:text-lg"
+                    )}
                     detail={`${formatPercent(fulfillmentRate)} fulfillment completion rate.`}
                     label="Latest fulfilled"
+                    tone="default"
                     value={formatTimestamp(latestFulfilledCheckoutAt)}
                   />
                 </div>
@@ -973,8 +954,9 @@ export function StudioCommerceClient({
         <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
           <div className="space-y-6">
             <section className={cn(commercePanelSectionClasses)}>
-              <CommerceSectionHeading
-                body="Separate manual fulfillment, automation recovery, and open reservations before reviewing the full session ledger."
+              <SectionHeading
+                className="mb-4"
+                lead="Separate manual fulfillment, automation recovery, and open reservations before reviewing the full session ledger."
                 eyebrow="Attention queue"
                 title="What needs action now"
               />
@@ -1036,8 +1018,9 @@ export function StudioCommerceClient({
             </section>
 
             <section className={cn(commercePanelSectionClasses)}>
-              <CommerceSectionHeading
-                body="Every session remains available for payment recovery, release, fulfillment updates, and provider verification."
+              <SectionHeading
+                className="mb-4"
+                lead="Every session remains available for payment recovery, release, fulfillment updates, and provider verification."
                 eyebrow="Session workspace"
                 title="Full transaction ledger"
               />
@@ -1080,8 +1063,9 @@ export function StudioCommerceClient({
 
           <aside className="space-y-6">
             <section className={cn(commercePanelSectionClasses)}>
-              <CommerceSectionHeading
-                body="Make the current commerce boundary explicit before exporting, retrying automation, or reviewing buyer sessions."
+              <SectionHeading
+                className="mb-4"
+                lead="Make the current commerce boundary explicit before exporting, retrying automation, or reviewing buyer sessions."
                 eyebrow="Scope"
                 title="Brand and workspace context"
               />
@@ -1160,8 +1144,9 @@ export function StudioCommerceClient({
             </section>
 
             <section className={cn(commercePanelSectionClasses)}>
-              <CommerceSectionHeading
-                body="Focus on the live or recently active releases carrying the most open checkout and fulfillment backlog."
+              <SectionHeading
+                className="mb-4"
+                lead="Focus on the live or recently active releases carrying the most open checkout and fulfillment backlog."
                 eyebrow="Releases"
                 title="Collection pressure"
               />
@@ -1223,8 +1208,9 @@ export function StudioCommerceClient({
             </section>
 
             <section className={cn(commercePanelSectionClasses)}>
-              <CommerceSectionHeading
-                body="Export the same filtered session scope you are reviewing live, or verify timing and automation cadence before a handoff."
+              <SectionHeading
+                className="mb-4"
+                lead="Export the same filtered session scope you are reviewing live, or verify timing and automation cadence before a handoff."
                 eyebrow="Reports"
                 title="Export and verify"
               />
