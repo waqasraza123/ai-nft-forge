@@ -18,6 +18,9 @@ import {
   ActionButton,
   ActionLink,
   cn,
+  FieldLabel,
+  FieldStack,
+  InputField,
   OpsPanelCard,
   OpsEmptyState,
   OpsStatusNotice,
@@ -82,14 +85,6 @@ function resolveOpsGridClass() {
 
 function resolveOpsSettingsGridClass() {
   return "grid gap-3 md:grid-cols-2 xl:grid-cols-4";
-}
-
-function resolveOpsFieldClass() {
-  return "grid gap-1.5 text-sm";
-}
-
-function resolveOpsInputClass() {
-  return "w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30";
 }
 
 function resolveOpsCheckboxClass() {
@@ -2650,10 +2645,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                   <Pill>Local now {alertSchedule.localTimeLabel ?? "n/a"}</Pill>
                 </div>
                 <div className={resolveOpsSettingsGridClass()}>
-                  <label className={resolveOpsFieldClass()}>
-                    <span>Timezone</span>
-                    <input
-                      className={resolveOpsInputClass()}
+                  <FieldStack>
+                    <FieldLabel>Timezone</FieldLabel>
+                    <InputField
                       disabled={
                         !canManageOpsPolicy ||
                         savingAlertScheduleAction !== null
@@ -2667,11 +2661,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       type="text"
                       value={alertScheduleDraft.timezone}
                     />
-                  </label>
-                  <label className={resolveOpsFieldClass()}>
-                    <span>Start</span>
-                    <input
-                      className={resolveOpsInputClass()}
+                  </FieldStack>
+                  <FieldStack>
+                    <FieldLabel>Start</FieldLabel>
+                    <InputField
                       disabled={
                         !canManageOpsPolicy ||
                         savingAlertScheduleAction !== null ||
@@ -2687,11 +2680,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       type="time"
                       value={alertScheduleDraft.startTime}
                     />
-                  </label>
-                  <label className={resolveOpsFieldClass()}>
-                    <span>End</span>
-                    <input
-                      className={resolveOpsInputClass()}
+                  </FieldStack>
+                  <FieldStack>
+                    <FieldLabel>End</FieldLabel>
+                    <InputField
                       disabled={
                         !canManageOpsPolicy ||
                         savingAlertScheduleAction !== null ||
@@ -2707,7 +2699,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       type="time"
                       value={alertScheduleDraft.endTime}
                     />
-                  </label>
+                  </FieldStack>
                   <label className={resolveOpsCheckboxClass()}>
                     <input
                       className={resolveOpsCheckboxInputClass()}
@@ -2857,10 +2849,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                   </Pill>
                 </div>
                 <div className={resolveOpsSettingsGridClass()}>
-                  <label className={resolveOpsFieldClass()}>
-                    <span>First reminder (minutes)</span>
-                    <input
-                      className={resolveOpsInputClass()}
+                  <FieldStack>
+                    <FieldLabel>First reminder (minutes)</FieldLabel>
+                    <InputField
                       disabled={
                         !canManageOpsPolicy ||
                         savingAlertEscalationAction !== null
@@ -2876,11 +2867,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       type="number"
                       value={alertEscalationDraft.firstReminderDelayMinutes}
                     />
-                  </label>
-                  <label className={resolveOpsFieldClass()}>
-                    <span>Repeat interval (minutes)</span>
-                    <input
-                      className={resolveOpsInputClass()}
+                  </FieldStack>
+                  <FieldStack>
+                    <FieldLabel>Repeat interval (minutes)</FieldLabel>
+                    <InputField
                       disabled={
                         !canManageOpsPolicy ||
                         savingAlertEscalationAction !== null
@@ -2896,7 +2886,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       type="number"
                       value={alertEscalationDraft.repeatReminderIntervalMinutes}
                     />
-                  </label>
+                  </FieldStack>
                 </div>
                 <div className={resolveOpsActionRowClass()}>
                   <OpsActionButton
