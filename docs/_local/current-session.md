@@ -563,3 +563,14 @@ Finish the production-grade consistency phase on remaining high-traffic Studio/O
   - `pnpm --filter @ai-nft-forge/ui typecheck`
   - `pnpm --filter @ai-nft-forge/web build`
 - Current phase status: production-grade UI consolidation continues; next target is a focused settings/form control pass and final cross-screen spacing audit before broad release readiness sign-off.
+
+## Latest Checkpoint (Checkout Theater Upgrade)
+- Completed the next premium public-flow step by upgrading the hosted checkout checkpoint page:
+  - `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/checkout/[checkoutSessionId]/page.tsx`
+- Added collectible-led hero composition through `CollectibleEditorialBand` and `CollectiblePreviewCard`, and moved the checkpoint into layered surface hierarchy with status-state metadata chips.
+- Kept all checkout behavior, action states, and provider flows unchanged.
+- Verification:
+  - `pnpm exec prettier --write 'apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/checkout/[checkoutSessionId]/page.tsx'`
+  - `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+  - `pnpm --filter @ai-nft-forge/web build`
+- Current phase status: main public storefront, collection, and creator surfaces are now in premium composition state; next target is a final cross-route consistency sweep on remaining duplicate non-semantic surfaces in Studio Ops boundary cases.
