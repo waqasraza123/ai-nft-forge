@@ -218,6 +218,31 @@ Complete the Tailwind migration checkpoint in `apps/web` and `packages/ui`, stab
 - Rewired `apps/web/src/app/(studio)/studio/commerce/studio-commerce-client.tsx` to consume shared `InsetMetric` and `EmptyState` primitives, reducing divergence between Studio route treatments.
 - This moves the UI migration into the shared-system consolidation step rather than continuing to accumulate one-off route helpers.
 
+## Date
+2026-04-17
+
+## Current Objective
+Finish the production-grade consistency phase on remaining high-traffic Studio/Ops controls while preserving operation-rail clarity and control integrity.
+
+## Latest Checkpoint (Ops Command Consistency)
+- Completed the next consistency pass in `apps/web/src/app/(ops)/ops/ops-operator-panel.tsx`:
+  - Replaced remaining native `<button>` action controls with shared `ActionButton` usage through a local `OpsActionButton` wrapper.
+  - Replaced legacy direct `Link` action/link styling with `ActionLink` for auth/ops navigation actions.
+  - Removed duplicated local action/link styling helpers from the operator command surface where behavior was already stable.
+  - Kept dense ops modules readable by preserving section-level command structure and spacing rhythm.
+- Completed the final button-normalization in `studio` detail surfaces where practical:
+  - `apps/web/src/app/(studio)/studio/collections/studio-collections-client.tsx` now uses shared `ActionButton` for collection browser cards.
+  - `apps/web/src/app/(studio)/studio/commerce/studio-commerce-client.tsx` converted remaining inline brand-scope buttons to `ActionButton`.
+
+## Verification (Ops Command Consistency)
+- `pnpm exec prettier --write apps/web/src/app/'(studio)'/studio/collections/studio-collections-client.tsx apps/web/src/app/'(studio)'/studio/commerce/studio-commerce-client.tsx apps/web/src/app/'(ops)'/ops/ops-operator-panel.tsx` ✅
+- `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false` ✅
+- `pnpm --filter @ai-nft-forge/web build` ✅
+
+## Next Follow-up
+- Reconcile route-level action rhythm by extracting any remaining repeated `OpsAction*` patterns into shared primitives in `packages/ui` only if they appear in two+ non-adjacent routes.
+- Perform one final sweep of remaining route-local shell helpers before preparing the next production design pass.
+
 ## Verification (Shared UI Primitive Consolidation)
 - `pnpm exec prettier --write packages/ui/src/index.tsx apps/web/src/app/'(studio)'/studio/settings/studio-settings-client.tsx apps/web/src/app/'(studio)'/studio/commerce/studio-commerce-client.tsx` ✅
 - `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false` ✅

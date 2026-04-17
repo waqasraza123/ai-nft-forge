@@ -493,15 +493,16 @@ function CollectionDraftBrowserCard({
   });
 
   return (
-    <button
+    <ActionButton
       className={cn(
-        "grid gap-3 rounded-[1.75rem] border bg-[linear-gradient(180deg,rgba(255,255,255,0.11),rgba(255,255,255,0.03))] p-3 text-left shadow-[var(--shadow-surface)] transition",
+        "grid w-full gap-3 rounded-[1.75rem] border bg-[linear-gradient(180deg,rgba(255,255,255,0.11),rgba(255,255,255,0.03))] p-3 text-left shadow-[var(--shadow-surface)] transition",
         "border-[color:var(--color-line)] hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-surface-strong)]",
         isSelected
           ? "border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)]/40"
           : null
       )}
       onClick={onSelect}
+      tone="ghost"
       type="button"
     >
       <div className="grid gap-2">
@@ -537,7 +538,7 @@ function CollectionDraftBrowserCard({
           </span>
         </div>
       </div>
-    </button>
+    </ActionButton>
   );
 }
 

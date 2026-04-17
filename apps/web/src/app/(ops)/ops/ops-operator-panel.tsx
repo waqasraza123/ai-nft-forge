@@ -5,12 +5,18 @@ import {
   opsAlertScheduleDayValues,
   type OpsAlertScheduleDay
 } from "@ai-nft-forge/shared";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type ReactNode, useEffect, useState } from "react";
+import {
+  type ReactNode,
+  type ButtonHTMLAttributes,
+  useEffect,
+  useState
+} from "react";
 
 import {
   StatusBanner,
+  ActionButton,
+  ActionLink,
   cn,
   MetricTile,
   Pill
@@ -103,10 +109,6 @@ function resolveOpsSettingsGridClass() {
   return "grid gap-3 md:grid-cols-2 xl:grid-cols-4";
 }
 
-function resolveOpsActionButtonClass() {
-  return "inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-text)] hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]";
-}
-
 function resolveOpsFieldClass() {
   return "grid gap-1.5 text-sm";
 }
@@ -123,12 +125,21 @@ function resolveOpsCheckboxInputClass() {
   return "size-4 rounded border border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]";
 }
 
-function resolveOpsActionLinkClass() {
-  return "inline-flex items-center rounded-full border border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)] px-3 py-1.5 text-sm font-semibold text-[color:var(--color-text)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] hover:bg-[color:var(--color-accent)] hover:text-white";
-}
+type OpsActionButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  children: ReactNode;
+};
 
-function resolveOpsInlineLinkClass() {
-  return "text-sm font-semibold text-[color:var(--color-accent)] underline underline-offset-4 hover:opacity-90";
+function OpsActionButton({ className, ...props }: OpsActionButtonProps) {
+  return (
+    <ActionButton
+      className={cn(
+        "border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-text)] hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]",
+        className
+      )}
+      tone="secondary"
+      {...props}
+    />
+  );
 }
 
 function resolveOpsPillRowClass() {
@@ -626,7 +637,9 @@ function OpsCommandModule({
         </h3>
         <p className="text-sm text-[color:var(--color-muted)]">{description}</p>
       </div>
-      {actions ? <div className="mt-2 flex flex-wrap gap-2">{actions}</div> : null}
+      {actions ? (
+        <div className="mt-2 flex flex-wrap gap-2">{actions}</div>
+      ) : null}
       <div className="space-y-3">{children}</div>
     </article>
   );
@@ -758,8 +771,7 @@ function ActivityItem({
       ) : null}
       {onRetry ? (
         <div className={resolveOpsActionRowClass()}>
-          <button
-            className={resolveOpsActionButtonClass()}
+          <OpsActionButton
             disabled={retrying}
             onClick={() => {
               void onRetry(activity.id);
@@ -767,7 +779,7 @@ function ActivityItem({
             type="button"
           >
             {retrying ? "Retrying…" : "Retry generation"}
-          </button>
+          </OpsActionButton>
         </div>
       ) : null}
     </div>
@@ -888,10 +900,7 @@ function AlertDeliveryItem({
 
   return (
     <div
-      className={cn(
-        "rounded-2xl border p-4",
-        resolveOpsActivityItemTone(tone)
-      )}
+      className={cn("rounded-2xl border p-4", resolveOpsActivityItemTone(tone))}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid gap-1">
@@ -950,10 +959,7 @@ function ActiveAlertItem({
 
   return (
     <div
-      className={cn(
-        "rounded-2xl border p-4",
-        resolveOpsActivityItemTone(tone)
-      )}
+      className={cn("rounded-2xl border p-4", resolveOpsActivityItemTone(tone))}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid gap-1">
@@ -995,8 +1001,7 @@ function ActiveAlertItem({
       </div>
       <div className={resolveOpsActionRowClass()}>
         {!alert.acknowledgedAt ? (
-          <button
-            className={resolveOpsActionButtonClass()}
+          <OpsActionButton
             disabled={acknowledging}
             onClick={() => {
               void onAcknowledge(alert.id);
@@ -1004,10 +1009,9 @@ function ActiveAlertItem({
             type="button"
           >
             {acknowledging ? "Acknowledging…" : "Acknowledge alert"}
-          </button>
+          </OpsActionButton>
         ) : null}
-        <button
-          className={resolveOpsActionButtonClass()}
+        <OpsActionButton
           disabled={muting || clearingMute}
           onClick={() => {
             void onMute(alert.id, 1);
@@ -1015,9 +1019,8 @@ function ActiveAlertItem({
           type="button"
         >
           {muting ? "Saving mute…" : "Mute 1h"}
-        </button>
-        <button
-          className={resolveOpsActionButtonClass()}
+        </OpsActionButton>
+        <OpsActionButton
           disabled={muting || clearingMute}
           onClick={() => {
             void onMute(alert.id, 24);
@@ -1025,9 +1028,8 @@ function ActiveAlertItem({
           type="button"
         >
           {muting ? "Saving mute…" : "Mute 1d"}
-        </button>
-        <button
-          className={resolveOpsActionButtonClass()}
+        </OpsActionButton>
+        <OpsActionButton
           disabled={muting || clearingMute}
           onClick={() => {
             void onMute(alert.id, 24 * 7);
@@ -1035,10 +1037,9 @@ function ActiveAlertItem({
           type="button"
         >
           {muting ? "Saving mute…" : "Mute 7d"}
-        </button>
+        </OpsActionButton>
         {alert.mutedUntil ? (
-          <button
-            className={resolveOpsActionButtonClass()}
+          <OpsActionButton
             disabled={muting || clearingMute}
             onClick={() => {
               void onClearMute(alert.id);
@@ -1046,7 +1047,7 @@ function ActiveAlertItem({
             type="button"
           >
             {clearingMute ? "Clearing mute…" : "Clear mute"}
-          </button>
+          </OpsActionButton>
         ) : null}
       </div>
     </div>
@@ -1063,7 +1064,12 @@ function ActiveMuteItem({
   onClear: (code: string) => Promise<void>;
 }) {
   return (
-    <div className={cn("rounded-2xl border p-4", resolveOpsActivityItemTone("neutral"))}>
+    <div
+      className={cn(
+        "rounded-2xl border p-4",
+        resolveOpsActivityItemTone("neutral")
+      )}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid gap-1">
           <strong>{mute.code}</strong>
@@ -1072,8 +1078,7 @@ function ActiveMuteItem({
         <Pill>mute</Pill>
       </div>
       <div className={resolveOpsActionRowClass()}>
-        <button
-          className={resolveOpsActionButtonClass()}
+        <OpsActionButton
           disabled={clearing}
           onClick={() => {
             void onClear(mute.code);
@@ -1081,7 +1086,7 @@ function ActiveMuteItem({
           type="button"
         >
           {clearing ? "Clearing mute…" : "Clear mute"}
-        </button>
+        </OpsActionButton>
       </div>
     </div>
   );
@@ -1813,9 +1818,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                 <Pill>Retry actions disabled</Pill>
               </div>
               <div className="mt-3">
-                <Link className={resolveOpsActionLinkClass()} href="/sign-in?next=%2Fops">
+                <ActionLink href="/sign-in?next=%2Fops" tone="action">
                   Sign in to /ops
-                </Link>
+                </ActionLink>
               </div>
             </OpsCommandModule>
             <OpsCommandModule
@@ -2164,8 +2169,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
           </OpsCommandModule>
           <OpsCommandModule
             actions={
-              <button
-                className={resolveOpsActionButtonClass()}
+              <OpsActionButton
                 disabled={runningReconciliation}
                 onClick={() => {
                   void runReconciliation();
@@ -2175,7 +2179,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                 {runningReconciliation
                   ? "Running reconciliation…"
                   : "Run reconciliation"}
-              </button>
+              </OpsActionButton>
             }
             description={
               reconciliation
@@ -2260,8 +2264,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       ))}
                     </div>
                     <div className={resolveOpsActionRowClass()}>
-                      <button
-                        className={resolveOpsActionButtonClass()}
+                      <OpsActionButton
                         disabled={
                           !issue.repairable ||
                           repairingReconciliationIssueId === issue.id
@@ -2274,9 +2277,8 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                         {repairingReconciliationIssueId === issue.id
                           ? "Repairing…"
                           : "Repair issue"}
-                      </button>
-                      <button
-                        className={resolveOpsActionButtonClass()}
+                      </OpsActionButton>
+                      <OpsActionButton
                         disabled={ignoringReconciliationIssueId === issue.id}
                         onClick={() => {
                           void ignoreReconciliationIssue(issue.id);
@@ -2286,7 +2288,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                         {ignoringReconciliationIssueId === issue.id
                           ? "Ignoring…"
                           : "Ignore issue"}
-                      </button>
+                      </OpsActionButton>
                     </div>
                   </div>
                 ))}
@@ -2435,7 +2437,11 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
           >
             {captureAutomation ? (
               <>
-                <div className={resolveOpsStatusBannerToneClass(captureAutomationTone)}>
+                <div
+                  className={resolveOpsStatusBannerToneClass(
+                    captureAutomationTone
+                  )}
+                >
                   <strong>{captureAutomation.status}</strong>
                   <span>{captureAutomation.message}</span>
                 </div>
@@ -2482,9 +2488,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
           </OpsCommandModule>
           <OpsCommandModule
             actions={
-              <Link className={resolveOpsInlineLinkClass()} href="/ops/fleet">
+              <ActionLink href="/ops/fleet" tone="inline">
                 Fleet triage
-              </Link>
+              </ActionLink>
             }
             description={
               reconciliationAutomation
@@ -2564,7 +2570,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
             tone={resolveOpsCommandToneFromObservability(observability?.status)}
           >
             {observability?.windows.length ? (
-                <div className="space-y-2.5">
+              <div className="space-y-2.5">
                 {observability.windows.map((window) => (
                   <WindowSummary key={window.windowKey} window={window} />
                 ))}
@@ -2603,7 +2609,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                     </span>
                   </StatusBanner>
                 ) : null}
-                  <div className={resolveOpsStatusBannerToneClass(alertRoutingTone)}>
+                <div
+                  className={resolveOpsStatusBannerToneClass(alertRoutingTone)}
+                >
                   <strong>{alertRouting.status}</strong>
                   <span>{alertRouting.message}</span>
                 </div>
@@ -2623,8 +2631,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                   </Pill>
                 </div>
                 <div className={resolveOpsActionRowClass()}>
-                  <button
-                    className={resolveOpsActionButtonClass()}
+                  <OpsActionButton
                     disabled={
                       !canManageOpsPolicy ||
                       savingAlertRoutingAction !== null ||
@@ -2638,9 +2645,8 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                     {savingAlertRoutingAction === "all"
                       ? "Saving…"
                       : "Route all alerts"}
-                  </button>
-                  <button
-                    className={resolveOpsActionButtonClass()}
+                  </OpsActionButton>
+                  <OpsActionButton
                     disabled={
                       !canManageOpsPolicy ||
                       savingAlertRoutingAction !== null ||
@@ -2654,9 +2660,8 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                     {savingAlertRoutingAction === "critical_only"
                       ? "Saving…"
                       : "Critical only"}
-                  </button>
-                  <button
-                    className={resolveOpsActionButtonClass()}
+                  </OpsActionButton>
+                  <OpsActionButton
                     disabled={
                       !canManageOpsPolicy ||
                       savingAlertRoutingAction !== null ||
@@ -2670,10 +2675,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                     {savingAlertRoutingAction === "disabled"
                       ? "Saving…"
                       : "Disable webhook"}
-                  </button>
+                  </OpsActionButton>
                   {alertRouting.policy.source === "owner_override" ? (
-                    <button
-                      className={resolveOpsActionButtonClass()}
+                    <OpsActionButton
                       disabled={
                         !canManageOpsPolicy || savingAlertRoutingAction !== null
                       }
@@ -2685,7 +2689,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       {savingAlertRoutingAction === "default"
                         ? "Resetting…"
                         : "Use default"}
-                    </button>
+                    </OpsActionButton>
                   ) : null}
                 </div>
               </>
@@ -2711,7 +2715,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                     </span>
                   </StatusBanner>
                 ) : null}
-                <div className={resolveOpsStatusBannerToneClass(alertScheduleTone)}>
+                <div
+                  className={resolveOpsStatusBannerToneClass(alertScheduleTone)}
+                >
                   <strong>{alertSchedule.status}</strong>
                   <span>{alertSchedule.message}</span>
                 </div>
@@ -2830,9 +2836,8 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       alertScheduleDraft.activeDays.includes(activeDay);
 
                     return (
-                      <button
+                      <OpsActionButton
                         aria-pressed={selected}
-                        className={resolveOpsActionButtonClass()}
                         disabled={
                           !canManageOpsPolicy ||
                           savingAlertScheduleAction !== null
@@ -2860,13 +2865,12 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       >
                         {alertScheduleDayLabelByValue[activeDay]}
                         {selected ? " on" : ""}
-                      </button>
+                      </OpsActionButton>
                     );
                   })}
                 </div>
                 <div className={resolveOpsActionRowClass()}>
-                  <button
-                    className={resolveOpsActionButtonClass()}
+                  <OpsActionButton
                     disabled={
                       !canManageOpsPolicy || savingAlertScheduleAction !== null
                     }
@@ -2878,10 +2882,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                     {savingAlertScheduleAction === "save"
                       ? "Saving…"
                       : "Save schedule"}
-                  </button>
+                  </OpsActionButton>
                   {alertSchedule.policy.source === "owner_override" ? (
-                    <button
-                      className={resolveOpsActionButtonClass()}
+                    <OpsActionButton
                       disabled={
                         !canManageOpsPolicy ||
                         savingAlertScheduleAction !== null
@@ -2894,7 +2897,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       {savingAlertScheduleAction === "default"
                         ? "Resetting…"
                         : "Use default"}
-                    </button>
+                    </OpsActionButton>
                   ) : null}
                 </div>
               </>
@@ -2920,7 +2923,11 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                     </span>
                   </StatusBanner>
                 ) : null}
-                <div className={resolveOpsStatusBannerToneClass(alertEscalationTone)}>
+                <div
+                  className={resolveOpsStatusBannerToneClass(
+                    alertEscalationTone
+                  )}
+                >
                   <strong>{alertEscalation.status}</strong>
                   <span>{alertEscalation.message}</span>
                 </div>
@@ -2999,8 +3006,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                   </label>
                 </div>
                 <div className={resolveOpsActionRowClass()}>
-                  <button
-                    className={resolveOpsActionButtonClass()}
+                  <OpsActionButton
                     disabled={
                       !canManageOpsPolicy ||
                       savingAlertEscalationAction !== null
@@ -3013,10 +3019,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                     {savingAlertEscalationAction === "save"
                       ? "Saving…"
                       : "Save escalation"}
-                  </button>
+                  </OpsActionButton>
                   {alertEscalation.policy.source === "owner_override" ? (
-                    <button
-                      className={resolveOpsActionButtonClass()}
+                    <OpsActionButton
                       disabled={
                         !canManageOpsPolicy ||
                         savingAlertEscalationAction !== null
@@ -3029,7 +3034,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       {savingAlertEscalationAction === "default"
                         ? "Resetting…"
                         : "Use default"}
-                    </button>
+                    </OpsActionButton>
                   ) : null}
                 </div>
               </>

@@ -1123,13 +1123,14 @@ export function StudioCommerceClient({
                 />
               </div>
               <div className="space-y-2">
-                <button
+                <ActionButton
                   className={cn(
                     listCardBaseClasses,
                     dashboard.activeBrandSlug === null
                       ? "border-[color:var(--color-accent)] ring-2 ring-[color:var(--color-accent)]"
                       : "hover:border-[color:var(--color-accent)]"
                   )}
+                  tone="secondary"
                   onClick={() => {
                     void handleBrandScopeChange(null);
                   }}
@@ -1140,15 +1141,16 @@ export function StudioCommerceClient({
                     {dashboard.summary.totalCheckoutCount.toString()} sessions
                     across the workspace
                   </span>
-                </button>
+                </ActionButton>
                 {sortedBrands.map((brand) => (
-                  <button
+                  <ActionButton
                     className={cn(
                       listCardBaseClasses,
                       dashboard.activeBrandSlug === brand.brandSlug
                         ? "border-[color:var(--color-accent)] ring-2 ring-[color:var(--color-accent)]"
                         : "hover:border-[color:var(--color-accent)]"
                     )}
+                    tone="secondary"
                     key={brand.brandSlug}
                     onClick={() => {
                       void handleBrandScopeChange(brand.brandSlug);
@@ -1161,7 +1163,7 @@ export function StudioCommerceClient({
                       {brand.unfulfilledCheckoutCount.toString()} unfulfilled ·{" "}
                       {brand.completedCheckoutCount.toString()} completed
                     </span>
-                  </button>
+                  </ActionButton>
                 ))}
               </div>
             </section>
