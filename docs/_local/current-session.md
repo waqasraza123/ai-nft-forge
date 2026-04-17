@@ -3,6 +3,23 @@
 ## Date
 2026-04-17
 
+## Latest Checkpoint (Collections and Retention Row Standardization)
+- Completed the next production-grade consistency pass in Studio/Ops high-traffic rails:
+  - `apps/web/src/app/(studio)/studio/collections/studio-collections-client.tsx`
+    - Removed the remaining local `flex flex-wrap` chip/action row patterns and replaced them with shared `ActionRow` usage (including row-cue, status, metadata, and control cluster rows).
+  - `apps/web/src/app/(ops)/ops/retention/ops-retention-client.tsx`
+    - Replaced remaining bulk-action chip rows with shared `ActionRow`.
+  - `apps/web/src/app/(studio)/studio/commerce/studio-commerce-client.tsx`
+    - Replaced commerce hero metric chip row with shared `ActionRow`.
+- Verification:
+  - `pnpm exec prettier --write apps/web/src/app/'(studio)'/studio/collections/studio-collections-client.tsx apps/web/src/app/'(ops)'/ops/retention/ops-retention-client.tsx apps/web/src/app/'(studio)'/studio/commerce/studio-commerce-client.tsx`
+  - `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+  - `pnpm --filter @ai-nft-forge/web build`
+
+## Current Objective
+- Shared UI Primitive Consolidation
+- Current step: final audit of remaining `studio-settings` wrap rows (`flex flex-wrap ...`) and then freeze this phase as production-complete.
+
 ## Latest Checkpoint (Studio/Ops Row Primitive Sweep)
 - Completed the next production-grade route-level primitive migration in remaining row-heavy Studio/Ops surfaces:
   - Replaced `flex flex-wrap gap-2` rows with shared primitives in:

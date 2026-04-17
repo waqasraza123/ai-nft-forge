@@ -78,7 +78,6 @@ const collectionPanelHeaderClasses = "grid gap-1.5";
 const collectionBrowserStatGridClasses =
   "grid gap-3 sm:grid-cols-2 xl:grid-cols-3";
 const collectionCreateFormGridClasses = "grid gap-3 md:grid-cols-2";
-const collectionCuesClasses = "flex flex-wrap items-center gap-2";
 const collectionFocusPanelClasses = "grid gap-4 md:grid-cols-[240px_1fr]";
 const collectionFocusMediaClasses =
   "overflow-hidden rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)]";
@@ -496,28 +495,34 @@ function CollectionDraftBrowserCard({
           subtitle={draft.slug}
           title={draft.title}
         />
-        <div className="flex flex-wrap justify-end gap-2">
+        <ActionRow compact className="justify-end">
           <Pill>{attentionLabel}</Pill>
-        </div>
+        </ActionRow>
       </div>
       <div className="grid gap-1.5">
-        <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+        <ActionRow
+          compact
+          className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]"
+        >
           <Pill>{formatDraftStatus(draft.status)}</Pill>
           <Pill>{draft.publication ? "Published" : "Draft only"}</Pill>
           {hasInvalidItems ? <Pill>Blocked</Pill> : null}
-        </div>
+        </ActionRow>
         <strong>{draft.title}</strong>
         <p>
           {draft.description?.trim() ||
             "No internal release framing has been saved yet."}
         </p>
-        <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-[color:var(--color-muted)]">
+        <ActionRow
+          compact
+          className="text-xs text-[color:var(--color-muted)] gap-x-4 gap-y-1.5"
+        >
           <span>{draft.itemCount} curated items</span>
           <span>Updated {formatCandidateTimestamp(draft.updatedAt)}</span>
           <span>
             {draft.publication?.publicPath ?? `/collections/${draft.slug}`}
           </span>
-        </div>
+        </ActionRow>
       </div>
     </ActionButton>
   );
@@ -574,12 +579,12 @@ function CollectionArtworkCard({
         <span className="text-sm text-[color:var(--color-muted)]">
           {subtitle}
         </span>
-        <div className="flex flex-wrap gap-2 text-xs text-[color:var(--color-muted)]">
+        <ActionRow compact className="text-xs text-[color:var(--color-muted)]">
           {meta}
-        </div>
+        </ActionRow>
       </div>
       <div className="mt-4 border-t border-[color:var(--color-line)] p-3">
-        <div className="flex flex-wrap gap-2">{actions}</div>
+        <ActionRow compact>{actions}</ActionRow>
       </div>
     </article>
   );
@@ -2186,11 +2191,11 @@ export function StudioCollectionsClient({
                   value={curatedAssetCount.toString()}
                 />
               </div>
-              <div className={collectionCuesClasses}>
+              <ActionRow compact>
                 <Pill>{approvedCandidateCount} approved outputs ready</Pill>
                 <Pill>{generatedAssetCandidates.length} recent candidates</Pill>
                 <Pill>Owner {shortHex(ownerWalletAddress)}</Pill>
-              </div>
+              </ActionRow>
               <form className="grid gap-4" onSubmit={handleCreateDraft}>
                 <div className={collectionPanelHeaderClasses}>
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
@@ -2297,7 +2302,7 @@ export function StudioCollectionsClient({
                         title={selectedDraft.title}
                       />
                       <div className={collectionFocusSummaryClasses}>
-                        <div className="flex flex-wrap items-center gap-2">
+                        <ActionRow compact>
                           <Pill>{formatDraftStatus(selectedDraft.status)}</Pill>
                           <Pill>{selectedDraft.itemCount} curated items</Pill>
                           <Pill>
@@ -2318,7 +2323,7 @@ export function StudioCollectionsClient({
                                 : "s"}
                             </Pill>
                           ) : null}
-                        </div>
+                        </ActionRow>
                         <div className="grid gap-2">
                           <h2>{selectedDraft.title}</h2>
                           <p>
@@ -2772,7 +2777,7 @@ export function StudioCollectionsClient({
                   />
                 ) : null}
 
-                <div className="flex flex-wrap items-center gap-2">
+                <ActionRow compact>
                   <Pill>{selectedDraftPublicPath}</Pill>
                   {selectedPublicationTarget ? (
                     <Pill>{selectedPublicationTarget.brandSlug}</Pill>
@@ -2794,7 +2799,7 @@ export function StudioCollectionsClient({
                   {selectedDraft.publication?.priceLabel ? (
                     <Pill>{selectedDraft.publication.priceLabel}</Pill>
                   ) : null}
-                </div>
+                </ActionRow>
 
                 <form className="grid gap-3" onSubmit={handlePublishDraft}>
                   <ActionRow compact>
@@ -3216,7 +3221,7 @@ export function StudioCollectionsClient({
                     tone="info"
                   />
                 ) : null}
-                <div className="flex flex-wrap items-center gap-2">
+                <ActionRow compact>
                   <Pill>
                     {walletProviderAvailable
                       ? "Wallet connector ready"
@@ -3258,7 +3263,7 @@ export function StudioCollectionsClient({
                       ? ""
                       : "s"}
                   </Pill>
-                </div>
+                </ActionRow>
                 <fieldset className="grid gap-4" disabled={!canManageOnchain}>
                   <FieldStack>
                     <FieldLabel>Wallet path</FieldLabel>

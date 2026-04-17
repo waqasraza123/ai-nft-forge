@@ -838,7 +838,7 @@ export function StudioCommerceClient({
                     drift away from the live buyer ledger.
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
+                <ActionRow compact>
                   <Pill>{activeBrand?.brandSlug ?? "all-brands"}</Pill>
                   <Pill>{scopeCheckoutCount.toString()} sessions in scope</Pill>
                   <Pill>
@@ -851,7 +851,7 @@ export function StudioCommerceClient({
                   <Pill>
                     {dashboard.summary.stripeCheckoutCount.toString()} stripe
                   </Pill>
-                </div>
+                </ActionRow>
                 <div className="grid gap-3 md:grid-cols-3">
                   <SignalCard
                     className={cn(

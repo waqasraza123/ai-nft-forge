@@ -439,7 +439,7 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
         span={12}
         title="Cancel scheduled decommissions"
       >
-        <div className="flex flex-wrap items-center gap-2">
+        <ActionRow compact>
           <Pill>{selectedCancelableWorkspaceIds.length} selected</Pill>
           <Pill>{cancelableWorkspaceIds.length} cancelable</Pill>
           <ActionButton
@@ -454,7 +454,7 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
           >
             {isCanceling ? "Canceling…" : "Cancel selected schedules"}
           </ActionButton>
-        </div>
+        </ActionRow>
       </SurfaceCard>
       <SurfaceCard
         body="Bulk automation only flips the top-level workspace scheduler switch. Per-workspace invitation and decommission notice settings stay intact."
@@ -462,7 +462,7 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
         span={12}
         title="Lifecycle automation control"
       >
-        <div className="flex flex-wrap items-center gap-2">
+        <ActionRow compact>
           <Pill>{selectedAutomationWorkspaceIds.length} selected</Pill>
           <Pill>{automationManageableWorkspaceIds.length} owner-managed</Pill>
           <ActionButton
@@ -491,7 +491,7 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
           >
             {isUpdatingAutomationPolicy ? "Updating…" : "Resume automation"}
           </ActionButton>
-        </div>
+        </ActionRow>
       </SurfaceCard>
       <SurfaceCard
         body="Workspaces that are owner-managed and active are included in every safe bulk control path so operators keep context before acting."
