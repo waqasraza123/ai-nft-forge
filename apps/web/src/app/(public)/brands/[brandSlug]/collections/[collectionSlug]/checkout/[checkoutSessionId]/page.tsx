@@ -7,7 +7,7 @@ import {
   CollectibleEditorialBand,
   CollectiblePreviewCard
 } from "../../../../../../../../components/collectible-visuals";
-import { ActionLink, Pill } from "@ai-nft-forge/ui";
+import { ActionLink, ActionRow, Pill } from "@ai-nft-forge/ui";
 
 import { CheckoutClient } from "./checkout-client";
 
@@ -245,7 +245,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
             accentVar="--storefront-accent"
             className="rounded-[2rem] border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/70 p-6 shadow-[0_24px_65px_rgba(15,23,42,0.22)]"
           >
-            <div className="mb-3 flex flex-wrap items-center gap-2">
+            <ActionRow compact className="mb-3">
               <Pill tone={statusVisual.tone}>{statusVisual.label}</Pill>
               <Pill className={storefrontAccentPillClass}>
                 {statusProviderCopy.shortTitle}
@@ -253,7 +253,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
               <Pill className={storefrontNeutralPillClass}>
                 Live storefront
               </Pill>
-            </div>
+            </ActionRow>
             <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
               <div className="space-y-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--storefront-accent)]">

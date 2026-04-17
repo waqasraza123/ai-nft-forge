@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import {
+  ActionRow,
   ActionLink,
   StorefrontPanel,
   StorefrontPill,
@@ -362,7 +363,7 @@ function BrandFeaturedReleaseCard(input: {
               </li>
             ))}
           </ul>
-          <div className="flex flex-wrap items-center gap-2">
+          <ActionRow compact>
             <ActionLink href={release.publicPath} tone="action">
               Open launch campaign
             </ActionLink>
@@ -370,7 +371,7 @@ function BrandFeaturedReleaseCard(input: {
               Launch {formatTimestamp(release.launchAt)} · Ends{" "}
               {formatTimestamp(release.endAt)}
             </span>
-          </div>
+          </ActionRow>
         </div>
       </div>
     </StorefrontPanel>
