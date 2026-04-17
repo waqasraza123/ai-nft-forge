@@ -2528,8 +2528,7 @@ export function StudioSettingsClient({
                         </FormPanel>
                       </div>
                       <ActionRow padTop>
-                        <button
-                          className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+                        <ActionButton
                           disabled={!canManageWorkspace || isSaving}
                           type="submit"
                         >
@@ -2538,7 +2537,7 @@ export function StudioSettingsClient({
                             : settings
                               ? "Save workspace settings"
                               : "Create settings"}
-                        </button>
+                        </ActionButton>
                       </ActionRow>
                     </fieldset>
                   </form>
@@ -2585,8 +2584,8 @@ export function StudioSettingsClient({
                       <ActionRow padTop>
                         {settings.workspace.status === "active" ? (
                           <>
-                            <button
-                              className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] text-[color:var(--color-text)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] hover:border-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60"
+                            <ActionButton
+                              tone="secondary"
                               disabled={
                                 !canManageWorkspace ||
                                 actingWorkspaceStatus !== null
@@ -2599,9 +2598,8 @@ export function StudioSettingsClient({
                               {actingWorkspaceStatus === "suspended"
                                 ? "Suspending…"
                                 : "Suspend workspace"}
-                            </button>
-                            <button
-                              className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+                            </ActionButton>
+                            <ActionButton
                               disabled={
                                 !canManageWorkspace ||
                                 actingWorkspaceStatus !== null
@@ -2614,11 +2612,10 @@ export function StudioSettingsClient({
                               {actingWorkspaceStatus === "archived"
                                 ? "Archiving…"
                                 : "Archive workspace"}
-                            </button>
+                            </ActionButton>
                           </>
                         ) : (
-                          <button
-                            className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+                          <ActionButton
                             disabled={
                               !canManageWorkspace ||
                               actingWorkspaceStatus !== null
@@ -2631,7 +2628,7 @@ export function StudioSettingsClient({
                             {actingWorkspaceStatus === "active"
                               ? "Reactivating…"
                               : "Reactivate workspace"}
-                          </button>
+                          </ActionButton>
                         )}
                       </ActionRow>
                     </>
@@ -3094,8 +3091,7 @@ export function StudioSettingsClient({
                         </section>
                       </div>
                       <div className="flex flex-wrap items-center gap-3 pt-2">
-                        <button
-                          className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+                        <ActionButton
                           disabled={!canManageWorkspace || isSaving}
                           type="submit"
                         >
@@ -3104,7 +3100,7 @@ export function StudioSettingsClient({
                             : settings
                               ? "Save brand profile"
                               : "Create settings"}
-                        </button>
+                        </ActionButton>
                       </div>
                     </fieldset>
                   </form>
@@ -3321,8 +3317,7 @@ export function StudioSettingsClient({
                         </Pill>
                       </div>
                       <div className="flex flex-wrap items-center gap-3 pt-2">
-                        <button
-                          className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+                        <ActionButton
                           disabled={
                             !canEditCurrentWorkspace ||
                             isCreatingBrand ||
@@ -3331,7 +3326,7 @@ export function StudioSettingsClient({
                           type="submit"
                         >
                           {isCreatingBrand ? "Creating…" : "Add brand"}
-                        </button>
+                        </ActionButton>
                       </div>
                     </fieldset>
                   </form>
@@ -3386,8 +3381,7 @@ export function StudioSettingsClient({
                           </SettingsRecordCopy>
                           {member.membershipId ? (
                             <SettingsRecordActions>
-                              <button
-                                className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+                              <ActionButton
                                 disabled={
                                   !canMutateMembers ||
                                   removingMembershipId === member.membershipId
@@ -3400,7 +3394,7 @@ export function StudioSettingsClient({
                                 {removingMembershipId === member.membershipId
                                   ? "Removing…"
                                   : "Remove"}
-                              </button>
+                              </ActionButton>
                             </SettingsRecordActions>
                           ) : (
                             <SettingsRecordActions>
@@ -3472,8 +3466,8 @@ export function StudioSettingsClient({
                             </span>
                           </SettingsRecordCopy>
                           <SettingsRecordActions>
-                            <button
-                              className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] text-[color:var(--color-text)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] hover:border-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60"
+                            <ActionButton
+                              tone="secondary"
                               disabled={
                                 !canMutateMembers ||
                                 invitation.status === "expired" ||
@@ -3488,9 +3482,8 @@ export function StudioSettingsClient({
                               {remindingInvitationId === invitation.id
                                 ? "Recording…"
                                 : "Record reminder"}
-                            </button>
-                            <button
-                              className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+                            </ActionButton>
+                            <ActionButton
                               disabled={
                                 !canMutateMembers ||
                                 remindingInvitationId === invitation.id ||
@@ -3504,7 +3497,7 @@ export function StudioSettingsClient({
                               {cancelingInvitationId === invitation.id
                                 ? "Canceling…"
                                 : "Cancel"}
-                            </button>
+                            </ActionButton>
                           </SettingsRecordActions>
                         </SettingsRecordCard>
                       ))
@@ -3535,15 +3528,14 @@ export function StudioSettingsClient({
                         />
                       </label>
                       <div className="flex flex-wrap items-center gap-3 pt-2">
-                        <button
-                          className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+                        <ActionButton
                           disabled={!canMutateMembers || isCreatingInvitation}
                           type="submit"
                         >
                           {isCreatingInvitation
                             ? "Inviting…"
                             : "Send invitation"}
-                        </button>
+                        </ActionButton>
                       </div>
                     </fieldset>
                   </form>
@@ -3602,8 +3594,7 @@ export function StudioSettingsClient({
                           </span>
                         </SettingsRecordCopy>
                         <SettingsRecordActions>
-                          <button
-                            className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+                          <ActionButton
                             disabled={
                               !workspaceIsActive ||
                               actingRoleEscalationRequestId ===
@@ -3620,7 +3611,7 @@ export function StudioSettingsClient({
                             actorRoleEscalationRequest.id
                               ? "Canceling…"
                               : "Cancel"}
-                          </button>
+                          </ActionButton>
                         </SettingsRecordActions>
                       </SettingsRecordCard>
                     ) : (
@@ -3665,8 +3656,7 @@ export function StudioSettingsClient({
                               />
                             </label>
                             <div className="flex flex-wrap items-center gap-3 pt-2">
-                              <button
-                                className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+                              <ActionButton
                                 disabled={
                                   !canRequestRoleEscalation ||
                                   isRequestingRoleEscalation ||
@@ -3677,7 +3667,7 @@ export function StudioSettingsClient({
                                 {isRequestingRoleEscalation
                                   ? "Submitting…"
                                   : "Request ownership transfer"}
-                              </button>
+                              </ActionButton>
                             </div>
                           </fieldset>
                         </form>
@@ -3706,8 +3696,7 @@ export function StudioSettingsClient({
                                   </span>
                                 </SettingsRecordCopy>
                                 <SettingsRecordActions>
-                                  <button
-                                    className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+                                  <ActionButton
                                     disabled={
                                       !workspaceIsActive ||
                                       actingRoleEscalationRequestId ===
@@ -3722,9 +3711,8 @@ export function StudioSettingsClient({
                                     request.id
                                       ? "Working…"
                                       : "Approve"}
-                                  </button>
-                                  <button
-                                    className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+                                  </ActionButton>
+                                  <ActionButton
                                     disabled={
                                       !workspaceIsActive ||
                                       actingRoleEscalationRequestId ===
@@ -3739,7 +3727,7 @@ export function StudioSettingsClient({
                                     request.id
                                       ? "Working…"
                                       : "Reject"}
-                                  </button>
+                                  </ActionButton>
                                 </SettingsRecordActions>
                               </SettingsRecordCard>
                             ))}
@@ -3923,14 +3911,11 @@ export function StudioSettingsClient({
                               : "disabled"}
                           </Pill>
                         </div>
-                        <button
-                          className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
-                          type="submit"
-                        >
+                        <ActionButton type="submit">
                           {isSavingLifecycleAutomationPolicy
                             ? "Saving…"
                             : "Save lifecycle automation"}
-                        </button>
+                        </ActionButton>
                       </fieldset>
                     </form>
                   )}
@@ -4096,14 +4081,11 @@ export function StudioSettingsClient({
                             )}
                           </div>
                         ) : null}
-                        <button
-                          className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
-                          type="submit"
-                        >
+                        <ActionButton type="submit">
                           {isSavingLifecycleSlaPolicy
                             ? "Saving…"
                             : "Save lifecycle SLA"}
-                        </button>
+                        </ActionButton>
                       </fieldset>
                     </form>
                   )}
@@ -4312,8 +4294,8 @@ export function StudioSettingsClient({
                               </SettingsRecordCopy>
                               <SettingsRecordActions>
                                 <Pill>{delivery.deliveryState}</Pill>
-                                <button
-                                  className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] text-[color:var(--color-text)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] hover:border-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60"
+                                <ActionButton
+                                  tone="secondary"
                                   disabled={
                                     !canManageWorkspace ||
                                     delivery.deliveryChannel !== "webhook" ||
@@ -4330,7 +4312,7 @@ export function StudioSettingsClient({
                                   {retryingLifecycleDeliveryId === delivery.id
                                     ? "Retrying…"
                                     : "Retry"}
-                                </button>
+                                </ActionButton>
                               </SettingsRecordActions>
                             </SettingsRecordCard>
                           ))
@@ -4547,8 +4529,8 @@ export function StudioSettingsClient({
                           ) : null}
                           {canManageWorkspace &&
                           decommissionWorkflow?.nextDueKind ? (
-                            <button
-                              className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] text-[color:var(--color-text)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] hover:border-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60"
+                            <ActionButton
+                              tone="secondary"
                               disabled={
                                 Boolean(
                                   recordingDecommissionNotificationKind
@@ -4569,7 +4551,7 @@ export function StudioSettingsClient({
                                 : `Record ${formatDecommissionNotificationKind(
                                     decommissionWorkflow.nextDueKind!
                                   )} notice`}
-                            </button>
+                            </ActionButton>
                           ) : null}
                           <label
                             className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]"
@@ -4609,8 +4591,8 @@ export function StudioSettingsClient({
                             </div>
                           ) : null}
                           <div className="flex flex-wrap items-center gap-3 pt-2">
-                            <button
-                              className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] text-[color:var(--color-text)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] hover:border-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60"
+                            <ActionButton
+                              tone="secondary"
                               disabled={
                                 isCancelingDecommission ||
                                 isExecutingDecommission ||
@@ -4624,9 +4606,8 @@ export function StudioSettingsClient({
                               {isCancelingDecommission
                                 ? "Canceling…"
                                 : "Cancel schedule"}
-                            </button>
-                            <button
-                              className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+                            </ActionButton>
+                            <ActionButton
                               disabled={
                                 isCancelingDecommission ||
                                 isExecutingDecommission ||
@@ -4640,7 +4621,7 @@ export function StudioSettingsClient({
                               {isExecutingDecommission
                                 ? "Decommissioning…"
                                 : "Execute decommission"}
-                            </button>
+                            </ActionButton>
                           </div>
                         </>
                       ) : null}
@@ -4761,15 +4742,14 @@ export function StudioSettingsClient({
                             rows={3}
                             value={workspaceDecommissionFormState.reason}
                           />
-                          <button
-                            className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+                          <ActionButton
                             disabled={isSchedulingDecommission}
                             type="submit"
                           >
                             {isSchedulingDecommission
                               ? "Scheduling…"
                               : "Schedule decommission"}
-                          </button>
+                          </ActionButton>
                         </form>
                       ) : null}
                     </div>
@@ -4924,14 +4904,11 @@ export function StudioSettingsClient({
                         </select>
                       </label>
                       <div className="flex flex-wrap items-center gap-3 pt-2">
-                        <button
-                          className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
-                          type="submit"
-                        >
+                        <ActionButton type="submit">
                           {isCreatingWorkspace
                             ? "Provisioning…"
                             : "Create workspace"}
-                        </button>
+                        </ActionButton>
                         <ActionLink href="/studio/commerce/fleet" tone="inline">
                           Open commerce fleet
                         </ActionLink>

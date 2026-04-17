@@ -337,3 +337,18 @@ Complete the Tailwind migration checkpoint in `apps/web` and `packages/ui`, stab
   - rail density under high-signal states,
   - empty-state empty-data storytelling,
   - section-level heading hierarchy.
+
+## Latest Checkpoint (Studio Settings Button Normalization)
+- Completed the next production-grade settings consistency pass in `apps/web/src/app/(studio)/studio/settings/studio-settings-client.tsx`:
+  - removed all remaining inline action button utility-class duplicates and standardized repeated controls to shared `ActionButton`.
+  - preserved all existing behavior while aligning muted/danger and primary actions with `tone="secondary"` and default `primary` variants.
+  - kept dense admin and lifecycle sections readable by not adding decorative embellishment in control-critical surfaces.
+
+## Verification (Studio Settings Button Normalization)
+- `pnpm exec prettier --write apps/web/src/app/'(studio)'/studio/settings/studio-settings-client.tsx` ✅
+- `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false` ✅
+- `pnpm --filter @ai-nft-forge/web build` ✅
+
+## Updated Next Follow-up
+- Run the next production-grade pass across `studio-collections-client.tsx` to standardize any remaining duplicated button/link treatment not yet covered by shared `ActionButton`/`ActionLink` conventions.
+- Continue the ops-facing restraint pass so dense operational surfaces stay readable while decorative direction stays in storefront/studio marketing zones.
