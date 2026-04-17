@@ -603,3 +603,16 @@ Finish the production-grade consistency phase on remaining high-traffic Studio/O
   - `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
   - `pnpm --filter @ai-nft-forge/web build`
 - Current phase status: `Shared UI Primitive Consolidation` remains active; next step is a Studio/Ops cross-surface consistency sweep on any remaining local shell variants before final modern-premium pass is marked complete.
+
+## Latest Checkpoint (Studio Collections Controls Normalization)
+- Completed the next production-grade step by finishing inline control normalization in `apps/web/src/app/(studio)/studio/collections/studio-collections-client.tsx`:
+  - Migrated remaining on-chain section form controls to shared primitives:
+    - `FieldStack` + `FieldLabel` + `SelectField` for wallet path and chain selects
+    - `TextAreaField` for deployment/mint intent JSON display
+    - `InputField` for mint recipient and token input fields
+  - Kept all deployment/mint workflows unchanged, including intent generation, wallet connect, retry confirmation flows, and status rendering.
+- Verification:
+  - `pnpm exec prettier --write apps/web/src/app/\\(studio\\)/studio/collections/studio-collections-client.tsx`
+  - `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+  - `pnpm --filter @ai-nft-forge/web build`
+- Current phase status: `Shared UI Primitive Consolidation` remains active; next target is a final Studio/Ops cross-surface spacing and rhythm pass after all high-traffic routes are free of duplicate local shell patterns.

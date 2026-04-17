@@ -41,6 +41,7 @@ import {
   FormPanel,
   InsetMetric,
   InputField,
+  SelectField,
   MetricTile,
   PageShell,
   Pill,
@@ -70,12 +71,6 @@ type StudioCollectionsClientProps = {
   studioRole: StudioWorkspaceRole;
 };
 
-const collectionFieldGridClasses = "grid gap-3 md:grid-cols-2";
-const collectionFieldLabelClasses =
-  "text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]";
-
-const collectionInputFieldClasses =
-  "rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30";
 const collectionSectionGridClasses =
   "grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1.6fr)_minmax(0,1fr)]";
 const collectionWorkspaceColumnClasses = "grid gap-4";
@@ -98,8 +93,6 @@ const collectionMintListClasses = "grid gap-3";
 const collectionMintCardClasses =
   "grid gap-1 rounded-2xl border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.03))] p-4 shadow-[var(--shadow-surface)]";
 const collectionStickyRailClasses = "grid gap-4 xl:sticky xl:top-24";
-const collectionStatusCardClasses =
-  "flex flex-col gap-2 rounded-2xl border p-4 shadow-[var(--shadow-surface)]";
 
 const collectionCardStateToneClasses = {
   default:
@@ -113,17 +106,6 @@ type NoticeState = {
   message: string;
   tone: "error" | "info" | "success";
 } | null;
-
-const statusBannerToneClasses = {
-  error: "border-red-500/45 bg-red-500/12 text-red-50",
-  info: "border-blue-500/35 bg-blue-500/12 text-blue-50",
-  success: "border-emerald-500/45 bg-emerald-500/12 text-emerald-50",
-  warning: "border-amber-400/45 bg-amber-400/12 text-amber-100"
-} as const;
-
-function getStatusBannerToneClass(tone: keyof typeof statusBannerToneClasses) {
-  return statusBannerToneClasses[tone];
-}
 
 type GeneratedAssetPreviewUrlMap = Record<string, string>;
 
@@ -609,17 +591,10 @@ function CollectionStatusNote(input: {
   tone: "error" | "info" | "success";
 }) {
   return (
-    <div
-      className={cn(collectionStatusCardClasses, {
-        "border-blue-500/35 bg-blue-500/12 text-blue-50": input.tone === "info",
-        "border-emerald-500/45 bg-emerald-500/12 text-emerald-50":
-          input.tone === "success",
-        "border-red-500/45 bg-red-500/12 text-red-50": input.tone === "error"
-      })}
-    >
+    <StatusBanner className="grid gap-1.5" tone={input.tone}>
       <strong>{input.title}</strong>
       <span className="text-sm leading-6 text-current/85">{input.body}</span>
-    </div>
+    </StatusBanner>
   );
 }
 
@@ -2230,7 +2205,6 @@ export function StudioCollectionsClient({
                 <FieldStack>
                   <FieldLabel>Title</FieldLabel>
                   <InputField
-                    className={collectionInputFieldClasses}
                     maxLength={120}
                     onChange={(event) => {
                       setCreateTitle(event.target.value);
@@ -2243,7 +2217,6 @@ export function StudioCollectionsClient({
                 <FieldStack>
                   <FieldLabel>Internal framing</FieldLabel>
                   <TextAreaField
-                    className={collectionInputFieldClasses}
                     maxLength={1000}
                     onChange={(event) => {
                       setCreateDescription(event.target.value);
@@ -2392,7 +2365,6 @@ export function StudioCollectionsClient({
                       <FieldStack>
                         <FieldLabel>Title</FieldLabel>
                         <InputField
-                          className={collectionInputFieldClasses}
                           maxLength={120}
                           onChange={(event) => {
                             setEditorState((current) => ({
@@ -2407,7 +2379,6 @@ export function StudioCollectionsClient({
                       <FieldStack>
                         <FieldLabel>Slug</FieldLabel>
                         <InputField
-                          className={collectionInputFieldClasses}
                           maxLength={80}
                           onChange={(event) => {
                             setEditorState((current) => ({
@@ -2422,8 +2393,7 @@ export function StudioCollectionsClient({
                       </FieldStack>
                       <FieldStack>
                         <FieldLabel>Workflow state</FieldLabel>
-                        <select
-                          className={collectionInputFieldClasses}
+                        <SelectField
                           onChange={(event) => {
                             setEditorState((current) => ({
                               ...current,
@@ -2435,12 +2405,11 @@ export function StudioCollectionsClient({
                         >
                           <option value="draft">Draft</option>
                           <option value="review_ready">Review ready</option>
-                        </select>
+                        </SelectField>
                       </FieldStack>
                       <FieldStack className="md:col-span-2">
                         <FieldLabel>Internal story</FieldLabel>
                         <TextAreaField
-                          className={collectionInputFieldClasses}
                           maxLength={1000}
                           onChange={(event) => {
                             setEditorState((current) => ({
@@ -2772,12 +2741,9 @@ export function StudioCollectionsClient({
                 )}
 
                 {publicationTargets.length > 1 ? (
-                  <label className="grid gap-1.5">
-                    <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                      Publication brand
-                    </span>
-                    <select
-                      className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                  <FieldStack>
+                    <FieldLabel>Publication brand</FieldLabel>
+                    <SelectField
                       disabled={!canManagePublication}
                       onChange={(event) => {
                         setSelectedPublicationTargetId(
@@ -2791,8 +2757,8 @@ export function StudioCollectionsClient({
                           {target.brandName} · {target.publicBrandPath}
                         </option>
                       ))}
-                    </select>
-                  </label>
+                    </SelectField>
+                  </FieldStack>
                 ) : null}
 
                 {selectedDraft.publication &&
@@ -2959,12 +2925,9 @@ export function StudioCollectionsClient({
                   }
                 >
                   <div className="grid gap-4 md:grid-cols-2">
-                    <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                        Storefront status
-                      </span>
-                      <select
-                        className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                    <FieldStack>
+                      <FieldLabel>Storefront status</FieldLabel>
+                      <SelectField
                         onChange={(event) => {
                           setPublicationMerchandisingState((current) => ({
                             ...current,
@@ -2981,14 +2944,11 @@ export function StudioCollectionsClient({
                         <option value="live">Live</option>
                         <option value="sold_out">Sold out</option>
                         <option value="ended">Ended</option>
-                      </select>
-                    </label>
-                    <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                        Display order
-                      </span>
-                      <input
-                        className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                      </SelectField>
+                    </FieldStack>
+                    <FieldStack>
+                      <FieldLabel>Display order</FieldLabel>
+                      <InputField
                         min={0}
                         onChange={(event) => {
                           setPublicationMerchandisingState((current) => ({
@@ -3002,13 +2962,10 @@ export function StudioCollectionsClient({
                         type="number"
                         value={publicationMerchandisingState.displayOrder}
                       />
-                    </label>
-                    <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                        Launch time
-                      </span>
-                      <input
-                        className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                    </FieldStack>
+                    <FieldStack>
+                      <FieldLabel>Launch time</FieldLabel>
+                      <InputField
                         onChange={(event) => {
                           setPublicationMerchandisingState((current) => ({
                             ...current,
@@ -3018,13 +2975,10 @@ export function StudioCollectionsClient({
                         type="datetime-local"
                         value={publicationMerchandisingState.launchAt}
                       />
-                    </label>
-                    <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                        End time
-                      </span>
-                      <input
-                        className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                    </FieldStack>
+                    <FieldStack>
+                      <FieldLabel>End time</FieldLabel>
+                      <InputField
                         onChange={(event) => {
                           setPublicationMerchandisingState((current) => ({
                             ...current,
@@ -3034,13 +2988,10 @@ export function StudioCollectionsClient({
                         type="datetime-local"
                         value={publicationMerchandisingState.endAt}
                       />
-                    </label>
-                    <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                        Price label
-                      </span>
-                      <input
-                        className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                    </FieldStack>
+                    <FieldStack>
+                      <FieldLabel>Price label</FieldLabel>
+                      <InputField
                         maxLength={60}
                         onChange={(event) => {
                           setPublicationMerchandisingState((current) => ({
@@ -3051,13 +3002,10 @@ export function StudioCollectionsClient({
                         placeholder="0.08 ETH"
                         value={publicationMerchandisingState.priceLabel}
                       />
-                    </label>
-                    <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                        Price amount (minor)
-                      </span>
-                      <input
-                        className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                    </FieldStack>
+                    <FieldStack>
+                      <FieldLabel>Price amount (minor)</FieldLabel>
+                      <InputField
                         min={1}
                         onChange={(event) => {
                           setPublicationMerchandisingState((current) => ({
@@ -3069,13 +3017,10 @@ export function StudioCollectionsClient({
                         type="number"
                         value={publicationMerchandisingState.priceAmountMinor}
                       />
-                    </label>
-                    <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                        Price currency
-                      </span>
-                      <input
-                        className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                    </FieldStack>
+                    <FieldStack>
+                      <FieldLabel>Price currency</FieldLabel>
+                      <InputField
                         maxLength={3}
                         onChange={(event) => {
                           setPublicationMerchandisingState((current) => ({
@@ -3086,13 +3031,10 @@ export function StudioCollectionsClient({
                         placeholder="USD"
                         value={publicationMerchandisingState.priceCurrency}
                       />
-                    </label>
-                    <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                        Total supply
-                      </span>
-                      <input
-                        className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                    </FieldStack>
+                    <FieldStack>
+                      <FieldLabel>Total supply</FieldLabel>
+                      <InputField
                         min={1}
                         onChange={(event) => {
                           setPublicationMerchandisingState((current) => ({
@@ -3103,13 +3045,10 @@ export function StudioCollectionsClient({
                         type="number"
                         value={publicationMerchandisingState.totalSupply}
                       />
-                    </label>
-                    <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                        Sold count
-                      </span>
-                      <input
-                        className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                    </FieldStack>
+                    <FieldStack>
+                      <FieldLabel>Sold count</FieldLabel>
+                      <InputField
                         min={0}
                         onChange={(event) => {
                           setPublicationMerchandisingState((current) => ({
@@ -3120,13 +3059,10 @@ export function StudioCollectionsClient({
                         type="number"
                         value={publicationMerchandisingState.soldCount}
                       />
-                    </label>
-                    <label className="grid gap-1.5 md:col-span-2">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                        Hero asset
-                      </span>
-                      <select
-                        className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                    </FieldStack>
+                    <FieldStack className="md:col-span-2">
+                      <FieldLabel>Hero asset</FieldLabel>
+                      <SelectField
                         onChange={(event) => {
                           setPublicationMerchandisingState((current) => ({
                             ...current,
@@ -3146,14 +3082,11 @@ export function StudioCollectionsClient({
                             {formatCandidateLabel(item.generatedAsset)}
                           </option>
                         ))}
-                      </select>
-                    </label>
-                    <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                        Storefront headline
-                      </span>
-                      <input
-                        className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                      </SelectField>
+                    </FieldStack>
+                    <FieldStack>
+                      <FieldLabel>Storefront headline</FieldLabel>
+                      <InputField
                         maxLength={120}
                         onChange={(event) => {
                           setPublicationMerchandisingState((current) => ({
@@ -3164,13 +3097,11 @@ export function StudioCollectionsClient({
                         placeholder="A midnight launch built for collectors."
                         value={publicationMerchandisingState.storefrontHeadline}
                       />
-                    </label>
-                    <label className="grid gap-1.5 md:col-span-2">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                        Storefront body
-                      </span>
-                      <textarea
-                        className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] min-h-[10rem] resize-y focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                    </FieldStack>
+                    <FieldStack className="md:col-span-2">
+                      <FieldLabel>Storefront body</FieldLabel>
+                      <TextAreaField
+                        className="min-h-[10rem]"
                         maxLength={600}
                         onChange={(event) => {
                           setPublicationMerchandisingState((current) => ({
@@ -3181,13 +3112,10 @@ export function StudioCollectionsClient({
                         rows={4}
                         value={publicationMerchandisingState.storefrontBody}
                       />
-                    </label>
-                    <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                        Primary CTA label
-                      </span>
-                      <input
-                        className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                    </FieldStack>
+                    <FieldStack>
+                      <FieldLabel>Primary CTA label</FieldLabel>
+                      <InputField
                         maxLength={40}
                         onChange={(event) => {
                           setPublicationMerchandisingState((current) => ({
@@ -3198,13 +3126,10 @@ export function StudioCollectionsClient({
                         placeholder="Join the launch"
                         value={publicationMerchandisingState.primaryCtaLabel}
                       />
-                    </label>
-                    <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                        Primary CTA URL
-                      </span>
-                      <input
-                        className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                    </FieldStack>
+                    <FieldStack>
+                      <FieldLabel>Primary CTA URL</FieldLabel>
+                      <InputField
                         onChange={(event) => {
                           setPublicationMerchandisingState((current) => ({
                             ...current,
@@ -3215,13 +3140,10 @@ export function StudioCollectionsClient({
                         type="url"
                         value={publicationMerchandisingState.primaryCtaHref}
                       />
-                    </label>
-                    <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                        Secondary CTA label
-                      </span>
-                      <input
-                        className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                    </FieldStack>
+                    <FieldStack>
+                      <FieldLabel>Secondary CTA label</FieldLabel>
+                      <InputField
                         maxLength={40}
                         onChange={(event) => {
                           setPublicationMerchandisingState((current) => ({
@@ -3232,13 +3154,10 @@ export function StudioCollectionsClient({
                         placeholder="Read the story"
                         value={publicationMerchandisingState.secondaryCtaLabel}
                       />
-                    </label>
-                    <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                        Secondary CTA URL
-                      </span>
-                      <input
-                        className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                    </FieldStack>
+                    <FieldStack>
+                      <FieldLabel>Secondary CTA URL</FieldLabel>
+                      <InputField
                         onChange={(event) => {
                           setPublicationMerchandisingState((current) => ({
                             ...current,
@@ -3249,7 +3168,7 @@ export function StudioCollectionsClient({
                         type="url"
                         value={publicationMerchandisingState.secondaryCtaHref}
                       />
-                    </label>
+                    </FieldStack>
                   </div>
                   <label className="flex items-center gap-3 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)]/55 px-4 py-3 text-sm text-[color:var(--color-text)]">
                     <input
@@ -3341,12 +3260,9 @@ export function StudioCollectionsClient({
                   </Pill>
                 </div>
                 <fieldset className="grid gap-4" disabled={!canManageOnchain}>
-                  <label className="grid gap-1.5">
-                    <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                      Wallet path
-                    </span>
-                    <select
-                      className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                  <FieldStack>
+                    <FieldLabel>Wallet path</FieldLabel>
+                    <SelectField
                       onChange={(event) => {
                         setSelectedWalletConnectorId(
                           event.target.value as SupportedWalletConnectorId
@@ -3362,8 +3278,8 @@ export function StudioCollectionsClient({
                           {injectedWalletConnector.name}
                         </option>
                       ) : null}
-                    </select>
-                  </label>
+                    </SelectField>
+                  </FieldStack>
                   <ActionRow compact>
                     <ActionButton
                       disabled={!walletProviderAvailable}
@@ -3408,12 +3324,9 @@ export function StudioCollectionsClient({
                       }
                     />
                   ) : null}
-                  <label className="grid gap-1.5">
-                    <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                      Deployment chain
-                    </span>
-                    <select
-                      className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                  <FieldStack>
+                    <FieldLabel>Deployment chain</FieldLabel>
+                    <SelectField
                       onChange={(event) => {
                         setDeploymentChainKey(
                           event.target.value as CollectionContractChainKey
@@ -3423,8 +3336,8 @@ export function StudioCollectionsClient({
                     >
                       <option value="base-sepolia">Base Sepolia</option>
                       <option value="base">Base</option>
-                    </select>
-                  </label>
+                    </SelectField>
+                  </FieldStack>
                   <ActionRow compact>
                     <ActionButton
                       disabled={
@@ -3455,25 +3368,20 @@ export function StudioCollectionsClient({
                     ) : null}
                   </ActionRow>
                   {deploymentIntentJson ? (
-                    <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                        Deployment intent JSON
-                      </span>
-                      <textarea
-                        className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] min-h-[10rem] resize-y focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                    <FieldStack>
+                      <FieldLabel>Deployment intent JSON</FieldLabel>
+                      <TextAreaField
+                        className="min-h-[10rem]"
                         readOnly
                         rows={10}
                         value={deploymentIntentJson}
                       />
-                    </label>
+                    </FieldStack>
                   ) : null}
                   <FormPanel>
-                    <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                        Recipient wallet
-                      </span>
-                      <input
-                        className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                    <FieldStack>
+                      <FieldLabel>Recipient wallet</FieldLabel>
+                      <InputField
                         onChange={(event) => {
                           setMintRequestState((current) => ({
                             ...current,
@@ -3483,13 +3391,10 @@ export function StudioCollectionsClient({
                         placeholder="0x..."
                         value={mintRequestState.recipientWalletAddress}
                       />
-                    </label>
-                    <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                        Token ID
-                      </span>
-                      <input
-                        className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                    </FieldStack>
+                    <FieldStack>
+                      <FieldLabel>Token ID</FieldLabel>
+                      <InputField
                         min={1}
                         onChange={(event) => {
                           setMintRequestState((current) => ({
@@ -3500,7 +3405,7 @@ export function StudioCollectionsClient({
                         type="number"
                         value={mintRequestState.tokenId}
                       />
-                    </label>
+                    </FieldStack>
                     <ActionRow compact>
                       <ActionButton
                         disabled={
@@ -3530,17 +3435,15 @@ export function StudioCollectionsClient({
                       ) : null}
                     </ActionRow>
                     {mintIntentJson ? (
-                      <label className="grid gap-1.5">
-                        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                          Mint intent JSON
-                        </span>
-                        <textarea
-                          className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] min-h-[10rem] resize-y focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                      <FieldStack>
+                        <FieldLabel>Mint intent JSON</FieldLabel>
+                        <TextAreaField
+                          className="min-h-[10rem]"
                           readOnly
                           rows={10}
                           value={mintIntentJson}
                         />
-                      </label>
+                      </FieldStack>
                     ) : null}
                   </FormPanel>
                 </fieldset>
