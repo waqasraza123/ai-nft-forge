@@ -79,6 +79,8 @@ const listCardBaseClasses =
 
 const commerceHeroMetricClasses =
   "rounded-[1.5rem] border border-white/10 bg-black/25 p-4 text-white shadow-[0_18px_40px_rgba(15,23,42,0.18)] backdrop-blur-xl";
+const commerceHeroMetricTextClasses =
+  "text-white/80 [&>span]:text-[11px] [&>span]:font-semibold [&>span]:tracking-[0.2em] [&>span]:text-white/60 [&>strong]:mt-2 [&>strong]:text-lg [&>strong]:font-semibold [&>strong]:text-white [&>p]:mt-2 [&>p]:text-sm [&>p]:leading-6 [&>p]:text-white/72";
 
 function createFallbackErrorMessage(response: Response) {
   switch (response.status) {
@@ -859,7 +861,7 @@ export function StudioCommerceClient({
                   <SignalCard
                     className={cn(
                       commerceHeroMetricClasses,
-                      "text-white/80 [&>strong]:text-white [&>strong]:text-lg"
+                      commerceHeroMetricTextClasses
                     )}
                     detail="Workspace owner wallet currently supervising this commerce scope."
                     label="Operator authority"
@@ -869,7 +871,7 @@ export function StudioCommerceClient({
                   <SignalCard
                     className={cn(
                       commerceHeroMetricClasses,
-                      "text-white/80 [&>strong]:text-white [&>strong]:text-lg"
+                      commerceHeroMetricTextClasses
                     )}
                     detail={`${formatPercent(completionRate)} payment completion rate.`}
                     label="Latest paid"
@@ -879,7 +881,7 @@ export function StudioCommerceClient({
                   <SignalCard
                     className={cn(
                       commerceHeroMetricClasses,
-                      "text-white/80 [&>strong]:text-white [&>strong]:text-lg"
+                      commerceHeroMetricTextClasses
                     )}
                     detail={`${formatPercent(fulfillmentRate)} fulfillment completion rate.`}
                     label="Latest fulfilled"
