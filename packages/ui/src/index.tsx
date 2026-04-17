@@ -280,6 +280,16 @@ type InsetMetricProps = {
   className?: string;
 };
 
+type ActionRowProps = PropsWithChildren<{
+  className?: string;
+  compact?: boolean;
+  padTop?: boolean;
+}>;
+
+type FormPanelProps = PropsWithChildren<{
+  className?: string;
+}>;
+
 export type { ActionButtonProps, PageTone };
 
 export function PageShell({
@@ -541,6 +551,39 @@ export function InsetMetric({
         </p>
       ) : null}
     </div>
+  );
+}
+
+export function ActionRow({
+  children,
+  className,
+  compact = false,
+  padTop = false
+}: ActionRowProps) {
+  return (
+    <div
+      className={cn(
+        "flex flex-wrap items-center",
+        compact ? "gap-2" : "gap-3",
+        padTop ? "pt-2" : null,
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function FormPanel({ children, className }: FormPanelProps) {
+  return (
+    <section
+      className={cn(
+        "grid gap-4 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)]/60 p-4",
+        className
+      )}
+    >
+      {children}
+    </section>
   );
 }
 

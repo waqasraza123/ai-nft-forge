@@ -33,11 +33,13 @@ import {
   type StudioWorkspaceRole
 } from "@ai-nft-forge/shared";
 import {
+  ActionRow,
   ActionButton,
   ActionLink,
   EmptyState,
   FieldLabel,
   FieldStack,
+  FormPanel,
   InsetMetric,
   InputField,
   MetricTile,
@@ -69,7 +71,6 @@ type StudioCollectionsClientProps = {
   studioRole: StudioWorkspaceRole;
 };
 
-const collectionActionRowClasses = "flex flex-wrap items-center gap-2";
 const collectionFieldGridClasses = "grid gap-3 md:grid-cols-2";
 const collectionFieldLabelClasses =
   "text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]";
@@ -97,8 +98,6 @@ const collectionLinkGridClasses = "grid gap-1.5 md:grid-cols-2";
 const collectionMintListClasses = "grid gap-3";
 const collectionMintCardClasses =
   "grid gap-1 rounded-2xl border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.03))] p-4 shadow-[var(--shadow-surface)]";
-const collectionFormSectionClasses =
-  "grid gap-4 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)]/60 p-4";
 const collectionStickyRailClasses = "grid gap-4 xl:sticky xl:top-24";
 const collectionStatusCardClasses =
   "flex flex-col gap-2 rounded-2xl border p-4 shadow-[var(--shadow-surface)]";
@@ -2254,11 +2253,11 @@ export function StudioCollectionsClient({
                     value={createDescription}
                   />
                 </FieldStack>
-                <div className={collectionActionRowClasses}>
+                <ActionRow compact>
                   <ActionButton disabled={isCreating} type="submit">
                     {isCreating ? "Creating…" : "Create release draft"}
                   </ActionButton>
-                </div>
+                </ActionRow>
               </form>
               <div className="grid gap-3">
                 {drafts.length === 0 ? (
@@ -2454,7 +2453,7 @@ export function StudioCollectionsClient({
                         />
                       </FieldStack>
                     </div>
-                    <div className={collectionActionRowClasses}>
+                    <ActionRow compact>
                       <ActionButton
                         disabled={savingDraftId === selectedDraft.id}
                         type="submit"
@@ -2463,7 +2462,7 @@ export function StudioCollectionsClient({
                           ? "Saving…"
                           : "Save release identity"}
                       </ActionButton>
-                    </div>
+                    </ActionRow>
                   </form>
                 </div>
               </SurfaceCard>
@@ -2835,7 +2834,7 @@ export function StudioCollectionsClient({
                 </div>
 
                 <form className="grid gap-3" onSubmit={handlePublishDraft}>
-                  <div className={collectionActionRowClasses}>
+                  <ActionRow compact>
                     <ActionButton
                       disabled={
                         !canManagePublication ||
@@ -2868,7 +2867,7 @@ export function StudioCollectionsClient({
                         ? "Unpublishing…"
                         : "Unpublish"}
                     </ActionButton>
-                  </div>
+                  </ActionRow>
                 </form>
 
                 <div className={collectionLinkGridClasses}>
@@ -3272,7 +3271,7 @@ export function StudioCollectionsClient({
                     />
                     <span>Feature this release on the brand landing page</span>
                   </label>
-                  <div className={collectionActionRowClasses}>
+                  <ActionRow compact>
                     <ActionButton
                       disabled={
                         !canManagePublication ||
@@ -3284,7 +3283,7 @@ export function StudioCollectionsClient({
                         ? "Saving merchandising…"
                         : "Save merchandising"}
                     </ActionButton>
-                  </div>
+                  </ActionRow>
                 </fieldset>
               </form>
             </SurfaceCard>
@@ -3371,7 +3370,7 @@ export function StudioCollectionsClient({
                       ) : null}
                     </select>
                   </label>
-                  <div className={collectionActionRowClasses}>
+                  <ActionRow compact>
                     <ActionButton
                       disabled={!walletProviderAvailable}
                       onClick={() => {
@@ -3393,7 +3392,7 @@ export function StudioCollectionsClient({
                         Disconnect wallet
                       </ActionButton>
                     ) : null}
-                  </div>
+                  </ActionRow>
                   {onchainFlowState ? (
                     <CollectionStatusNote
                       body={`${onchainFlowState.message}${
@@ -3432,7 +3431,7 @@ export function StudioCollectionsClient({
                       <option value="base">Base</option>
                     </select>
                   </label>
-                  <div className={collectionActionRowClasses}>
+                  <ActionRow compact>
                     <ActionButton
                       disabled={
                         deployingDraftId === selectedDraft.id ||
@@ -3460,7 +3459,7 @@ export function StudioCollectionsClient({
                         Retry deployment confirmation
                       </ActionButton>
                     ) : null}
-                  </div>
+                  </ActionRow>
                   {deploymentIntentJson ? (
                     <label className="grid gap-1.5">
                       <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
@@ -3474,7 +3473,7 @@ export function StudioCollectionsClient({
                       />
                     </label>
                   ) : null}
-                  <div className={collectionFormSectionClasses}>
+                  <FormPanel>
                     <label className="grid gap-1.5">
                       <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
                         Recipient wallet
@@ -3508,7 +3507,7 @@ export function StudioCollectionsClient({
                         value={mintRequestState.tokenId}
                       />
                     </label>
-                    <div className={collectionActionRowClasses}>
+                    <ActionRow compact>
                       <ActionButton
                         disabled={
                           mintingDraftId === selectedDraft.id ||
@@ -3535,7 +3534,7 @@ export function StudioCollectionsClient({
                           Retry mint confirmation
                         </ActionButton>
                       ) : null}
-                    </div>
+                    </ActionRow>
                     {mintIntentJson ? (
                       <label className="grid gap-1.5">
                         <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
@@ -3549,7 +3548,7 @@ export function StudioCollectionsClient({
                         />
                       </label>
                     ) : null}
-                  </div>
+                  </FormPanel>
                 </fieldset>
                 {selectedDraft.publication.mints.length > 0 ? (
                   <div className={collectionMintListClasses}>

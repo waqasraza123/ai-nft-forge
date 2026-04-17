@@ -60,7 +60,9 @@ import {
   type WorkspaceLifecycleNotificationDeliverySummary
 } from "@ai-nft-forge/shared";
 import {
+  ActionRow,
   EmptyState as SettingsEmptyState,
+  FormPanel,
   MetricTile,
   PanelHeading as SettingsPanelHeading,
   PageShell,
@@ -2328,7 +2330,7 @@ export function StudioSettingsClient({
                   <form className="space-y-4" onSubmit={handleSaveSettings}>
                     <fieldset disabled={!canEditCurrentWorkspace || isSaving}>
                       <div className="grid gap-4 xl:grid-cols-3">
-                        <section className="grid gap-4 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)]/60 p-4">
+                        <FormPanel>
                           <SettingsPanelHeading
                             lead="The workspace name and slug define the current administration context across Studio and Ops."
                             title="Workspace identity"
@@ -2370,8 +2372,8 @@ export function StudioSettingsClient({
                               value={editorState.workspaceSlug}
                             />
                           </label>
-                        </section>
-                        <section className="grid gap-4 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)]/60 p-4">
+                        </FormPanel>
+                        <FormPanel>
                           <SettingsPanelHeading
                             lead="These values govern future decommission schedules and offboarding requirements for this workspace."
                             title="Retention defaults"
@@ -2449,8 +2451,8 @@ export function StudioSettingsClient({
                               <option value="required">Required</option>
                             </select>
                           </label>
-                        </section>
-                        <section className="grid gap-4 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)]/60 p-4">
+                        </FormPanel>
+                        <FormPanel>
                           <SettingsPanelHeading
                             lead="Delivery controls decide whether reminder and decommission events fan out to configured webhook providers in addition to the audit-log leg."
                             title="Lifecycle delivery policy"
@@ -2526,7 +2528,7 @@ export function StudioSettingsClient({
                               <option value="disabled">Disabled</option>
                             </select>
                           </label>
-                          <div className="flex flex-wrap items-center gap-2">
+                          <ActionRow compact>
                             <Pill>
                               Webhook{" "}
                               {lifecycleDeliveryPolicy.webhookEnabled
@@ -2551,10 +2553,10 @@ export function StudioSettingsClient({
                                 {provider.enabled ? "configured" : "disabled"}
                               </Pill>
                             ))}
-                          </div>
-                        </section>
+                          </ActionRow>
+                        </FormPanel>
                       </div>
-                      <div className="flex flex-wrap items-center gap-3 pt-2">
+                      <ActionRow padTop>
                         <button
                           className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
                           disabled={!canManageWorkspace || isSaving}
@@ -2566,7 +2568,7 @@ export function StudioSettingsClient({
                               ? "Save workspace settings"
                               : "Create settings"}
                         </button>
-                      </div>
+                      </ActionRow>
                     </fieldset>
                   </form>
                 </SurfaceCard>
@@ -2586,13 +2588,13 @@ export function StudioSettingsClient({
                   ) : null}
                   {settings?.workspace ? (
                     <>
-                      <div className="flex flex-wrap items-center gap-2">
+                      <ActionRow compact>
                         <Pill>
                           {formatWorkspaceStatus(settings.workspace.status)}
                         </Pill>
                         <Pill>/{settings.workspace.slug}</Pill>
                         <Pill>{access.role}</Pill>
-                      </div>
+                      </ActionRow>
                       {inactiveWorkspaceMessage ? (
                         <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
                           <strong>Read-only</strong>
@@ -2609,7 +2611,7 @@ export function StudioSettingsClient({
                           </span>
                         </div>
                       ) : null}
-                      <div className="flex flex-wrap items-center gap-3 pt-2">
+                      <ActionRow padTop>
                         {settings.workspace.status === "active" ? (
                           <>
                             <button
@@ -2660,7 +2662,7 @@ export function StudioSettingsClient({
                               : "Reactivate workspace"}
                           </button>
                         )}
-                      </div>
+                      </ActionRow>
                     </>
                   ) : null}
                 </SurfaceCard>

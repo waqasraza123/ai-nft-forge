@@ -253,3 +253,31 @@ Complete the Tailwind migration checkpoint in `apps/web` and `packages/ui`, stab
   - empty-state styling
   - action-row consistency
 - After Studio consistency is locked, re-audit public/storefront surfaces for any remaining shell patterns that should move into `packages/ui`.
+
+## Latest Checkpoint (Studio Consistency Primitives)
+- Completed the next Studio normalization step by extracting additional shared surface helpers into `packages/ui/src/index.tsx`:
+  - `ActionRow`
+  - `FormPanel`
+- Rewired the main Studio routes to consume them where the patterns were already stable:
+  - `apps/web/src/app/(studio)/studio/settings/studio-settings-client.tsx`
+  - `apps/web/src/app/(studio)/studio/collections/studio-collections-client.tsx`
+  - `apps/web/src/app/(studio)/studio/commerce/studio-commerce-client.tsx`
+- This tightened consistency for:
+  - action button rows
+  - compact pill/action rows
+  - inset form-panel treatment
+- The pass intentionally did not force all route-specific compositions into shared primitives; collectible hero/preview/onchain compositions remain route-owned where they still carry product-specific structure.
+
+## Verification (Studio Consistency Primitives)
+- `pnpm exec prettier --write packages/ui/src/index.tsx apps/web/src/app/'(studio)'/studio/settings/studio-settings-client.tsx apps/web/src/app/'(studio)'/studio/collections/studio-collections-client.tsx apps/web/src/app/'(studio)'/studio/commerce/studio-commerce-client.tsx` ✅
+- `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false` ✅
+- `pnpm --filter @ai-nft-forge/ui build` ✅
+- `pnpm --filter @ai-nft-forge/web build` ✅
+
+## Updated Next Follow-up
+- Finish the last Studio consistency audit for spacing and hierarchy details that do not justify new shared primitives:
+  - section spacing cadence
+  - pill density
+  - rail stacking rhythm
+  - repeated inline link/button treatment
+- After Studio is locked, re-audit public/storefront card-shell and showcase patterns for any remaining promotion into `packages/ui`.

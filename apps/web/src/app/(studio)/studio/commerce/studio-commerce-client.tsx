@@ -22,6 +22,7 @@ import {
   type StudioCommerceDashboardResponse
 } from "@ai-nft-forge/shared";
 import {
+  ActionRow,
   ActionButton,
   EmptyState,
   FieldLabel,
@@ -69,8 +70,6 @@ const commerceMetricTones = {
 
 const commercePanelSectionClasses =
   "rounded-[1.75rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.04))] p-4 shadow-[var(--shadow-surface)] backdrop-blur md:p-5";
-
-const actionRowClasses = "flex flex-wrap items-center gap-3";
 
 const listCardBaseClasses =
   "rounded-[1.5rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))] p-4 text-left transition hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-soft)]";
@@ -1253,7 +1252,7 @@ export function StudioCommerceClient({
                   value={formatTimestamp(latestFulfilledCheckoutAt)}
                 />
               </div>
-              <div className={actionRowClasses}>
+              <ActionRow>
                 <a
                   className="inline-flex items-center rounded-full border border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)] px-3 py-1.5 text-sm font-medium text-[color:var(--color-text)] transition hover:bg-[color:var(--color-accent)] hover:text-white"
                   href={commerceReportCsvPath}
@@ -1268,8 +1267,8 @@ export function StudioCommerceClient({
                 >
                   Open report JSON
                 </a>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
+              </ActionRow>
+              <ActionRow compact>
                 <Pill>
                   {automationInFlightCount.toString()} automation in flight
                 </Pill>
@@ -1280,7 +1279,7 @@ export function StudioCommerceClient({
                 <Pill>
                   {prioritizedCheckouts.length.toString()} sessions listed
                 </Pill>
-              </div>
+              </ActionRow>
             </section>
           </aside>
         </div>
