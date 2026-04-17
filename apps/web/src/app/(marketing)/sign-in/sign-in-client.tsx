@@ -15,9 +15,11 @@ import {
   ActionLink,
   MetricTile,
   Pill,
+  ActionRow,
   SurfaceCard
 } from "@ai-nft-forge/ui";
 
+import { CollectibleHeroArtwork } from "../../../components/collectible-visuals";
 import {
   defaultWalletAuthChain,
   getWalletChainLabel
@@ -135,7 +137,8 @@ export function SignInClient({ initialSession }: SignInClientProps) {
   const browserWalletConnector =
     connectors.find((connector) => connector.id === "injected") ?? null;
   const availableConnectorCount =
-    Number(Boolean(baseAccountConnector)) + Number(Boolean(browserWalletConnector));
+    Number(Boolean(baseAccountConnector)) +
+    Number(Boolean(browserWalletConnector));
   const connectedWalletAddress = walletConnection.address ?? null;
   const connectedWalletChainLabel = getWalletChainLabel(
     walletConnection.chainId ?? null
@@ -395,7 +398,7 @@ export function SignInClient({ initialSession }: SignInClientProps) {
             value={walletConnection.connector?.name ?? "Not connected"}
           />
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <ActionRow className="mt-3">
           <Pill>{availableConnectorCount} wallet path(s) ready</Pill>
           <Pill>Next: {nextPath}</Pill>
           {connectedWalletChainLabel ? (
@@ -404,7 +407,24 @@ export function SignInClient({ initialSession }: SignInClientProps) {
           {session?.user.walletAddress ? (
             <Pill>Owner {shortHex(session.user.walletAddress)}</Pill>
           ) : null}
-        </div>
+        </ActionRow>
+        <CollectibleHeroArtwork
+          accentVar="--color-accent"
+          badge={
+            session?.user.walletAddress
+              ? `Owner ${shortHex(session.user.walletAddress)}`
+              : "Sign-in first"
+          }
+          className="mt-2"
+          imageAlt="Wallet authentication artwork"
+          imageUrl={null}
+          meta={
+            session?.user.walletAddress
+              ? "Session-backed auth boundary is active."
+              : "Server-issued nonce then signature, then signed cookie session."
+          }
+          title="Secure access"
+        />
         {notice ? (
           <div
             className={`mt-3 rounded-xl border p-2.5 text-sm ${formatNoticeToneClass(
@@ -414,7 +434,7 @@ export function SignInClient({ initialSession }: SignInClientProps) {
             {notice.message}
           </div>
         ) : null}
-        <div className="mt-4 flex flex-wrap gap-2">
+        <ActionRow className="mt-4">
           <ActionButton
             disabled={!baseAccountConnector || activeAction !== null}
             onClick={() => {
@@ -452,7 +472,7 @@ export function SignInClient({ initialSession }: SignInClientProps) {
             </ActionButton>
           ) : null}
           <ActionLink href={nextPath}>Continue</ActionLink>
-        </div>
+        </ActionRow>
       </SurfaceCard>
       <SurfaceCard
         body="The authenticated studio session remains server-owned. Wallet connection state is a client convenience for sign-in and later onchain actions."

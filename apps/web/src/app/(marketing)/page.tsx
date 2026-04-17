@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { ActionRow } from "@ai-nft-forge/ui";
 
 import {
   CollectibleEditorialBand,
   CollectibleHeroArtwork,
   CollectiblePreviewCard,
+  CollectibleGalleryRail,
   FloatingCollectibleCluster
 } from "../../components/collectible-visuals";
 
@@ -201,7 +203,7 @@ export default function MarketingPage() {
               creative pipelines, deterministic storefront publishing, and
               chain-aware release controls in one place.
             </p>
-            <div className="flex flex-wrap gap-3">
+            <ActionRow compact>
               <Link
                 className="inline-flex items-center rounded-full border border-[color:var(--color-accent)] bg-[color:var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-95"
                 href="/studio"
@@ -214,7 +216,7 @@ export default function MarketingPage() {
               >
                 Visit demo storefront
               </Link>
-            </div>
+            </ActionRow>
             <p className="text-sm leading-6 text-[color:var(--color-muted)]">
               Designed for teams that scale from campaign experiments to
               enterprise launch operations.
@@ -229,13 +231,16 @@ export default function MarketingPage() {
         </div>
       </section>
 
-      <section className="rounded-[2rem] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-6 shadow-[var(--shadow-surface)] md:p-8">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">
-          Capability proof
-        </p>
-        <h2 className="mb-5 max-w-3xl text-2xl font-semibold">
-          Built for teams that ship collectible launches, not prototypes.
-        </h2>
+      <CollectibleGalleryRail
+        accentVar="--color-accent"
+        headline="Capability proof"
+        summary="Built for teams that ship collectible launches, not prototypes."
+      >
+        <div className="mt-1">
+          <h2 className="max-w-3xl text-2xl font-semibold">
+            Built for teams that ship collectible launches, not prototypes.
+          </h2>
+        </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {proofPoints.map((point) => (
             <article
@@ -249,15 +254,13 @@ export default function MarketingPage() {
             </article>
           ))}
         </div>
-      </section>
+      </CollectibleGalleryRail>
 
-      <section className="rounded-[2rem] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-6 shadow-[var(--shadow-surface)] md:p-8">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">
-          How it works
-        </p>
-        <h2 className="mb-5 max-w-3xl text-2xl font-semibold">
-          A premium workflow from intake to fulfillment.
-        </h2>
+      <CollectibleGalleryRail
+        accentVar="--color-accent"
+        headline="How it works"
+        summary="A premium workflow from intake to fulfillment."
+      >
         <ol className="grid gap-3 md:grid-cols-2">
           {processSteps.map((step, index) => (
             <li
@@ -277,7 +280,7 @@ export default function MarketingPage() {
             </li>
           ))}
         </ol>
-      </section>
+      </CollectibleGalleryRail>
 
       <FloatingCollectibleCluster
         headline="Showcase rails should feel like premium collectible shelves."
@@ -316,13 +319,11 @@ export default function MarketingPage() {
         </div>
       </CollectibleEditorialBand>
 
-      <section className="rounded-[2rem] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-6 shadow-[var(--shadow-surface)] md:p-8">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">
-          Who it is for
-        </p>
-        <h2 className="mb-5 max-w-3xl text-2xl font-semibold">
-          Crafted for teams operating collectible launches at scale.
-        </h2>
+      <CollectibleGalleryRail
+        accentVar="--color-accent"
+        headline="Who it is for"
+        summary="Crafted for teams operating collectible launches at scale."
+      >
         <div className="grid gap-4 md:grid-cols-2">
           {audienceProfiles.map((audience) => (
             <article
@@ -343,13 +344,15 @@ export default function MarketingPage() {
             </article>
           ))}
         </div>
-      </section>
+      </CollectibleGalleryRail>
 
-      <section className="rounded-[2rem] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-6 shadow-[var(--shadow-surface)] md:p-8">
+      <CollectibleGalleryRail
+        accentVar="--color-accent"
+        headline="Product direction"
+        summary="Move from mockups to live drops with predictable boundaries and
+            production-minded operational posture."
+      >
         <div className="grid gap-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">
-            Product direction
-          </p>
           <h2 className="max-w-3xl text-3xl font-semibold">
             AI NFT Forge: premium launch infrastructure under operational
             pressure.
@@ -358,7 +361,7 @@ export default function MarketingPage() {
             Move from mockups to live drops with predictable boundaries and
             production-minded operational posture.
           </p>
-          <div className="flex flex-wrap gap-3">
+          <ActionRow compact>
             <Link
               className="inline-flex items-center rounded-full border border-[color:var(--color-accent)] bg-[color:var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-95"
               href="/studio"
@@ -371,9 +374,9 @@ export default function MarketingPage() {
             >
               Explore public routes
             </Link>
-          </div>
+          </ActionRow>
         </div>
-      </section>
+      </CollectibleGalleryRail>
     </div>
   );
 }

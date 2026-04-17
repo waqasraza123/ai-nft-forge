@@ -3,6 +3,28 @@
 ## Date
 2026-04-17
 
+## Latest Checkpoint (Polish + Visual QA)
+- Completed the next-phase polish and visual QA pass for storefront/studio composition with ops restrained:
+  - Added `CollectibleGalleryRail` and introduced it across public collection pages to unify gallery/story/technical/related section composition.
+  - Replaced remaining low-signal row layouts with `ActionRow` in:
+    - `apps/web/src/app/(public)/brands/[brandSlug]/page.tsx`
+    - `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/page.tsx`
+    - `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/purchase-panel.tsx`
+    - `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/checkout/[checkoutSessionId]/checkout-client.tsx`
+    - `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/checkout/[checkoutSessionId]/page.tsx`
+    - `apps/web/src/app/(marketing)/sign-in/page.tsx`
+    - `apps/web/src/app/(marketing)/sign-in/sign-in-client.tsx`
+    - `apps/web/src/components/collectible-visuals.tsx`
+  - Added explicit premium art-direction shell patterns on collection detail sections while keeping checkout/action rail density in public flow light.
+  - Added a collectible hero artwork strip inside the sign-in client to keep the public auth surface from feeling text-only while still staying minimal and readable.
+  - Audit step included `rg` checks for lingering `flex flex-wrap` in marketing/public/studio/ops routes, and remaining instances are intentionally scoped to header/chrome/theme/ops components per the “ops minimal/readable” constraint.
+- Verification:
+  - `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+  - `pnpm --filter @ai-nft-forge/web build`
+- Current Objective:
+  - Lock migration phase as production-complete for current pass.
+  - Start optional brand-level art asset expansion only if needed.
+
 ## Latest Checkpoint (Studio Settings Row Finalization)
 - Completed the final `studio-settings` row-standardization step in `apps/web/src/app/(studio)/studio/settings/studio-settings-client.tsx`:
   - Replaced the remaining `div` rows using `flex flex-wrap items-center` variants with shared `ActionRow` (`compact`, `padTop`, and default variants) in all remaining workspace, brand, membership, lifecycle, offboarding, role escalation, decommission, and sidebar rail action clusters.
