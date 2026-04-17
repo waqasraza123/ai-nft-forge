@@ -8,6 +8,7 @@ import {
   FieldLabel,
   FieldStack,
   Pill,
+  SelectField,
   StatusBanner,
   SurfaceCard
 } from "@ai-nft-forge/ui";
@@ -251,8 +252,7 @@ export function StudioAssetCard({
             <div className="flex flex-wrap gap-2">
               <FieldStack>
                 <FieldLabel>Variant count</FieldLabel>
-                <select
-                  className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                <SelectField
                   disabled={isDispatchingGeneration}
                   id={`variant-count-${asset.id}`}
                   onChange={(event) =>
@@ -267,7 +267,7 @@ export function StudioAssetCard({
                       </option>
                     )
                   )}
-                </select>
+                </SelectField>
               </FieldStack>
               {canStartGeneration(asset) ? (
                 <ActionButton
@@ -310,9 +310,9 @@ export function StudioAssetCard({
                 {asset.contentType}
               </div>
             )}
-            <span className="absolute left-2 top-2 inline-flex items-center rounded-full bg-[color:var(--color-surface)]/85 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-[color:var(--color-muted)]">
+            <Pill className="absolute left-2 top-2 bg-[color:var(--color-surface)]/85 px-2.5 py-1 text-[0.65rem] tracking-[0.12em] text-[color:var(--color-muted)]">
               {latestStatusLabel}
-            </span>
+            </Pill>
           </div>
           <div className="grid gap-2">
             <FieldLabel>State</FieldLabel>
@@ -355,8 +355,7 @@ export function StudioAssetCard({
           <div className="flex flex-wrap gap-2">
             <FieldStack>
               <FieldLabel>Variant count</FieldLabel>
-              <select
-                className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+              <SelectField
                 disabled={isDispatchingGeneration}
                 id={`variant-count-${asset.id}`}
                 onChange={(event) =>
@@ -371,7 +370,7 @@ export function StudioAssetCard({
                     </option>
                   )
                 )}
-              </select>
+              </SelectField>
             </FieldStack>
             <ActionButton
               disabled={isDispatchingGeneration}
@@ -512,7 +511,8 @@ export function StudioAssetCard({
                       requested
                     </span>
                     <span>
-                      {selectedGeneration.result.storedAssetCount} stored outputs
+                      {selectedGeneration.result.storedAssetCount} stored
+                      outputs
                     </span>
                     <span className="text-xs text-[color:var(--color-muted)]">
                       {selectedGeneration.result.outputGroupKey}
@@ -594,7 +594,9 @@ export function StudioAssetCard({
                               {generatedAsset.moderatedAt ? (
                                 <span>
                                   Reviewed{" "}
-                                  {formatIsoDateTime(generatedAsset.moderatedAt)}
+                                  {formatIsoDateTime(
+                                    generatedAsset.moderatedAt
+                                  )}
                                 </span>
                               ) : null}
                               <span className="text-xs text-[color:var(--color-muted)]">
@@ -680,11 +682,12 @@ export function StudioAssetCard({
               </>
             ) : null}
           </div>
-    ) : (
-      <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 text-sm text-[color:var(--color-muted)]">
-        Stored generated outputs will appear here after worker processing succeeds.
-      </div>
-    )}
+        ) : (
+          <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 text-sm text-[color:var(--color-muted)]">
+            Stored generated outputs will appear here after worker processing
+            succeeds.
+          </div>
+        )}
       </div>
     </SurfaceCard>
   );

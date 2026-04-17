@@ -592,3 +592,14 @@ Finish the production-grade consistency phase on remaining high-traffic Studio/O
 
 ## Updated Next Follow-up
 - Finish the same production-grade sweep for `studio` and `ops` high-traffic surfaces by normalizing remaining route-local action/link/compact-status treatments before introducing any new one-off decorative patterns.
+
+## Latest Checkpoint (Studio Asset Card Normalization)
+- Completed the next focused production-grade pass for creator media controls in `apps/web/src/app/(studio)/studio/assets/studio-asset-card.tsx`:
+  - Replaced duplicated inline variant-select markup with shared `SelectField` in both card render modes.
+  - Replaced inline status overlay span with shared `Pill` + compact `className` for consistent status token styling.
+- Behavior remains unchanged; change is interface-only normalization around existing generation/selection/preview controls.
+- Verification:
+  - `pnpm exec prettier --write \"apps/web/src/app/(studio)/studio/assets/studio-asset-card.tsx\"`
+  - `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+  - `pnpm --filter @ai-nft-forge/web build`
+- Current phase status: `Shared UI Primitive Consolidation` remains active; next step is a Studio/Ops cross-surface consistency sweep on any remaining local shell variants before final modern-premium pass is marked complete.
