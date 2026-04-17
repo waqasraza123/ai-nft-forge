@@ -21,8 +21,21 @@ import {
   type StudioCommerceCollectionSummary,
   type StudioCommerceDashboardResponse
 } from "@ai-nft-forge/shared";
-import { PageShell, Pill, cn } from "@ai-nft-forge/ui";
+import {
+  ActionButton,
+  FieldLabel,
+  FieldStack,
+  PageShell,
+  Pill,
+  StatusBanner,
+  cn
+} from "@ai-nft-forge/ui";
 
+import {
+  CollectibleEditorialBand,
+  FloatingCollectibleCluster,
+  StudioSceneCard
+} from "../../../../components/collectible-visuals";
 import {
   StudioCommerceSessionCard,
   type StudioCommerceSessionActionRequest,
@@ -44,44 +57,87 @@ type FulfillmentEditorState = Record<string, StudioCommerceSessionEditor>;
 
 type CommerceSignalTone = "critical" | "warning" | "success" | "neutral";
 
-type CommercePanelTone = "primary" | "positive" | "neutral";
-
 const commerceMetricTones = {
-  critical:
-    "border-red-500/45 bg-red-500/12 text-red-50",
-  warning:
-    "border-amber-400/45 bg-amber-400/12 text-amber-100",
-  success:
-    "border-emerald-500/45 bg-emerald-500/12 text-emerald-50",
+  critical: "border-red-500/45 bg-red-500/12 text-red-50",
+  warning: "border-amber-400/45 bg-amber-400/12 text-amber-100",
+  success: "border-emerald-500/45 bg-emerald-500/12 text-emerald-50",
   neutral:
     "border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-text)]"
 } as const;
 
-const commercePanelToneClasses = {
-  primary:
-    "bg-[color:var(--color-surface)] text-[color:var(--color-text)] border-[color:var(--color-line)]",
-  positive:
-    "bg-[color:var(--color-surface)] text-[color:var(--color-text)] border-[color:var(--color-line)]",
-  neutral:
-    "bg-[color:var(--color-surface)] text-[color:var(--color-text)] border-[color:var(--color-line)]"
-} as const;
-
-const commercePanelHeaderClasses =
-  "rounded-2xl border p-4 shadow-[var(--shadow-surface)] md:p-5";
-
 const commercePanelSectionClasses =
-  "rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 shadow-[var(--shadow-surface)] md:p-5";
+  "rounded-[1.75rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.04))] p-4 shadow-[var(--shadow-surface)] backdrop-blur md:p-5";
 
 const actionRowClasses = "flex flex-wrap items-center gap-3";
 
 const emptyStateClasses =
-  "rounded-2xl border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 text-sm text-[color:var(--color-muted)]";
+  "rounded-[1.5rem] border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface)]/75 p-4 text-sm text-[color:var(--color-muted)]";
 
 const listCardBaseClasses =
-  "rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 transition hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-soft)]";
+  "rounded-[1.5rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))] p-4 text-left transition hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-soft)]";
 
-function commercePanelToneClass(tone: CommercePanelTone) {
-  return commercePanelToneClasses[tone];
+const commerceHeroMetricClasses =
+  "rounded-[1.5rem] border border-white/10 bg-black/25 p-4 text-white shadow-[0_18px_40px_rgba(15,23,42,0.18)] backdrop-blur-xl";
+
+const commerceInsetMetricClasses =
+  "rounded-[1.35rem] border border-[color:var(--color-line)] bg-[color:var(--color-surface)]/75 p-4 shadow-[0_14px_30px_rgba(15,23,42,0.08)]";
+
+function CommerceHeroMetric(input: {
+  detail: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className={commerceHeroMetricClasses}>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/60">
+        {input.label}
+      </p>
+      <p className="mt-2 text-lg font-semibold text-white">{input.value}</p>
+      <p className="mt-2 text-sm leading-6 text-white/72">{input.detail}</p>
+    </div>
+  );
+}
+
+function CommerceInsetMetric(input: {
+  detail?: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className={commerceInsetMetricClasses}>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--color-muted)]">
+        {input.label}
+      </p>
+      <p className="mt-2 text-xl font-semibold text-[color:var(--color-text)]">
+        {input.value}
+      </p>
+      {input.detail ? (
+        <p className="mt-2 text-sm leading-6 text-[color:var(--color-muted)]">
+          {input.detail}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function CommerceSectionHeading(input: {
+  body: string;
+  eyebrow: string;
+  title: string;
+}) {
+  return (
+    <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
+          {input.eyebrow}
+        </p>
+        <h3 className="mt-1 text-xl font-semibold">{input.title}</h3>
+      </div>
+      <p className="max-w-xs text-sm leading-6 text-[color:var(--color-muted)]">
+        {input.body}
+      </p>
+    </div>
+  );
 }
 
 function createFallbackErrorMessage(response: Response) {
@@ -501,6 +557,28 @@ export function StudioCommerceClient({
     ? activeBrand.totalCheckoutCount
     : dashboard.summary.totalCheckoutCount;
   const scopeBrandCount = activeBrand ? 1 : dashboard.brands.length;
+  const commerceVisualItems = useMemo(() => {
+    const queueItems = attentionCheckouts
+      .slice(0, 3)
+      .map(
+        (checkout) =>
+          `${checkout.brandName} · Edition ${checkout.editionNumber}`
+      );
+
+    if (queueItems.length > 0) {
+      return queueItems;
+    }
+
+    const collectionItems = sortedCollections
+      .slice(0, 3)
+      .map((collection) => collection.title);
+
+    if (collectionItems.length > 0) {
+      return collectionItems;
+    }
+
+    return ["Live checkout", "Fulfillment queue", "Release reports"];
+  }, [attentionCheckouts, sortedCollections]);
 
   const overviewSignals = [
     {
@@ -780,8 +858,8 @@ export function StudioCommerceClient({
       lead="Use this workspace to supervise reservations, payment completion, automation handoff, and final fulfillment without leaving the Studio scope boundary."
       actions={
         <>
-          <button
-            className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+          <ActionButton
+            tone="accent"
             disabled={isRefreshing}
             onClick={() => {
               void refreshDashboard();
@@ -789,14 +867,23 @@ export function StudioCommerceClient({
             type="button"
           >
             {isRefreshing ? "Refreshing…" : "Refresh workspace"}
-          </button>
-          <Link className="inline-flex items-center rounded-full border border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)] px-3 py-1.5 text-sm font-medium text-[color:var(--color-text)] transition hover:bg-[color:var(--color-accent)] hover:text-white" href="/studio/collections">
+          </ActionButton>
+          <Link
+            className="inline-flex items-center rounded-full border border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)] px-3 py-1.5 text-sm font-medium text-[color:var(--color-text)] transition hover:bg-[color:var(--color-accent)] hover:text-white"
+            href="/studio/collections"
+          >
             Collections
           </Link>
-          <Link className="inline-flex items-center rounded-full border border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)] px-3 py-1.5 text-sm font-medium text-[color:var(--color-text)] transition hover:bg-[color:var(--color-accent)] hover:text-white" href="/studio/commerce/fleet">
+          <Link
+            className="inline-flex items-center rounded-full border border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)] px-3 py-1.5 text-sm font-medium text-[color:var(--color-text)] transition hover:bg-[color:var(--color-accent)] hover:text-white"
+            href="/studio/commerce/fleet"
+          >
             Fleet view
           </Link>
-          <Link className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm" href="/studio">
+          <Link
+            className="text-sm text-[color:var(--color-accent)] hover:underline hover:underline-offset-4"
+            href="/studio"
+          >
             Back to studio
           </Link>
         </>
@@ -804,64 +891,82 @@ export function StudioCommerceClient({
       tone="studio"
     >
       <div className="space-y-6">
-        <section className="grid gap-6 rounded-3xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-5 shadow-[var(--shadow-surface)] md:p-6 lg:grid-cols-[1.45fr_1fr]">
-          <div className="space-y-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">
-              Transaction control room
-            </p>
-            <h2 className="max-w-4xl text-3xl font-semibold font-[var(--font-display)] leading-tight text-[color:var(--color-text)] sm:text-4xl">
-              {attentionCheckouts.length > 0
-                ? `${attentionCheckouts.length.toString()} sessions need attention in ${activeScopeLabel}.`
-                : `Checkout and fulfillment are stable in ${activeScopeLabel}.`}
-            </h2>
-            <p className="max-w-3xl text-sm leading-7 text-[color:var(--color-muted)]">
-              Scope, backlog, automation state, and release context stay visible
-              together so payment recovery and fulfillment verification do not
-              drift apart.
-            </p>
-            <div className="flex flex-wrap items-center gap-2">
-              <Pill>{activeBrand?.brandSlug ?? "all-brands"}</Pill>
-              <Pill>{scopeCheckoutCount.toString()} sessions in scope</Pill>
-              <Pill>{dashboard.collections.length.toString()} releases</Pill>
-              <Pill>{scopeBrandCount.toString()} brand scope</Pill>
-              <Pill>
-                {dashboard.summary.manualCheckoutCount.toString()} manual
-              </Pill>
-              <Pill>
-                {dashboard.summary.stripeCheckoutCount.toString()} stripe
-              </Pill>
+        <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+          <CollectibleEditorialBand className="bg-[linear-gradient(135deg,rgba(15,23,42,0.96),rgba(15,23,42,0.78))] text-white shadow-[0_28px_90px_rgba(15,23,42,0.28)]">
+            <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr] xl:items-start">
+              <div className="space-y-5">
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/65">
+                    Transaction control room
+                  </p>
+                  <h2 className="max-w-4xl text-3xl font-semibold font-[var(--font-display)] leading-tight text-white sm:text-4xl">
+                    {attentionCheckouts.length > 0
+                      ? `${attentionCheckouts.length.toString()} sessions need attention in ${activeScopeLabel}.`
+                      : `Checkout and fulfillment are stable in ${activeScopeLabel}.`}
+                  </h2>
+                  <p className="max-w-3xl text-sm leading-7 text-white/72">
+                    Scope, payment state, fulfillment automation, and release
+                    pressure stay visible together so recovery decisions do not
+                    drift away from the live buyer ledger.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Pill>{activeBrand?.brandSlug ?? "all-brands"}</Pill>
+                  <Pill>{scopeCheckoutCount.toString()} sessions in scope</Pill>
+                  <Pill>
+                    {dashboard.collections.length.toString()} releases
+                  </Pill>
+                  <Pill>{scopeBrandCount.toString()} brand scope</Pill>
+                  <Pill>
+                    {dashboard.summary.manualCheckoutCount.toString()} manual
+                  </Pill>
+                  <Pill>
+                    {dashboard.summary.stripeCheckoutCount.toString()} stripe
+                  </Pill>
+                </div>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <CommerceHeroMetric
+                    detail="Workspace owner wallet currently supervising this commerce scope."
+                    label="Operator authority"
+                    value={shortenWalletAddress(ownerWalletAddress)}
+                  />
+                  <CommerceHeroMetric
+                    detail={`${formatPercent(completionRate)} payment completion rate.`}
+                    label="Latest paid"
+                    value={formatTimestamp(latestCompletedCheckoutAt)}
+                  />
+                  <CommerceHeroMetric
+                    detail={`${formatPercent(fulfillmentRate)} fulfillment completion rate.`}
+                    label="Latest fulfilled"
+                    value={formatTimestamp(latestFulfilledCheckoutAt)}
+                  />
+                </div>
+              </div>
+              <StudioSceneCard
+                className="border-white/10 bg-white/8"
+                eyebrow="Creator-side oversight"
+                note="Keep live checkout operations premium and legible: active scope, automation state, and release backlog remain visible without turning the route into a dense ops wall."
+                title="Premium commerce shell"
+              />
             </div>
-          </div>
-          <div className="grid gap-3">
-            <div className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] p-4">
-              <span>Operator authority</span>
-              <strong>{shortenWalletAddress(ownerWalletAddress)}</strong>
-              <small>
-                Workspace owner wallet currently supervising this scope
-              </small>
-            </div>
-            <div className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] p-4">
-              <span>Latest paid</span>
-              <strong>{formatTimestamp(latestCompletedCheckoutAt)}</strong>
-              <small>
-                {formatPercent(completionRate)} payment completion rate
-              </small>
-            </div>
-            <div className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] p-4">
-              <span>Latest fulfilled</span>
-              <strong>{formatTimestamp(latestFulfilledCheckoutAt)}</strong>
-              <small>
-                {formatPercent(fulfillmentRate)} fulfillment completion rate
-              </small>
-            </div>
-          </div>
+          </CollectibleEditorialBand>
+
+          <FloatingCollectibleCluster
+            className="min-h-full"
+            headline="Release pressure, buyer activity, and fulfillment signals now share one visual frame."
+            items={commerceVisualItems}
+            label="Commerce spotlight"
+          />
         </section>
 
-        <section className="grid gap-3 md:grid-cols-3" aria-label="Commerce overview">
+        <section
+          className="grid gap-3 md:grid-cols-3"
+          aria-label="Commerce overview"
+        >
           {overviewSignals.map((signal) => (
             <article
               className={cn(
-                "rounded-2xl border p-4 shadow-sm",
+                "rounded-[1.5rem] border p-4 shadow-[0_14px_30px_rgba(15,23,42,0.08)] backdrop-blur",
                 getCommerceMetricToneClass(signal.tone)
               )}
               key={signal.label}
@@ -880,16 +985,16 @@ export function StudioCommerceClient({
         </section>
 
         {notice ? (
-          <div
-            className={`rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] ${
+          <StatusBanner
+            tone={
               notice.tone === "error"
-                ? "border-red-500/45 bg-red-500/12 text-red-50"
+                ? "error"
                 : notice.tone === "success"
-                  ? "border-emerald-500/45 bg-emerald-500/12 text-emerald-50"
-                  : "border-blue-500/35 bg-blue-500/12 text-blue-50"
-            }`}
+                  ? "success"
+                  : "info"
+            }
           >
-            <strong>
+            <strong className="mr-2">
               {notice.tone === "error"
                 ? "Commerce error"
                 : notice.tone === "success"
@@ -897,31 +1002,22 @@ export function StudioCommerceClient({
                   : "Working"}
             </strong>
             <span>{notice.message}</span>
-          </div>
+          </StatusBanner>
         ) : null}
 
         <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
           <div className="space-y-6">
             <section className={cn(commercePanelSectionClasses)}>
-              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
-                    Attention queue
-                  </p>
-                  <h3 className="mt-1 text-xl font-semibold">
-                    What needs action now
-                  </h3>
-                </div>
-                <p className="text-sm text-[color:var(--color-muted)] max-w-xs">
-                  Separate manual fulfillment, automation recovery, and open
-                  reservations before reviewing the full session ledger.
-                </p>
-              </div>
+              <CommerceSectionHeading
+                body="Separate manual fulfillment, automation recovery, and open reservations before reviewing the full session ledger."
+                eyebrow="Attention queue"
+                title="What needs action now"
+              />
               <div className="grid gap-3 md:grid-cols-2">
                 {queueSignals.map((signal) => (
                   <article
                     className={cn(
-                      "rounded-xl border p-4",
+                      "rounded-[1.35rem] border p-4 shadow-[0_12px_26px_rgba(15,23,42,0.06)]",
                       getCommerceMetricToneClass(signal.tone)
                     )}
                     key={signal.label}
@@ -975,20 +1071,11 @@ export function StudioCommerceClient({
             </section>
 
             <section className={cn(commercePanelSectionClasses)}>
-              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
-                    Session workspace
-                  </p>
-                  <h3 className="mt-1 text-xl font-semibold">
-                    Full transaction ledger
-                  </h3>
-                </div>
-                <p className="text-sm text-[color:var(--color-muted)] max-w-xs">
-                  Every session remains available for payment recovery, release,
-                  fulfillment updates, and provider verification.
-                </p>
-              </div>
+              <CommerceSectionHeading
+                body="Every session remains available for payment recovery, release, fulfillment updates, and provider verification."
+                eyebrow="Session workspace"
+                title="Full transaction ledger"
+              />
               {prioritizedCheckouts.length === 0 ? (
                 <div className={emptyStateClasses}>
                   Buyer-facing checkout has not produced any sessions yet.
@@ -1028,22 +1115,13 @@ export function StudioCommerceClient({
 
           <aside className="space-y-6">
             <section className={cn(commercePanelSectionClasses)}>
-              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
-                    Scope
-                  </p>
-                  <h3 className="mt-1 text-xl font-semibold">
-                    Brand and workspace context
-                  </h3>
-                </div>
-                <p className="text-sm text-[color:var(--color-muted)] max-w-xs">
-                  Make the current commerce boundary explicit before exporting,
-                  retrying automation, or reviewing buyer sessions.
-                </p>
-              </div>
-              <label className="grid gap-1.5">
-                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Active commerce scope</span>
+              <CommerceSectionHeading
+                body="Make the current commerce boundary explicit before exporting, retrying automation, or reviewing buyer sessions."
+                eyebrow="Scope"
+                title="Brand and workspace context"
+              />
+              <FieldStack emphasis="compact">
+                <FieldLabel>Active commerce scope</FieldLabel>
                 <select
                   className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                   onChange={(event) => {
@@ -1058,7 +1136,19 @@ export function StudioCommerceClient({
                     </option>
                   ))}
                 </select>
-              </label>
+              </FieldStack>
+              <div className="grid gap-3 md:grid-cols-2">
+                <CommerceInsetMetric
+                  detail="Current workspace-wide session count in this scope."
+                  label="Sessions"
+                  value={scopeCheckoutCount.toString()}
+                />
+                <CommerceInsetMetric
+                  detail="Brands participating in the selected commerce boundary."
+                  label="Brand scope"
+                  value={scopeBrandCount.toString()}
+                />
+              </div>
               <div className="space-y-2">
                 <button
                   className={cn(
@@ -1104,18 +1194,11 @@ export function StudioCommerceClient({
             </section>
 
             <section className={cn(commercePanelSectionClasses)}>
-              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">Releases</p>
-                  <h3 className="mt-1 text-xl font-semibold">
-                    Collection pressure
-                  </h3>
-                </div>
-                <p className="text-sm text-[color:var(--color-muted)] max-w-xs">
-                  Focus on the live or recently active releases carrying the
-                  most open checkout and fulfillment backlog.
-                </p>
-              </div>
+              <CommerceSectionHeading
+                body="Focus on the live or recently active releases carrying the most open checkout and fulfillment backlog."
+                eyebrow="Releases"
+                title="Collection pressure"
+              />
               {sortedCollections.length === 0 ? (
                 <div className={emptyStateClasses}>
                   No checkout sessions exist yet.
@@ -1124,28 +1207,48 @@ export function StudioCommerceClient({
                 <div className="space-y-2">
                   {sortedCollections.map((collection) => (
                     <article
-                      className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4"
+                      className="rounded-[1.5rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.04))] p-4 shadow-[0_12px_26px_rgba(15,23,42,0.06)]"
                       key={collection.collectionPublicPath}
                     >
-                      <div className="space-y-1">
-                        <strong>{collection.title}</strong>
-                        <span>
-                          {collection.brandName} · {collection.storefrontStatus}
-                        </span>
-                        <span>
-                          {collection.openCheckoutCount.toString()} open ·{" "}
-                          {collection.unfulfilledCheckoutCount.toString()}{" "}
-                          unfulfilled
+                      <div className="grid gap-4">
+                        <div className="space-y-1">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
+                            Live release
+                          </p>
+                          <strong className="text-base text-[color:var(--color-text)]">
+                            {collection.title}
+                          </strong>
+                          <span className="block text-sm text-[color:var(--color-muted)]">
+                            {collection.brandName} ·{" "}
+                            {collection.storefrontStatus}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Pill>
+                            {collection.openCheckoutCount.toString()} open
+                          </Pill>
+                          <Pill>
+                            {collection.unfulfilledCheckoutCount.toString()}{" "}
+                            unfulfilled
+                          </Pill>
+                          <Pill>
+                            {collection.completedCheckoutCount.toString()}{" "}
+                            completed
+                          </Pill>
+                        </div>
+                        <span className="text-sm text-[color:var(--color-muted)]">
+                          Public launch route remains available for storefront
+                          verification and buyer-path QA.
                         </span>
                       </div>
-                        <Link
-                          className="text-sm text-[color:var(--color-accent)] hover:text-white"
-                          href={collection.collectionPublicPath}
-                          rel="noreferrer"
-                          target="_blank"
-                        >
-                          Public page
-                        </Link>
+                      <Link
+                        className="mt-4 inline-flex items-center text-sm text-[color:var(--color-accent)] hover:text-white"
+                        href={collection.collectionPublicPath}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        Public page
+                      </Link>
                     </article>
                   ))}
                 </div>
@@ -1153,35 +1256,28 @@ export function StudioCommerceClient({
             </section>
 
             <section className={cn(commercePanelSectionClasses)}>
-              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">Reports</p>
-                  <h3 className="mt-1 text-xl font-semibold">
-                    Export and verify
-                  </h3>
-                </div>
-                <p className="text-sm text-[color:var(--color-muted)] max-w-xs">
-                  Export the same filtered session scope you are reviewing live,
-                  or verify timing and automation cadence before a handoff.
-                </p>
-              </div>
+              <CommerceSectionHeading
+                body="Export the same filtered session scope you are reviewing live, or verify timing and automation cadence before a handoff."
+                eyebrow="Reports"
+                title="Export and verify"
+              />
               <div className="grid gap-3 md:grid-cols-2">
-                <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3">
-                  <span>Completion rate</span>
-                  <strong>{formatPercent(completionRate)}</strong>
-                </div>
-                <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3">
-                  <span>Fulfillment rate</span>
-                  <strong>{formatPercent(fulfillmentRate)}</strong>
-                </div>
-                <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3">
-                  <span>Last paid</span>
-                  <strong>{formatTimestamp(latestCompletedCheckoutAt)}</strong>
-                </div>
-                <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3">
-                  <span>Last fulfilled</span>
-                  <strong>{formatTimestamp(latestFulfilledCheckoutAt)}</strong>
-                </div>
+                <CommerceInsetMetric
+                  label="Completion rate"
+                  value={formatPercent(completionRate)}
+                />
+                <CommerceInsetMetric
+                  label="Fulfillment rate"
+                  value={formatPercent(fulfillmentRate)}
+                />
+                <CommerceInsetMetric
+                  label="Last paid"
+                  value={formatTimestamp(latestCompletedCheckoutAt)}
+                />
+                <CommerceInsetMetric
+                  label="Last fulfilled"
+                  value={formatTimestamp(latestFulfilledCheckoutAt)}
+                />
               </div>
               <div className={actionRowClasses}>
                 <a

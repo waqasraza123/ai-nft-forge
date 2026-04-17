@@ -171,3 +171,33 @@ Complete the Tailwind migration checkpoint in `apps/web` and `packages/ui`, stab
 ## Updated Follow-up
 - `studio-commerce-client` is now the highest-priority remaining Studio route for a full premium migration and visual/system audit.
 - After commerce, the next quality pass should unify repeated route-local helpers from settings/collections into broader shared `packages/ui` variants where the patterns have stabilized.
+
+## Latest Checkpoint (Studio Commerce Migration)
+- Completed the next major Studio migration slice in `apps/web/src/app/(studio)/studio/commerce/studio-commerce-client.tsx`.
+- Replaced the route's remaining flat dashboard treatment with a premium but restrained commerce control-room composition:
+  - editorial-style hero shell with commerce metrics
+  - selective studio scene / collectible visual support
+  - stronger overview signal cards
+  - upgraded scope, release-pressure, and report/export side modules
+  - preserved dense ledger readability by leaving the session card behavior-first
+- Reused `apps/web/src/components/collectible-visuals.tsx` and `@ai-nft-forge/ui` primitives (`ActionButton`, `StatusBanner`, `FieldStack`, `FieldLabel`) instead of introducing route-scoped CSS.
+- Kept all existing commerce behavior intact:
+  - brand scoping
+  - checkout refresh
+  - fulfillment editing
+  - cancel/complete/retry actions
+  - report/export links
+- Audit result:
+  - Studio commerce was still structurally flatter than collections and storefront routes.
+  - It lacked a strong focal composition and clearer hierarchy between queue, scope, release pressure, and reports.
+  - The migration intentionally kept the transaction ledger operational and uncluttered rather than over-decorating dense session surfaces.
+
+## Verification (Studio Commerce Migration)
+- `pnpm exec prettier --write apps/web/src/app/'(studio)'/studio/commerce/studio-commerce-client.tsx` ✅
+- `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false` ✅
+- `pnpm --filter @ai-nft-forge/web build` ✅
+
+## Next Follow-up
+- Start consolidating repeated premium route helpers from Studio settings, collections, and commerce into durable `packages/ui` variants once the route treatments have stabilized.
+- Re-audit `studio-settings-client.tsx` for consistency against the now-upgraded collections and commerce control-room patterns.
+- Keep ops route families clarity-first and avoid importing the heavier collectible visual language into dense operational tables.
