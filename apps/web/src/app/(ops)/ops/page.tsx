@@ -1,4 +1,4 @@
-import { ActionLink, PageShell, Pill } from "@ai-nft-forge/ui";
+import { ActionLink, PageShell, Pill, SurfaceCard } from "@ai-nft-forge/ui";
 
 import { WorkspaceDirectoryPanel } from "../../../components/workspace-directory-panel";
 import { WorkspaceScopeSwitcher } from "../../../components/workspace-scope-switcher";
@@ -217,37 +217,23 @@ export default async function OpsPage() {
         </section>
 
         <aside className="grid gap-5">
-          <section className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-5 shadow-[var(--shadow-surface)]">
-            <div className="space-y-1">
-              <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--color-accent)]">
-                Workspace scope
-              </span>
-              <h3 className="text-xl font-semibold">
-                Controlled workspace selection
-              </h3>
-              <p className="text-sm text-[color:var(--color-muted)]">
-                Keep the current workspace explicit before acting on alerts,
-                policies, reconciliation, or queue-owned evidence.
-              </p>
-            </div>
+          <SurfaceCard
+            body="Keep the current workspace explicit before acting on alerts, policies, reconciliation, or queue-owned evidence."
+            eyebrow="Workspace scope"
+            title="Controlled workspace selection"
+          >
             <div className="mt-4">
               <WorkspaceScopeSwitcher
                 currentWorkspaceSlug={currentWorkspace?.slug ?? null}
                 workspaces={runtime.operator.access?.availableWorkspaces ?? []}
               />
             </div>
-          </section>
-          <section className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-5 shadow-[var(--shadow-surface)]">
-            <div className="space-y-1">
-              <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--color-accent)]">
-                Route deck
-              </span>
-              <h3 className="text-xl font-semibold">Adjacent ops surfaces</h3>
-              <p className="text-sm text-[color:var(--color-muted)]">
-                Use dedicated routes for fleet triage, audit evidence, retention
-                review, and workspace estate context.
-              </p>
-            </div>
+          </SurfaceCard>
+          <SurfaceCard
+            body="Use dedicated routes for fleet triage, audit evidence, retention review, and workspace estate context."
+            eyebrow="Route deck"
+            title="Adjacent ops surfaces"
+          >
             <div className="mt-4 grid gap-2">
               <ActionLink href="/ops/audit">Review audit evidence</ActionLink>
               <ActionLink href="/ops/fleet">Open fleet triage</ActionLink>
@@ -258,22 +244,16 @@ export default async function OpsPage() {
                 Browse workspace directory
               </ActionLink>
             </div>
-          </section>
-          <section className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-5 shadow-[var(--shadow-surface)]">
-            <div className="space-y-1">
-              <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--color-accent)]">
-                Internal chrome
-              </span>
-              <h3 className="text-xl font-semibold">Internal sidebar theme</h3>
-              <p className="text-sm text-[color:var(--color-muted)]">
-                Choose one of five premium themes to change sidebar chrome,
-                focus, and key accent language across Studio and Ops surfaces.
-              </p>
-            </div>
+          </SurfaceCard>
+          <SurfaceCard
+            body="Choose one of five premium themes to change sidebar chrome, focus, and key accent language across Studio and Ops surfaces."
+            eyebrow="Internal chrome"
+            title="Internal sidebar theme"
+          >
             <div className="mt-4">
               <SidebarThemeSwitcher />
             </div>
-          </section>
+          </SurfaceCard>
         </aside>
       </div>
       <OpsOperatorPanel operator={runtime.operator} />

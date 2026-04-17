@@ -391,3 +391,49 @@ Finish the production-grade consistency phase on remaining high-traffic Studio/O
 ## Verification (Checkout Panel Premium Polish)
 - `pnpm exec prettier --write apps/web/src/app/'(public)'/brands/'[brandSlug]'/collections/'[collectionSlug]'/purchase-panel.tsx`
 - `pnpm --filter @ai-nft-forge/web build`
+
+## Latest Checkpoint (Studio Route Action Normalization)
+- Completed the next production-grade consistency pass on high-impact Studio links by standardizing repeated inline link actions to `ActionLink` in:
+  - `apps/web/src/app/(studio)/studio/commerce/studio-commerce-client.tsx`
+  - `apps/web/src/app/(studio)/studio/collections/studio-collections-client.tsx`
+- Normalized commerce header and report actions, plus collections target/external artifact links, to shared action-link tone variants while preserving existing URLs, targets, and behavior.
+- Verification:
+  - `pnpm exec prettier --write apps/web/src/app/'(studio)'/studio/collections/studio-collections-client.tsx apps/web/src/app/'(studio)'/studio/commerce/studio-commerce-client.tsx`
+  - `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+  - `pnpm --filter @ai-nft-forge/web build`
+
+## Updated Next Follow-up
+- Run one final studio-wide sweep for spacing/action rhythm in the remaining controls that still use route-local patterns and decide whether any should be promoted to shared `packages/ui` variants.
+- Keep the phase focus on premium consistency with production intent: stronger visual hierarchy on public/storefront and studio-preview surfaces first, minimal changes on ops density-heavy command surfaces.
+
+## Latest Checkpoint (Ops + Studio Route Link Consolidation)
+- Completed the next production-grade consistency step after link normalization:
+  - normalized remaining ad-hoc ops action links in `apps/web/src/app/(ops)/ops/page.tsx` to shared `ActionLink` tones (`inline`, `muted`, default action), including backend health + marketing back-link actions;
+  - aligned Studio navigation card links in `apps/web/src/app/(studio)/studio/layout.tsx` to a shared link primitive with reusable card classes, preserving internal spacing and interaction rhythm while removing route-local `Link` class duplication.
+- Verification:
+  - `pnpm exec prettier --write apps/web/src/app/'(ops)'/ops/page.tsx apps/web/src/app/'(studio)'/studio/layout.tsx`
+  - `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+  - `pnpm --filter @ai-nft-forge/web build`
+
+## Updated Next Follow-up
+- Continue the next step in this phase by consolidating any repeated route-shell shell-level wrappers into `packages/ui` only when they appear across two+ production surfaces.
+- Keep Ops dense operational screens behavior-first and reserve additional decorative depth for public storefront and Studio preview/creation pathways.
+
+## Latest Checkpoint (Ops Shell Consistency)
+- Completed the next production-grade consistency step in the Ops surface by replacing repeated local shell wrappers with shared primitives:
+  - `apps/web/src/app/(ops)/ops/page.tsx`
+  - `apps/web/src/app/(ops)/ops/retention/page.tsx`
+  - `apps/web/src/app/(ops)/ops/workspaces/page.tsx`
+- Standardized repeated wrapper patterns while preserving behavior:
+  - `SurfaceCard` now drives the three right rail modules on `/ops`.
+  - `SurfaceCard` now drives the retention workspace scope module.
+  - `/ops/workspaces` now uses `PageShell` and `ActionRow` for route-level consistency with other ops pages.
+
+## Verification (Ops Shell Consistency)
+- `pnpm exec prettier --write apps/web/src/app/'(ops)'/ops/page.tsx apps/web/src/app/'(ops)'/ops/retention/page.tsx apps/web/src/app/'(ops)'/ops/workspaces/page.tsx`
+- `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+- `pnpm --filter @ai-nft-forge/web build`
+
+## Updated Next Follow-up
+- Extract a shared Ops shell helper in `@ai-nft-forge/ui` only if the same card shell pattern is needed again outside the two touched routes (`/ops`, `/ops/retention`, `/ops/workspaces`).
+- Begin the next production UI pass by auditing route-level action rhythm in ops pages for any duplicated action-link groups that still sit outside shared helpers.
