@@ -114,7 +114,11 @@ const pillVariants = cva(
   }
 );
 
-type PillProps = PropsWithChildren<VariantProps<typeof pillVariants>>;
+type PillProps = PropsWithChildren<
+  VariantProps<typeof pillVariants> & {
+    className?: string;
+  }
+>;
 
 const actionButtonVariants = cva(
   "inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60",
@@ -411,8 +415,10 @@ export function SurfaceCard({
   );
 }
 
-export function Pill({ children, tone }: PillProps) {
-  return <span className={pillVariants({ tone })}>{children}</span>;
+export function Pill({ children, className, tone }: PillProps) {
+  return (
+    <span className={cn(pillVariants({ tone }), className)}>{children}</span>
+  );
 }
 
 export function MetricTile({ label, value }: MetricTileProps) {

@@ -574,3 +574,21 @@ Finish the production-grade consistency phase on remaining high-traffic Studio/O
   - `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
   - `pnpm --filter @ai-nft-forge/web build`
 - Current phase status: main public storefront, collection, and creator surfaces are now in premium composition state; next target is a final cross-route consistency sweep on remaining duplicate non-semantic surfaces in Studio Ops boundary cases.
+
+## Latest Checkpoint (Checkout Session Control Normalization)
+- Completed a focused production-grade cleanup pass inside the same checkout checkpoint route:
+  - `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/checkout/[checkoutSessionId]/page.tsx`
+- Migrated ad-hoc pill/link utility patterns to shared primitives:
+  - `Pill` for status/provider/cost chips
+  - `ActionLink` for all route navigation CTA links in collector action and continuity sections
+- Extended `Pill` in `packages/ui/src/index.tsx` with optional `className` support so storefront theme token styles can be preserved while reusing the shared primitive.
+- Kept all checkout logic, URLs, and provider branching unchanged.
+- Verification:
+  - `pnpm exec prettier --write packages/ui/src/index.tsx 'apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/checkout/[checkoutSessionId]/page.tsx'`
+  - `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+  - `pnpm --filter @ai-nft-forge/ui typecheck`
+  - `pnpm --filter @ai-nft-forge/web build`
+- Current phase status: `Shared UI Primitive Consolidation` remains active; this is a production step focused on checkout-route consistency and storefront-safe reusable-control reuse.
+
+## Updated Next Follow-up
+- Finish the same production-grade sweep for `studio` and `ops` high-traffic surfaces by normalizing remaining route-local action/link/compact-status treatments before introducing any new one-off decorative patterns.

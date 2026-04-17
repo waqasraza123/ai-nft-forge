@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { createRuntimeCollectionCommerceService } from "../../../../../../../../server/commerce/runtime";
@@ -8,6 +7,7 @@ import {
   CollectibleEditorialBand,
   CollectiblePreviewCard
 } from "../../../../../../../../components/collectible-visuals";
+import { ActionLink, Pill } from "@ai-nft-forge/ui";
 
 import { CheckoutClient } from "./checkout-client";
 
@@ -22,6 +22,11 @@ type CheckoutPageProps = {
 type CheckoutActionMode = "manual" | "stripe";
 
 type CheckoutStatus = "open" | "completed" | "expired" | "canceled";
+type CheckoutStatusTone = "success" | "warning" | "danger";
+type CheckoutStatusVisual = {
+  tone: CheckoutStatusTone;
+  label: string;
+};
 
 type CheckoutStatusCopy = {
   heroLead: string;
@@ -147,37 +152,38 @@ function buildActionCopy(input: {
   };
 }
 
-function statusToneClass(status: CheckoutStatus) {
+function statusToneClass(status: CheckoutStatus): CheckoutStatusVisual {
   if (status === "open") {
     return {
-      border: "border-emerald-400/45",
-      glow: "bg-emerald-400/12 text-emerald-100",
+      tone: "success",
       label: "Checkout open"
     };
   }
 
   if (status === "completed") {
     return {
-      border: "border-emerald-400/45",
-      glow: "bg-emerald-400/12 text-emerald-100",
+      tone: "success",
       label: "Completed"
     };
   }
 
   if (status === "expired") {
     return {
-      border: "border-amber-400/45",
-      glow: "bg-amber-400/12 text-amber-100",
+      tone: "warning",
       label: "Expired"
     };
   }
 
   return {
-    border: "border-rose-400/45",
-    glow: "bg-rose-400/12 text-rose-100",
+    tone: "danger",
     label: "Canceled"
   };
 }
+
+const storefrontAccentPillClass =
+  "border-[color:var(--storefront-accent)]/45 bg-[color:var(--storefront-accent)]/15 text-[color:var(--storefront-accent)]";
+const storefrontNeutralPillClass =
+  "border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] text-[color:var(--storefront-muted)]";
 
 export default async function CheckoutPage({ params }: CheckoutPageProps) {
   const { brandSlug, checkoutSessionId, collectionSlug } = await params;
@@ -240,17 +246,13 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
             className="rounded-[2rem] border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/70 p-6 shadow-[0_24px_65px_rgba(15,23,42,0.22)]"
           >
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              <span
-                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${statusVisual.border} ${statusVisual.glow} uppercase`}
-              >
-                {statusVisual.label}
-              </span>
-              <span className="rounded-full border border-[color:var(--storefront-accent)]/45 bg-[color:var(--storefront-accent)]/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.13em] text-[color:var(--storefront-accent)]">
+              <Pill tone={statusVisual.tone}>{statusVisual.label}</Pill>
+              <Pill className={storefrontAccentPillClass}>
                 {statusProviderCopy.shortTitle}
-              </span>
-              <span className="rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] px-3 py-1 text-xs text-[color:var(--storefront-muted)]">
+              </Pill>
+              <Pill className={storefrontNeutralPillClass}>
                 Live storefront
-              </span>
+              </Pill>
             </div>
             <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
               <div className="space-y-4">
@@ -268,13 +270,13 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {checkout.checkout.priceLabel ? (
-                    <span className="inline-flex items-center rounded-full border border-[color:var(--storefront-accent)]/45 bg-[color:var(--storefront-accent)]/15 px-3 py-1 text-xs font-semibold text-[color:var(--storefront-accent)]">
+                    <Pill className={storefrontAccentPillClass}>
                       {checkout.checkout.priceLabel}
-                    </span>
+                    </Pill>
                   ) : null}
-                  <span className="rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] px-3 py-1 text-xs text-[color:var(--storefront-muted)]">
+                  <Pill className={storefrontNeutralPillClass}>
                     {statusProviderCopy.title}
-                  </span>
+                  </Pill>
                 </div>
               </div>
               <CollectiblePreviewCard
@@ -387,26 +389,26 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
                   />
                 ) : isStripeOpen ? (
                   <>
-                    <Link
-                      className="inline-flex items-center rounded-full border border-[color:var(--storefront-accent)] bg-[color:var(--storefront-accent)]/15 px-4 py-2 text-sm font-semibold text-[color:var(--storefront-accent)]"
+                    <ActionLink
+                      className={storefrontAccentPillClass}
                       href={checkout.checkout.checkoutUrl}
                     >
                       {actionCopy.buttonLabel}
-                    </Link>
-                    <Link
-                      className="inline-flex items-center rounded-full border border-[color:var(--storefront-border)] bg-transparent px-4 py-2 text-sm font-semibold"
+                    </ActionLink>
+                    <ActionLink
+                      className="border border-[color:var(--storefront-border)] bg-transparent px-4 py-2 text-sm font-semibold text-[color:var(--storefront-text)]"
                       href={`/brands/${brandSlug}/collections/${collectionSlug}/checkout/${checkoutSessionId}`}
                     >
                       {actionCopy.secondaryLabel}
-                    </Link>
+                    </ActionLink>
                   </>
                 ) : (
-                  <Link
-                    className="inline-flex items-center rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] px-4 py-2 text-sm font-semibold"
+                  <ActionLink
+                    className="border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] px-4 py-2 text-sm font-semibold text-[color:var(--storefront-text)]"
                     href={releasePath}
                   >
                     Start a fresh checkout
-                  </Link>
+                  </ActionLink>
                 )}
               </div>
             </article>
@@ -425,18 +427,18 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
                 campaigns.
               </p>
               <div className="flex flex-wrap gap-2">
-                <Link
-                  className="inline-flex items-center rounded-full border border-[color:var(--storefront-accent)]/45 bg-[color:var(--storefront-accent)]/15 px-4 py-2 text-sm font-semibold text-[color:var(--storefront-accent)]"
+                <ActionLink
+                  className={storefrontAccentPillClass}
                   href={releasePath}
                 >
                   Back to release page
-                </Link>
-                <Link
-                  className="inline-flex items-center rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] px-4 py-2 text-sm font-semibold"
+                </ActionLink>
+                <ActionLink
+                  className="border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] px-4 py-2 text-sm font-semibold text-[color:var(--storefront-text)]"
                   href={`/brands/${brandSlug}`}
                 >
                   Back to brand landing
-                </Link>
+                </ActionLink>
               </div>
             </article>
           </div>
