@@ -20,7 +20,8 @@ import {
   FieldLabel,
   FieldStack,
   Pill,
-  StatusBanner,
+  EmptyState,
+  OpsStatusNotice,
   SurfaceCard,
   SurfaceGrid
 } from "@ai-nft-forge/ui";
@@ -375,9 +376,9 @@ export function OpsAuditClient({
               ))}
             </div>
           ) : (
-            <div className="mt-3 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-muted)]">
+            <EmptyState className="mt-3 p-3">
               No audit entries matched the current filter.
-            </div>
+            </EmptyState>
           )}
           {audit.audit.nextCursor ? (
             <div className="mt-3 flex flex-wrap gap-2">
@@ -396,9 +397,9 @@ export function OpsAuditClient({
         </SurfaceCard>
       </SurfaceGrid>
       {notice ? (
-        <StatusBanner className="mt-4" tone={notice.tone}>
+        <OpsStatusNotice className="mt-4" tone={notice.tone}>
           {notice.message}
-        </StatusBanner>
+        </OpsStatusNotice>
       ) : null}
     </>
   );

@@ -280,6 +280,17 @@ type InsetMetricProps = {
   className?: string;
 };
 
+type OpsEmptyStateProps = PropsWithChildren<{
+  centered?: boolean;
+  className?: string;
+}>;
+
+type OpsStatusNoticeProps = PropsWithChildren<{
+  className?: string;
+  tone?: "error" | "info" | "success" | "warning";
+  title?: string;
+}>;
+
 type ActionRowProps = PropsWithChildren<{
   className?: string;
   compact?: boolean;
@@ -508,6 +519,40 @@ export function EmptyState({ children, className }: EmptyStateProps) {
     >
       {children}
     </div>
+  );
+}
+
+export function OpsEmptyState({
+  centered = false,
+  children,
+  className
+}: OpsEmptyStateProps) {
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface)]/40 p-4 text-sm text-[color:var(--color-muted)]",
+        centered ? "text-center" : null,
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function OpsStatusNotice({
+  children,
+  className,
+  title,
+  tone = "info"
+}: OpsStatusNoticeProps) {
+  return (
+    <StatusBanner tone={tone} className={cn("mt-3", className)}>
+      {title ? (
+        <strong className="mb-1 block font-semibold">{title}</strong>
+      ) : null}
+      {children}
+    </StatusBanner>
   );
 }
 

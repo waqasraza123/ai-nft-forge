@@ -12,6 +12,8 @@ import {
 import {
   ActionButton,
   ActionLink,
+  OpsEmptyState,
+  OpsStatusNotice,
   MetricTile,
   Pill,
   StatusBanner,
@@ -66,9 +68,7 @@ function formatDurationSeconds(value: number | null) {
     : `${hours}h ${remainingMinutes}m`;
 }
 
-function resolveNoticeTone(
-  tone: "error" | "info" | "success"
-) {
+function resolveNoticeTone(tone: "error" | "info" | "success") {
   return tone === "error" ? "error" : tone === "success" ? "success" : "info";
 }
 
@@ -324,16 +324,18 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
           </ActionButton>
         </div>
         {notice ? (
-          <StatusBanner tone={resolveNoticeTone(notice.tone)} className="mt-3">
-            <strong className="mb-1 block font-semibold">
-              {notice.tone === "error"
+          <OpsStatusNotice
+            tone={resolveNoticeTone(notice.tone)}
+            title={
+              notice.tone === "error"
                 ? "Retention error"
                 : notice.tone === "success"
                   ? "Retention updated"
-                  : "Working"}
-            </strong>
-            <span>{notice.message}</span>
-          </StatusBanner>
+                  : "Working"
+            }
+          >
+            {notice.message}
+          </OpsStatusNotice>
         ) : null}
       </SurfaceCard>
       <SurfaceCard
@@ -418,9 +420,9 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
               </article>
             ))
           ) : (
-            <div className="rounded-2xl border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 text-center text-sm text-[color:var(--color-muted)]">
+            <OpsEmptyState centered>
               No lifecycle automation runs have been recorded yet.
-            </div>
+            </OpsEmptyState>
           )}
         </div>
       </SurfaceCard>
@@ -518,15 +520,15 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
                     reconciliation
                   </span>
                   <span>
-                    invites {workspace.directory.pendingInvitationCount}{" "}
-                    pending · {workspace.directory.expiringInvitationCount}{" "}
-                    expiring · {workspace.directory.expiredInvitationCount}{" "}
-                    expired
+                    invites {workspace.directory.pendingInvitationCount} pending
+                    · {workspace.directory.expiringInvitationCount} expiring ·{" "}
+                    {workspace.directory.expiredInvitationCount} expired
                   </span>
                   <span>
                     policy default{" "}
-                    {workspace.retentionPolicy.defaultDecommissionRetentionDays}d
-                    · minimum {workspace.retentionPolicy.minimumDecommissionRetentionDays}
+                    {workspace.retentionPolicy.defaultDecommissionRetentionDays}
+                    d · minimum{" "}
+                    {workspace.retentionPolicy.minimumDecommissionRetentionDays}
                     d · reason{" "}
                     {workspace.retentionPolicy.requireDecommissionReason
                       ? "required"
@@ -549,11 +551,13 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
                       : "disabled"}
                   </span>
                   <span>
-                    SLA {formatStatus(workspace.lifecycleSlaSummary.status)} · max
-                    age {workspace.lifecycleSlaPolicy.automationMaxAgeMinutes}m ·
+                    SLA {formatStatus(workspace.lifecycleSlaSummary.status)} ·
+                    max age{" "}
+                    {workspace.lifecycleSlaPolicy.automationMaxAgeMinutes}m ·
                     failure threshold{" "}
-                    {workspace.lifecycleSlaPolicy.webhookFailureThreshold} · failed
-                    webhooks {workspace.lifecycleSlaSummary.failedWebhookCount}
+                    {workspace.lifecycleSlaPolicy.webhookFailureThreshold} ·
+                    failed webhooks{" "}
+                    {workspace.lifecycleSlaSummary.failedWebhookCount}
                     {workspace.lifecycleSlaSummary.reasonCodes.length
                       ? ` · reasons ${workspace.lifecycleSlaSummary.reasonCodes
                           .map((reasonCode) => formatStatus(reasonCode))
@@ -569,9 +573,9 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
                     {workspace.lifecycleDelivery.auditLog.deliveredCount} ·
                     webhook delivered{" "}
                     {workspace.lifecycleDelivery.webhook.deliveredCount} ·
-                    webhook failed {workspace.lifecycleDelivery.webhook.failedCount} ·
-                    webhook queued{" "}
-                    {workspace.lifecycleDelivery.webhook.queuedCount}
+                    webhook failed{" "}
+                    {workspace.lifecycleDelivery.webhook.failedCount} · webhook
+                    queued {workspace.lifecycleDelivery.webhook.queuedCount}
                     {workspace.lifecycleDelivery.providers.length
                       ? ` · providers ${workspace.lifecycleDelivery.providers
                           .map(

@@ -1,7 +1,7 @@
 # Current Session
 
 ## Date
-2026-04-16
+2026-04-17
 
 ## Current Objective
 Complete the Tailwind migration checkpoint in `apps/web` and `packages/ui`, stabilize the partial redesign pass, and verify build/type quality.
@@ -456,3 +456,27 @@ Finish the production-grade consistency phase on remaining high-traffic Studio/O
 
 ## Updated Next Follow-up
 - Keep this phase-level pass open on dense tables/commands by introducing a reusable empty-state/notice treatment only when the same ops pattern repeats in two+ command-heavy client surfaces.
+
+## Latest Checkpoint (Ops Empty-State and Notice Consolidation)
+- Completed the next production-grade ops consistency pass by introducing shared ops-focused UI primitives in `packages/ui/src/index.tsx`:
+  - `OpsEmptyState`
+  - `OpsStatusNotice`
+- Replaced repeated dashed empty-state blocks in command-heavy and retention/audit surfaces with `OpsEmptyState`:
+  - `apps/web/src/app/(ops)/ops/fleet/ops-fleet-client.tsx`
+  - `apps/web/src/app/(ops)/ops/retention/ops-retention-client.tsx`
+  - `apps/web/src/app/(ops)/ops/ops-operator-panel.tsx`
+- Standardized notice rendering on ops and retention/audit surfaces with `OpsStatusNotice` while preserving behavior and messages:
+  - `apps/web/src/app/(ops)/ops/retention/ops-retention-client.tsx`
+  - `apps/web/src/app/(ops)/ops/retention/ops-retention-client.tsx`
+  - `apps/web/src/app/(ops)/ops/audit/ops-audit-client.tsx`
+  - `apps/web/src/app/(ops)/ops/ops-operator-panel.tsx`
+
+## Verification (Ops Empty-State and Notice Consolidation)
+- `pnpm exec prettier --write packages/ui/src/index.tsx apps/web/src/app/'(ops)'/ops/fleet/ops-fleet-client.tsx apps/web/src/app/'(ops)'/ops/retention/ops-retention-client.tsx apps/web/src/app/'(ops)'/ops/ops-operator-panel.tsx apps/web/src/app/'(ops)'/ops/audit/ops-audit-client.tsx`
+- `pnpm --filter @ai-nft-forge/ui typecheck`
+- `pnpm --filter @ai-nft-forge/web typecheck`
+- `pnpm --filter @ai-nft-forge/web build`
+
+## Updated Next Follow-up
+- Begin the next production-grade step by auditing remaining Ops high-signal modules for any still-custom empty-state and notice shells that are now duplicated across routes.
+- If patterns repeat, fold them into `packages/ui` as constrained variants (for example table helper shells vs. command activity shells) and keep operational density clear.

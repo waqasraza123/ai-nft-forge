@@ -13,6 +13,7 @@ import {
 import {
   ActionButton,
   cn,
+  OpsEmptyState,
   MetricTile,
   Pill,
   StatusBanner,
@@ -354,7 +355,9 @@ export function OpsFleetClient({
                   <div className="mt-2 flex flex-wrap gap-2 text-xs text-[color:var(--color-muted)]">
                     <Pill>{getWorkspacePressureScore(workspace)} pressure</Pill>
                     <Pill>{workspace.ops.activeAlertCount} alerts</Pill>
-                    <Pill>{workspace.ops.openReconciliationIssueCount} recon</Pill>
+                    <Pill>
+                      {workspace.ops.openReconciliationIssueCount} recon
+                    </Pill>
                   </div>
                 </article>
               ))}
@@ -493,10 +496,10 @@ export function OpsFleetClient({
             />
           ))}
           {attentionWorkspaces.length === 0 ? (
-            <div className="col-span-full rounded-lg border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 text-sm text-[color:var(--color-muted)]">
+            <OpsEmptyState className="col-span-full rounded-lg">
               No workspace pressure is currently standing out across the
               accessible fleet.
-            </div>
+            </OpsEmptyState>
           ) : null}
         </div>
       </SurfaceCard>
@@ -545,10 +548,10 @@ export function OpsFleetClient({
               </article>
             ))
           ) : (
-            <div className="rounded-lg border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 text-sm text-[color:var(--color-muted)]">
+            <OpsEmptyState className="rounded-lg">
               No workspace is carrying active alerts across the accessible
               fleet.
-            </div>
+            </OpsEmptyState>
           )}
         </div>
         <div className="mt-4 space-y-2">
@@ -667,9 +670,9 @@ export function OpsFleetClient({
               );
             })
           ) : (
-            <div className="rounded-lg border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 text-sm text-[color:var(--color-muted)]">
+            <OpsEmptyState className="rounded-lg">
               No active alerts are queued across the accessible workspace fleet.
-            </div>
+            </OpsEmptyState>
           )}
         </div>
       </SurfaceCard>
@@ -707,14 +710,16 @@ export function OpsFleetClient({
                 <div className="mt-2 flex flex-wrap gap-2">
                   <Pill>{workspace.ops.criticalAlertCount} critical</Pill>
                   <Pill>{workspace.ops.activeAlertCount} alerts</Pill>
-                  <Pill>{formatTimestamp(workspace.directory.lastActivityAt)}</Pill>
+                  <Pill>
+                    {formatTimestamp(workspace.directory.lastActivityAt)}
+                  </Pill>
                 </div>
               </article>
             ))
           ) : (
-            <div className="rounded-lg border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 text-sm text-[color:var(--color-muted)]">
+            <OpsEmptyState className="rounded-lg">
               No workspace currently has an open reconciliation issue.
-            </div>
+            </OpsEmptyState>
           )}
         </div>
         <div className="mt-4">
@@ -750,9 +755,9 @@ export function OpsFleetClient({
               />
             ))
           ) : (
-            <div className="rounded-lg border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 text-sm text-[color:var(--color-muted)]">
+            <OpsEmptyState className="rounded-lg">
               No workspace currently has an open reconciliation issue.
-            </div>
+            </OpsEmptyState>
           )}
         </div>
       </SurfaceCard>
@@ -819,7 +824,9 @@ export function OpsFleetClient({
                     <span className="text-xs font-semibold uppercase tracking-wide text-[color:var(--color-muted)]">
                       Reconciliation
                     </span>
-                    <span>{workspace.ops.openReconciliationIssueCount} open</span>
+                    <span>
+                      {workspace.ops.openReconciliationIssueCount} open
+                    </span>
                     <span>
                       {workspace.commerce.automationFailedCheckoutCount} failed
                     </span>
@@ -837,8 +844,12 @@ export function OpsFleetClient({
                     <span className="text-xs font-semibold uppercase tracking-wide text-[color:var(--color-muted)]">
                       Publications
                     </span>
-                    <span>{workspace.publications.livePublicationCount} live</span>
-                    <span>{workspace.publications.totalPublicationCount} total</span>
+                    <span>
+                      {workspace.publications.livePublicationCount} live
+                    </span>
+                    <span>
+                      {workspace.publications.totalPublicationCount} total
+                    </span>
                   </div>
                   <div className="space-y-1">
                     <span className="text-xs font-semibold uppercase tracking-wide text-[color:var(--color-muted)]">

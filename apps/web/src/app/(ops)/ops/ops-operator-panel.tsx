@@ -18,6 +18,8 @@ import {
   ActionButton,
   ActionLink,
   cn,
+  OpsEmptyState,
+  OpsStatusNotice,
   MetricTile,
   Pill
 } from "@ai-nft-forge/ui";
@@ -335,6 +337,20 @@ function resolveAlertScheduleTone(status: OpsAlertSchedule["status"]) {
   }
 
   return "error";
+}
+
+function resolveNoticeBannerTone(
+  tone: "error" | "info" | "success"
+): "error" | "info" | "success" {
+  if (tone === "error") {
+    return "error";
+  }
+
+  if (tone === "success") {
+    return "success";
+  }
+
+  return "info";
 }
 
 function resolveOpsCommandToneFromObservability(
@@ -1088,14 +1104,6 @@ function ActiveMuteItem({
           {clearing ? "Clearing mute…" : "Clear mute"}
         </OpsActionButton>
       </div>
-    </div>
-  );
-}
-
-function EmptyState({ children }: { children: ReactNode }) {
-  return (
-    <div className="rounded-2xl border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface)]/40 p-4 text-sm text-[color:var(--color-muted)]">
-      {children}
     </div>
   );
 }
@@ -1951,21 +1959,18 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
   return (
     <div className="space-y-6">
       {notice ? (
-        <div
-          className={cn(
-            "rounded-xl border p-3 text-sm text-[color:var(--color-text)]",
-            resolveOpsStatusBannerToneClass(notice.tone)
-          )}
-        >
-          <strong>
-            {notice.tone === "error"
+        <OpsStatusNotice
+          tone={resolveNoticeBannerTone(notice.tone)}
+          title={
+            notice.tone === "error"
               ? "Operator action failed"
               : notice.tone === "success"
                 ? "Operator action recorded"
-                : "Operator action in progress"}
-          </strong>
-          <span>{notice.message}</span>
-        </div>
+                : "Operator action in progress"
+          }
+        >
+          {notice.message}
+        </OpsStatusNotice>
       ) : null}
       <div className={resolveOpsCommandSignalGridClass()}>
         <OpsCommandSignal
@@ -2139,10 +2144,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                     ))}
                   </div>
                 ) : (
-                  <EmptyState>
+                  <OpsEmptyState>
                     No active operator alerts were derived from the latest
                     queue, backend, and rolling-window signals.
-                  </EmptyState>
+                  </OpsEmptyState>
                 )}
               </>
             ) : null}
@@ -2162,9 +2167,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                 ))}
               </div>
             ) : (
-              <EmptyState>
+              <OpsEmptyState>
                 No persisted active alerts are currently open for this operator.
-              </EmptyState>
+              </OpsEmptyState>
             )}
           </OpsCommandModule>
           <OpsCommandModule
@@ -2294,9 +2299,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                 ))}
               </div>
             ) : (
-              <EmptyState>
+              <OpsEmptyState>
                 No open reconciliation issues are recorded for this operator.
-              </EmptyState>
+              </OpsEmptyState>
             )}
           </OpsCommandModule>
         </div>
@@ -2387,10 +2392,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                 ))}
               </div>
             ) : (
-              <EmptyState>
+              <OpsEmptyState>
                 No queued or running generation requests are owned by this
                 session.
-              </EmptyState>
+              </OpsEmptyState>
             )}
           </OpsCommandModule>
           <OpsCommandModule
@@ -2416,10 +2421,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                 ))}
               </div>
             ) : (
-              <EmptyState>
+              <OpsEmptyState>
                 No failed generation requests are currently retryable for this
                 session.
-              </EmptyState>
+              </OpsEmptyState>
             )}
           </OpsCommandModule>
           <OpsCommandModule
@@ -2576,9 +2581,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                 ))}
               </div>
             ) : (
-              <EmptyState>
+              <OpsEmptyState>
                 Rolling generation windows are not available for this operator.
-              </EmptyState>
+              </OpsEmptyState>
             )}
           </OpsCommandModule>
         </div>
@@ -3063,9 +3068,9 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                 ))}
               </div>
             ) : (
-              <EmptyState>
+              <OpsEmptyState>
                 No active alert mutes are configured for this operator.
-              </EmptyState>
+              </OpsEmptyState>
             )}
           </OpsCommandModule>
         </div>
@@ -3095,10 +3100,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                 ))}
               </div>
             ) : (
-              <EmptyState>
+              <OpsEmptyState>
                 No persisted observability captures are available for this
                 operator yet.
-              </EmptyState>
+              </OpsEmptyState>
             )}
           </OpsCommandModule>
           <OpsCommandModule
@@ -3127,10 +3132,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                 ))}
               </div>
             ) : (
-              <EmptyState>
+              <OpsEmptyState>
                 No persisted alert deliveries are available for this operator
                 yet.
-              </EmptyState>
+              </OpsEmptyState>
             )}
           </OpsCommandModule>
         </div>
