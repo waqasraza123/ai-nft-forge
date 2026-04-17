@@ -377,3 +377,17 @@ Finish the production-grade consistency phase on remaining high-traffic Studio/O
 ## Updated Next Follow-up
 - Run the next production-grade pass across `studio-collections-client.tsx` to standardize any remaining duplicated button/link treatment not yet covered by shared `ActionButton`/`ActionLink` conventions.
 - Continue the ops-facing restraint pass so dense operational surfaces stay readable while decorative direction stays in storefront/studio marketing zones.
+
+## Latest Checkpoint (Checkout Panel Premium Polish)
+- Completed the next production-grade UI step on `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/purchase-panel.tsx`:
+  - upgraded the public checkout panel with layered collectible shell composition;
+  - added a stronger two-pane visual rhythm (action form + reservation state module);
+  - replaced raw text inputs and labels with shared `InputField` and `FieldLabel` primitives;
+  - preserved all checkout behavior and payloads while making the collector action surface more visual.
+- Clarified the phase position:
+  - phase: `Shared UI Primitive Consolidation` is still active.
+  - step: `Public checkout panel art-led polish` completed.
+
+## Verification (Checkout Panel Premium Polish)
+- `pnpm exec prettier --write apps/web/src/app/'(public)'/brands/'[brandSlug]'/collections/'[collectionSlug]'/purchase-panel.tsx`
+- `pnpm --filter @ai-nft-forge/web build`

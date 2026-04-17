@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ActionButton } from "@ai-nft-forge/ui";
+import { ActionButton, FieldLabel, InputField } from "@ai-nft-forge/ui";
 
 type PurchasePanelProps = {
   activeReservationCount: number;
@@ -102,92 +102,127 @@ export function PurchasePanel(props: PurchasePanelProps) {
           : "Checkout opens once this release is live.";
 
   return (
-    <article className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] p-6 shadow-[var(--shadow-surface)]">
-      <p className="mb-1 text-xs uppercase tracking-[0.18em] text-[color:var(--storefront-accent)]">
-        Reserve and checkout
-      </p>
-      <h2 className="text-xl font-semibold text-[color:var(--storefront-text)]">
-        {props.priceLabel
-          ? `Reserve the next available edition for ${props.priceLabel}`
-          : "Reserve the next available edition"}
-      </h2>
-      <div className="mt-2 flex flex-wrap gap-2">
-        <span className="rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-2.5 py-1 text-xs text-[color:var(--storefront-text)]">
-          {props.availableEditionCount} editions open
-        </span>
-        {props.nextAvailableEditionNumber ? (
-          <span className="rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-2.5 py-1 text-xs text-[color:var(--storefront-text)]">
-            Next edition #{props.nextAvailableEditionNumber}
-          </span>
-        ) : null}
-        {props.activeReservationCount > 0 ? (
-          <span className="rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-2.5 py-1 text-xs text-[color:var(--storefront-text)]">
-            {props.activeReservationCount} held right now
-          </span>
-        ) : null}
-      </div>
-      {props.checkoutEnabled ? (
-        <form className="mt-3 space-y-3" onSubmit={handleSubmit}>
-          <label className="grid gap-1.5">
-            <span className="text-sm font-semibold text-[color:var(--storefront-text)]">
-              Name
-            </span>
-            <input
-              autoComplete="name"
-              className="rounded-xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-3 py-2 text-sm text-[color:var(--storefront-text)] placeholder:text-[color:var(--storefront-muted)]"
-              onChange={(event) => setBuyerDisplayName(event.target.value)}
-              placeholder="Collector name"
-              value={buyerDisplayName}
-            />
-          </label>
-          <label className="grid gap-1.5">
-            <span className="text-sm font-semibold text-[color:var(--storefront-text)]">
-              Email
-            </span>
-            <input
-              autoComplete="email"
-              className="rounded-xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-3 py-2 text-sm text-[color:var(--storefront-text)] placeholder:text-[color:var(--storefront-muted)]"
-              onChange={(event) => setBuyerEmail(event.target.value)}
-              placeholder="collector@example.com"
-              required
-              type="email"
-              value={buyerEmail}
-            />
-          </label>
-          <label className="grid gap-1.5">
-            <span className="text-sm font-semibold text-[color:var(--storefront-text)]">
-              Wallet address
-            </span>
-            <input
-              autoComplete="off"
-              className="rounded-xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-3 py-2 text-sm text-[color:var(--storefront-text)] placeholder:text-[color:var(--storefront-muted)]"
-              onChange={(event) => setBuyerWalletAddress(event.target.value)}
-              placeholder="Optional delivery wallet"
-              value={buyerWalletAddress}
-            />
-          </label>
-          {error ? (
-            <p className="rounded-xl border border-red-400/45 bg-red-500/12 p-2.5 text-sm text-red-100">
-              {error}
+    <article className="relative overflow-hidden rounded-[1.75rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] p-6 shadow-[var(--shadow-surface)]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_18%,rgba(255,255,255,0.17),transparent_25%),radial-gradient(circle_at_82%_14%,rgba(255,255,255,0.09),transparent_20%)]" />
+      <div className="relative grid gap-4 md:grid-cols-[1.05fr_0.95fr] md:items-stretch">
+        <section className="space-y-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--storefront-accent)]">
+              Reserve and checkout
             </p>
-          ) : null}
-          <ActionButton
-            disabled={busy}
-            tone="primary"
-            type="submit"
-          >
-            {busy
-              ? "Starting checkout..."
-              : props.providerMode === "stripe"
-                ? "Reserve and continue to payment"
-                : "Reserve and continue"}
-          </ActionButton>
-        </form>
-      ) : (
-        <p className="mt-3 rounded-xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-3 text-sm text-[color:var(--storefront-text)]">
-          {disabledMessage}
-        </p>
-      )}
+            <h2 className="mt-1 text-xl font-semibold text-[color:var(--storefront-text)]">
+              {props.priceLabel
+                ? `Reserve the next available edition for ${props.priceLabel}`
+                : "Reserve the next available edition"}
+            </h2>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <span className="inline-flex items-center rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[color:var(--storefront-text)]">
+              {props.availableEditionCount} editions open
+            </span>
+            {props.nextAvailableEditionNumber ? (
+              <span className="inline-flex items-center rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[color:var(--storefront-text)]">
+                Next edition #{props.nextAvailableEditionNumber}
+              </span>
+            ) : null}
+            {props.activeReservationCount > 0 ? (
+              <span className="inline-flex items-center rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[color:var(--storefront-text)]">
+                {props.activeReservationCount} held right now
+              </span>
+            ) : null}
+          </div>
+          {props.checkoutEnabled ? (
+            <form className="space-y-3" onSubmit={handleSubmit}>
+              <label className="grid gap-1.5">
+                <FieldLabel>Name</FieldLabel>
+                <InputField
+                  autoComplete="name"
+                  className="rounded-xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-3 py-2 text-sm text-[color:var(--storefront-text)] placeholder:text-[color:var(--storefront-muted)]"
+                  onChange={(event) => setBuyerDisplayName(event.target.value)}
+                  placeholder="Collector name"
+                  value={buyerDisplayName}
+                />
+              </label>
+              <label className="grid gap-1.5">
+                <FieldLabel>Email</FieldLabel>
+                <InputField
+                  autoComplete="email"
+                  className="rounded-xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-3 py-2 text-sm text-[color:var(--storefront-text)] placeholder:text-[color:var(--storefront-muted)]"
+                  onChange={(event) => setBuyerEmail(event.target.value)}
+                  placeholder="collector@example.com"
+                  required
+                  type="email"
+                  value={buyerEmail}
+                />
+              </label>
+              <label className="grid gap-1.5">
+                <FieldLabel>Wallet address</FieldLabel>
+                <InputField
+                  autoComplete="off"
+                  className="rounded-xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-3 py-2 text-sm text-[color:var(--storefront-text)] placeholder:text-[color:var(--storefront-muted)]"
+                  onChange={(event) =>
+                    setBuyerWalletAddress(event.target.value)
+                  }
+                  placeholder="Optional delivery wallet"
+                  value={buyerWalletAddress}
+                />
+              </label>
+              {error ? (
+                <p className="rounded-xl border border-red-400/45 bg-red-500/12 p-2.5 text-sm text-red-100">
+                  {error}
+                </p>
+              ) : null}
+              <div className="flex flex-wrap gap-2">
+                <ActionButton disabled={busy} tone="primary" type="submit">
+                  {busy
+                    ? "Starting checkout..."
+                    : props.providerMode === "stripe"
+                      ? "Reserve and continue to payment"
+                      : "Reserve and continue"}
+                </ActionButton>
+              </div>
+            </form>
+          ) : (
+            <p className="rounded-xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-3 text-sm text-[color:var(--storefront-text)]">
+              {disabledMessage}
+            </p>
+          )}
+        </section>
+
+        <aside className="rounded-[1.5rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-4">
+          <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--storefront-accent)]">
+            Reservation state
+          </p>
+          <h3 className="mt-1 text-lg font-semibold text-[color:var(--storefront-text)]">
+            Collector-ready interface
+          </h3>
+          <p className="mt-2 text-sm leading-7 text-[color:var(--storefront-muted)]">
+            This panel anchors the reserve action with collectible-first visuals
+            and explicit snapshot-backed availability.
+          </p>
+          <p className="mt-3 text-xs text-[color:var(--storefront-accent)]">
+            Price mode: {props.priceLabel ?? "Open-edition pricing"}
+          </p>
+          <div className="mt-4 border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--storefront-accent)]">
+              Live metrics
+            </p>
+            <p className="mt-2 text-sm text-[color:var(--storefront-text)]">
+              {props.availableEditionCount} editions remain,{" "}
+              {props.activeReservationCount} held right now, and checkout is
+              currently
+              <span className="ml-1 font-semibold">
+                {props.checkoutEnabled ? "live" : "disabled"}
+              </span>
+              .
+            </p>
+          </div>
+          <p className="mt-3 rounded-xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] px-3 py-2 text-xs text-[color:var(--storefront-muted)]">
+            If checkout is unavailable, enable provider mode in studio and
+            retry.
+          </p>
+        </aside>
+      </div>
     </article>
   );
 }
