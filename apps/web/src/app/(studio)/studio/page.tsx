@@ -1,5 +1,10 @@
-import { ActionButton, ActionLink } from "@ai-nft-forge/ui";
+import { ActionLink } from "@ai-nft-forge/ui";
 
+import {
+  CollectibleEditorialBand,
+  CollectiblePreviewCard,
+  StudioSceneCard
+} from "../../../components/collectible-visuals";
 import { getCurrentStudioAccess } from "../../../server/studio/access";
 
 type StudioNavigationModule = {
@@ -54,33 +59,40 @@ export default async function StudioPage() {
   return (
     <section className="space-y-6">
       <header className="rounded-3xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)]/80 p-6 shadow-[var(--shadow-surface)]">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
-          Operational foundation
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold font-[var(--font-display)]">
-          Creator launch operating room
-        </h1>
-        <p className="mt-3 max-w-4xl text-sm leading-7 text-[color:var(--color-muted)]">
-          Keep one workspace in focus while moving from source capture to
-          collection release, and then to owner-side commerce supervision. This is
-          your operator command surface for the next safe action.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <ActionButton
-            onClick={() => {
-              return;
-            }}
-            tone="accent"
-            type="button"
-          >
-            {nextActionLabel}
-          </ActionButton>
-          <ActionLink href="/studio/collections" tone="inline">
-            Review latest collections
-          </ActionLink>
-          <ActionLink href="/" tone="inline">
-            Return to marketing
-          </ActionLink>
+        <div className="grid gap-6 xl:grid-cols-[1fr_360px] xl:items-center">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
+              Operational foundation
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold font-[var(--font-display)]">
+              Creator launch operating room
+            </h1>
+            <p className="mt-3 max-w-4xl text-sm leading-7 text-[color:var(--color-muted)]">
+              Keep one workspace in focus while moving from source capture to
+              collection release, and then to owner-side commerce supervision.
+              This is the premium creator-side operating surface for the next
+              safe action.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <ActionLink href={primaryDestination} tone="action">
+                {nextActionLabel}
+              </ActionLink>
+              <ActionLink href="/studio/collections" tone="inline">
+                Review latest collections
+              </ActionLink>
+              <ActionLink href="/" tone="inline">
+                Return to marketing
+              </ActionLink>
+            </div>
+          </div>
+          <CollectiblePreviewCard
+            badge="Studio preview"
+            className="bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))]"
+            imageAlt="Studio collectible preview"
+            meta={`${workspaceStatus} workspace · ${roleCopy}`}
+            subtitle={workspaceSlug}
+            title={workspaceName}
+          />
         </div>
       </header>
       <section className="grid gap-4 xl:grid-cols-2">
@@ -142,10 +154,17 @@ export default async function StudioPage() {
           </p>
         </article>
       </section>
+      <CollectibleEditorialBand>
+        <StudioSceneCard
+          eyebrow="Creator-side depth"
+          note="Studio should stay product-like, but preview cards, framed drop shells, and tasteful scene accents make setup feel premium rather than purely utilitarian."
+          title="Preview-led launch preparation"
+        />
+      </CollectibleEditorialBand>
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {studioModules.map((module, index) => (
           <article
-            className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4"
+            className="rounded-2xl border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.04))] p-4 shadow-[var(--shadow-surface)]"
             key={module.title}
           >
             <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">

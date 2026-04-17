@@ -1,5 +1,12 @@
 import Link from "next/link";
 
+import {
+  CollectibleEditorialBand,
+  CollectibleHeroArtwork,
+  CollectiblePreviewCard,
+  FloatingCollectibleCluster
+} from "../../components/collectible-visuals";
+
 type MarketingProofPoint = {
   title: string;
   detail: string;
@@ -69,7 +76,7 @@ const processSteps: MarketingProcessStep[] = [
     action: "Generate",
     title: "Variant synthesis",
     description:
-    "Create collectible variants through queue-backed workers with durable request tracking."
+      "Create collectible variants through queue-backed workers with durable request tracking."
   },
   {
     action: "Curate",
@@ -103,21 +110,33 @@ const releasePreviews: MarketingShowcaseRelease[] = [
     focus: "Collection launch",
     title: "Series One",
     trust: "Curated · White-label · Wallet verified",
-    metrics: ["Ready for public drop", "Chain metadata generated", "Static media snapshot"]
+    metrics: [
+      "Ready for public drop",
+      "Chain metadata generated",
+      "Static media snapshot"
+    ]
   },
   {
     cadence: "Collector program",
     focus: "Seasonal release",
     title: "Seasonal Capsule",
     trust: "Editioned · Checkout gated · Immutable view",
-    metrics: ["Live availability controls", "Inventory reservation", "Static storefront publish"]
+    metrics: [
+      "Live availability controls",
+      "Inventory reservation",
+      "Static storefront publish"
+    ]
   },
   {
     cadence: "Brand rollout",
     focus: "Multi-release floor",
     title: "Brand Pulse",
     trust: "Brand presets · Archive rails · Route-ready",
-    metrics: ["Brand storefront route", "Release state controls", "Metadata endpoints"]
+    metrics: [
+      "Brand storefront route",
+      "Release state controls",
+      "Metadata endpoints"
+    ]
   }
 ];
 
@@ -167,8 +186,8 @@ const audienceProfiles: MarketingAudience[] = [
 export default function MarketingPage() {
   return (
     <div className="mx-auto grid w-full max-w-7xl gap-7 px-4 pb-12 pt-6 md:px-6">
-      <section className="relative isolate overflow-hidden rounded-[2rem] border border-white/15 bg-[color:var(--color-surface-strong)]/75 p-6 shadow-[var(--shadow-surface)] backdrop-blur-sm md:p-10">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(60%_70%_at_15%_10%,_rgba(255,255,255,0.28),_transparent),radial-gradient(40%_40%_at_85%_85%,rgba(139,94,52,0.24),transparent)]" />
+      <section className="relative isolate overflow-hidden rounded-[2rem] border border-white/15 bg-[color:var(--color-surface-strong)]/80 p-6 shadow-[var(--shadow-surface)] backdrop-blur-sm md:p-10">
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(50%_60%_at_14%_10%,_rgba(255,255,255,0.45),_transparent),radial-gradient(35%_35%_at_82%_18%,rgba(139,94,52,0.22),transparent),linear-gradient(180deg,rgba(255,255,255,0.12),transparent)]" />
         <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div className="space-y-6">
             <p className="inline-flex items-center gap-2 rounded-full border border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-text)]">
@@ -178,9 +197,9 @@ export default function MarketingPage() {
               Build launch infrastructure for premium collectible campaigns.
             </h1>
             <p className="max-w-2xl text-sm leading-7 text-[color:var(--color-muted)] md:text-base">
-              A self-hosted product platform for teams that need reliable creative
-              pipelines, deterministic storefront publishing, and chain-aware release
-              controls in one place.
+              A self-hosted product platform for teams that need reliable
+              creative pipelines, deterministic storefront publishing, and
+              chain-aware release controls in one place.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link
@@ -197,33 +216,16 @@ export default function MarketingPage() {
               </Link>
             </div>
             <p className="text-sm leading-6 text-[color:var(--color-muted)]">
-              Designed for teams that scale from campaign experiments to enterprise
-              launch operations.
+              Designed for teams that scale from campaign experiments to
+              enterprise launch operations.
             </p>
           </div>
-          <div className="relative overflow-hidden rounded-3xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)]/80 p-6">
-            <div className="grid gap-3">
-              <p className="text-xs uppercase tracking-[0.2em] text-[color:var(--color-accent)]">
-                Cinematic Surface
-              </p>
-              <p className="text-lg font-semibold">Launch plane</p>
-              <p className="text-sm text-[color:var(--color-muted)]">
-                Route-aware publication shell with deterministic storefront snapshots,
-                immutable campaign context, and premium operator controls.
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <span className="rounded-full border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-1 text-xs text-[color:var(--color-text)]">
-                  Generation intake
-                </span>
-                <span className="rounded-full border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-1 text-xs text-[color:var(--color-text)]">
-                  Publish snapshots
-                </span>
-                <span className="rounded-full border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-1 text-xs text-[color:var(--color-text)]">
-                  Mint verification
-                </span>
-              </div>
-            </div>
-          </div>
+          <CollectibleHeroArtwork
+            badge="Hero release"
+            imageAlt="AI NFT Forge showcase artwork"
+            meta="Generation intake · Snapshot publish · Mint verification"
+            title="Launch plane"
+          />
         </div>
       </section>
 
@@ -277,42 +279,42 @@ export default function MarketingPage() {
         </ol>
       </section>
 
-      <section className="rounded-[2rem] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-6 shadow-[var(--shadow-surface)] md:p-8">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">
-          Showcase preview
-        </p>
-        <h2 className="mb-5 max-w-3xl text-2xl font-semibold">
-          Launch modules that mirror real production drop workflows.
-        </h2>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {releasePreviews.map((release) => (
-            <article
-              className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-5"
-              key={release.title}
-            >
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <span className="rounded-full border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] px-2.5 py-1 text-xs">
-                  {release.cadence}
-                </span>
-                <span className="text-xs text-[color:var(--color-accent)]">
-                  {release.focus}
-                </span>
-              </div>
-              <h3 className="text-xl font-semibold">{release.title}</h3>
-              <p className="mt-1 text-sm text-[color:var(--color-muted)]">
-                {release.trust}
-              </p>
-              <ul className="mt-3 space-y-2 text-sm text-[color:var(--color-muted)]">
-                {release.metrics.map((metric) => (
-                  <li className="pl-2" key={metric}>
-                    {metric}
-                  </li>
-                ))}
-              </ul>
-            </article>
-          ))}
+      <FloatingCollectibleCluster
+        headline="Showcase rails should feel like premium collectible shelves."
+        items={["Framed editions", "Spotlight drops", "Launch capsules"]}
+        label="Art-directed composition"
+      />
+
+      <CollectibleEditorialBand>
+        <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr] xl:items-center">
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">
+              Showcase preview
+            </p>
+            <h2 className="max-w-3xl text-2xl font-semibold">
+              Launch modules that mirror real production drop workflows.
+            </h2>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-[color:var(--color-muted)]">
+              The storefront needs one dominant hero composition, then a
+              supporting rhythm of collectible cards and editorial rails that
+              keep media presentation in the foreground.
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            {releasePreviews.map((release) => (
+              <CollectiblePreviewCard
+                badge={release.cadence}
+                className="bg-[color:var(--color-surface-strong)]/55"
+                imageAlt={`${release.title} showcase artwork`}
+                key={release.title}
+                meta={release.focus}
+                subtitle={release.trust}
+                title={release.title}
+              />
+            ))}
+          </div>
         </div>
-      </section>
+      </CollectibleEditorialBand>
 
       <section className="rounded-[2rem] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-6 shadow-[var(--shadow-surface)] md:p-8">
         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">
@@ -349,7 +351,8 @@ export default function MarketingPage() {
             Product direction
           </p>
           <h2 className="max-w-3xl text-3xl font-semibold">
-            AI NFT Forge: premium launch infrastructure under operational pressure.
+            AI NFT Forge: premium launch infrastructure under operational
+            pressure.
           </h2>
           <p className="max-w-4xl text-sm text-[color:var(--color-muted)]">
             Move from mockups to live drops with predictable boundaries and

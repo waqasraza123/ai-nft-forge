@@ -8,6 +8,12 @@ import {
 import { ActionLink } from "@ai-nft-forge/ui";
 import type { CollectionPublicBrandTheme } from "@ai-nft-forge/shared";
 
+import {
+  CollectibleEditorialBand,
+  CollectibleHeroArtwork,
+  CollectiblePreviewCard,
+  FloatingCollectibleCluster
+} from "../../../../../../components/collectible-visuals";
 import { createRuntimePublicCollectionService } from "../../../../../../server/collections/runtime";
 import { createStorefrontThemeStyle } from "../../../../../../lib/ui/storefront-theme";
 import { PurchasePanel } from "./purchase-panel";
@@ -158,13 +164,7 @@ function computeProofStats(input: {
   ];
 }
 
-function SectionHeader({
-  kicker,
-  title
-}: {
-  kicker: string;
-  title: string;
-}) {
+function SectionHeader({ kicker, title }: { kicker: string; title: string }) {
   return (
     <div className="mb-3 space-y-2">
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
@@ -268,32 +268,31 @@ function CollectionHeroSection(input: {
                   : "Sold out"}
           </StorefrontChip>
           {input.totalSupply ? (
-            <StorefrontChip>{formatCount(input.totalSupply)} artworks</StorefrontChip>
+            <StorefrontChip>
+              {formatCount(input.totalSupply)} artworks
+            </StorefrontChip>
           ) : null}
-          {input.priceLabel ? <StorefrontChip>{input.priceLabel}</StorefrontChip> : null}
-          <StorefrontChip>{formatCount(input.claimedCount)} claimed</StorefrontChip>
+          {input.priceLabel ? (
+            <StorefrontChip>{input.priceLabel}</StorefrontChip>
+          ) : null}
+          <StorefrontChip>
+            {formatCount(input.claimedCount)} claimed
+          </StorefrontChip>
         </div>
       </div>
-      <div className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] p-4">
-        {input.heroImageUrl ? (
-          <img
-            alt={`${input.title} hero artwork`}
-            className="aspect-[4/5] w-full rounded-2xl border border-[color:var(--storefront-border)] object-cover"
-            src={input.heroImageUrl}
-          />
-        ) : (
-          <div className="aspect-[4/5] rounded-2xl border border-dashed border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-4 text-sm text-[color:var(--storefront-muted)] grid place-items-center">
-            Hero artwork unavailable
-          </div>
-        )}
-        <div className="mt-4 flex flex-wrap gap-2">
-          <StorefrontChip accent>{input.availabilityLabel}</StorefrontChip>
-          <StorefrontChip>{formatTimestamp(input.launchAt)}</StorefrontChip>
-        </div>
-        <p className="mt-4 text-sm text-[color:var(--storefront-muted)]">
-          {input.brandThemeWordmark}
-        </p>
-      </div>
+      <CollectibleHeroArtwork
+        accentVar="--storefront-accent"
+        badge={
+          input.storefrontStatus === "live"
+            ? "Live mint window"
+            : formatStatusLabel(input.storefrontStatus)
+        }
+        className="border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]"
+        imageAlt={`${input.title} hero artwork`}
+        imageUrl={input.heroImageUrl}
+        meta={`${input.availabilityLabel} · ${formatTimestamp(input.launchAt)}`}
+        title={input.brandThemeWordmark || input.title}
+      />
     </section>
   );
 }
@@ -327,7 +326,8 @@ function CollectionLaunchStory(input: {
             {formatStatusLabel(input.status)} runway
           </h3>
           <p className="mt-2 text-sm text-[color:var(--storefront-muted)]">
-            {input.availabilityLabel} · {formatCount(input.mintedTokenCount)} minted proofs
+            {input.availabilityLabel} · {formatCount(input.mintedTokenCount)}{" "}
+            minted proofs
           </p>
         </article>
       </div>
@@ -391,7 +391,8 @@ function CollectionProofPanel(input: {
           : `${describeSupply(input)}. ${input.activeDeployment ? `Deployed contract on ${input.activeDeployment.chain.label}.` : "No onchain deployment recorded yet."}`}
       </p>
       <p className="mt-2 text-xs text-[color:var(--storefront-accent)]">
-        Launch timing: {launchLabel(input.launchAt, input.storefrontStatus)} · Ends {formatTimestamp(input.endAt)}
+        Launch timing: {launchLabel(input.launchAt, input.storefrontStatus)} ·
+        Ends {formatTimestamp(input.endAt)}
       </p>
     </section>
   );
@@ -447,11 +448,28 @@ function CollectionReserveZone(input: {
             Reserve trust
           </p>
           <h3 className="mt-2 text-xl font-semibold">Trust before checkout</h3>
+          <div className="my-4">
+            <CollectiblePreviewCard
+              accentVar="--storefront-accent"
+              badge="Reserve-ready"
+              className="bg-transparent p-0 shadow-none"
+              imageAlt="Reserve module collectible frame"
+              meta={`${formatCount(input.availableEditionCount)} open editions`}
+              subtitle={input.priceLabel ?? "Transparent checkout state"}
+              title="Collector checkout module"
+            />
+          </div>
           <ul className="mt-3 space-y-2 text-sm text-[color:var(--storefront-muted)]">
             <li>Reservations are time-bound and consumed at checkout.</li>
-            <li>Availability is sourced from immutable published snapshot state.</li>
-            <li>Provider state and launch timing remain explicit in this route.</li>
-            <li>Onchain deployment status is presented as transparent proof.</li>
+            <li>
+              Availability is sourced from immutable published snapshot state.
+            </li>
+            <li>
+              Provider state and launch timing remain explicit in this route.
+            </li>
+            <li>
+              Onchain deployment status is presented as transparent proof.
+            </li>
           </ul>
           {input.providerMode === "stripe" ? (
             <p className="mt-3 text-xs text-[color:var(--storefront-accent)]">
@@ -494,24 +512,21 @@ function CollectionGallery(input: {
       <SectionHeader kicker="Gallery wall" title="Curated collectible set" />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {input.items.map((item) => (
-          <article
-            className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] overflow-hidden"
+          <div
+            className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-3 shadow-[0_18px_45px_rgba(2,6,23,0.22)]"
             key={item.generatedAssetId}
           >
-            <img
-              alt={`${input.title} edition ${item.position}`}
-              className="aspect-[1/1] w-full border-b border-[color:var(--storefront-border)] object-cover"
-              src={item.imageUrl}
+            <CollectiblePreviewCard
+              accentVar="--storefront-accent"
+              badge={`Edition ${item.position}`}
+              className="bg-transparent p-0 shadow-none"
+              imageAlt={`${input.title} edition ${item.position}`}
+              imageUrl={item.imageUrl}
+              meta={`Variant ${item.variantIndex} · ${item.pipelineKey}`}
+              subtitle={item.sourceAssetOriginalFilename}
+              title={input.title}
             />
-            <div className="space-y-1 p-3">
-              <strong className="block text-sm">
-                {item.sourceAssetOriginalFilename} · Edition {item.position}
-              </strong>
-              <span className="text-xs text-[color:var(--storefront-muted)]">
-                Variant {item.variantIndex} from {item.pipelineKey}
-              </span>
-            </div>
-          </article>
+          </div>
         ))}
       </div>
     </section>
@@ -545,7 +560,9 @@ function CollectionTechnicalSection(input: {
           {input.activeDeployment ? (
             <div className="mt-3 space-y-1 text-sm text-[color:var(--storefront-muted)]">
               <p>Chain {input.activeDeployment.chain.label}</p>
-              <p>{formatAddressShort(input.activeDeployment.contractAddress)}</p>
+              <p>
+                {formatAddressShort(input.activeDeployment.contractAddress)}
+              </p>
               <p>{formatAddressShort(input.activeDeployment.deployTxHash)}</p>
               <p>{formatTimestamp(input.activeDeployment.deployedAt)}</p>
             </div>
@@ -562,10 +579,18 @@ function CollectionTechnicalSection(input: {
           </p>
           <h3 className="mt-2 text-xl font-semibold">Public metadata</h3>
           <div className="mt-3 flex flex-col gap-2">
-            <ActionLink href={input.metadataPath} tone={linkClass()} target="_blank">
+            <ActionLink
+              href={input.metadataPath}
+              tone={linkClass()}
+              target="_blank"
+            >
               Collection metadata JSON
             </ActionLink>
-            <ActionLink href={input.contractPath} tone={linkClass()} target="_blank">
+            <ActionLink
+              href={input.contractPath}
+              tone={linkClass()}
+              target="_blank"
+            >
               Contract manifest
             </ActionLink>
           </div>
@@ -631,7 +656,9 @@ function CollectionRelatedSection(input: {
               href={related.publicPath}
               key={related.publicPath}
             >
-              <StorefrontChip accent>{formatStatusLabel(related.storefrontStatus)}</StorefrontChip>
+              <StorefrontChip accent>
+                {formatStatusLabel(related.storefrontStatus)}
+              </StorefrontChip>
               <h3 className="mt-2 text-lg font-semibold">{related.title}</h3>
               <p className="mt-1 text-sm text-[color:var(--storefront-muted)]">
                 Collection {related.collectionSlug}
@@ -685,11 +712,14 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
       className="min-h-screen bg-[var(--storefront-bg)] text-[color:var(--storefront-text)]"
       style={createStorefrontThemeStyle(collection.brandTheme)}
     >
-      <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-8 md:px-6 lg:px-8">
+      <div className="relative mx-auto grid w-full max-w-7xl gap-6 px-4 py-8 md:px-6 lg:px-8">
+        <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-96 bg-[radial-gradient(circle_at_15%_10%,rgba(255,255,255,0.14),transparent_26%),radial-gradient(circle_at_82%_12%,rgba(255,255,255,0.08),transparent_22%)]" />
         <CollectionHeroSection
           availabilityLabel={collection.availabilityLabel}
           brandPath={collection.brandPublicPath}
-          brandThemeWordmark={collection.brandTheme.wordmark ?? collection.brandName}
+          brandThemeWordmark={
+            collection.brandTheme.wordmark ?? collection.brandName
+          }
           description={launchStory}
           featuredMessage={collection.brandTheme.featuredReleaseLabel}
           heroImageUrl={collection.heroImageUrl}
@@ -705,13 +735,22 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
           priceLabel={collection.priceLabel}
         />
 
-        <CollectionLaunchStory
-          availabilityLabel={collection.availabilityLabel}
-          headline={heroHeadline}
-          lead={launchStory}
-          mintedTokenCount={collection.mintedTokenCount}
-          status={collection.storefrontStatus}
+        <FloatingCollectibleCluster
+          accentVar="--storefront-accent"
+          headline="Each release page should feel staged like a premium collectible debut."
+          items={["Hero frame", "Collector proof", "Reserve shell"]}
+          label="Release composition"
         />
+
+        <CollectibleEditorialBand accentVar="--storefront-accent">
+          <CollectionLaunchStory
+            availabilityLabel={collection.availabilityLabel}
+            headline={heroHeadline}
+            lead={launchStory}
+            mintedTokenCount={collection.mintedTokenCount}
+            status={collection.storefrontStatus}
+          />
+        </CollectibleEditorialBand>
 
         <CollectionProofPanel
           activeDeployment={collection.activeDeployment}
@@ -743,7 +782,12 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
           availabilityLabel={collection.availabilityLabel}
         />
 
-        <CollectionGallery items={collection.items} title={collection.title} />
+        <CollectibleEditorialBand accentVar="--storefront-accent">
+          <CollectionGallery
+            items={collection.items}
+            title={collection.title}
+          />
+        </CollectibleEditorialBand>
 
         <CollectionTechnicalSection
           activeDeployment={collection.activeDeployment}
