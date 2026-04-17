@@ -228,3 +228,28 @@ Complete the Tailwind migration checkpoint in `apps/web` and `packages/ui`, stab
 - Continue migrating stable route-local patterns from `studio-collections-client.tsx` into the new shared `packages/ui` surface primitives where they match.
 - Do a final consistency pass across Studio routes so settings, collections, and commerce share the same spacing, rail, metric, and empty-state behavior.
 - After Studio is fully normalized, re-audit public/storefront surfaces for any remaining card-shell or gallery-frame patterns worth moving into reusable shared primitives.
+
+## Latest Checkpoint (Collections Primitive Normalization)
+- Completed the next shared-system normalization step in `apps/web/src/app/(studio)/studio/collections/studio-collections-client.tsx`.
+- Replaced matching route-local collection surface patterns with shared `packages/ui` primitives:
+  - `EmptyState`
+  - `InsetMetric`
+- Removed collection-local duplicate implementations for:
+  - empty state shells
+  - launch-rail metric cards
+- Kept route-specific collection composition in place where it is still unique to the release-builder workflow, especially the collectible preview cards, publication-note treatment, and onchain flow surfaces.
+- This keeps `studio-collections-client` aligned with the new shared system without flattening the route into generic admin UI.
+
+## Verification (Collections Primitive Normalization)
+- `pnpm exec prettier --write apps/web/src/app/'(studio)'/studio/collections/studio-collections-client.tsx` ✅
+- `pnpm --filter @ai-nft-forge/web build` ✅
+- `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false` ✅
+
+## Updated Next Follow-up
+- Finish the final Studio consistency pass across settings, collections, and commerce:
+  - spacing rhythm
+  - rail treatment
+  - metric density
+  - empty-state styling
+  - action-row consistency
+- After Studio consistency is locked, re-audit public/storefront surfaces for any remaining shell patterns that should move into `packages/ui`.

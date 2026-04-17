@@ -35,8 +35,10 @@ import {
 import {
   ActionButton,
   ActionLink,
+  EmptyState,
   FieldLabel,
   FieldStack,
+  InsetMetric,
   InputField,
   MetricTile,
   PageShell,
@@ -71,8 +73,6 @@ const collectionActionRowClasses = "flex flex-wrap items-center gap-2";
 const collectionFieldGridClasses = "grid gap-3 md:grid-cols-2";
 const collectionFieldLabelClasses =
   "text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]";
-const collectionEmptyStateClasses =
-  "rounded-2xl border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)]/55 p-4 text-sm leading-6 text-[color:var(--color-muted)]";
 
 const collectionInputFieldClasses =
   "rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30";
@@ -93,8 +93,6 @@ const collectionArtGridClasses = "grid gap-3 md:grid-cols-2 xl:grid-cols-3";
 const collectionArtCardWideGridClasses =
   "grid gap-3 md:grid-cols-2 xl:grid-cols-2";
 const collectionLaunchGridClasses = "grid gap-3 sm:grid-cols-3";
-const collectionLaunchCardClasses =
-  "grid gap-1 rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3";
 const collectionLinkGridClasses = "grid gap-1.5 md:grid-cols-2";
 const collectionMintListClasses = "grid gap-3";
 const collectionMintCardClasses =
@@ -622,26 +620,6 @@ function CollectionStatusNote(input: {
     >
       <strong>{input.title}</strong>
       <span className="text-sm leading-6 text-current/85">{input.body}</span>
-    </div>
-  );
-}
-
-function CollectionControlMetric(input: {
-  label: string;
-  note: string;
-  value: string;
-}) {
-  return (
-    <div className={collectionLaunchCardClasses}>
-      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-        {input.label}
-      </span>
-      <strong className="text-base text-[color:var(--color-text)]">
-        {input.value}
-      </strong>
-      <small className="text-xs leading-5 text-[color:var(--color-muted)]">
-        {input.note}
-      </small>
     </div>
   );
 }
@@ -2284,10 +2262,10 @@ export function StudioCollectionsClient({
               </form>
               <div className="grid gap-3">
                 {drafts.length === 0 ? (
-                  <div className={collectionEmptyStateClasses}>
+                  <EmptyState className="bg-[color:var(--color-surface-strong)]/55 leading-6">
                     No collection drafts exist yet. Create one to begin the
                     release workflow.
-                  </div>
+                  </EmptyState>
                 ) : (
                   drafts.map((draft) => (
                     <CollectionDraftBrowserCard
@@ -2496,10 +2474,10 @@ export function StudioCollectionsClient({
                 title="Curated release sequence"
               >
                 {selectedDraft.items.length === 0 ? (
-                  <div className={collectionEmptyStateClasses}>
+                  <EmptyState className="bg-[color:var(--color-surface-strong)]/55 leading-6">
                     No generated assets have been curated into this release yet.
                     Add approved outputs from the candidate rail.
-                  </div>
+                  </EmptyState>
                 ) : (
                   <div className={collectionArtCardWideGridClasses}>
                     {selectedDraft.items.map((item, index) => (
@@ -2588,10 +2566,10 @@ export function StudioCollectionsClient({
                 title="Recent generated outputs"
               >
                 {generatedAssetCandidates.length === 0 ? (
-                  <div className={collectionEmptyStateClasses}>
+                  <EmptyState className="bg-[color:var(--color-surface-strong)]/55 leading-6">
                     No generated assets are available yet. Generate variants in
                     `/studio/assets` first.
-                  </div>
+                  </EmptyState>
                 ) : (
                   <div className={collectionArtGridClasses}>
                     {generatedAssetCandidates.map((candidate) => {
@@ -2725,14 +2703,14 @@ export function StudioCollectionsClient({
             {selectedDraft ? (
               <div className="grid gap-4">
                 <div className={collectionLaunchGridClasses}>
-                  <CollectionControlMetric
+                  <InsetMetric
                     label="Draft state"
-                    note={`${selectedDraft.itemCount} curated items`}
+                    detail={`${selectedDraft.itemCount} curated items`}
                     value={formatDraftStatus(selectedDraft.status)}
                   />
-                  <CollectionControlMetric
+                  <InsetMetric
                     label="Publication"
-                    note={selectedDraftPublicPath ?? "Route pending"}
+                    detail={selectedDraftPublicPath ?? "Route pending"}
                     value={
                       selectedDraft.publication
                         ? formatStorefrontStatus(
@@ -2741,9 +2719,9 @@ export function StudioCollectionsClient({
                         : "Not published"
                     }
                   />
-                  <CollectionControlMetric
+                  <InsetMetric
                     label="Onchain"
-                    note={
+                    detail={
                       selectedDraft.publication
                         ? `${selectedDraft.publication.mintedTokenCount} recorded mints`
                         : "Publish first"
@@ -2792,9 +2770,9 @@ export function StudioCollectionsClient({
                     </Link>
                   </div>
                 ) : (
-                  <div className={collectionEmptyStateClasses}>
+                  <EmptyState className="bg-[color:var(--color-surface-strong)]/55 leading-6">
                     Configure `/studio/settings` before publishing a release.
-                  </div>
+                  </EmptyState>
                 )}
 
                 {publicationTargets.length > 1 ? (
@@ -2964,9 +2942,9 @@ export function StudioCollectionsClient({
                 </div>
               </div>
             ) : (
-              <div className={collectionEmptyStateClasses}>
+              <EmptyState className="bg-[color:var(--color-surface-strong)]/55 leading-6">
                 Select a draft to inspect publication state and launch controls.
-              </div>
+              </EmptyState>
             )}
           </SurfaceCard>
 
@@ -3591,9 +3569,9 @@ export function StudioCollectionsClient({
                 ) : null}
               </div>
             ) : (
-              <div className={collectionEmptyStateClasses}>
+              <EmptyState className="bg-[color:var(--color-surface-strong)]/55 leading-6">
                 Publish a release before preparing deployment or minting.
-              </div>
+              </EmptyState>
             )}
           </SurfaceCard>
         </aside>
