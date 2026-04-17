@@ -5,7 +5,12 @@ import {
   createCollectionContractPath,
   createCollectionTokenUriPath
 } from "@ai-nft-forge/contracts";
-import { ActionLink } from "@ai-nft-forge/ui";
+import {
+  ActionLink,
+  StorefrontPanel,
+  StorefrontPill,
+  StorefrontTile
+} from "@ai-nft-forge/ui";
 import type { CollectionPublicBrandTheme } from "@ai-nft-forge/shared";
 
 import {
@@ -177,26 +182,6 @@ function SectionHeader({ kicker, title }: { kicker: string; title: string }) {
   );
 }
 
-function StorefrontChip({
-  accent,
-  children
-}: {
-  accent?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <span
-      className={
-        accent
-          ? "inline-flex items-center rounded-full border border-[color:var(--storefront-accent)]/45 bg-[color:var(--storefront-accent)]/15 px-3 py-1 text-xs font-semibold text-[color:var(--storefront-accent)]"
-          : "inline-flex items-center rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] px-2.5 py-1 text-xs text-[color:var(--storefront-muted)]"
-      }
-    >
-      {children}
-    </span>
-  );
-}
-
 function CollectionHeroSection(input: {
   availabilityLabel: string;
   brandPath: string;
@@ -231,7 +216,7 @@ function CollectionHeroSection(input: {
   return (
     <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
       <div className="space-y-5">
-        <StorefrontChip accent>{input.featuredMessage}</StorefrontChip>
+        <StorefrontPill tone="accent">{input.featuredMessage}</StorefrontPill>
         <p className="text-xs uppercase tracking-[0.2em] text-[color:var(--storefront-muted)]">
           {input.brandPath}
         </p>
@@ -257,8 +242,8 @@ function CollectionHeroSection(input: {
           </ActionLink>
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
-          <StorefrontChip accent>Launch mode</StorefrontChip>
-          <StorefrontChip>
+          <StorefrontPill tone="accent">Launch mode</StorefrontPill>
+          <StorefrontPill>
             {input.storefrontStatus === "live"
               ? "Open"
               : input.storefrontStatus === "upcoming"
@@ -266,18 +251,18 @@ function CollectionHeroSection(input: {
                 : input.storefrontStatus === "ended"
                   ? "Closed"
                   : "Sold out"}
-          </StorefrontChip>
+          </StorefrontPill>
           {input.totalSupply ? (
-            <StorefrontChip>
+            <StorefrontPill>
               {formatCount(input.totalSupply)} artworks
-            </StorefrontChip>
+            </StorefrontPill>
           ) : null}
           {input.priceLabel ? (
-            <StorefrontChip>{input.priceLabel}</StorefrontChip>
+            <StorefrontPill>{input.priceLabel}</StorefrontPill>
           ) : null}
-          <StorefrontChip>
+          <StorefrontPill>
             {formatCount(input.claimedCount)} claimed
-          </StorefrontChip>
+          </StorefrontPill>
         </div>
       </div>
       <CollectibleHeroArtwork
@@ -305,7 +290,7 @@ function CollectionLaunchStory(input: {
   mintedTokenCount: number;
 }) {
   return (
-    <section className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] p-5">
+    <StorefrontPanel tone="soft">
       <div className="grid gap-4 md:grid-cols-[1fr_0.8fr] md:items-center">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
@@ -318,7 +303,7 @@ function CollectionLaunchStory(input: {
             {input.lead}
           </p>
         </div>
-        <article className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-4">
+        <StorefrontTile className="p-4" tone="muted">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
             Collector proof
           </p>
@@ -329,9 +314,9 @@ function CollectionLaunchStory(input: {
             {input.availabilityLabel} · {formatCount(input.mintedTokenCount)}{" "}
             minted proofs
           </p>
-        </article>
+        </StorefrontTile>
       </div>
-    </section>
+    </StorefrontPanel>
   );
 }
 
@@ -365,24 +350,21 @@ function CollectionProofPanel(input: {
   const proofs = computeProofStats(input);
 
   return (
-    <section className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] p-5">
+    <StorefrontPanel tone="soft">
       <SectionHeader
         kicker="Collector proof"
         title="Drop ledger and launch telemetry"
       />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {proofs.map((proof) => (
-          <article
-            className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-4"
-            key={proof.label}
-          >
+          <StorefrontTile className="p-4" key={proof.label} tone="muted">
             <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
               {proof.label}
             </span>
             <strong className="mt-1 block text-sm text-[color:var(--storefront-text)]">
               {proof.value}
             </strong>
-          </article>
+          </StorefrontTile>
         ))}
       </div>
       <p className="mt-4 text-sm leading-7 text-[color:var(--storefront-muted)]">
@@ -394,7 +376,7 @@ function CollectionProofPanel(input: {
         Launch timing: {launchLabel(input.launchAt, input.storefrontStatus)} ·
         Ends {formatTimestamp(input.endAt)}
       </p>
-    </section>
+    </StorefrontPanel>
   );
 }
 
@@ -420,15 +402,17 @@ function CollectionReserveZone(input: {
   availabilityLabel: string;
 }) {
   return (
-    <section className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] p-5">
+    <StorefrontPanel tone="soft">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <SectionHeader
           kicker="Reserve module"
           title="Secure your edition before it sells out"
         />
         <div className="flex flex-wrap gap-2">
-          <StorefrontChip accent>{input.availabilityLabel}</StorefrontChip>
-          <StorefrontChip>Reserve-ready</StorefrontChip>
+          <StorefrontPill tone="accent">
+            {input.availabilityLabel}
+          </StorefrontPill>
+          <StorefrontPill>Reserve-ready</StorefrontPill>
         </div>
       </div>
       <div className="grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
@@ -443,7 +427,7 @@ function CollectionReserveZone(input: {
           priceLabel={input.priceLabel}
           providerMode={input.providerMode}
         />
-        <article className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-4">
+        <StorefrontTile className="p-4" tone="muted">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
             Reserve trust
           </p>
@@ -476,9 +460,9 @@ function CollectionReserveZone(input: {
               Stripe-powered checkout available for active reservations.
             </p>
           ) : null}
-        </article>
+        </StorefrontTile>
       </div>
-    </section>
+    </StorefrontPanel>
   );
 }
 
@@ -495,7 +479,7 @@ function CollectionGallery(input: {
 }) {
   if (input.items.length === 0) {
     return (
-      <section className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] p-5">
+      <StorefrontPanel tone="soft">
         <SectionHeader
           kicker="Gallery wall"
           title={`Gallery waiting for published variants for ${input.title}`}
@@ -503,17 +487,19 @@ function CollectionGallery(input: {
         <p className="text-sm text-[color:var(--storefront-muted)]">
           No artwork has been published for this release yet.
         </p>
-      </section>
+      </StorefrontPanel>
     );
   }
 
   return (
-    <section className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] p-5">
+    <StorefrontPanel tone="soft">
       <SectionHeader kicker="Gallery wall" title="Curated collectible set" />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {input.items.map((item) => (
-          <div
-            className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-3 shadow-[0_18px_45px_rgba(2,6,23,0.22)]"
+          <StorefrontTile
+            className="p-3 shadow-[0_18px_45px_rgba(2,6,23,0.22)]"
+            interactive
+            tone="gallery"
             key={item.generatedAssetId}
           >
             <CollectiblePreviewCard
@@ -526,10 +512,10 @@ function CollectionGallery(input: {
               subtitle={item.sourceAssetOriginalFilename}
               title={input.title}
             />
-          </div>
+          </StorefrontTile>
         ))}
       </div>
-    </section>
+    </StorefrontPanel>
   );
 }
 
@@ -544,13 +530,13 @@ function CollectionTechnicalSection(input: {
   } | null;
 }) {
   return (
-    <section className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] p-5">
+    <StorefrontPanel tone="soft">
       <SectionHeader
         kicker="Technical proof"
         title="Manifest and contract references"
       />
       <div className="grid gap-4 xl:grid-cols-3">
-        <article className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-4">
+        <StorefrontTile className="p-4" tone="muted">
           <p className="text-xs text-[color:var(--storefront-muted)]">
             Deployment record
           </p>
@@ -571,9 +557,9 @@ function CollectionTechnicalSection(input: {
               This collection has no recorded chain deployment yet.
             </p>
           )}
-        </article>
+        </StorefrontTile>
 
-        <article className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-4">
+        <StorefrontTile className="p-4" tone="muted">
           <p className="text-xs text-[color:var(--storefront-muted)]">
             Publication manifest
           </p>
@@ -594,9 +580,9 @@ function CollectionTechnicalSection(input: {
               Contract manifest
             </ActionLink>
           </div>
-        </article>
+        </StorefrontTile>
 
-        <article className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-4">
+        <StorefrontTile className="p-4" tone="muted">
           <p className="text-xs text-[color:var(--storefront-muted)]">
             Token URI reference
           </p>
@@ -627,9 +613,9 @@ function CollectionTechnicalSection(input: {
               Add editions to generate sample token URI references.
             </p>
           )}
-        </article>
+        </StorefrontTile>
       </div>
-    </section>
+    </StorefrontPanel>
   );
 }
 
@@ -642,7 +628,7 @@ function CollectionRelatedSection(input: {
   }>;
 }) {
   return (
-    <section className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] p-5">
+    <StorefrontPanel tone="soft">
       <SectionHeader kicker="Related drops" title="Connected brand releases" />
       {input.relatedCollections.length === 0 ? (
         <p className="text-sm text-[color:var(--storefront-muted)]">
@@ -652,22 +638,24 @@ function CollectionRelatedSection(input: {
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {input.relatedCollections.map((related) => (
             <Link
-              className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-4 transition hover:translate-y-[-2px] hover:border-[color:var(--storefront-accent)] hover:shadow-[0_12px_40px_rgba(255,255,255,0.06)]"
+              className="transition"
               href={related.publicPath}
               key={related.publicPath}
             >
-              <StorefrontChip accent>
-                {formatStatusLabel(related.storefrontStatus)}
-              </StorefrontChip>
-              <h3 className="mt-2 text-lg font-semibold">{related.title}</h3>
-              <p className="mt-1 text-sm text-[color:var(--storefront-muted)]">
-                Collection {related.collectionSlug}
-              </p>
+              <StorefrontTile className="p-4" interactive tone="gallery">
+                <StorefrontPill tone="accent">
+                  {formatStatusLabel(related.storefrontStatus)}
+                </StorefrontPill>
+                <h3 className="mt-2 text-lg font-semibold">{related.title}</h3>
+                <p className="mt-1 text-sm text-[color:var(--storefront-muted)]">
+                  Collection {related.collectionSlug}
+                </p>
+              </StorefrontTile>
             </Link>
           ))}
         </div>
       )}
-    </section>
+    </StorefrontPanel>
   );
 }
 

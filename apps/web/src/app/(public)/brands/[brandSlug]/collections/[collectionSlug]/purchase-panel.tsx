@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ActionButton, FieldLabel, InputField } from "@ai-nft-forge/ui";
+import {
+  ActionButton,
+  FieldLabel,
+  InputField,
+  StorefrontPanel,
+  StorefrontPill,
+  StorefrontTile
+} from "@ai-nft-forge/ui";
 
 type PurchasePanelProps = {
   activeReservationCount: number;
@@ -102,7 +109,10 @@ export function PurchasePanel(props: PurchasePanelProps) {
           : "Checkout opens once this release is live.";
 
   return (
-    <article className="relative overflow-hidden rounded-[1.75rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] p-6 shadow-[var(--shadow-surface)]">
+    <StorefrontPanel
+      className="relative overflow-hidden p-6 shadow-[var(--shadow-surface)]"
+      tone="elevated"
+    >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_18%,rgba(255,255,255,0.17),transparent_25%),radial-gradient(circle_at_82%_14%,rgba(255,255,255,0.09),transparent_20%)]" />
       <div className="relative grid gap-4 md:grid-cols-[1.05fr_0.95fr] md:items-stretch">
         <section className="space-y-4">
@@ -117,18 +127,18 @@ export function PurchasePanel(props: PurchasePanelProps) {
             </h2>
           </div>
           <div className="flex flex-wrap gap-2">
-            <span className="inline-flex items-center rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[color:var(--storefront-text)]">
+            <StorefrontPill className="text-[color:var(--storefront-text)]">
               {props.availableEditionCount} editions open
-            </span>
+            </StorefrontPill>
             {props.nextAvailableEditionNumber ? (
-              <span className="inline-flex items-center rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[color:var(--storefront-text)]">
+              <StorefrontPill className="text-[color:var(--storefront-text)]">
                 Next edition #{props.nextAvailableEditionNumber}
-              </span>
+              </StorefrontPill>
             ) : null}
             {props.activeReservationCount > 0 ? (
-              <span className="inline-flex items-center rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[color:var(--storefront-text)]">
+              <StorefrontPill className="text-[color:var(--storefront-text)]">
                 {props.activeReservationCount} held right now
-              </span>
+              </StorefrontPill>
             ) : null}
           </div>
           {props.checkoutEnabled ? (
@@ -137,7 +147,7 @@ export function PurchasePanel(props: PurchasePanelProps) {
                 <FieldLabel>Name</FieldLabel>
                 <InputField
                   autoComplete="name"
-                  className="rounded-xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-3 py-2 text-sm text-[color:var(--storefront-text)] placeholder:text-[color:var(--storefront-muted)]"
+                  tone="storefront"
                   onChange={(event) => setBuyerDisplayName(event.target.value)}
                   placeholder="Collector name"
                   value={buyerDisplayName}
@@ -147,7 +157,7 @@ export function PurchasePanel(props: PurchasePanelProps) {
                 <FieldLabel>Email</FieldLabel>
                 <InputField
                   autoComplete="email"
-                  className="rounded-xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-3 py-2 text-sm text-[color:var(--storefront-text)] placeholder:text-[color:var(--storefront-muted)]"
+                  tone="storefront"
                   onChange={(event) => setBuyerEmail(event.target.value)}
                   placeholder="collector@example.com"
                   required
@@ -159,7 +169,7 @@ export function PurchasePanel(props: PurchasePanelProps) {
                 <FieldLabel>Wallet address</FieldLabel>
                 <InputField
                   autoComplete="off"
-                  className="rounded-xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] px-3 py-2 text-sm text-[color:var(--storefront-text)] placeholder:text-[color:var(--storefront-muted)]"
+                  tone="storefront"
                   onChange={(event) =>
                     setBuyerWalletAddress(event.target.value)
                   }
@@ -168,9 +178,9 @@ export function PurchasePanel(props: PurchasePanelProps) {
                 />
               </label>
               {error ? (
-                <p className="rounded-xl border border-red-400/45 bg-red-500/12 p-2.5 text-sm text-red-100">
+                <StorefrontTile className="p-2.5" tone="muted">
                   {error}
-                </p>
+                </StorefrontTile>
               ) : null}
               <div className="flex flex-wrap gap-2">
                 <ActionButton disabled={busy} tone="primary" type="submit">
@@ -183,13 +193,13 @@ export function PurchasePanel(props: PurchasePanelProps) {
               </div>
             </form>
           ) : (
-            <p className="rounded-xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-3 text-sm text-[color:var(--storefront-text)]">
+            <StorefrontTile className="p-3" tone="muted">
               {disabledMessage}
-            </p>
+            </StorefrontTile>
           )}
         </section>
 
-        <aside className="rounded-[1.5rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-4">
+        <StorefrontPanel className="p-4" tone="soft">
           <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--storefront-accent)]">
             Reservation state
           </p>
@@ -221,8 +231,8 @@ export function PurchasePanel(props: PurchasePanelProps) {
             If checkout is unavailable, enable provider mode in studio and
             retry.
           </p>
-        </aside>
+        </StorefrontPanel>
       </div>
-    </article>
+    </StorefrontPanel>
   );
 }

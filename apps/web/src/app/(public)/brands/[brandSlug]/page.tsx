@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { ActionLink } from "@ai-nft-forge/ui";
+import {
+  ActionLink,
+  StorefrontPanel,
+  StorefrontPill,
+  StorefrontTile
+} from "@ai-nft-forge/ui";
 import type {
   CollectionPublicBrandPreview,
   CollectionPublicBrandTheme
@@ -146,28 +151,11 @@ function dedupeByPublicPath(
   );
 }
 
-function BrandFeaturePill(input: {
-  label: string;
-  tone?: "default" | "accent";
-}) {
-  return (
-    <span
-      className={
-        input.tone === "accent"
-          ? "inline-flex items-center rounded-full border border-[color:var(--storefront-accent)]/45 bg-[color:var(--storefront-accent)]/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]"
-          : "inline-flex items-center rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/70 px-3 py-1 text-xs text-[color:var(--storefront-muted)]"
-      }
-    >
-      {input.label}
-    </span>
-  );
-}
-
 function BrandHeroVisual(input: {
   release: CollectionPublicBrandPreview | null;
 }) {
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/60 p-4 md:p-6">
+    <StorefrontPanel className="relative overflow-hidden" tone="soft">
       <div className="absolute -left-20 top-8 h-40 w-40 rounded-full bg-[color:var(--storefront-accent)]/15 blur-3xl" />
       <div className="absolute -right-16 bottom-4 h-44 w-44 rounded-full bg-[color:var(--storefront-accent)]/10 blur-3xl" />
       <div className="relative space-y-4">
@@ -205,7 +193,7 @@ function BrandHeroVisual(input: {
           </span>
         </div>
         <div className="mt-2 grid gap-2 text-sm text-[color:var(--storefront-muted)]">
-          <div className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)]/80 px-4 py-3">
+          <StorefrontTile className="px-4 py-3" tone="gallery">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--storefront-accent)]">
               Featured spotlight
             </p>
@@ -214,7 +202,7 @@ function BrandHeroVisual(input: {
                 ? "Live campaign loaded from immutable publication snapshot."
                 : "The spotlight remains empty until a release is published."}
             </p>
-          </div>
+          </StorefrontTile>
         </div>
       </div>
       <div className="mt-5">
@@ -240,7 +228,7 @@ function BrandHeroVisual(input: {
           title={input.release?.title ?? "Campaign spotlight"}
         />
       </div>
-    </section>
+    </StorefrontPanel>
   );
 }
 
@@ -260,11 +248,11 @@ function BrandHeroSection(input: {
   return (
     <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
       <div className="space-y-5">
-        <p className="inline-flex items-center gap-2 rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--storefront-accent)]">
+        <StorefrontPill className="gap-2" tone="accent">
           <span>{input.brandLabel}</span>
           <span>·</span>
           <span>{input.brandPath}</span>
-        </p>
+        </StorefrontPill>
         <h1 className="text-3xl font-semibold leading-tight font-[var(--font-display)] md:text-5xl">
           {input.heroHeadline}
         </h1>
@@ -283,26 +271,23 @@ function BrandHeroSection(input: {
             </ActionLink>
           ) : null}
         </div>
-        <div className="rounded-3xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/80 p-4">
+        <StorefrontPanel>
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
             {input.heroKicker}
           </p>
           <div className="flex flex-wrap gap-2">
             {input.campaignMetrics.map((metric) => (
-              <div
-                className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-3"
-                key={metric.label}
-              >
+              <StorefrontTile className="p-3" tone="muted" key={metric.label}>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--storefront-accent)]">
                   {metric.label}
                 </p>
                 <p className="mt-1 text-sm text-[color:var(--storefront-text)]">
                   {metric.value}
                 </p>
-              </div>
+              </StorefrontTile>
             ))}
           </div>
-        </div>
+        </StorefrontPanel>
       </div>
       <BrandHeroVisual release={input.release} />
     </section>
@@ -315,9 +300,12 @@ function BrandFeaturedReleaseCard(input: {
 }) {
   if (!input.release) {
     return (
-      <section className="rounded-3xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/70 p-5 text-sm text-[color:var(--storefront-muted)]">
+      <StorefrontPanel
+        tone="default"
+        className="text-sm text-[color:var(--storefront-muted)]"
+      >
         Campaign spotlight is waiting on a published release.
-      </section>
+      </StorefrontPanel>
     );
   }
 
@@ -325,7 +313,7 @@ function BrandFeaturedReleaseCard(input: {
   const metadataRows = formatAvailabilityLabel({ release });
 
   return (
-    <section className="rounded-3xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/70 p-5">
+    <StorefrontPanel tone="soft">
       <div className="grid gap-5 md:grid-cols-[1fr_1.1fr] md:items-center">
         <CollectiblePreviewCard
           accentVar="--storefront-accent"
@@ -351,19 +339,18 @@ function BrandFeaturedReleaseCard(input: {
                 "Published collectible drops are surfaced from immutable snapshots and arranged by brand campaign rhythm.")}
           </p>
           <div className="flex flex-wrap gap-2">
-            <BrandFeaturePill
-              tone="accent"
-              label={formatStatusLabel(release.storefrontStatus)}
-            />
+            <StorefrontPill tone="accent">
+              {formatStatusLabel(release.storefrontStatus)}
+            </StorefrontPill>
             {release.priceLabel ? (
-              <BrandFeaturePill label={release.priceLabel} />
+              <StorefrontPill>{release.priceLabel}</StorefrontPill>
             ) : null}
-            <BrandFeaturePill
-              label={formatSectionHeadline({
+            <StorefrontPill>
+              {formatSectionHeadline({
                 itemCount: release.itemCount,
                 status: release.storefrontStatus
               })}
-            />
+            </StorefrontPill>
           </div>
           <ul
             className="grid gap-1 text-sm text-[color:var(--storefront-muted)] md:grid-cols-2"
@@ -386,7 +373,7 @@ function BrandFeaturedReleaseCard(input: {
           </div>
         </div>
       </div>
-    </section>
+    </StorefrontPanel>
   );
 }
 
@@ -396,7 +383,7 @@ function BrandStorySection(input: {
   metrics: BrandMetric[];
 }) {
   return (
-    <section className="rounded-3xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/70 p-6">
+    <StorefrontPanel tone="soft">
       <div className="grid gap-4 md:grid-cols-[1.1fr_1fr] md:items-start">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
@@ -411,21 +398,18 @@ function BrandStorySection(input: {
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
           {input.metrics.map((metric) => (
-            <div
-              className="rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-3"
-              key={metric.label}
-            >
+            <StorefrontTile className="p-3" tone="muted" key={metric.label}>
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--storefront-accent)]">
                 {metric.label}
               </p>
               <p className="mt-1 text-sm text-[color:var(--storefront-text)]">
                 {metric.value}
               </p>
-            </div>
+            </StorefrontTile>
           ))}
         </div>
       </div>
-    </section>
+    </StorefrontPanel>
   );
 }
 
@@ -436,7 +420,11 @@ function BrandReleaseCard(input: {
   const metadata = formatAvailabilityLabel({ release: input.release });
 
   return (
-    <article className="rounded-3xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/70 p-4 shadow-[0_22px_55px_rgba(2,6,23,0.22)]">
+    <StorefrontTile
+      className="rounded-[2rem] p-4 shadow-[0_22px_55px_rgba(2,6,23,0.22)]"
+      interactive
+      tone="gallery"
+    >
       <Link href={input.release.publicPath}>
         <CollectiblePreviewCard
           accentVar="--storefront-accent"
@@ -473,11 +461,10 @@ function BrandReleaseCard(input: {
             "Campaign entry for this campaign route."}
         </p>
         <div className="flex flex-wrap gap-2">
-          <BrandFeaturePill
-            tone="accent"
-            label={formatStatusLabel(input.release.storefrontStatus)}
-          />
-          <BrandFeaturePill label={input.release.availabilityLabel} />
+          <StorefrontPill tone="accent">
+            {formatStatusLabel(input.release.storefrontStatus)}
+          </StorefrontPill>
+          <StorefrontPill>{input.release.availabilityLabel}</StorefrontPill>
         </div>
         <ul className="text-sm leading-6 text-[color:var(--storefront-muted)]">
           {metadata.map((metric) => (
@@ -488,7 +475,7 @@ function BrandReleaseCard(input: {
           Open campaign
         </ActionLink>
       </div>
-    </article>
+    </StorefrontTile>
   );
 }
 
@@ -503,22 +490,25 @@ function BrandReleaseSection(input: BrandSection) {
           <h2 className="text-2xl font-semibold font-[var(--font-display)]">
             {input.title}
           </h2>
-          <span className="rounded-full border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] px-3 py-1 text-xs text-[color:var(--storefront-muted)]">
+          <StorefrontPill className="text-[color:var(--storefront-muted)]">
             {input.collections.length} drops
-          </span>
+          </StorefrontPill>
         </div>
         <p className="text-sm text-[color:var(--storefront-muted)]">
           {brandSectionCopyByTone[input.tone]}
         </p>
       </div>
       {input.collections.length === 0 ? (
-        <div className="rounded-3xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/70 p-6 text-sm text-[color:var(--storefront-muted)]">
+        <StorefrontPanel
+          tone="default"
+          className="text-sm text-[color:var(--storefront-muted)]"
+        >
           {input.tone === "live"
             ? "No live launches are active right now."
             : input.tone === "upcoming"
               ? "No upcoming launches are queued yet."
               : "Archived campaigns are currently being recorded in this brand route."}
-        </div>
+        </StorefrontPanel>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {input.collections.map((release) => (

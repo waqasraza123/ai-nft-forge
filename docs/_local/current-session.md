@@ -3,6 +3,30 @@
 ## Date
 2026-04-17
 
+## Latest Checkpoint (Public Storefront Finalization)
+- Completed the single production-grade storefront finish pass on the public campaign/collection routes introduced in the previous art-direction cycle.
+- Added reusable Storefront primitives to `packages/ui/src/index.tsx`:
+  - `StorefrontPanel`
+  - `StorefrontTile`
+  - `StorefrontPill`
+  - storefront input tone and collectible-ready variants on `InputField`
+- Rewired `apps/web/src/app/(public)/brands/[brandSlug]/page.tsx` to use shared storefront wrappers and collectible cards for hero, featured release, story, and release rail surfaces.
+- Rewired `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/page.tsx` to use storefront wrappers for hero, launch proof, reserve, gallery, technical, and related sections.
+- Rewired `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/purchase-panel.tsx` to use storefront wrappers and storefront-tuned pills/inputs in checkout, notice, and reserve states.
+- Completed outstanding syntax cleanup in `purchase-panel.tsx` and rerouted final panel wrapping through shared primitives.
+- This pass intentionally keeps gallery/shop-like surfaces image-first while leaving ops tables/dense dashboards unchanged.
+
+## Current Objective
+- Tailwind and art-direction completion for public storefront touchpoints.
+- Step: Close this flagship production-grade storefront sweep, then move to route-level cleanup only where remaining repetitive patterns are proven to cross 2+ route families.
+
+## Verification
+- `pnpm exec prettier --write 'apps/web/src/app/(public)/brands/[brandSlug]/page.tsx' 'apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/page.tsx' 'apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/purchase-panel.tsx' packages/ui/src/index.tsx`
+- `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+- `pnpm --filter @ai-nft-forge/ui typecheck`
+- `pnpm --filter @ai-nft-forge/web typecheck`
+- `pnpm --filter @ai-nft-forge/web build`
+
 ## Latest Checkpoint (Shared Primitives Step)
 - Completed the next production-grade consolidation step in shared primitives:
   - Added `OpsSummaryCard` in `packages/ui/src/index.tsx` to replace repeated ops summary card markup.

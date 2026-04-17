@@ -114,6 +114,65 @@ const pillVariants = cva(
   }
 );
 
+const storefrontPanelVariants = cva(
+  "rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]",
+  {
+    variants: {
+      tone: {
+        default: "p-5",
+        soft: "bg-[color:var(--storefront-panel)]/60 p-6",
+        strong: "bg-[color:var(--storefront-panel)]/70 p-5",
+        elevated:
+          "bg-[color:var(--storefront-panel)]/70 p-5 shadow-[0_22px_55px_rgba(2,6,23,0.22)]"
+      }
+    },
+    defaultVariants: {
+      tone: "default"
+    }
+  }
+);
+
+const storefrontTileVariants = cva(
+  "rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-4",
+  {
+    variants: {
+      tone: {
+        default: "",
+        muted: "bg-[color:var(--storefront-panel)]/30",
+        gallery:
+          "bg-[color:var(--storefront-panel)]/30 shadow-[0_18px_45px_rgba(2,6,23,0.22)]"
+      },
+      interactive: {
+        false: "",
+        true: "transition hover:-translate-y-0.5 hover:border-[color:var(--storefront-accent)] hover:shadow-[0_12px_40px_rgba(255,255,255,0.06)]"
+      }
+    },
+    defaultVariants: {
+      tone: "default",
+      interactive: false
+    }
+  }
+);
+
+const storefrontPillVariants = cva(
+  "inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]",
+  {
+    variants: {
+      tone: {
+        accent:
+          "border-[color:var(--storefront-accent)]/45 bg-[color:var(--storefront-accent)]/15 text-[color:var(--storefront-accent)]",
+        muted:
+          "border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] text-[color:var(--storefront-muted)]",
+        subtle:
+          "border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/70 text-[color:var(--storefront-text)]"
+      }
+    },
+    defaultVariants: {
+      tone: "muted"
+    }
+  }
+);
+
 type PillProps = PropsWithChildren<
   VariantProps<typeof pillVariants> & {
     className?: string;
@@ -212,6 +271,8 @@ const inputFieldVariants = cva(
     variants: {
       tone: {
         default: "",
+        storefront:
+          "border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] text-[color:var(--storefront-text)] placeholder:text-[color:var(--storefront-muted)] focus:border-[color:var(--storefront-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--storefront-accent)]/30",
         file: "file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[color:var(--color-surface-strong)] file:px-3 file:py-2 file:text-sm file:text-[color:var(--color-text)] file:shadow-sm"
       }
     },
@@ -250,7 +311,7 @@ type InputFieldProps = Omit<
   InputHTMLAttributes<HTMLInputElement>,
   "prefix" | "suffix"
 > & {
-  tone?: "default" | "file";
+  tone?: "default" | "file" | "storefront";
 };
 
 type SelectFieldProps = Omit<
@@ -361,6 +422,23 @@ type FormPanelProps = PropsWithChildren<{
   className?: string;
 }>;
 
+type StorefrontPanelProps = PropsWithChildren<{
+  as?: "article" | "div" | "section";
+  className?: string;
+  tone?: "default" | "soft" | "strong" | "elevated";
+}>;
+
+type StorefrontTileProps = PropsWithChildren<{
+  className?: string;
+  interactive?: boolean;
+  tone?: "default" | "muted" | "gallery";
+}>;
+
+type StorefrontPillProps = PropsWithChildren<{
+  className?: string;
+  tone?: "accent" | "muted" | "subtle";
+}>;
+
 type SurfacePanelProps = PropsWithChildren<{
   className?: string;
 }>;
@@ -440,6 +518,46 @@ export function SurfaceCard({
       <div className="pt-1">{children}</div>
       <div className="pt-2">{footer ? <>{footer}</> : null}</div>
     </article>
+  );
+}
+
+export function StorefrontPanel({
+  as: As = "section",
+  children,
+  className,
+  tone = "default"
+}: StorefrontPanelProps) {
+  return (
+    <As className={cn(storefrontPanelVariants({ tone }), className)}>
+      {children}
+    </As>
+  );
+}
+
+export function StorefrontTile({
+  children,
+  className,
+  interactive = false,
+  tone = "default"
+}: StorefrontTileProps) {
+  return (
+    <div
+      className={cn(storefrontTileVariants({ interactive, tone }), className)}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function StorefrontPill({
+  children,
+  className,
+  tone = "muted"
+}: StorefrontPillProps) {
+  return (
+    <span className={cn(storefrontPillVariants({ tone }), className)}>
+      {children}
+    </span>
   );
 }
 
