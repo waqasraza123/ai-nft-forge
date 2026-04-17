@@ -1,8 +1,13 @@
-import { ActionLink } from "@ai-nft-forge/ui";
+import {
+  ActionLink,
+  ActionRow,
+  PageShell,
+  SurfaceCard,
+  SurfaceGrid
+} from "@ai-nft-forge/ui";
 
 import {
   CollectibleEditorialBand,
-  CollectiblePreviewCard,
   StudioSceneCard
 } from "../../../components/collectible-visuals";
 import { getCurrentStudioAccess } from "../../../server/studio/access";
@@ -57,56 +62,34 @@ export default async function StudioPage() {
   const roleCopy = isOwner ? "owner" : "operator";
 
   return (
-    <section className="space-y-6">
-      <header className="rounded-3xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)]/80 p-6 shadow-[var(--shadow-surface)]">
-        <div className="grid gap-6 xl:grid-cols-[1fr_360px] xl:items-center">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
-              Operational foundation
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold font-[var(--font-display)]">
-              Creator launch operating room
-            </h1>
-            <p className="mt-3 max-w-4xl text-sm leading-7 text-[color:var(--color-muted)]">
-              Keep one workspace in focus while moving from source capture to
-              collection release, and then to owner-side commerce supervision.
-              This is the premium creator-side operating surface for the next
-              safe action.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <ActionLink href={primaryDestination} tone="action">
-                {nextActionLabel}
-              </ActionLink>
-              <ActionLink href="/studio/collections" tone="inline">
-                Review latest collections
-              </ActionLink>
-              <ActionLink href="/" tone="inline">
-                Return to marketing
-              </ActionLink>
-            </div>
-          </div>
-          <CollectiblePreviewCard
-            badge="Studio preview"
-            className="bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))]"
-            imageAlt="Studio collectible preview"
-            meta={`${workspaceStatus} workspace · ${roleCopy}`}
-            subtitle={workspaceSlug}
-            title={workspaceName}
-          />
-        </div>
-      </header>
-      <section className="grid gap-4 xl:grid-cols-2">
-        <article className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-5">
-          <h2 className="text-xl font-semibold font-[var(--font-display)]">
-            Current workspace context
-          </h2>
-          <dl className="mt-4 grid gap-2 text-sm">
-            <div className="grid gap-0.5">
-              <dt className="text-xs uppercase tracking-[0.15em] text-[color:var(--color-muted)]">
-                Workspace
-              </dt>
-              <dd>{workspaceName}</dd>
-            </div>
+    <PageShell
+      eyebrow="Operational foundation"
+      lead="Keep one workspace in focus while moving from source capture to collection release, then monitor commerce fulfillment from one operator-safe center."
+      title="Creator launch operating room"
+      tone="studio"
+      actions={
+        <ActionRow>
+          <ActionLink href={primaryDestination} tone="action">
+            {nextActionLabel}
+          </ActionLink>
+          <ActionLink href="/studio/collections" tone="inline">
+            Review latest collections
+          </ActionLink>
+          <ActionLink href="/" tone="inline">
+            Return to marketing
+          </ActionLink>
+        </ActionRow>
+      }
+      className="lg:px-1"
+    >
+      <SurfaceGrid>
+        <SurfaceCard
+          body={`${workspaceStatus} workspace · ${roleCopy}`}
+          eyebrow="Workspace context"
+          span={6}
+          title={workspaceName}
+        >
+          <dl className="grid gap-2.5 text-sm text-[color:var(--color-muted)]">
             <div className="grid gap-0.5">
               <dt className="text-xs uppercase tracking-[0.15em] text-[color:var(--color-muted)]">
                 Slug
@@ -115,45 +98,63 @@ export default async function StudioPage() {
             </div>
             <div className="grid gap-0.5">
               <dt className="text-xs uppercase tracking-[0.15em] text-[color:var(--color-muted)]">
-                Status
-              </dt>
-              <dd>{workspaceStatus}</dd>
-            </div>
-            <div className="grid gap-0.5">
-              <dt className="text-xs uppercase tracking-[0.15em] text-[color:var(--color-muted)]">
-                Role
-              </dt>
-              <dd>{roleCopy}</dd>
-            </div>
-            <div className="grid gap-0.5">
-              <dt className="text-xs uppercase tracking-[0.15em] text-[color:var(--color-muted)]">
-                Workspace owner
+                Owner
               </dt>
               <dd>{ownerAddress}</dd>
             </div>
           </dl>
-        </article>
-        <article className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-5">
-          <h2 className="text-xl font-semibold font-[var(--font-display)]">
-            Operational rhythm
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-[color:var(--color-muted)]">
-            Work with this sequence: capture source assets, curate collections,
-            run storefront release preparation, then monitor fulfillment and
-            delivery.
-          </p>
-          <ol className="mt-3 list-decimal space-y-1 pl-4 text-sm text-[color:var(--color-muted)]">
+        </SurfaceCard>
+
+        <SurfaceCard
+          body="Run through source intake, curation, publication, then monitor checkout and fulfillment from one sequence."
+          eyebrow="Operational rhythm"
+          span={6}
+          title="Creator sequence"
+        >
+          <ol className="mt-2 list-decimal space-y-1 pl-4 text-sm leading-6 text-[color:var(--color-muted)]">
             <li>Capture and process source material.</li>
             <li>Approve and curate outputs into release drafts.</li>
-            <li>Publish from draft once review constraints pass.</li>
-            <li>Close the loop with checkout and fulfillment health.</li>
+            <li>Publish from review-ready drafts to immutable targets.</li>
+            <li>Monitor checkout, fulfillment, and reconciliation together.</li>
           </ol>
-          <p className="mt-3 text-sm text-[color:var(--color-muted)]">
-            All actions are scoped to the selected workspace and remain
-            protected by auth boundaries.
-          </p>
-        </article>
-      </section>
+        </SurfaceCard>
+
+        <SurfaceCard
+          body="Use this route as a visual index for where you are operating this launch cycle."
+          eyebrow="Workspace scope"
+          span={12}
+          title="Single surface for a complete launch"
+          className="min-h-60 border-white/20 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))]"
+        >
+          <ul className="mt-2 grid gap-2 text-sm text-[color:var(--color-muted)] sm:grid-cols-2">
+            <li>
+              <span className="mr-2 rounded-full bg-[color:var(--color-accent-soft)] px-2 py-1 text-xs font-semibold text-[color:var(--color-accent)]">
+                A
+              </span>
+              Keep current workspace as your immutable control anchor.
+            </li>
+            <li>
+              <span className="mr-2 rounded-full bg-[color:var(--color-accent-soft)] px-2 py-1 text-xs font-semibold text-[color:var(--color-accent)]">
+                B
+              </span>
+              Route from production assets to commerce with audit-backed state.
+            </li>
+            <li>
+              <span className="mr-2 rounded-full bg-[color:var(--color-accent-soft)] px-2 py-1 text-xs font-semibold text-[color:var(--color-accent)]">
+                C
+              </span>
+              Move quickly between public launch prep and operational controls.
+            </li>
+            <li>
+              <span className="mr-2 rounded-full bg-[color:var(--color-accent-soft)] px-2 py-1 text-xs font-semibold text-[color:var(--color-accent)]">
+                D
+              </span>
+              Maintain auth boundaries and workspace separation at each action.
+            </li>
+          </ul>
+        </SurfaceCard>
+      </SurfaceGrid>
+
       <CollectibleEditorialBand>
         <StudioSceneCard
           eyebrow="Creator-side depth"
@@ -161,25 +162,24 @@ export default async function StudioPage() {
           title="Preview-led launch preparation"
         />
       </CollectibleEditorialBand>
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+
+      <SurfaceGrid>
         {studioModules.map((module, index) => (
-          <article
-            className="rounded-2xl border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.04))] p-4 shadow-[var(--shadow-surface)]"
+          <SurfaceCard
+            body={module.description}
+            eyebrow={`0${index + 1}`}
             key={module.title}
-          >
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
-              0{index + 1}
-            </span>
-            <h2 className="mt-2 text-lg font-semibold">{module.title}</h2>
-            <p className="mt-2 text-sm text-[color:var(--color-muted)]">
-              {module.description}
-            </p>
-            <ActionLink href={module.href} tone="inline" className="mt-4">
-              Open {module.title.toLowerCase()}
-            </ActionLink>
-          </article>
+            span={4}
+            title={module.title}
+            className="h-full bg-[linear-gradient(180deg,rgba(255,255,255,0.11),rgba(255,255,255,0.03))]"
+            footer={
+              <ActionLink href={module.href} tone="inline">
+                Open {module.title.toLowerCase()}
+              </ActionLink>
+            }
+          />
         ))}
-      </section>
-    </section>
+      </SurfaceGrid>
+    </PageShell>
   );
 }

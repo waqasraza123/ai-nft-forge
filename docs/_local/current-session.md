@@ -281,3 +281,13 @@ Complete the Tailwind migration checkpoint in `apps/web` and `packages/ui`, stab
   - rail stacking rhythm
   - repeated inline link/button treatment
 - After Studio is locked, re-audit public/storefront card-shell and showcase patterns for any remaining promotion into `packages/ui`.
+
+## Latest Checkpoint (Studio Home Consistency)
+- Completed the next Studio consistency production step on `apps/web/src/app/(studio)/studio/page.tsx`:
+  - moved the Studio landing shell to shared `PageShell` and `SurfaceGrid`.
+  - migrated section cards to shared `SurfaceCard` for consistent panel rhythm.
+  - kept collectible scene anchoring and strengthened premium hierarchy with editorial pacing and module rail cards.
+  - removed route-local decorative shell patterns that were not using shared studio primitives.
+
+## Verification (Studio Home Consistency)
+- `pnpm exec prettier --write apps/web/src/app/'(studio)'/studio/page.tsx`
