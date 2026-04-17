@@ -127,6 +127,8 @@ const actionButtonVariants = cva(
       tone: {
         accent:
           "border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white hover:brightness-95",
+        surface:
+          "justify-start rounded-[1.5rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))] px-4 py-3 text-left transition hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-soft)]",
         ghost:
           "border-[color:var(--color-line)] bg-transparent text-[color:var(--color-text)] hover:bg-[color:var(--color-accent-soft)]",
         secondary:
@@ -233,7 +235,7 @@ type ActionLinkProps = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, never> & {
 };
 
 type ActionButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  tone?: "primary" | "accent" | "secondary" | "ghost";
+  tone?: "primary" | "accent" | "secondary" | "ghost" | "surface";
 };
 
 type StatusBannerProps = React.HTMLAttributes<HTMLDivElement> & {
@@ -358,6 +360,23 @@ type OpsQuickActionsProps = {
 type FormPanelProps = PropsWithChildren<{
   className?: string;
 }>;
+
+type SurfacePanelProps = PropsWithChildren<{
+  className?: string;
+}>;
+
+type ProgressTrackStatus =
+  | "failed"
+  | "preparing"
+  | "succeeded"
+  | "uploading"
+  | "verifying";
+
+type ProgressTrackProps = {
+  className?: string;
+  status?: ProgressTrackStatus;
+  value: number;
+};
 
 export type { ActionButtonProps, PageTone };
 
@@ -746,6 +765,52 @@ export function FormPanel({ children, className }: FormPanelProps) {
     >
       {children}
     </section>
+  );
+}
+
+export function SurfacePanel({ children, className }: SurfacePanelProps) {
+  return (
+    <section
+      className={cn(
+        "rounded-[1.75rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.04))] p-4 shadow-[var(--shadow-surface)] backdrop-blur md:p-5",
+        className
+      )}
+    >
+      {children}
+    </section>
+  );
+}
+
+export function ProgressTrack({
+  className,
+  status = "uploading",
+  value
+}: ProgressTrackProps) {
+  const normalizedValue = Math.max(0, Math.min(100, value));
+  const statusClass = {
+    succeeded: "bg-emerald-500/80",
+    failed: "bg-rose-500/80",
+    preparing: "bg-indigo-400/80",
+    uploading: "bg-[color:var(--color-accent)]/75",
+    verifying: "bg-[color:var(--color-accent)]/75"
+  }[status];
+
+  return (
+    <div
+      className={cn(
+        "h-2 overflow-hidden rounded-full bg-black/10 dark:bg-white/10",
+        className
+      )}
+      aria-hidden="true"
+    >
+      <span
+        className={cn(
+          "block h-full rounded-full transition-[width]",
+          statusClass
+        )}
+        style={{ width: `${normalizedValue}%` }}
+      />
+    </div>
   );
 }
 

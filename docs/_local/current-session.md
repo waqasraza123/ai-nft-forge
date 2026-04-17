@@ -3,8 +3,22 @@
 ## Date
 2026-04-17
 
+## Latest Checkpoint (Shared Primitives Step)
+- Completed the next production-grade consolidation step in shared primitives:
+  - Added `OpsSummaryCard` in `packages/ui/src/index.tsx` to replace repeated ops summary card markup.
+  - Rewired `apps/web/src/app/(ops)/ops/page.tsx` to use `OpsSummaryCard`.
+  - Replaced route-local commerce heading/hero helpers in `apps/web/src/app/(studio)/studio/commerce/studio-commerce-client.tsx` with shared `SectionHeading` and reusable `SignalCard` + shared class shell.
+- This keeps the commerce dashboard compositional intent while removing duplicate local shell logic.
+- Verification:
+  - `pnpm exec prettier --write packages/ui/src/index.tsx apps/web/src/app/'(ops)'/ops/page.tsx apps/web/src/app/'(studio)'/studio/commerce/studio-commerce-client.tsx`
+  - `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+  - `pnpm --filter @ai-nft-forge/ui typecheck`
+  - `pnpm --filter @ai-nft-forge/web build`
+
 ## Current Objective
-Complete the Tailwind migration checkpoint in `apps/web` and `packages/ui`, stabilize the partial redesign pass, and verify build/type quality.
+- Shared UI Primitive Consolidation
+- Step: Route-level reuse of repeated shell components (`ops` summary surfaces, studio commerce section headings/hero cards).
+- Next Step: Continue one final sweep through remaining `studio-assets-client.tsx` route-local shell variants, then lock the checkpoint as production-complete after responsive and rhythm review.
 
 ## Changes Applied
 - Continued migration of high-traffic browser UI routes and shared primitives from semantic stylesheet classes to Tailwind utility variants.
@@ -635,3 +649,36 @@ Finish the production-grade consistency phase on remaining high-traffic Studio/O
 - Remaining work before production-complete quality is:
   - One final sweep for any remaining non-shared spacing/notice shells outside current hot paths (`studio-commerce-client.tsx`, `studio-assets-client.tsx`, ops command surfaces).
   - Final acceptance pass against responsive rhythm and label/action density across public/storefront + studio settings.
+
+## Latest Checkpoint (Ops Command Field Consolidation)
+- Completed the next production-grade controls pass on `ops` command surfaces:
+  - `apps/web/src/app/(ops)/ops/ops-operator-panel.tsx`
+  - Normalized alert schedule and escalation form inputs from local label/input shell helpers to shared `FieldStack` + `FieldLabel` + `InputField`.
+  - Kept existing policy read/edit flow, role-gating, save/reset actions, and muted-state behavior unchanged.
+  - Kept existing checkbox controls in place where `InputField` does not provide a specialized checkbox preset, preserving behavior.
+- Verification:
+  - `pnpm exec prettier --write "apps/web/src/app/\\(ops\\)/ops/ops-operator-panel.tsx"`
+  - `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+  - `pnpm --filter @ai-nft-forge/web build`
+- Current phase status: `Shared UI Primitive Consolidation` is advancing; remaining focus is the final spacing and shell consistency sweep across `studio-assets-client.tsx` and `studio-commerce-client.tsx` before production-grade sign-off.
+
+## Updated Next Follow-up
+- Keep one final pass on `studio-assets-client.tsx` and `studio-commerce-client.tsx` for any remaining non-shared command/metric shell patterns; avoid adding new decorations on dense operational surfaces.
+
+## Latest Checkpoint (Studio Premium Surfaces Sweep)
+- Completed the next production-grade Studio sweep by moving remaining high-friction route-local shells onto shared Tailwind-first primitives:
+  - `packages/ui/src/index.tsx`
+    - Added `SurfacePanel` for reusable commerce/ops-style command shells.
+    - Added `ProgressTrack` for reusable upload-progress bars.
+    - Added `ActionButton` `surface` tone for framed selectable shell-like actions.
+  - `apps/web/src/app/(studio)/studio/assets/studio-assets-client.tsx`
+    - Replaced local upload progress bar markup with shared `ProgressTrack`.
+  - `apps/web/src/app/(studio)/studio/commerce/studio-commerce-client.tsx`
+    - Replaced repeated panel shell constants with shared `SurfacePanel`.
+    - Replaced brand-scope action card styling with shared `ActionButton` surface tone.
+- Verification:
+  - `pnpm exec prettier --write packages/ui/src/index.tsx apps/web/src/app/\(studio\)/studio/commerce/studio-commerce-client.tsx apps/web/src/app/\(studio\)/studio/assets/studio-assets-client.tsx`
+  - `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+  - `pnpm --filter @ai-nft-forge/ui typecheck`
+  - `pnpm --filter @ai-nft-forge/web build`
+- Current phase status: Shared UI Primitive Consolidation reaches a production-ready baseline for Studio assets/commerce command surfaces; remaining work is a final visual parity audit of any other legacy shell variants outside these two routes.

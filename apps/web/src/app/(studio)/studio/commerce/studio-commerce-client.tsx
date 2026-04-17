@@ -27,6 +27,7 @@ import {
   EmptyState,
   FieldLabel,
   FieldStack,
+  SurfacePanel,
   SectionHeading,
   SignalCard,
   SelectField,
@@ -70,12 +71,6 @@ const commerceMetricTones = {
   neutral:
     "border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-text)]"
 } as const;
-
-const commercePanelSectionClasses =
-  "rounded-[1.75rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.04))] p-4 shadow-[var(--shadow-surface)] backdrop-blur md:p-5";
-
-const listCardBaseClasses =
-  "rounded-[1.5rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))] p-4 text-left transition hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-soft)]";
 
 const commerceHeroMetricClasses =
   "rounded-[1.5rem] border border-white/10 bg-black/25 p-4 text-white shadow-[0_18px_40px_rgba(15,23,42,0.18)] backdrop-blur-xl";
@@ -955,7 +950,7 @@ export function StudioCommerceClient({
 
         <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
           <div className="space-y-6">
-            <section className={cn(commercePanelSectionClasses)}>
+            <SurfacePanel>
               <SectionHeading
                 className="mb-4"
                 lead="Separate manual fulfillment, automation recovery, and open reservations before reviewing the full session ledger."
@@ -1017,9 +1012,9 @@ export function StudioCommerceClient({
                   })}
                 </div>
               )}
-            </section>
+            </SurfacePanel>
 
-            <section className={cn(commercePanelSectionClasses)}>
+            <SurfacePanel>
               <SectionHeading
                 className="mb-4"
                 lead="Every session remains available for payment recovery, release, fulfillment updates, and provider verification."
@@ -1060,11 +1055,11 @@ export function StudioCommerceClient({
                   })}
                 </div>
               )}
-            </section>
+            </SurfacePanel>
           </div>
 
           <aside className="space-y-6">
-            <section className={cn(commercePanelSectionClasses)}>
+            <SurfacePanel>
               <SectionHeading
                 className="mb-4"
                 lead="Make the current commerce boundary explicit before exporting, retrying automation, or reviewing buyer sessions."
@@ -1102,12 +1097,11 @@ export function StudioCommerceClient({
               <div className="space-y-2">
                 <ActionButton
                   className={cn(
-                    listCardBaseClasses,
                     dashboard.activeBrandSlug === null
                       ? "border-[color:var(--color-accent)] ring-2 ring-[color:var(--color-accent)]"
                       : "hover:border-[color:var(--color-accent)]"
                   )}
-                  tone="secondary"
+                  tone="surface"
                   onClick={() => {
                     void handleBrandScopeChange(null);
                   }}
@@ -1122,12 +1116,11 @@ export function StudioCommerceClient({
                 {sortedBrands.map((brand) => (
                   <ActionButton
                     className={cn(
-                      listCardBaseClasses,
                       dashboard.activeBrandSlug === brand.brandSlug
                         ? "border-[color:var(--color-accent)] ring-2 ring-[color:var(--color-accent)]"
                         : "hover:border-[color:var(--color-accent)]"
                     )}
-                    tone="secondary"
+                    tone="surface"
                     key={brand.brandSlug}
                     onClick={() => {
                       void handleBrandScopeChange(brand.brandSlug);
@@ -1143,9 +1136,9 @@ export function StudioCommerceClient({
                   </ActionButton>
                 ))}
               </div>
-            </section>
+            </SurfacePanel>
 
-            <section className={cn(commercePanelSectionClasses)}>
+            <SurfacePanel>
               <SectionHeading
                 className="mb-4"
                 lead="Focus on the live or recently active releases carrying the most open checkout and fulfillment backlog."
@@ -1207,9 +1200,9 @@ export function StudioCommerceClient({
                   ))}
                 </div>
               )}
-            </section>
+            </SurfacePanel>
 
-            <section className={cn(commercePanelSectionClasses)}>
+            <SurfacePanel>
               <SectionHeading
                 className="mb-4"
                 lead="Export the same filtered session scope you are reviewing live, or verify timing and automation cadence before a handoff."
@@ -1260,7 +1253,7 @@ export function StudioCommerceClient({
                   {prioritizedCheckouts.length.toString()} sessions listed
                 </Pill>
               </ActionRow>
-            </section>
+            </SurfacePanel>
           </aside>
         </div>
       </div>

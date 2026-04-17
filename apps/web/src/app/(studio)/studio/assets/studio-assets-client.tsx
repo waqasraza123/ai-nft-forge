@@ -37,7 +37,8 @@ import {
   InputField,
   StatusBanner,
   SurfaceCard,
-  SurfaceGrid
+  SurfaceGrid,
+  ProgressTrack
 } from "@ai-nft-forge/ui";
 
 import { StudioAssetCard } from "./studio-asset-card";
@@ -1046,26 +1047,10 @@ export function StudioAssetsClient({
                         {item.message}
                       </span>
                     </div>
-                    <div
-                      className="h-2 overflow-hidden rounded-full bg-black/10 dark:bg-white/10"
-                      aria-hidden="true"
-                    >
-                      <span
-                        className={cn(
-                          "block h-full rounded-full",
-                          item.status === "succeeded"
-                            ? "bg-emerald-500/80"
-                            : item.status === "failed"
-                              ? "bg-rose-500/80"
-                              : item.status === "preparing"
-                                ? "bg-indigo-400/80"
-                                : "bg-[color:var(--color-accent)]/75"
-                        )}
-                        style={{
-                          width: `${item.progressPercent}%`
-                        }}
-                      />
-                    </div>
+                    <ProgressTrack
+                      status={item.status}
+                      value={item.progressPercent}
+                    />
                   </div>
                 ))}
               </div>
