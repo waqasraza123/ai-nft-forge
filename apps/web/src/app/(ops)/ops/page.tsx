@@ -1,10 +1,4 @@
-import Link from "next/link";
-
-import {
-  ActionLink,
-  PageShell,
-  Pill
-} from "@ai-nft-forge/ui";
+import { ActionLink, PageShell, Pill } from "@ai-nft-forge/ui";
 
 import { WorkspaceDirectoryPanel } from "../../../components/workspace-directory-panel";
 import { WorkspaceScopeSwitcher } from "../../../components/workspace-scope-switcher";
@@ -47,9 +41,7 @@ function resolveTone(
   return "neutral";
 }
 
-function summaryToneClasses(
-  tone: OpsPageTone
-) {
+function summaryToneClasses(tone: OpsPageTone) {
   if (tone === "critical") {
     return "border-rose-400/45 bg-rose-500/12 text-rose-100";
   }
@@ -79,9 +71,7 @@ function OpsCommandSummaryCard({
   value: string;
 }) {
   return (
-    <article
-      className={`rounded-2xl border p-4 ${summaryToneClasses(tone)}`}
-    >
+    <article className={`rounded-2xl border p-4 ${summaryToneClasses(tone)}`}>
       <div className="space-y-1 text-xs font-semibold uppercase tracking-[0.15em]">
         <span>{label}</span>
       </div>
@@ -103,21 +93,18 @@ function opsActions(runtimeBackendHealthUrl: string | null) {
       <ActionLink href="/ops/workspaces">Directory</ActionLink>
       <ActionLink href="/api/health">Web health</ActionLink>
       {runtimeBackendHealthUrl ? (
-        <a
-          className="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold text-[color:var(--color-accent)] transition hover:underline hover:underline-offset-4"
+        <ActionLink
           href={runtimeBackendHealthUrl}
           rel="noreferrer"
           target="_blank"
+          tone="inline"
         >
           Backend health
-        </a>
+        </ActionLink>
       ) : null}
-      <Link
-        className="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold text-[color:var(--color-muted)] transition hover:text-[color:var(--color-text)]"
-        href="/"
-      >
+      <ActionLink href="/" tone="muted">
         Back to marketing
-      </Link>
+      </ActionLink>
     </>
   );
 }
@@ -151,7 +138,9 @@ export default async function OpsPage() {
       eyebrow="Ops Command"
       title="Workspace command center"
       lead="Scan current workspace health, act on alerts and reconciliation, verify queue and automation state, and review operational evidence without leaving the selected ops scope."
-      actions={opsActions(runtime.generationBackend.endpoints.healthUrl ?? null)}
+      actions={opsActions(
+        runtime.generationBackend.endpoints.healthUrl ?? null
+      )}
       tone="ops"
     >
       <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_1fr] xl:items-start">
@@ -255,15 +244,19 @@ export default async function OpsPage() {
               </span>
               <h3 className="text-xl font-semibold">Adjacent ops surfaces</h3>
               <p className="text-sm text-[color:var(--color-muted)]">
-                Use dedicated routes for fleet triage, audit evidence,
-                retention review, and workspace estate context.
+                Use dedicated routes for fleet triage, audit evidence, retention
+                review, and workspace estate context.
               </p>
             </div>
             <div className="mt-4 grid gap-2">
               <ActionLink href="/ops/audit">Review audit evidence</ActionLink>
               <ActionLink href="/ops/fleet">Open fleet triage</ActionLink>
-              <ActionLink href="/ops/retention">Open retention review</ActionLink>
-              <ActionLink href="/ops/workspaces">Browse workspace directory</ActionLink>
+              <ActionLink href="/ops/retention">
+                Open retention review
+              </ActionLink>
+              <ActionLink href="/ops/workspaces">
+                Browse workspace directory
+              </ActionLink>
             </div>
           </section>
           <section className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-5 shadow-[var(--shadow-surface)]">
@@ -271,11 +264,10 @@ export default async function OpsPage() {
               <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--color-accent)]">
                 Internal chrome
               </span>
-              <h3 className="text-xl font-semibold">
-                Internal sidebar theme
-              </h3>
+              <h3 className="text-xl font-semibold">Internal sidebar theme</h3>
               <p className="text-sm text-[color:var(--color-muted)]">
-                Choose one of five premium themes to change sidebar chrome, focus, and key accent language across Studio and Ops surfaces.
+                Choose one of five premium themes to change sidebar chrome,
+                focus, and key accent language across Studio and Ops surfaces.
               </p>
             </div>
             <div className="mt-4">

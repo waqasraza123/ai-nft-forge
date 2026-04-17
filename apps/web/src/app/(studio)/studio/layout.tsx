@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { WorkspaceScopeSwitcher } from "../../../components/workspace-scope-switcher";
@@ -39,6 +38,9 @@ const studioNavigationItems: StudioNavigationItem[] = [
     label: "Settings"
   }
 ];
+
+const studioRouteCardClasses =
+  "block rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 no-underline transition hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-soft)]";
 
 function shortenWalletAddress(input: string | null) {
   if (!input) {
@@ -104,16 +106,19 @@ export default async function StudioLayout({ children }: StudioLayoutProps) {
         aria-label="Studio routes"
       >
         {studioNavigationItems.map((item) => (
-          <Link
-            className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 transition hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-soft)]"
+          <ActionLink
+            className={studioRouteCardClasses}
             href={item.href}
             key={item.href}
+            tone="muted"
           >
-            <span>{item.label}</span>
+            <span className="font-semibold text-[color:var(--color-text)]">
+              {item.label}
+            </span>
             <small className="mt-2 block text-xs text-[color:var(--color-muted)]">
               {item.description}
             </small>
-          </Link>
+          </ActionLink>
         ))}
       </nav>
       <section className="mt-5">{children}</section>
