@@ -13,6 +13,7 @@ import {
   ActionButton,
   ActionLink,
   OpsEmptyState,
+  OpsPanelCard,
   OpsStatusNotice,
   MetricTile,
   Pill,
@@ -82,6 +83,14 @@ function resolveAutomationTone(status: string | null | undefined) {
   }
 
   return "error";
+}
+
+function resolveWorkspaceReadinessTone(readiness: string | null | undefined) {
+  if (readiness === "blocked" || readiness === "review_required") {
+    return "warning";
+  }
+
+  return "neutral";
 }
 
 async function parseJsonResponse<T>(input: {
@@ -388,10 +397,7 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
         <div className="mt-4 space-y-2">
           {report.recentLifecycleAutomationRuns.length ? (
             report.recentLifecycleAutomationRuns.map((run) => (
-              <article
-                className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4"
-                key={run.id}
-              >
+              <OpsPanelCard tone="neutral" key={run.id}>
                 <div className="grid gap-1 text-sm text-[color:var(--color-muted)]">
                   <strong className="text-[color:var(--color-text)]">
                     {formatStatus(run.status)} · {run.triggerSource}
@@ -417,7 +423,7 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
                     {run.failureMessage ? ` · ${run.failureMessage}` : ""}
                   </span>
                 </div>
-              </article>
+              </OpsPanelCard>
             ))
           ) : (
             <OpsEmptyState centered>
@@ -499,8 +505,10 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
               workspace.decommission?.status === "scheduled";
 
             return (
-              <article
-                className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4"
+              <OpsPanelCard
+                tone={resolveWorkspaceReadinessTone(
+                  workspace.summary.readiness
+                )}
                 key={workspace.workspace.id}
               >
                 <div className="grid gap-1.5 text-sm text-[color:var(--color-muted)]">
@@ -689,7 +697,7 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
                     </ActionLink>
                   ) : null}
                 </div>
-              </article>
+              </OpsPanelCard>
             );
           })}
         </div>

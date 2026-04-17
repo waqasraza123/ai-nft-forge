@@ -1,6 +1,11 @@
 "use client";
 
-import { Pill, SurfaceCard } from "@ai-nft-forge/ui";
+import {
+  OpsEmptyState,
+  OpsPanelCard,
+  Pill,
+  SurfaceCard
+} from "@ai-nft-forge/ui";
 import type { StudioWorkspaceDirectoryEntry } from "@ai-nft-forge/shared";
 
 type WorkspaceDirectoryPanelProps = {
@@ -38,23 +43,25 @@ export function WorkspaceDirectoryPanel({
     >
       <div className="space-y-4">
         {entries.length === 0 ? (
-          <div className="rounded-xl border border-emerald-200/20 bg-emerald-500/8 p-3 text-emerald-100">
+          <OpsEmptyState centered>
             <strong className="font-semibold">No accessible workspaces</strong>
             <p className="mt-1 text-sm text-[color:var(--color-muted)]">
               Workspace summaries will appear here after ownership or operator
               access is provisioned.
             </p>
-          </div>
+          </OpsEmptyState>
         ) : null}
         {entries.map((entry) => (
-          <article
-            className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] p-4"
+          <OpsPanelCard
+            tone={entry.current ? "healthy" : "neutral"}
             key={entry.workspace.id}
           >
             <div className="space-y-3">
               <div className="flex flex-col gap-1">
                 <div>
-                  <h3 className="text-base font-semibold">{entry.workspace.name}</h3>
+                  <h3 className="text-base font-semibold">
+                    {entry.workspace.name}
+                  </h3>
                   <p className="text-sm text-[color:var(--color-muted)]">
                     {entry.workspace.slug} · {entry.workspace.role} ·{" "}
                     {entry.workspace.status}
@@ -76,7 +83,7 @@ export function WorkspaceDirectoryPanel({
                 Last activity: {formatDateTime(entry.lastActivityAt)}
               </p>
             </div>
-          </article>
+          </OpsPanelCard>
         ))}
       </div>
     </SurfaceCard>

@@ -21,6 +21,7 @@ import {
   FieldStack,
   Pill,
   EmptyState,
+  OpsPanelCard,
   OpsStatusNotice,
   SurfaceCard,
   SurfaceGrid
@@ -348,10 +349,7 @@ export function OpsAuditClient({
           {audit.audit.entries.length ? (
             <div className="mt-3 space-y-3">
               {audit.audit.entries.map((entry: OpsWorkspaceAuditEntry) => (
-                <article
-                  className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4"
-                  key={entry.id}
-                >
+                <OpsPanelCard tone="neutral" key={entry.id}>
                   <div className="grid gap-1">
                     <strong>{entry.action.replaceAll("_", " ")}</strong>
                     <span>
@@ -372,7 +370,7 @@ export function OpsAuditClient({
                       {entry.requestId ? ` · request ${entry.requestId}` : ""}
                     </span>
                   </div>
-                </article>
+                </OpsPanelCard>
               ))}
             </div>
           ) : (

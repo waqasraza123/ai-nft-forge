@@ -480,3 +480,49 @@ Finish the production-grade consistency phase on remaining high-traffic Studio/O
 ## Updated Next Follow-up
 - Begin the next production-grade step by auditing remaining Ops high-signal modules for any still-custom empty-state and notice shells that are now duplicated across routes.
 - If patterns repeat, fold them into `packages/ui` as constrained variants (for example table helper shells vs. command activity shells) and keep operational density clear.
+
+## Latest Checkpoint (Ops Panel Card Consolidation)
+- Completed a production-grade Ops visual-consistency pass by introducing and adopting `OpsPanelCard` across high-traffic Ops surfaces:
+  - Added `OpsPanelCard` variant family in `packages/ui/src/index.tsx` with ops tone options (`critical`, `healthy`, `neutral`, `warning`).
+  - Replaced repeated local shell classes in:
+    - `apps/web/src/app/(ops)/ops/page.tsx`
+    - `apps/web/src/app/(ops)/ops/ops-operator-panel.tsx`
+    - `apps/web/src/app/(ops)/ops/retention/ops-retention-client.tsx`
+    - `apps/web/src/app/(ops)/ops/audit/ops-audit-client.tsx`
+  - Reused the shared panel card in reusable workspace surfaces:
+    - `apps/web/src/components/ops/ops-fleet-workspace-card.tsx`
+    - `apps/web/src/components/workspace-directory-panel.tsx`
+    - `apps/web/src/components/workspace-offboarding-panel.tsx`
+- Scope impact: behavioral logic unchanged; only composition and visual rhythm are standardized for consistency and maintainability in ops surfaces.
+
+## Verification (Ops Panel Card Consolidation)
+- `pnpm exec prettier --write packages/ui/src/index.tsx apps/web/src/app/'(ops)'/ops/page.tsx apps/web/src/app/'(ops)'/ops/ops-operator-panel.tsx apps/web/src/app/'(ops)'/ops/retention/ops-retention-client.tsx apps/web/src/app/'(ops)'/ops/audit/ops-audit-client.tsx apps/web/src/components/ops/ops-fleet-workspace-card.tsx apps/web/src/components/workspace-directory-panel.tsx apps/web/src/components/workspace-offboarding-panel.tsx`
+- `pnpm --filter @ai-nft-forge/ui typecheck`
+- `pnpm --filter @ai-nft-forge/web typecheck`
+- `pnpm --filter @ai-nft-forge/web build`
+
+## Updated Next Follow-up
+- Next target is controlled, non-functional visual upgrade for `ops` command rows that still require dense action density:
+  - keep panels restrained;
+  - promote reusable notice/alert sub-panels only where exact duplication appears again across at least two high-traffic routes.
+
+## Latest Checkpoint (Fleet Command Surface Alignment)
+- Extended production-grade ops consistency into the remaining high-signal fleet surfaces without changing command behavior:
+  - Converted remaining command-adjacent fleet cards in `apps/web/src/app/(ops)/ops/fleet/ops-fleet-client.tsx` to `OpsPanelCard`:
+    - top-pressure workspaces
+    - pressure summary cluster
+    - alert-pressure cards
+    - active alert queue items (critical/warning tone mapping)
+    - reconciliation pressure cards
+  - Converted `apps/web/src/components/workspace-scope-switcher.tsx` to `OpsPanelCard` shell and `StatusBanner` notice rendering, removing local notice color helpers while keeping copy and action semantics.
+- This keeps ops density intact while standardizing the same restrained command panel language already established by `OpsPanelCard` and shared notice primitives.
+
+## Verification (Fleet Command Surface Alignment)
+- `pnpm exec prettier --write apps/web/src/app/'(ops)'/ops/fleet/ops-fleet-client.tsx apps/web/src/components/workspace-scope-switcher.tsx`
+- `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+- `pnpm --filter @ai-nft-forge/web build`
+
+## Updated Next Follow-up
+- Continue a final ops audit for duplicated command-row helpers before declaring this phase complete:
+  - table shell treatments in `ops-fleet-client.tsx` are already mostly stable;
+  - move only if the same non-utility shell contract repeats outside these touched files.

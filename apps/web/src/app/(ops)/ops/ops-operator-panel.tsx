@@ -18,6 +18,7 @@ import {
   ActionButton,
   ActionLink,
   cn,
+  OpsPanelCard,
   OpsEmptyState,
   OpsStatusNotice,
   MetricTile,
@@ -691,13 +692,7 @@ function OpsCommandSignal({
   value: string;
 }) {
   return (
-    <article
-      className={cn(
-        "rounded-2xl border p-4 text-sm",
-        resolveOpsCommandSignalClass(tone),
-        "space-y-1 border-[color:var(--color-line)] bg-[color:var(--color-surface)]"
-      )}
-    >
+    <OpsPanelCard tone={tone} className="space-y-1 text-sm">
       <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--color-muted)]">
         {label}
       </span>
@@ -706,24 +701,8 @@ function OpsCommandSignal({
       </strong>
       <span className="text-sm text-[color:var(--color-muted)]">{detail}</span>
       <span className="text-xs text-[color:var(--color-muted)]">{meta}</span>
-    </article>
+    </OpsPanelCard>
   );
-}
-
-function resolveOpsCommandSignalClass(tone: OpsCommandTone) {
-  if (tone === "critical") {
-    return "border-rose-400/40";
-  }
-
-  if (tone === "warning") {
-    return "border-amber-400/35";
-  }
-
-  if (tone === "healthy") {
-    return "border-emerald-400/30";
-  }
-
-  return "border-[color:var(--color-line)] bg-[color:var(--color-surface)]";
 }
 
 function ActivityItem({
@@ -743,12 +722,7 @@ function ActivityItem({
         : "healthy";
 
   return (
-    <div
-      className={cn(
-        "rounded-2xl border p-4",
-        resolveOpsActivityItemTone(itemTone)
-      )}
-    >
+    <OpsPanelCard tone={itemTone}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid gap-1">
           <strong>{activity.sourceAsset.originalFilename}</strong>
@@ -798,7 +772,7 @@ function ActivityItem({
           </OpsActionButton>
         </div>
       ) : null}
-    </div>
+    </OpsPanelCard>
   );
 }
 
@@ -915,9 +889,7 @@ function AlertDeliveryItem({
         : "neutral";
 
   return (
-    <div
-      className={cn("rounded-2xl border p-4", resolveOpsActivityItemTone(tone))}
-    >
+    <OpsPanelCard tone={tone}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid gap-1">
           <strong>{delivery.title}</strong>
@@ -950,7 +922,7 @@ function AlertDeliveryItem({
             "This alert was persisted through an operator delivery channel."}
         </span>
       </div>
-    </div>
+    </OpsPanelCard>
   );
 }
 
@@ -974,9 +946,7 @@ function ActiveAlertItem({
   const tone = alert.severity === "critical" ? "critical" : "warning";
 
   return (
-    <div
-      className={cn("rounded-2xl border p-4", resolveOpsActivityItemTone(tone))}
-    >
+    <OpsPanelCard tone={tone}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid gap-1">
           <strong>{alert.title}</strong>
@@ -1066,7 +1036,7 @@ function ActiveAlertItem({
           </OpsActionButton>
         ) : null}
       </div>
-    </div>
+    </OpsPanelCard>
   );
 }
 
@@ -1080,12 +1050,7 @@ function ActiveMuteItem({
   onClear: (code: string) => Promise<void>;
 }) {
   return (
-    <div
-      className={cn(
-        "rounded-2xl border p-4",
-        resolveOpsActivityItemTone("neutral")
-      )}
-    >
+    <OpsPanelCard tone="neutral">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid gap-1">
           <strong>{mute.code}</strong>
@@ -1104,24 +1069,8 @@ function ActiveMuteItem({
           {clearing ? "Clearing mute…" : "Clear mute"}
         </OpsActionButton>
       </div>
-    </div>
+    </OpsPanelCard>
   );
-}
-
-function resolveOpsActivityItemTone(tone: OpsCommandTone) {
-  if (tone === "critical") {
-    return "border-rose-400/30 bg-[color:var(--color-surface)]";
-  }
-
-  if (tone === "warning") {
-    return "border-amber-400/30 bg-[color:var(--color-surface)]/85";
-  }
-
-  if (tone === "healthy") {
-    return "border-emerald-400/20 bg-[color:var(--color-surface)]/90";
-  }
-
-  return "border-[color:var(--color-line)] bg-[color:var(--color-surface)]";
 }
 
 function resolveOpsCaptureWindowTone(tone: OpsCommandTone) {
@@ -2236,13 +2185,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
             {openIssues.length ? (
               <div className="space-y-2.5">
                 {openIssues.map((issue) => (
-                  <div
-                    className={cn(
-                      "rounded-2xl border p-4",
-                      resolveOpsActivityItemTone(
-                        issue.severity === "critical" ? "critical" : "warning"
-                      )
-                    )}
+                  <OpsPanelCard
+                    tone={
+                      issue.severity === "critical" ? "critical" : "warning"
+                    }
                     key={issue.id}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -2295,7 +2241,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                           : "Ignore issue"}
                       </OpsActionButton>
                     </div>
-                  </div>
+                  </OpsPanelCard>
                 ))}
               </div>
             ) : (

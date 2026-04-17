@@ -1,7 +1,7 @@
 "use client";
 
 import type { WorkspaceFleetWorkspaceSummary } from "@ai-nft-forge/shared";
-import { ActionButton, Pill } from "@ai-nft-forge/ui";
+import { ActionButton, OpsPanelCard, Pill } from "@ai-nft-forge/ui";
 
 type OpsFleetWorkspaceCardProps = {
   busyKey: string | null;
@@ -44,18 +44,6 @@ function resolvePressureTone(
   return "healthy";
 }
 
-function getCardToneClass(tone: "critical" | "warning" | "healthy") {
-  if (tone === "critical") {
-    return "border-rose-300/40 bg-rose-500/10";
-  }
-
-  if (tone === "warning") {
-    return "border-amber-300/40 bg-amber-500/12";
-  }
-
-  return "border-[color:var(--color-line)] bg-[color:var(--color-surface)]";
-}
-
 function getScoreTextClass(tone: "critical" | "warning" | "healthy") {
   if (tone === "critical") {
     return "text-rose-300";
@@ -80,9 +68,7 @@ export function OpsFleetWorkspaceCard({
   const tone = resolvePressureTone(pressureScore, workspace);
 
   return (
-    <article
-      className={`rounded-2xl border p-4 ${getCardToneClass(tone)} shadow-sm`}
-    >
+    <OpsPanelCard tone={tone} className="space-y-3 shadow-sm">
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
@@ -143,6 +129,6 @@ export function OpsFleetWorkspaceCard({
           </ActionButton>
         </div>
       </div>
-    </article>
+    </OpsPanelCard>
   );
 }

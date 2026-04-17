@@ -172,6 +172,21 @@ const statusBannerVariants = cva(
   }
 );
 
+const opsPanelCardVariants = cva("rounded-2xl border p-4", {
+  variants: {
+    tone: {
+      critical: "border-rose-400/30 bg-[color:var(--color-surface)]",
+      healthy: "border-emerald-400/20 bg-[color:var(--color-surface)]/90",
+      neutral:
+        "border-[color:var(--color-line)] bg-[color:var(--color-surface)]",
+      warning: "border-amber-400/30 bg-[color:var(--color-surface)]/85"
+    }
+  },
+  defaultVariants: {
+    tone: "neutral"
+  }
+});
+
 const fieldStackVariants = cva("grid gap-1.5", {
   variants: {
     emphasis: {
@@ -289,6 +304,11 @@ type OpsStatusNoticeProps = PropsWithChildren<{
   className?: string;
   tone?: "error" | "info" | "success" | "warning";
   title?: string;
+}>;
+
+type OpsPanelCardProps = PropsWithChildren<{
+  className?: string;
+  tone?: "critical" | "healthy" | "neutral" | "warning";
 }>;
 
 type ActionRowProps = PropsWithChildren<{
@@ -553,6 +573,18 @@ export function OpsStatusNotice({
       ) : null}
       {children}
     </StatusBanner>
+  );
+}
+
+export function OpsPanelCard({
+  children,
+  className,
+  tone = "neutral"
+}: OpsPanelCardProps) {
+  return (
+    <article className={cn(opsPanelCardVariants({ tone }), className)}>
+      {children}
+    </article>
   );
 }
 

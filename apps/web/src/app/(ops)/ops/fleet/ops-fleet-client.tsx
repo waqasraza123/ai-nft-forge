@@ -14,6 +14,7 @@ import {
   ActionButton,
   cn,
   OpsEmptyState,
+  OpsPanelCard,
   MetricTile,
   Pill,
   StatusBanner,
@@ -333,15 +334,16 @@ export function OpsFleetClient({
             <Pill>{pressuredWorkspaceCount} pressured</Pill>
             <Pill>{formatTimestamp(fleet.summary.generatedAt)}</Pill>
           </div>
-          <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3">
+          <OpsPanelCard tone="neutral" className="space-y-2">
             <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--color-muted)]">
               Top pressure
             </span>
             <div className="mt-3 grid gap-2 md:grid-cols-2">
               {attentionWorkspaces.map((workspace, index) => (
-                <article
-                  className="rounded-lg border border-[color:var(--color-line)] p-3"
+                <OpsPanelCard
+                  className="p-3"
                   key={workspace.workspace.id}
+                  tone="neutral"
                 >
                   <div className="space-y-1">
                     <strong>
@@ -359,11 +361,14 @@ export function OpsFleetClient({
                       {workspace.ops.openReconciliationIssueCount} recon
                     </Pill>
                   </div>
-                </article>
+                </OpsPanelCard>
               ))}
             </div>
-          </div>
-          <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] p-3">
+          </OpsPanelCard>
+          <OpsPanelCard
+            tone="neutral"
+            className="bg-[color:var(--color-surface-strong)] p-3"
+          >
             <div className="flex flex-wrap gap-2">
               <Pill>{pressuredWorkspaceCount} pressured</Pill>
               <Pill>{alertPressureWorkspaceCount} with alerts</Pill>
@@ -383,7 +388,7 @@ export function OpsFleetClient({
                 {isRefreshing ? "Refreshing…" : "Refresh fleet"}
               </ActionButton>
             </div>
-          </div>
+          </OpsPanelCard>
           {notice ? (
             <StatusBanner
               tone={
@@ -512,8 +517,9 @@ export function OpsFleetClient({
         <div className="space-y-2">
           {alertPressureLeaders.length ? (
             alertPressureLeaders.map((workspace, index) => (
-              <article
-                className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3"
+              <OpsPanelCard
+                className="p-3"
+                tone="neutral"
                 key={workspace.workspace.id}
               >
                 <div className="space-y-1">
@@ -545,7 +551,7 @@ export function OpsFleetClient({
                     {workspace.publications.livePublicationCount} live pubs
                   </Pill>
                 </div>
-              </article>
+              </OpsPanelCard>
             ))
           ) : (
             <OpsEmptyState className="rounded-lg">
@@ -562,13 +568,9 @@ export function OpsFleetClient({
               const workspaceIsActive = alert.workspace.status === "active";
 
               return (
-                <article
-                  className={cn(
-                    "rounded-xl border p-4",
-                    resolveAlertTone(alert.severity) === "critical"
-                      ? "border-rose-300/45 bg-rose-500/10"
-                      : "border-amber-300/40 bg-amber-500/10"
-                  )}
+                <OpsPanelCard
+                  className="text-sm"
+                  tone={resolveAlertTone(alert.severity)}
                   key={alert.alertStateId}
                 >
                   <div className="space-y-2">
@@ -666,7 +668,7 @@ export function OpsFleetClient({
                           : "Mute 4h"}
                     </ActionButton>
                   </div>
-                </article>
+                </OpsPanelCard>
               );
             })
           ) : (
@@ -685,8 +687,9 @@ export function OpsFleetClient({
         <div className="space-y-2">
           {reconciliationPressureLeaders.length ? (
             reconciliationPressureLeaders.map((workspace, index) => (
-              <article
-                className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3"
+              <OpsPanelCard
+                className="p-3"
+                tone="neutral"
                 key={workspace.workspace.id}
               >
                 <div className="space-y-1">
@@ -714,7 +717,7 @@ export function OpsFleetClient({
                     {formatTimestamp(workspace.directory.lastActivityAt)}
                   </Pill>
                 </div>
-              </article>
+              </OpsPanelCard>
             ))
           ) : (
             <OpsEmptyState className="rounded-lg">

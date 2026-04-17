@@ -1,5 +1,6 @@
 import {
   OpsQuickActions,
+  OpsPanelCard,
   PageShell,
   Pill,
   SurfaceCard
@@ -46,22 +47,6 @@ function resolveTone(
   return "neutral";
 }
 
-function summaryToneClasses(tone: OpsPageTone) {
-  if (tone === "critical") {
-    return "border-rose-400/45 bg-rose-500/12 text-rose-100";
-  }
-
-  if (tone === "warning") {
-    return "border-amber-400/45 bg-amber-500/12 text-amber-100";
-  }
-
-  if (tone === "healthy") {
-    return "border-emerald-400/45 bg-emerald-500/12 text-emerald-100";
-  }
-
-  return "border-[color:var(--color-line)] bg-[color:var(--color-surface)]/60 text-[color:var(--color-muted)]";
-}
-
 function OpsCommandSummaryCard({
   detail,
   label,
@@ -76,7 +61,7 @@ function OpsCommandSummaryCard({
   value: string;
 }) {
   return (
-    <article className={`rounded-2xl border p-4 ${summaryToneClasses(tone)}`}>
+    <OpsPanelCard tone={tone} className="space-y-1">
       <div className="space-y-1 text-xs font-semibold uppercase tracking-[0.15em]">
         <span>{label}</span>
       </div>
@@ -85,7 +70,7 @@ function OpsCommandSummaryCard({
       </p>
       <p className="mt-2 text-sm">{detail}</p>
       <p className="mt-3 text-xs text-[color:var(--color-muted)]">{meta}</p>
-    </article>
+    </OpsPanelCard>
   );
 }
 

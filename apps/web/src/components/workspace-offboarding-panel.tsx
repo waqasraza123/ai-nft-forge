@@ -1,4 +1,4 @@
-import { ActionLink, Pill, SurfaceCard } from "@ai-nft-forge/ui";
+import { ActionLink, OpsPanelCard, Pill, SurfaceCard } from "@ai-nft-forge/ui";
 import type { WorkspaceOffboardingEntry } from "@ai-nft-forge/shared";
 
 type OffboardingNoticeTone = "error" | "info" | "success";
@@ -77,10 +77,7 @@ export function WorkspaceOffboardingPanel({
           </div>
         ) : null}
         {entries.map((entry) => (
-          <article
-            className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] p-4"
-            key={entry.workspace.id}
-          >
+          <OpsPanelCard tone="neutral" key={entry.workspace.id}>
             <div className="space-y-3">
               <div className="flex flex-col gap-1">
                 <div>
@@ -101,7 +98,9 @@ export function WorkspaceOffboardingPanel({
                   {entry.summary.openReconciliationIssueCount} open
                   reconciliation
                 </Pill>
-                <Pill>{entry.summary.unfulfilledCheckoutCount} unfulfilled</Pill>
+                <Pill>
+                  {entry.summary.unfulfilledCheckoutCount} unfulfilled
+                </Pill>
                 <Pill>{entry.summary.livePublicationCount} live releases</Pill>
                 <Pill>
                   {entry.directory.pendingInvitationCount} pending invites
@@ -109,13 +108,18 @@ export function WorkspaceOffboardingPanel({
                 <Pill>
                   {entry.directory.expiringInvitationCount} expiring invites
                 </Pill>
-                <Pill>{entry.directory.expiredInvitationCount} expired invites</Pill>
-                <Pill>{entry.lifecycleDelivery.failedCount} lifecycle failed</Pill>
+                <Pill>
+                  {entry.directory.expiredInvitationCount} expired invites
+                </Pill>
+                <Pill>
+                  {entry.lifecycleDelivery.failedCount} lifecycle failed
+                </Pill>
                 <Pill>
                   {entry.lifecycleDelivery.deliveredCount} lifecycle delivered
                 </Pill>
                 <Pill>
-                  automation {entry.lifecycleAutomationPolicy.enabled ? "on" : "off"}
+                  automation{" "}
+                  {entry.lifecycleAutomationPolicy.enabled ? "on" : "off"}
                 </Pill>
                 <Pill>SLA {formatCode(entry.lifecycleSlaSummary.status)}</Pill>
                 {entry.decommission ? (
@@ -131,35 +135,43 @@ export function WorkspaceOffboardingPanel({
                 Last activity: {formatDateTime(entry.directory.lastActivityAt)}
               </p>
               {entry.summary.blockerCodes.length ? (
-                <div className={`rounded-xl border p-3 ${getNoticeClass("error")}`}>
-                  <strong className="block font-semibold">Archive blocked</strong>
+                <div
+                  className={`rounded-xl border p-3 ${getNoticeClass("error")}`}
+                >
+                  <strong className="block font-semibold">
+                    Archive blocked
+                  </strong>
                   <p className="mt-1 text-sm">
                     Resolve{" "}
-                    {entry.summary.blockerCodes.map(formatCode).join(", ")} before
-                    offboarding this workspace.
+                    {entry.summary.blockerCodes.map(formatCode).join(", ")}{" "}
+                    before offboarding this workspace.
                   </p>
                 </div>
               ) : null}
               {!entry.summary.blockerCodes.length &&
               entry.summary.cautionCodes.length ? (
-                <div className={`rounded-xl border p-3 ${getNoticeClass("info")}`}>
+                <div
+                  className={`rounded-xl border p-3 ${getNoticeClass("info")}`}
+                >
                   <strong className="block font-semibold">
                     Review before archive
                   </strong>
                   <p className="mt-1 text-sm">
                     Check{" "}
-                    {entry.summary.cautionCodes.map(formatCode).join(", ")} before
-                    final offboarding.
+                    {entry.summary.cautionCodes.map(formatCode).join(", ")}{" "}
+                    before final offboarding.
                   </p>
                 </div>
               ) : null}
               {!entry.summary.blockerCodes.length &&
               !entry.summary.cautionCodes.length ? (
-                <div className={`rounded-xl border p-3 ${getNoticeClass("success")}`}>
+                <div
+                  className={`rounded-xl border p-3 ${getNoticeClass("success")}`}
+                >
                   <strong className="block font-semibold">Archive-ready</strong>
                   <p className="mt-1 text-sm">
-                    No active operational blockers are currently attached to this
-                    workspace.
+                    No active operational blockers are currently attached to
+                    this workspace.
                   </p>
                 </div>
               ) : null}
@@ -175,8 +187,12 @@ export function WorkspaceOffboardingPanel({
                 </div>
               ) : null}
               {entry.decommission ? (
-                <div className={`rounded-xl border p-3 ${getNoticeClass("info")}`}>
-                  <strong className="block font-semibold">Notice workflow</strong>
+                <div
+                  className={`rounded-xl border p-3 ${getNoticeClass("info")}`}
+                >
+                  <strong className="block font-semibold">
+                    Notice workflow
+                  </strong>
                   <p className="mt-1 text-sm">
                     {entry.decommissionWorkflow.notificationCount} recorded
                     notice(s)
@@ -197,8 +213,12 @@ export function WorkspaceOffboardingPanel({
                 </div>
               ) : null}
               {entry.lifecycleDelivery.latestDelivery ? (
-                <div className={`rounded-xl border p-3 ${getNoticeClass("info")}`}>
-                  <strong className="block font-semibold">Lifecycle delivery</strong>
+                <div
+                  className={`rounded-xl border p-3 ${getNoticeClass("info")}`}
+                >
+                  <strong className="block font-semibold">
+                    Lifecycle delivery
+                  </strong>
                   <p className="mt-1 text-sm">
                     Policy webhook{" "}
                     {entry.lifecycleDeliveryPolicy.webhookEnabled
@@ -222,16 +242,27 @@ export function WorkspaceOffboardingPanel({
                     {formatCode(
                       entry.lifecycleDelivery.latestDelivery.deliveryChannel
                     )}{" "}
-                    {formatCode(entry.lifecycleDelivery.latestDelivery.deliveryState)}{" "}
-                    {formatDateTime(entry.lifecycleDelivery.latestDelivery.updatedAt)}.
+                    {formatCode(
+                      entry.lifecycleDelivery.latestDelivery.deliveryState
+                    )}{" "}
+                    {formatDateTime(
+                      entry.lifecycleDelivery.latestDelivery.updatedAt
+                    )}
+                    .
                   </p>
                 </div>
               ) : null}
-              <div className={`rounded-xl border p-3 ${getNoticeClass("info")}`}>
-                <strong className="block font-semibold">Lifecycle automation</strong>
+              <div
+                className={`rounded-xl border p-3 ${getNoticeClass("info")}`}
+              >
+                <strong className="block font-semibold">
+                  Lifecycle automation
+                </strong>
                 <p className="mt-1 text-sm">
                   Scheduler{" "}
-                  {entry.lifecycleAutomationPolicy.enabled ? "enabled" : "disabled"}{" "}
+                  {entry.lifecycleAutomationPolicy.enabled
+                    ? "enabled"
+                    : "disabled"}{" "}
                   · invitation reminders{" "}
                   {entry.lifecycleAutomationPolicy.automateInvitationReminders
                     ? "enabled"
@@ -278,7 +309,7 @@ export function WorkspaceOffboardingPanel({
                 </div>
               ) : null}
             </div>
-          </article>
+          </OpsPanelCard>
         ))}
       </div>
     </SurfaceCard>

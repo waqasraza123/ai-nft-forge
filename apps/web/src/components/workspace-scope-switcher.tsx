@@ -9,7 +9,12 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 
-import { ActionButton, Pill } from "@ai-nft-forge/ui";
+import {
+  ActionButton,
+  OpsPanelCard,
+  Pill,
+  StatusBanner
+} from "@ai-nft-forge/ui";
 import {
   studioWorkspaceSelectionResponseSchema,
   type StudioWorkspaceScopeSummary
@@ -34,18 +39,6 @@ function createFallbackErrorMessage(response: Response) {
     default:
       return "Workspace scope could not be changed.";
   }
-}
-
-function getNoticeToneClass(tone: NoticeState["tone"]) {
-  if (tone === "error") {
-    return "border-red-400/45 bg-red-500/10 text-red-100";
-  }
-
-  if (tone === "success") {
-    return "border-emerald-400/35 bg-emerald-500/15 text-emerald-100";
-  }
-
-  return "border-cyan-400/35 bg-cyan-500/12 text-cyan-100";
 }
 
 export function WorkspaceScopeSwitcher({
@@ -135,7 +128,7 @@ export function WorkspaceScopeSwitcher({
   }
 
   return (
-    <section className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)]/70 p-4">
+    <OpsPanelCard tone="neutral" className="bg-[color:var(--color-surface)]/70">
       <label className="grid gap-2">
         <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--color-muted)]">
           Active workspace
@@ -177,10 +170,17 @@ export function WorkspaceScopeSwitcher({
         <Pill>{workspaces.length} accessible</Pill>
       </div>
       {notice ? (
-        <div
-          className={`mt-3 rounded-xl border p-3 text-sm ${getNoticeToneClass(notice.tone)}`}
+        <StatusBanner
+          tone={
+            notice.tone === "error"
+              ? "error"
+              : notice.tone === "success"
+                ? "success"
+                : "info"
+          }
+          className="mt-3"
         >
-          <strong className="block font-semibold">
+          <strong className="mb-1 block font-semibold">
             {notice.tone === "error"
               ? "Workspace error"
               : notice.tone === "success"
@@ -188,8 +188,8 @@ export function WorkspaceScopeSwitcher({
                 : "Working"}
           </strong>
           <span>{notice.message}</span>
-        </div>
+        </StatusBanner>
       ) : null}
-    </section>
+    </OpsPanelCard>
   );
 }
