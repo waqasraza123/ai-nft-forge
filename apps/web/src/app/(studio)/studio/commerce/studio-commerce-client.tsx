@@ -23,8 +23,10 @@ import {
 } from "@ai-nft-forge/shared";
 import {
   ActionButton,
+  EmptyState,
   FieldLabel,
   FieldStack,
+  InsetMetric as CommerceInsetMetric,
   PageShell,
   Pill,
   StatusBanner,
@@ -70,17 +72,11 @@ const commercePanelSectionClasses =
 
 const actionRowClasses = "flex flex-wrap items-center gap-3";
 
-const emptyStateClasses =
-  "rounded-[1.5rem] border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface)]/75 p-4 text-sm text-[color:var(--color-muted)]";
-
 const listCardBaseClasses =
   "rounded-[1.5rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))] p-4 text-left transition hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-soft)]";
 
 const commerceHeroMetricClasses =
   "rounded-[1.5rem] border border-white/10 bg-black/25 p-4 text-white shadow-[0_18px_40px_rgba(15,23,42,0.18)] backdrop-blur-xl";
-
-const commerceInsetMetricClasses =
-  "rounded-[1.35rem] border border-[color:var(--color-line)] bg-[color:var(--color-surface)]/75 p-4 shadow-[0_14px_30px_rgba(15,23,42,0.08)]";
 
 function CommerceHeroMetric(input: {
   detail: string;
@@ -94,28 +90,6 @@ function CommerceHeroMetric(input: {
       </p>
       <p className="mt-2 text-lg font-semibold text-white">{input.value}</p>
       <p className="mt-2 text-sm leading-6 text-white/72">{input.detail}</p>
-    </div>
-  );
-}
-
-function CommerceInsetMetric(input: {
-  detail?: string;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className={commerceInsetMetricClasses}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--color-muted)]">
-        {input.label}
-      </p>
-      <p className="mt-2 text-xl font-semibold text-[color:var(--color-text)]">
-        {input.value}
-      </p>
-      {input.detail ? (
-        <p className="mt-2 text-sm leading-6 text-[color:var(--color-muted)]">
-          {input.detail}
-        </p>
-      ) : null}
     </div>
   );
 }
@@ -1035,9 +1009,9 @@ export function StudioCommerceClient({
                 ))}
               </div>
               {attentionCheckouts.length === 0 ? (
-                <div className={emptyStateClasses}>
+                <EmptyState className="rounded-[1.5rem] bg-[color:var(--color-surface)]/75">
                   No sessions currently require intervention in this scope.
-                </div>
+                </EmptyState>
               ) : (
                 <div className="space-y-3">
                   {attentionCheckouts.slice(0, 6).map((checkout) => {
@@ -1077,9 +1051,9 @@ export function StudioCommerceClient({
                 title="Full transaction ledger"
               />
               {prioritizedCheckouts.length === 0 ? (
-                <div className={emptyStateClasses}>
+                <EmptyState className="rounded-[1.5rem] bg-[color:var(--color-surface)]/75">
                   Buyer-facing checkout has not produced any sessions yet.
-                </div>
+                </EmptyState>
               ) : (
                 <div className="space-y-3">
                   {prioritizedCheckouts.map((checkout) => {
@@ -1200,9 +1174,9 @@ export function StudioCommerceClient({
                 title="Collection pressure"
               />
               {sortedCollections.length === 0 ? (
-                <div className={emptyStateClasses}>
+                <EmptyState className="rounded-[1.5rem] bg-[color:var(--color-surface)]/75">
                   No checkout sessions exist yet.
-                </div>
+                </EmptyState>
               ) : (
                 <div className="space-y-2">
                   {sortedCollections.map((collection) => (

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   startTransition,
   type FormEvent,
-  type PropsWithChildren,
   type ReactNode,
   useEffect,
   useEffectEvent,
@@ -61,12 +60,21 @@ import {
   type WorkspaceLifecycleNotificationDeliverySummary
 } from "@ai-nft-forge/shared";
 import {
-  cn,
+  EmptyState as SettingsEmptyState,
   MetricTile,
+  PanelHeading as SettingsPanelHeading,
   PageShell,
   Pill,
+  RailCard as SettingsRailCard,
+  RecordActions as SettingsRecordActions,
+  RecordCard as SettingsRecordCard,
+  RecordCopy as SettingsRecordCopy,
+  RecordList as SettingsRecordList,
+  SectionHeading as SettingsSectionHeading,
+  SignalCard as SettingsSignalCard,
   SurfaceCard,
-  SurfaceGrid
+  SurfaceGrid,
+  cn
 } from "@ai-nft-forge/ui";
 
 import { WorkspaceDirectoryPanel } from "../../../../components/workspace-directory-panel";
@@ -583,133 +591,6 @@ function SettingsStatusMessage(input: {
       <strong>{input.title}</strong>
       <span>{input.children}</span>
     </div>
-  );
-}
-
-function SettingsSectionHeading(input: {
-  eyebrow: string;
-  lead: string;
-  title: string;
-}) {
-  return (
-    <header className="space-y-3">
-      <div className="space-y-2">
-        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
-          {input.eyebrow}
-        </span>
-        <h2 className="font-[var(--font-display)] text-2xl font-semibold tracking-tight text-[color:var(--color-text)]">
-          {input.title}
-        </h2>
-        <p className="max-w-3xl text-sm leading-7 text-[color:var(--color-muted)]">
-          {input.lead}
-        </p>
-      </div>
-    </header>
-  );
-}
-
-function SettingsPanelHeading(input: { lead: string; title: string }) {
-  return (
-    <div className="space-y-1.5">
-      <h3 className="text-base font-semibold text-[color:var(--color-text)]">
-        {input.title}
-      </h3>
-      <p className="text-sm leading-6 text-[color:var(--color-muted)]">
-        {input.lead}
-      </p>
-    </div>
-  );
-}
-
-function SettingsSignalCard(input: {
-  detail: string;
-  label: string;
-  tone: "critical" | "default" | "success" | "warning";
-  value: string;
-}) {
-  return (
-    <article
-      className={cn(
-        "flex h-full flex-col gap-2 rounded-2xl border p-4 shadow-[var(--shadow-surface)]",
-        {
-          critical: "border-red-400/55 bg-red-500/10 text-red-50",
-          default:
-            "border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-text)]",
-          success: "border-emerald-400/45 bg-emerald-500/10 text-emerald-50",
-          warning: "border-amber-300/45 bg-amber-500/12 text-amber-100"
-        }[input.tone]
-      )}
-    >
-      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-current/80">
-        {input.label}
-      </span>
-      <strong className="text-lg font-semibold">{input.value}</strong>
-      <span className="text-sm leading-6 text-current/80">{input.detail}</span>
-    </article>
-  );
-}
-
-function SettingsRecordList({ children }: PropsWithChildren) {
-  return <div className="grid gap-3">{children}</div>;
-}
-
-function SettingsRecordCard({ children }: PropsWithChildren) {
-  return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 md:flex-row md:items-start md:justify-between">
-      {children}
-    </div>
-  );
-}
-
-function SettingsRecordCopy({ children }: PropsWithChildren) {
-  return (
-    <div className="flex min-w-0 flex-1 flex-col gap-1.5 text-sm leading-6 text-[color:var(--color-muted)]">
-      {children}
-    </div>
-  );
-}
-
-function SettingsRecordActions({ children }: PropsWithChildren) {
-  return (
-    <div className="flex flex-wrap items-center gap-2 md:justify-end">
-      {children}
-    </div>
-  );
-}
-
-function SettingsEmptyState({ children }: PropsWithChildren) {
-  return (
-    <div className="rounded-2xl border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)]/50 p-4 text-sm text-[color:var(--color-muted)]">
-      {children}
-    </div>
-  );
-}
-
-function SettingsRailCard({
-  body,
-  children,
-  eyebrow,
-  title
-}: PropsWithChildren<{
-  body?: string;
-  eyebrow: string;
-  title: string;
-}>) {
-  return (
-    <article className="space-y-4 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-5 shadow-[var(--shadow-surface)]">
-      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
-        {eyebrow}
-      </span>
-      <h3 className="font-[var(--font-display)] text-xl font-semibold text-[color:var(--color-text)]">
-        {title}
-      </h3>
-      {body ? (
-        <p className="text-sm leading-7 text-[color:var(--color-muted)]">
-          {body}
-        </p>
-      ) : null}
-      {children}
-    </article>
   );
 }
 

@@ -201,3 +201,30 @@ Complete the Tailwind migration checkpoint in `apps/web` and `packages/ui`, stab
 - Start consolidating repeated premium route helpers from Studio settings, collections, and commerce into durable `packages/ui` variants once the route treatments have stabilized.
 - Re-audit `studio-settings-client.tsx` for consistency against the now-upgraded collections and commerce control-room patterns.
 - Keep ops route families clarity-first and avoid importing the heavier collectible visual language into dense operational tables.
+
+## Latest Checkpoint (Shared UI Primitive Consolidation)
+- Completed the next post-route-migration step by extracting stable premium surface helpers into `packages/ui/src/index.tsx`:
+  - `SectionHeading`
+  - `PanelHeading`
+  - `SignalCard`
+  - `RecordList`
+  - `RecordCard`
+  - `RecordCopy`
+  - `RecordActions`
+  - `EmptyState`
+  - `RailCard`
+  - `InsetMetric`
+- Rewired `apps/web/src/app/(studio)/studio/settings/studio-settings-client.tsx` to consume the shared `packages/ui` versions instead of keeping those patterns route-local.
+- Rewired `apps/web/src/app/(studio)/studio/commerce/studio-commerce-client.tsx` to consume shared `InsetMetric` and `EmptyState` primitives, reducing divergence between Studio route treatments.
+- This moves the UI migration into the shared-system consolidation step rather than continuing to accumulate one-off route helpers.
+
+## Verification (Shared UI Primitive Consolidation)
+- `pnpm exec prettier --write packages/ui/src/index.tsx apps/web/src/app/'(studio)'/studio/settings/studio-settings-client.tsx apps/web/src/app/'(studio)'/studio/commerce/studio-commerce-client.tsx` ✅
+- `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false` ✅
+- `pnpm --filter @ai-nft-forge/ui build` ✅
+- `pnpm --filter @ai-nft-forge/web build` ✅
+
+## Updated Next Follow-up
+- Continue migrating stable route-local patterns from `studio-collections-client.tsx` into the new shared `packages/ui` surface primitives where they match.
+- Do a final consistency pass across Studio routes so settings, collections, and commerce share the same spacing, rail, metric, and empty-state behavior.
+- After Studio is fully normalized, re-audit public/storefront surfaces for any remaining card-shell or gallery-frame patterns worth moving into reusable shared primitives.

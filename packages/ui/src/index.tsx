@@ -83,13 +83,15 @@ const surfaceCardVariants = cva(
   }
 );
 
-type SurfaceCardProps = PropsWithChildren<{
-  body: string;
-  eyebrow: string;
-  footer?: ReactNode;
-  span?: 4 | 6 | 8 | 12;
-  title: string;
-} & VariantProps<typeof surfaceCardVariants>>;
+type SurfaceCardProps = PropsWithChildren<
+  {
+    body: string;
+    eyebrow: string;
+    footer?: ReactNode;
+    span?: 4 | 6 | 8 | 12;
+    title: string;
+  } & VariantProps<typeof surfaceCardVariants>
+>;
 
 const pillVariants = cva(
   "inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide",
@@ -98,13 +100,11 @@ const pillVariants = cva(
       tone: {
         accent:
           "border-transparent bg-[color:var(--color-accent)] text-[color:var(--color-surface-strong)]",
-        danger:
-          "border-transparent bg-red-500/85 text-white",
+        danger: "border-transparent bg-red-500/85 text-white",
         neutral:
           "border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-muted)]",
         success: "border-transparent bg-emerald-500/85 text-white",
-        warning:
-          "border-transparent bg-amber-500/85 text-black"
+        warning: "border-transparent bg-amber-500/85 text-black"
       }
     },
     defaultVariants: {
@@ -122,7 +122,8 @@ const actionButtonVariants = cva(
       tone: {
         accent:
           "border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white hover:brightness-95",
-        ghost: "border-[color:var(--color-line)] bg-transparent text-[color:var(--color-text)] hover:bg-[color:var(--color-accent-soft)]",
+        ghost:
+          "border-[color:var(--color-line)] bg-transparent text-[color:var(--color-text)] hover:bg-[color:var(--color-accent-soft)]",
         secondary:
           "border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] text-[color:var(--color-text)] hover:border-[color:var(--color-accent)]",
         primary:
@@ -142,7 +143,8 @@ const actionLinkVariants = cva(
       tone: {
         action:
           "border border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)] text-[color:var(--color-text)] hover:bg-[color:var(--color-accent)] hover:text-white",
-        inline: "text-[color:var(--color-accent)] hover:underline hover:underline-offset-4",
+        inline:
+          "text-[color:var(--color-accent)] hover:underline hover:underline-offset-4",
         muted:
           "text-[color:var(--color-muted)] hover:text-[color:var(--color-text)]"
       }
@@ -158,13 +160,10 @@ const statusBannerVariants = cva(
   {
     variants: {
       tone: {
-        error:
-          "border-red-500/45 bg-red-500/12 text-red-50",
+        error: "border-red-500/45 bg-red-500/12 text-red-50",
         info: "border-blue-500/35 bg-blue-500/12 text-blue-50",
-        success:
-          "border-emerald-500/45 bg-emerald-500/12 text-emerald-50",
-        warning:
-          "border-amber-400/45 bg-amber-400/12 text-amber-100"
+        success: "border-emerald-500/45 bg-emerald-500/12 text-emerald-50",
+        warning: "border-amber-400/45 bg-amber-400/12 text-amber-100"
       }
     },
     defaultVariants: {
@@ -238,6 +237,49 @@ type MetricTileProps = {
   value: string;
 };
 
+type SectionHeadingProps = {
+  eyebrow: string;
+  lead: string;
+  title: string;
+  className?: string;
+};
+
+type PanelHeadingProps = {
+  lead: string;
+  title: string;
+  className?: string;
+};
+
+type SignalCardProps = {
+  detail: string;
+  label: string;
+  tone?: "critical" | "default" | "success" | "warning";
+  value: string;
+  className?: string;
+};
+
+type RecordShellProps = PropsWithChildren<{
+  className?: string;
+}>;
+
+type EmptyStateProps = PropsWithChildren<{
+  className?: string;
+}>;
+
+type RailCardProps = PropsWithChildren<{
+  body?: string;
+  eyebrow: string;
+  title: string;
+  className?: string;
+}>;
+
+type InsetMetricProps = {
+  detail?: string;
+  label: string;
+  value: string;
+  className?: string;
+};
+
 export type { ActionButtonProps, PageTone };
 
 export function PageShell({
@@ -261,19 +303,14 @@ export function PageShell({
         <p className="max-w-4xl text-sm leading-7 text-[color:var(--color-muted)]">
           {lead}
         </p>
-        {actions ? (
-          <div className="flex flex-wrap gap-3">{actions}</div>
-        ) : null}
+        {actions ? <div className="flex flex-wrap gap-3">{actions}</div> : null}
       </div>
       <div className="space-y-5">{children}</div>
     </section>
   );
 }
 
-export function SurfaceGrid({
-  children,
-  density
-}: SurfaceGridProps) {
+export function SurfaceGrid({ children, density }: SurfaceGridProps) {
   return <div className={surfaceGridVariants({ density })}>{children}</div>;
 }
 
@@ -285,7 +322,7 @@ export function SurfaceCard({
   footer,
   span = 6,
   title,
-  className,
+  className
 }: SurfaceCardProps & {
   className?: string;
 }) {
@@ -325,6 +362,188 @@ export function MetricTile({ label, value }: MetricTileProps) {
   );
 }
 
+export function SectionHeading({
+  className,
+  eyebrow,
+  lead,
+  title
+}: SectionHeadingProps) {
+  return (
+    <header className={cn("space-y-3", className)}>
+      <div className="space-y-2">
+        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
+          {eyebrow}
+        </span>
+        <h2 className="font-[var(--font-display)] text-2xl font-semibold tracking-tight text-[color:var(--color-text)]">
+          {title}
+        </h2>
+        <p className="max-w-3xl text-sm leading-7 text-[color:var(--color-muted)]">
+          {lead}
+        </p>
+      </div>
+    </header>
+  );
+}
+
+export function PanelHeading({ className, lead, title }: PanelHeadingProps) {
+  return (
+    <div className={cn("space-y-1.5", className)}>
+      <h3 className="text-base font-semibold text-[color:var(--color-text)]">
+        {title}
+      </h3>
+      <p className="text-sm leading-6 text-[color:var(--color-muted)]">
+        {lead}
+      </p>
+    </div>
+  );
+}
+
+export function SignalCard({
+  className,
+  detail,
+  label,
+  tone = "default",
+  value
+}: SignalCardProps) {
+  const toneClass = {
+    critical: "border-red-400/55 bg-red-500/10 text-red-50",
+    default:
+      "border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-text)]",
+    success: "border-emerald-400/45 bg-emerald-500/10 text-emerald-50",
+    warning: "border-amber-300/45 bg-amber-500/12 text-amber-100"
+  }[tone];
+
+  return (
+    <article
+      className={cn(
+        "flex h-full flex-col gap-2 rounded-2xl border p-4 shadow-[var(--shadow-surface)]",
+        toneClass,
+        className
+      )}
+    >
+      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-current/80">
+        {label}
+      </span>
+      <strong className="text-lg font-semibold">{value}</strong>
+      <span className="text-sm leading-6 text-current/80">{detail}</span>
+    </article>
+  );
+}
+
+export function RecordList({ children, className }: RecordShellProps) {
+  return <div className={cn("grid gap-3", className)}>{children}</div>;
+}
+
+export function RecordCard({ children, className }: RecordShellProps) {
+  return (
+    <div
+      className={cn(
+        "flex flex-col gap-3 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 md:flex-row md:items-start md:justify-between",
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function RecordCopy({ children, className }: RecordShellProps) {
+  return (
+    <div
+      className={cn(
+        "flex min-w-0 flex-1 flex-col gap-1.5 text-sm leading-6 text-[color:var(--color-muted)]",
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function RecordActions({ children, className }: RecordShellProps) {
+  return (
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-2 md:justify-end",
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function EmptyState({ children, className }: EmptyStateProps) {
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)]/50 p-4 text-sm text-[color:var(--color-muted)]",
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function RailCard({
+  body,
+  children,
+  className,
+  eyebrow,
+  title
+}: RailCardProps) {
+  return (
+    <article
+      className={cn(
+        "space-y-4 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-5 shadow-[var(--shadow-surface)]",
+        className
+      )}
+    >
+      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
+        {eyebrow}
+      </span>
+      <h3 className="font-[var(--font-display)] text-xl font-semibold text-[color:var(--color-text)]">
+        {title}
+      </h3>
+      {body ? (
+        <p className="text-sm leading-7 text-[color:var(--color-muted)]">
+          {body}
+        </p>
+      ) : null}
+      {children}
+    </article>
+  );
+}
+
+export function InsetMetric({
+  className,
+  detail,
+  label,
+  value
+}: InsetMetricProps) {
+  return (
+    <div
+      className={cn(
+        "rounded-[1.35rem] border border-[color:var(--color-line)] bg-[color:var(--color-surface)]/75 p-4 shadow-[0_14px_30px_rgba(15,23,42,0.08)]",
+        className
+      )}
+    >
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--color-muted)]">
+        {label}
+      </p>
+      <p className="mt-2 text-xl font-semibold text-[color:var(--color-text)]">
+        {value}
+      </p>
+      {detail ? (
+        <p className="mt-2 text-sm leading-6 text-[color:var(--color-muted)]">
+          {detail}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function StatusBanner({
   className,
   tone = "info",
@@ -344,13 +563,27 @@ export function FieldStack({
   ...props
 }: FieldStackProps) {
   return (
-    <label className={cn(fieldStackVariants({ emphasis }), className)} {...props} />
+    <label
+      className={cn(fieldStackVariants({ emphasis }), className)}
+      {...props}
+    />
   );
 }
 
-export function FieldLabel({ children, className }: { children: ReactNode; className?: string }) {
+export function FieldLabel({
+  children,
+  className
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <span className={cn("text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]", className)}>
+    <span
+      className={cn(
+        "text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]",
+        className
+      )}
+    >
       {children}
     </span>
   );
@@ -370,19 +603,14 @@ export const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
 
 InputField.displayName = "InputField";
 
-export function TextAreaField({
-  className,
-  ...props
-}: TextAreaFieldProps) {
-  return (
-    <textarea
-      className={cn(textAreaVariants(), className)}
-      {...props}
-    />
-  );
+export function TextAreaField({ className, ...props }: TextAreaFieldProps) {
+  return <textarea className={cn(textAreaVariants(), className)} {...props} />;
 }
 
-export function ActionButton({ tone = "primary", ...props }: ActionButtonProps) {
+export function ActionButton({
+  tone = "primary",
+  ...props
+}: ActionButtonProps) {
   return <button className={actionButtonVariants({ tone })} {...props} />;
 }
 
