@@ -253,6 +253,29 @@ const opsPanelCardVariants = cva("rounded-2xl border p-4", {
   }
 });
 
+const opsCommandModuleVariants = cva(
+  "rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 shadow-[var(--shadow-surface)] space-y-3",
+  {
+    variants: {
+      span: {
+        full: "xl:col-span-6",
+        standard: "xl:col-span-3",
+        wide: "xl:col-span-2"
+      },
+      tone: {
+        critical: "ring-1 ring-rose-400/20",
+        warning: "ring-1 ring-amber-400/20",
+        healthy: "ring-1 ring-emerald-400/20",
+        neutral: "ring-1 ring-transparent"
+      }
+    },
+    defaultVariants: {
+      span: "standard",
+      tone: "neutral"
+    }
+  }
+);
+
 const fieldStackVariants = cva("grid gap-1.5", {
   variants: {
     emphasis: {
@@ -397,6 +420,33 @@ type OpsSummaryCardProps = PropsWithChildren<{
   value: string;
 }>;
 
+type OpsCommandTone = "critical" | "healthy" | "neutral" | "warning";
+
+type OpsCommandSectionProps = PropsWithChildren<{
+  className?: string;
+  description: string;
+  eyebrow: string;
+  title: string;
+}>;
+
+type OpsCommandSignalProps = {
+  detail: string;
+  label: string;
+  meta: string;
+  tone?: OpsCommandTone;
+  value: string;
+};
+
+type OpsCommandModuleProps = PropsWithChildren<{
+  actions?: ReactNode;
+  className?: string;
+  description: string;
+  eyebrow: string;
+  span?: "full" | "standard" | "wide";
+  tone?: OpsCommandTone;
+  title: string;
+}>;
+
 type ActionRowProps = PropsWithChildren<{
   className?: string;
   compact?: boolean;
@@ -456,7 +506,7 @@ type ProgressTrackProps = {
   value: number;
 };
 
-export type { ActionButtonProps, PageTone };
+export type { ActionButtonProps, OpsCommandTone, PageTone };
 
 export function PageShell({
   actions,
@@ -719,6 +769,101 @@ export function OpsEmptyState({
     >
       {children}
     </div>
+  );
+}
+
+export function OpsActionButton({ className, ...props }: ActionButtonProps) {
+  return (
+    <ActionButton
+      className={cn(
+        "border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-text)] hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]",
+        className
+      )}
+      tone="secondary"
+      {...props}
+    />
+  );
+}
+
+export function OpsCommandSection({
+  className,
+  children,
+  description,
+  eyebrow,
+  title
+}: OpsCommandSectionProps) {
+  return (
+    <section
+      className={cn(
+        "space-y-3 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-background)] p-4",
+        className
+      )}
+    >
+      <div className="space-y-1">
+        <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--color-accent)]">
+          {eyebrow}
+        </span>
+        <h2 className="text-2xl font-semibold text-[color:var(--color-text)]">
+          {title}
+        </h2>
+        <p className="text-sm leading-7 text-[color:var(--color-muted)]">
+          {description}
+        </p>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+export function OpsCommandModule({
+  actions,
+  children,
+  className,
+  description,
+  eyebrow,
+  span = "standard",
+  tone = "neutral",
+  title
+}: OpsCommandModuleProps) {
+  return (
+    <article
+      className={cn(opsCommandModuleVariants({ span, tone }), className)}
+    >
+      <div className="grid gap-1">
+        <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--color-muted)]">
+          {eyebrow}
+        </span>
+        <h3 className="text-lg font-semibold text-[color:var(--color-text)]">
+          {title}
+        </h3>
+        <p className="text-sm text-[color:var(--color-muted)]">{description}</p>
+      </div>
+      {actions ? (
+        <div className="mt-2 flex flex-wrap gap-2">{actions}</div>
+      ) : null}
+      <div className="space-y-3">{children}</div>
+    </article>
+  );
+}
+
+export function OpsCommandSignal({
+  detail,
+  label,
+  meta,
+  tone = "neutral",
+  value
+}: OpsCommandSignalProps) {
+  return (
+    <OpsPanelCard tone={tone} className="space-y-1 text-sm">
+      <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--color-muted)]">
+        {label}
+      </span>
+      <strong className="text-2xl text-[color:var(--color-text)]">
+        {value}
+      </strong>
+      <span className="text-sm text-[color:var(--color-muted)]">{detail}</span>
+      <span className="text-xs text-[color:var(--color-muted)]">{meta}</span>
+    </OpsPanelCard>
   );
 }
 

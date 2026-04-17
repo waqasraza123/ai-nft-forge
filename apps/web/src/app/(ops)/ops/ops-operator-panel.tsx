@@ -6,21 +6,20 @@ import {
   type OpsAlertScheduleDay
 } from "@ai-nft-forge/shared";
 import { useRouter } from "next/navigation";
-import {
-  type ReactNode,
-  type ButtonHTMLAttributes,
-  useEffect,
-  useState
-} from "react";
+import { useEffect, useState } from "react";
 
 import {
   StatusBanner,
-  ActionButton,
   ActionLink,
   cn,
   FieldLabel,
   FieldStack,
   InputField,
+  OpsActionButton,
+  OpsCommandModule,
+  OpsCommandSection,
+  OpsCommandSignal,
+  OpsCommandTone,
   OpsPanelCard,
   OpsEmptyState,
   OpsStatusNotice,
@@ -67,8 +66,6 @@ type AlertEscalationDraft = {
   repeatReminderIntervalMinutes: string;
 };
 
-type OpsCommandTone = "critical" | "healthy" | "neutral" | "warning";
-
 const alertScheduleDayLabelByValue: Record<OpsAlertScheduleDay, string> = {
   fri: "Fri",
   mon: "Mon",
@@ -95,41 +92,8 @@ function resolveOpsCheckboxInputClass() {
   return "size-4 rounded border border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]";
 }
 
-type OpsActionButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  children: ReactNode;
-};
-
-function OpsActionButton({ className, ...props }: OpsActionButtonProps) {
-  return (
-    <ActionButton
-      className={cn(
-        "border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-text)] hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]",
-        className
-      )}
-      tone="secondary"
-      {...props}
-    />
-  );
-}
-
 function resolveOpsPillRowClass() {
   return "flex flex-wrap gap-2";
-}
-
-function resolveOpsCommandSignalTone(tone: OpsCommandTone) {
-  if (tone === "critical") {
-    return "border-rose-400/45 bg-rose-500/12 text-rose-100";
-  }
-
-  if (tone === "warning") {
-    return "border-amber-400/35 bg-amber-500/12 text-amber-100";
-  }
-
-  if (tone === "healthy") {
-    return "border-emerald-400/35 bg-emerald-500/12 text-emerald-100";
-  }
-
-  return "border-[color:var(--color-line)] bg-[color:var(--color-surface)]/65 text-[color:var(--color-text)]";
 }
 
 function resolveOpsActionRowClass() {
@@ -549,127 +513,6 @@ function renderActivityTiming(activity: OpsGenerationActivitySummary) {
   }
 
   return `Created ${formatRelativeDuration(activity.createdAt)} ago`;
-}
-
-function OpsCommandSection({
-  children,
-  description,
-  eyebrow,
-  title
-}: {
-  children: ReactNode;
-  description: string;
-  eyebrow: string;
-  title: string;
-}) {
-  return (
-    <section className={resolveOpsCommandSectionClass()}>
-      <div className="space-y-1">
-        <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--color-accent)]">
-          {eyebrow}
-        </span>
-        <h2 className="text-2xl font-semibold text-[color:var(--color-text)]">
-          {title}
-        </h2>
-        <p className="text-sm leading-7 text-[color:var(--color-muted)]">
-          {description}
-        </p>
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function resolveOpsCommandSectionClass() {
-  return "space-y-3 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-background)] p-4";
-}
-
-function OpsCommandModule({
-  actions,
-  children,
-  description,
-  eyebrow,
-  span = "standard",
-  tone = "neutral",
-  title
-}: {
-  actions?: ReactNode;
-  children: ReactNode;
-  description: string;
-  eyebrow: string;
-  span?: "full" | "standard" | "wide";
-  tone?: OpsCommandTone;
-  title: string;
-}) {
-  return (
-    <article
-      className={cn(
-        "rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 shadow-[var(--shadow-surface)]",
-        resolveOpsCommandToneClasses(tone),
-        span === "wide" && "xl:col-span-2",
-        span === "full" && "xl:col-span-6",
-        span === "standard" && "xl:col-span-3",
-        "space-y-3"
-      )}
-    >
-      <div className="grid gap-1">
-        <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--color-muted)]">
-          {eyebrow}
-        </span>
-        <h3 className="text-lg font-semibold text-[color:var(--color-text)]">
-          {title}
-        </h3>
-        <p className="text-sm text-[color:var(--color-muted)]">{description}</p>
-      </div>
-      {actions ? (
-        <div className="mt-2 flex flex-wrap gap-2">{actions}</div>
-      ) : null}
-      <div className="space-y-3">{children}</div>
-    </article>
-  );
-}
-
-function resolveOpsCommandToneClasses(tone: OpsCommandTone) {
-  if (tone === "critical") {
-    return "ring-1 ring-rose-400/20";
-  }
-
-  if (tone === "warning") {
-    return "ring-1 ring-amber-400/20";
-  }
-
-  if (tone === "healthy") {
-    return "ring-1 ring-emerald-400/20";
-  }
-
-  return "ring-1 ring-transparent";
-}
-
-function OpsCommandSignal({
-  detail,
-  label,
-  meta,
-  tone,
-  value
-}: {
-  detail: string;
-  label: string;
-  meta: string;
-  tone: OpsCommandTone;
-  value: string;
-}) {
-  return (
-    <OpsPanelCard tone={tone} className="space-y-1 text-sm">
-      <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--color-muted)]">
-        {label}
-      </span>
-      <strong className="text-2xl text-[color:var(--color-text)]">
-        {value}
-      </strong>
-      <span className="text-sm text-[color:var(--color-muted)]">{detail}</span>
-      <span className="text-xs text-[color:var(--color-muted)]">{meta}</span>
-    </OpsPanelCard>
-  );
 }
 
 function ActivityItem({
