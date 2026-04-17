@@ -808,3 +808,17 @@ Finish the production-grade consistency phase on remaining high-traffic Studio/O
   - `pnpm --filter @ai-nft-forge/web build`
 - Current phase status: `Shared UI Primitive Consolidation`
 - Current phase step: final acceptance of remaining high-density studio and public rhythm patterns, then lock release-ready UI polish phase and start art-direction pass on composition surfaces only.
+
+## Latest Checkpoint (Public Route Action-Row Completion)
+- Completed the final row-shell cleanup in public storefront routes:
+  - `apps/web/src/app/(public)/brands/[brandSlug]/page.tsx`
+    - Replaced CTA/status metadata row with shared `ActionRow` (compact variant).
+  - `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/checkout/[checkoutSessionId]/page.tsx`
+    - Replaced manual status pill row with shared `ActionRow` (compact + top margin class).
+- Verification:
+  - `pnpm exec prettier --write apps/web/src/app/\(public\)/brands/\[brandSlug\]/page.tsx apps/web/src/app/\(public\)/brands/\[brandSlug\]/collections/\[collectionSlug\]/checkout/\[checkoutSessionId\]/page.tsx`
+  - `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+  - `pnpm --filter @ai-nft-forge/web build`
+- Commit: `0dd01b2`
+- Current phase status: `Shared UI Primitive Consolidation`
+- Current phase step: tailwind utility-primitives migration is now complete for identified row-shell patterns across public, studio, and ops routes; next step is optional visual polish review and final QA on dense action density at breakpoints.
