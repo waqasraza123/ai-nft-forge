@@ -1169,7 +1169,7 @@ export function StudioCommerceClient({
                             {collection.storefrontStatus}
                           </span>
                         </div>
-                        <div className="flex flex-wrap gap-2">
+                        <ActionRow compact>
                           <Pill>
                             {collection.openCheckoutCount.toString()} open
                           </Pill>
@@ -1181,7 +1181,7 @@ export function StudioCommerceClient({
                             {collection.completedCheckoutCount.toString()}{" "}
                             completed
                           </Pill>
-                        </div>
+                        </ActionRow>
                         <span className="text-sm text-[color:var(--color-muted)]">
                           Public launch route remains available for storefront
                           verification and buyer-path QA.

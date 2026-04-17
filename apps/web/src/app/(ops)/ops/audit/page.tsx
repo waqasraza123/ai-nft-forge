@@ -1,5 +1,6 @@
 import {
   OpsQuickActions,
+  OpsPillRow,
   PageShell,
   Pill,
   SurfaceCard,
@@ -43,13 +44,13 @@ export default async function OpsAuditPage() {
           span={8}
           title="Workspace audit trail"
         >
-          <div className="flex flex-wrap gap-2">
+          <OpsPillRow>
             <Pill>{access?.workspace?.slug ?? "Session required"}</Pill>
             <Pill>{access?.role ?? "unauthenticated"}</Pill>
             <Pill>
               {initialAudit?.audit.entries.length ?? 0} current entries
             </Pill>
-          </div>
+          </OpsPillRow>
         </SurfaceCard>
         <SurfaceCard
           body="Use the same authenticated workspace selection here to move between accessible audit streams without changing query semantics or mixing rows across workspaces."

@@ -1026,13 +1026,13 @@ export function StudioAssetsClient({
               </ActionRow>
             </form>
             {selectedFiles.length > 0 ? (
-              <div className="mt-3 flex flex-wrap gap-2">
+              <ActionRow compact className="mt-3">
                 {selectedFiles.map((file) => (
                   <Pill key={`${file.name}-${file.lastModified}`}>
                     {file.name}
                   </Pill>
                 ))}
-              </div>
+              </ActionRow>
             ) : null}
             {uploadQueue.length > 0 ? (
               <div className="mt-3 space-y-2">

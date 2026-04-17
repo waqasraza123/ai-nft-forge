@@ -525,12 +525,12 @@ function ActivityItem({
         </div>
         <Pill>{activity.status}</Pill>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <OpsPillRow>
         <Pill>{activity.pipelineKey}</Pill>
         <Pill>{activity.requestedVariantCount} variants</Pill>
         <Pill>{activity.generatedAssetCount} stored rows</Pill>
         <Pill>{activity.queueJobId ?? "No queue job id"}</Pill>
-      </div>
+      </OpsPillRow>
       <div className="mt-2 grid gap-1 text-xs text-[color:var(--color-muted)] sm:grid-cols-2">
         <span>Requested {formatDateTime(activity.createdAt)}</span>
         {activity.startedAt ? (
@@ -639,7 +639,7 @@ function PersistedCaptureItem({
         </div>
         <Pill>{capture.observabilityStatus}</Pill>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <OpsPillRow>
         <Pill>{capture.backendReadinessStatus}</Pill>
         <Pill>{capture.queueStatus}</Pill>
         <Pill>{capture.workerAdapter ?? "Unknown adapter"}</Pill>
@@ -652,13 +652,13 @@ function PersistedCaptureItem({
           Oldest running{" "}
           {formatDurationSeconds(capture.oldestRunningAgeSeconds)}
         </Pill>
-      </div>
-      <div className="mt-2 flex flex-wrap gap-2">
+      </OpsPillRow>
+      <OpsPillRow className="mt-2">
         <Pill>Waiting {capture.queueCounts.waiting ?? "n/a"}</Pill>
         <Pill>Active {capture.queueCounts.active ?? "n/a"}</Pill>
         <Pill>Failed {capture.queueCounts.failed ?? "n/a"}</Pill>
         <Pill>Completed {capture.queueCounts.completed ?? "n/a"}</Pill>
-      </div>
+      </OpsPillRow>
       <div className="mt-2 grid gap-2">
         {capture.windows.map((window) => (
           <WindowSummary
@@ -692,11 +692,11 @@ function AlertDeliveryItem({
         </div>
         <Pill>{delivery.deliveryState}</Pill>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <OpsPillRow>
         <Pill>{delivery.code}</Pill>
         <Pill>{delivery.severity}</Pill>
         <Pill>{delivery.deliveryChannel}</Pill>
-      </div>
+      </OpsPillRow>
       <StatusBanner
         tone={
           delivery.deliveryState === "failed"
@@ -748,7 +748,7 @@ function ActiveAlertItem({
         </div>
         <Pill>{alert.severity}</Pill>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <OpsPillRow>
         <Pill>{alert.code}</Pill>
         <Pill>{alert.status}</Pill>
         <Pill>
@@ -761,7 +761,7 @@ function ActiveAlertItem({
             ? `Muted until ${formatDateTime(alert.mutedUntil)}`
             : "Delivery active"}
         </Pill>
-      </div>
+      </OpsPillRow>
       <StatusBanner tone={alert.severity === "critical" ? "error" : "info"}>
         <strong>First seen {formatDateTime(alert.firstObservedAt)}</strong>
         <span>Last seen {formatDateTime(alert.lastObservedAt)}</span>
@@ -1551,12 +1551,12 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
               title="Operator command surface"
               tone="warning"
             >
-              <div className="flex flex-wrap gap-2">
+              <OpsPillRow>
                 <Pill>Queue depth hidden</Pill>
                 <Pill>Active alerts hidden</Pill>
                 <Pill>Reconciliation hidden</Pill>
                 <Pill>Retry actions disabled</Pill>
-              </div>
+              </OpsPillRow>
               <div className="mt-3">
                 <ActionLink href="/sign-in?next=%2Fops" tone="action">
                   Sign in to /ops
@@ -1568,12 +1568,12 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
               eyebrow="Available after sign-in"
               title="What the locked view omits"
             >
-              <div className="flex flex-wrap gap-2">
+              <OpsPillRow>
                 <Pill>Workspace-scoped queue metrics</Pill>
                 <Pill>Persisted alerts and mutes</Pill>
                 <Pill>Reconciliation issues and repairs</Pill>
                 <Pill>Owner retry controls</Pill>
-              </div>
+              </OpsPillRow>
             </OpsCommandModule>
           </div>
         </OpsCommandSection>

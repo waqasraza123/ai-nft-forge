@@ -4,6 +4,7 @@ import {
   type StudioSourceAssetSummary
 } from "@ai-nft-forge/shared";
 import {
+  ActionRow,
   ActionButton,
   FieldLabel,
   FieldStack,
@@ -249,7 +250,7 @@ export function StudioAssetCard({
         title={asset.originalFilename}
         footer={
           <div className="grid gap-2.5">
-            <div className="flex flex-wrap gap-2">
+            <ActionRow compact>
               <FieldStack>
                 <FieldLabel>Variant count</FieldLabel>
                 <SelectField
@@ -281,7 +282,7 @@ export function StudioAssetCard({
                   {resolveGenerationActionLabel(asset)}
                 </ActionButton>
               ) : null}
-            </div>
+            </ActionRow>
             <div>
               <ActionButton
                 onClick={() => {
@@ -319,7 +320,7 @@ export function StudioAssetCard({
             <p>
               {asset.id} · {formatIsoDateTime(asset.uploadedAt)}
             </p>
-            <div className="flex flex-wrap gap-2">
+            <ActionRow compact>
               <Pill>
                 {asset.latestGeneration
                   ? `${asset.latestGeneration.requestedVariantCount} variants`
@@ -335,7 +336,7 @@ export function StudioAssetCard({
                   ? `${totalStoredOutputCount} output${totalStoredOutputCount === 1 ? "" : "s"}`
                   : "No outputs"}
               </Pill>
-            </div>
+            </ActionRow>
             <p className="text-xs text-[color:var(--color-muted)]">
               Source size {formatAssetByteSize(asset.byteSize)}
             </p>
@@ -352,7 +353,7 @@ export function StudioAssetCard({
       title={asset.originalFilename}
       footer={
         canStartGeneration(asset) ? (
-          <div className="flex flex-wrap gap-2">
+          <ActionRow compact>
             <FieldStack>
               <FieldLabel>Variant count</FieldLabel>
               <SelectField
@@ -382,12 +383,12 @@ export function StudioAssetCard({
             >
               {resolveGenerationActionLabel(asset)}
             </ActionButton>
-          </div>
+          </ActionRow>
         ) : null
       }
     >
       <div className="grid gap-3">
-        <div className="flex flex-wrap gap-2">
+        <ActionRow compact>
           <Pill>{asset.id}</Pill>
           <Pill>{formatIsoDateTime(asset.uploadedAt)}</Pill>
           <Pill>{latestStatusLabel}</Pill>
@@ -417,7 +418,7 @@ export function StudioAssetCard({
           {asset.latestGeneration?.queueJobId ? (
             <Pill>{asset.latestGeneration.queueJobId}</Pill>
           ) : null}
-        </div>
+        </ActionRow>
         {generationRunCount > 0 ? (
           <div className="grid gap-3">
             <StatusBanner tone="info">
@@ -450,7 +451,7 @@ export function StudioAssetCard({
                         </strong>
                         <span>{generation.id}</span>
                       </div>
-                      <div className="flex flex-wrap gap-2">
+                      <ActionRow compact>
                         <Pill>{generation.status}</Pill>
                         <ActionButton
                           onClick={() => setSelectedGenerationId(generation.id)}
@@ -459,7 +460,7 @@ export function StudioAssetCard({
                         >
                           {isSelected ? "Viewing run" : "Inspect run"}
                         </ActionButton>
-                      </div>
+                      </ActionRow>
                     </div>
                     <div className="mt-2 grid gap-1 text-xs text-[color:var(--color-muted)]">
                       <span>
@@ -484,7 +485,7 @@ export function StudioAssetCard({
             </div>
             {selectedGeneration ? (
               <>
-                <div className="mt-2 flex flex-wrap gap-2">
+                <ActionRow compact className="mt-2">
                   <Pill>{selectedGeneration.id}</Pill>
                   <Pill>
                     Requested {formatIsoDateTime(selectedGeneration.createdAt)}
@@ -502,7 +503,7 @@ export function StudioAssetCard({
                   {selectedGeneration.queueJobId ? (
                     <Pill>{selectedGeneration.queueJobId}</Pill>
                   ) : null}
-                </div>
+                </ActionRow>
                 {selectedGeneration.result ? (
                   <StatusBanner tone="success">
                     <strong>Generation completed.</strong>
@@ -603,7 +604,7 @@ export function StudioAssetCard({
                                 {generatedAsset.storageObjectKey}
                               </span>
                             </div>
-                            <div className="mt-3 flex flex-wrap gap-2">
+                            <ActionRow compact className="mt-3">
                               <Pill>
                                 {formatModerationStatus(
                                   generatedAsset.moderationStatus
@@ -668,7 +669,7 @@ export function StudioAssetCard({
                               >
                                 {isDownloading ? "Preparing..." : "Download"}
                               </ActionButton>
-                            </div>
+                            </ActionRow>
                           </article>
                         );
                       }

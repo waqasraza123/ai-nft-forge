@@ -1,5 +1,6 @@
 import {
   MetricTile,
+  ActionRow,
   ActionLink,
   EmptyState,
   PageShell,
@@ -91,10 +92,10 @@ export default async function StudioCommerceFleetPage() {
               value={report.report.summary.unfulfilledCheckoutCount.toString()}
             />
           </div>
-          <div className="flex flex-wrap gap-2">
+          <ActionRow compact>
             <Pill>{report.report.scopeLabel}</Pill>
             <Pill>{report.report.generatedAt}</Pill>
-          </div>
+          </ActionRow>
         </SurfaceCard>
         <SurfaceCard
           body="Workspace rows are grouped for fleet visibility so operators can assess cross-workspace rollout health at a glance without leaving this selected workspace context."

@@ -3,6 +3,24 @@
 ## Date
 2026-04-17
 
+## Latest Checkpoint (Studio/Ops Row Primitive Sweep)
+- Completed the next production-grade route-level primitive migration in remaining row-heavy Studio/Ops surfaces:
+  - Replaced `flex flex-wrap gap-2` rows with shared primitives in:
+    - `apps/web/src/app/(studio)/studio/assets/studio-assets-client.tsx`
+    - `apps/web/src/app/(studio)/studio/assets/studio-asset-card.tsx`
+    - `apps/web/src/app/(studio)/studio/commerce/studio-commerce-client.tsx`
+    - `apps/web/src/app/(studio)/studio/commerce/fleet/page.tsx`
+    - `apps/web/src/app/(ops)/ops/audit/page.tsx`
+    - `apps/web/src/app/(ops)/ops/ops-operator-panel.tsx`
+    - `apps/web/src/app/(ops)/ops/retention/ops-retention-client.tsx`
+  - Kept dense ops/table-like surfaces behavior-first; only introduced shared row shells where layout intent is unchanged.
+- Verification:
+  - `pnpm --filter @ai-nft-forge/web build`
+
+## Current Objective
+- Shared UI Primitive Consolidation
+- Current step: run a cross-route consistency pass on any remaining `flex flex-wrap` row patterns in public routes and then lock the milestone as production-complete once visual rhythm is reviewed.
+
 ## Latest Checkpoint (Ops Operator Surface Finalization)
 - Completed the current production-grade ops command-shell sweep by fully adopting shared ops layout primitives in `apps/web/src/app/(ops)/ops/ops-operator-panel.tsx`:
   - Added `OpsGrid`, `OpsSettingsGrid`, `OpsPillRow`, `OpsActionRow`, and `OpsCommandSignalGrid` to `packages/ui/src/index.tsx`.

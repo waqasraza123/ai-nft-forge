@@ -10,6 +10,7 @@ import {
   type WorkspaceRetentionFleetReportResponse
 } from "@ai-nft-forge/shared";
 import {
+  ActionRow,
   ActionButton,
   ActionLink,
   OpsEmptyState,
@@ -313,7 +314,7 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
             value={report.summary.reasonRequiredWorkspaceCount.toString()}
           />
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <ActionRow compact className="mt-3">
           <Pill>{formatTimestamp(report.generatedAt)}</Pill>
           <ActionLink href="/api/ops/retention?format=json" tone="inline">
             Export JSON
@@ -331,7 +332,7 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
           >
             {isRefreshing ? "Refreshing…" : "Refresh retention"}
           </ActionButton>
-        </div>
+        </ActionRow>
         {notice ? (
           <OpsStatusNotice
             tone={resolveNoticeTone(notice.tone)}
@@ -361,7 +362,7 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
           </strong>
           <span>{report.lifecycleAutomationHealth.message}</span>
         </StatusBanner>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <ActionRow compact className="mt-3">
           <Pill>
             {report.lifecycleAutomationHealth.enabled
               ? "Scheduler enabled"
@@ -393,7 +394,7 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
                 )} ago`
               : "n/a"}
           </Pill>
-        </div>
+        </ActionRow>
         <div className="mt-4 space-y-2">
           {report.recentLifecycleAutomationRuns.length ? (
             report.recentLifecycleAutomationRuns.map((run) => (
@@ -625,7 +626,7 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
                     </span>
                   ) : null}
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2">
+                <ActionRow compact className="mt-3">
                   {canSelectCancel ? (
                     <label
                       className="inline-flex items-center gap-2 text-sm text-[color:var(--color-text)]"
@@ -696,7 +697,7 @@ export function OpsRetentionClient({ initialReport }: OpsRetentionClientProps) {
                       Workspace export
                     </ActionLink>
                   ) : null}
-                </div>
+                </ActionRow>
               </OpsPanelCard>
             );
           })}
