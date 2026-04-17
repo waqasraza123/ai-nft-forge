@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   startTransition,
@@ -60,6 +59,8 @@ import {
   type WorkspaceLifecycleNotificationDeliverySummary
 } from "@ai-nft-forge/shared";
 import {
+  ActionButton,
+  ActionLink,
   ActionRow,
   EmptyState as SettingsEmptyState,
   FormPanel,
@@ -76,6 +77,7 @@ import {
   SignalCard as SettingsSignalCard,
   SurfaceCard,
   SurfaceGrid,
+  StatusBanner,
   cn
 } from "@ai-nft-forge/ui";
 
@@ -104,17 +106,6 @@ type NoticeState = {
 } | null;
 
 type StatusBannerTone = "error" | "info" | "success" | "warning";
-
-const statusBannerToneClasses = {
-  error: "border-red-500/45 bg-red-500/12 text-red-50",
-  info: "border-blue-500/35 bg-blue-500/12 text-blue-50",
-  success: "border-emerald-500/45 bg-emerald-500/12 text-emerald-50",
-  warning: "border-amber-400/45 bg-amber-400/12 text-amber-100"
-} as const;
-
-function getStatusBannerToneClass(tone: StatusBannerTone) {
-  return statusBannerToneClasses[tone];
-}
 
 type StudioBrandEditorState = {
   accentColor: string;
@@ -584,15 +575,10 @@ function SettingsStatusMessage(input: {
   title: string;
 }) {
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-1.5 rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)]",
-        getStatusBannerToneClass(input.tone ?? "info")
-      )}
-    >
+    <StatusBanner className="flex flex-col gap-1.5" tone={input.tone ?? "info"}>
       <strong>{input.title}</strong>
       <span>{input.children}</span>
-    </div>
+    </StatusBanner>
   );
 }
 
@@ -2088,30 +2074,24 @@ export function StudioSettingsClient({
       title="Workspace administration cockpit"
       lead="Operate workspace identity, public brand profile, team access, lifecycle policy, retention, offboarding, and recent governance history from one workspace-scoped control room."
       actions={
-        <>
-          <button
-            className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+        <ActionRow compact>
+          <ActionButton
             disabled={isRefreshing}
             onClick={() => {
               void refreshSettings();
             }}
+            tone="accent"
             type="button"
           >
             {isRefreshing ? "Refreshing…" : "Refresh data"}
-          </button>
-          <Link
-            className="inline-flex items-center rounded-full border border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)] px-3 py-1.5 text-sm font-medium text-[color:var(--color-text)] transition hover:bg-[color:var(--color-accent)] hover:text-white"
-            href="/studio/collections"
-          >
+          </ActionButton>
+          <ActionLink href="/studio/collections" tone="action">
             Open collections
-          </Link>
-          <Link
-            className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
-            href="/studio/commerce"
-          >
+          </ActionLink>
+          <ActionLink href="/studio/commerce" tone="inline">
             Open commerce
-          </Link>
-        </>
+          </ActionLink>
+        </ActionRow>
       }
       tone="studio"
     >
@@ -2271,24 +2251,15 @@ export function StudioSettingsClient({
               workspaces={availableWorkspaces}
             />
             <div className="flex flex-wrap items-center gap-3">
-              <Link
-                className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
-                href="/studio/assets"
-              >
+              <ActionLink href="/studio/assets" tone="inline">
                 Open assets
-              </Link>
-              <Link
-                className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
-                href="/studio/collections"
-              >
+              </ActionLink>
+              <ActionLink href="/studio/collections" tone="inline">
                 Open collections
-              </Link>
-              <Link
-                className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
-                href="/studio/commerce"
-              >
+              </ActionLink>
+              <ActionLink href="/studio/commerce" tone="inline">
                 Open commerce
-              </Link>
+              </ActionLink>
             </div>
           </section>
         </div>
@@ -2737,18 +2708,19 @@ export function StudioSettingsClient({
                       ) : null}
                       {canManageWorkspace ? (
                         <div className="flex flex-wrap items-center gap-3 pt-2">
-                          <Link
-                            className="inline-flex items-center rounded-full border border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)] px-3 py-1.5 text-sm font-medium text-[color:var(--color-text)] transition hover:bg-[color:var(--color-accent)] hover:text-white"
+                          <ActionLink
+                            className="px-3 py-1.5"
                             href={`/api/studio/workspaces/${exportWorkspaceId ?? ""}/export?format=json`}
+                            tone="action"
                           >
                             Export JSON
-                          </Link>
-                          <Link
-                            className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
+                          </ActionLink>
+                          <ActionLink
                             href={`/api/studio/workspaces/${exportWorkspaceId ?? ""}/export?format=csv`}
+                            tone="inline"
                           >
                             Export CSV
-                          </Link>
+                          </ActionLink>
                         </div>
                       ) : (
                         <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
@@ -3205,18 +3177,12 @@ export function StudioSettingsClient({
                     </Pill>
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Link
-                      className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
-                      href="/studio/collections"
-                    >
+                    <ActionLink href="/studio/collections" tone="inline">
                       Collections publish from this profile
-                    </Link>
-                    <Link
-                      className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
-                      href="/studio/assets"
-                    >
+                    </ActionLink>
+                    <ActionLink href="/studio/assets" tone="inline">
                       Generated assets still feed the same curation path
-                    </Link>
+                    </ActionLink>
                   </div>
                 </SurfaceCard>
                 <SurfaceCard
@@ -4078,12 +4044,12 @@ export function StudioSettingsClient({
                             }
                           />
                         </label>
-                        <div
-                          className={`rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] ${getStatusBannerToneClass(
+                        <StatusBanner
+                          tone={
                             getSlaTone(
                               lifecycleSlaSummary?.status ?? "unreachable"
                             ) as StatusBannerTone
-                          )}`}
+                          }
                         >
                           <strong>
                             {lifecycleSlaSummary?.status ?? "unreachable"}
@@ -4092,7 +4058,7 @@ export function StudioSettingsClient({
                             {lifecycleSlaSummary?.message ??
                               "Lifecycle SLA summary is not available on this service instance."}
                           </span>
-                        </div>
+                        </StatusBanner>
                         <div className="flex flex-wrap items-center gap-2">
                           <Pill>
                             Current{" "}
@@ -4154,8 +4120,8 @@ export function StudioSettingsClient({
                 >
                   {lifecycleAutomationHealth ? (
                     <div className="space-y-4">
-                      <div
-                        className={`rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] ${getStatusBannerToneClass(
+                      <StatusBanner
+                        tone={
                           lifecycleAutomationHealth.status === "healthy"
                             ? "success"
                             : lifecycleAutomationHealth.status === "warning" ||
@@ -4164,11 +4130,11 @@ export function StudioSettingsClient({
                                   "unreachable"
                               ? "error"
                               : "info"
-                        )}`}
+                        }
                       >
                         <strong>{lifecycleAutomationHealth.status}</strong>
                         <span>{lifecycleAutomationHealth.message}</span>
-                      </div>
+                      </StatusBanner>
                       <div className="flex flex-wrap items-center gap-2">
                         <Pill>
                           {lifecycleAutomationHealth.enabled
@@ -4966,12 +4932,9 @@ export function StudioSettingsClient({
                             ? "Provisioning…"
                             : "Create workspace"}
                         </button>
-                        <Link
-                          className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
-                          href="/studio/commerce/fleet"
-                        >
+                        <ActionLink href="/studio/commerce/fleet" tone="inline">
                           Open commerce fleet
-                        </Link>
+                        </ActionLink>
                       </div>
                     </fieldset>
                   </form>
@@ -5004,12 +4967,9 @@ export function StudioSettingsClient({
                       {settings?.auditEntries.length ?? 0} recent events
                     </Pill>
                     <Pill>workspace audit</Pill>
-                    <Link
-                      className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
-                      href="/ops/audit"
-                    >
+                    <ActionLink href="/ops/audit" tone="inline">
                       Open full audit
-                    </Link>
+                    </ActionLink>
                   </div>
                   {settings?.auditEntries.length ? (
                     <SettingsRecordList>
@@ -5058,18 +5018,18 @@ export function StudioSettingsClient({
               </div>
               {canManageWorkspace && exportWorkspaceId ? (
                 <div className="flex flex-wrap items-center gap-3">
-                  <Link
-                    className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
+                  <ActionLink
                     href={`/api/studio/workspaces/${exportWorkspaceId}/export?format=json`}
+                    tone="inline"
                   >
                     Export JSON
-                  </Link>
-                  <Link
-                    className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
+                  </ActionLink>
+                  <ActionLink
                     href={`/api/studio/workspaces/${exportWorkspaceId}/export?format=csv`}
+                    tone="inline"
                   >
                     Export CSV
-                  </Link>
+                  </ActionLink>
                 </div>
               ) : null}
             </SettingsRailCard>
@@ -5120,19 +5080,19 @@ export function StudioSettingsClient({
                 <Pill>{lifecycleSlaSummary?.status ?? "unreachable"}</Pill>
                 <Pill>Failed webhooks {recentWebhookFailedCount}</Pill>
               </div>
-              <div
-                className={`rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] ${getStatusBannerToneClass(
+              <StatusBanner
+                tone={
                   getSlaTone(
                     lifecycleSlaSummary?.status ?? "unreachable"
                   ) as StatusBannerTone
-                )}`}
+                }
               >
                 <strong>{lifecycleSlaSummary?.status ?? "unreachable"}</strong>
                 <span>
                   {lifecycleSlaSummary?.message ??
                     "Lifecycle SLA summary is not available."}
                 </span>
-              </div>
+              </StatusBanner>
             </SettingsRailCard>
             <SettingsRailCard
               eyebrow="Estate posture"

@@ -318,3 +318,22 @@ Complete the Tailwind migration checkpoint in `apps/web` and `packages/ui`, stab
   - tighten repeated action/notice spacing patterns in `studio-settings-client.tsx`;
   - standardize spacing rhythm for dense detail sections in collections/commerce rails where safe;
   - keep art direction selective and never decorative in moderation/compliance-heavy controls.
+
+## Latest Checkpoint (Studio Settings Consistency)
+- Completed the next production-grade Studio pass in `apps/web/src/app/(studio)/studio/settings/studio-settings-client.tsx`:
+  - replaced remaining legacy status-banner class helpers with shared `StatusBanner`,
+  - migrated remaining route-local action/link controls to `ActionButton`/`ActionLink`,
+  - kept all settings, lifecycle, retention, and offboarding behavior unchanged.
+- This hardens UI consistency for the heaviest Studio settings section without adding decorative elements to dense operations.
+
+## Verification (Studio Settings Consistency)
+- `pnpm exec prettier --write apps/web/src/app/'(studio)'/studio/settings/studio-settings-client.tsx` ✅
+- `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false` ✅
+- `pnpm --filter @ai-nft-forge/web build` ✅
+
+## Updated Next Follow-up
+- Add production-grade, reusable notice/link variants in `packages/ui` if `SettingsStatusMessage`, action-row, and export-link patterns repeat across additional screens.
+- Re-run the Studio settings visual audit for:
+  - rail density under high-signal states,
+  - empty-state empty-data storytelling,
+  - section-level heading hierarchy.
