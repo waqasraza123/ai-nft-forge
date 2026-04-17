@@ -1,7 +1,12 @@
-import { ActionLink, OpsPanelCard, Pill, SurfaceCard } from "@ai-nft-forge/ui";
+import {
+  ActionLink,
+  OpsEmptyState,
+  OpsPanelCard,
+  OpsStatusNotice,
+  Pill,
+  SurfaceCard
+} from "@ai-nft-forge/ui";
 import type { WorkspaceOffboardingEntry } from "@ai-nft-forge/shared";
-
-type OffboardingNoticeTone = "error" | "info" | "success";
 
 type WorkspaceOffboardingPanelProps = {
   body: string;
@@ -40,18 +45,6 @@ function getSlaTone(
   return "error";
 }
 
-function getNoticeClass(tone: OffboardingNoticeTone) {
-  if (tone === "error") {
-    return "border-red-300/45 bg-red-500/12 text-red-50";
-  }
-
-  if (tone === "success") {
-    return "border-emerald-300/45 bg-emerald-500/12 text-emerald-50";
-  }
-
-  return "border-cyan-300/45 bg-cyan-500/12 text-cyan-50";
-}
-
 export function WorkspaceOffboardingPanel({
   body,
   entries,
@@ -68,13 +61,15 @@ export function WorkspaceOffboardingPanel({
     >
       <div className="space-y-4">
         {entries.length === 0 ? (
-          <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3">
-            <strong className="font-semibold">No accessible workspaces</strong>
-            <p className="mt-1 text-sm text-[color:var(--color-muted)]">
+          <OpsEmptyState>
+            <strong className="mb-1 block font-semibold">
+              No accessible workspaces
+            </strong>
+            <p>
               Archive-readiness and export summaries will appear here after
               workspace access is provisioned.
             </p>
-          </div>
+          </OpsEmptyState>
         ) : null}
         {entries.map((entry) => (
           <OpsPanelCard tone="neutral" key={entry.workspace.id}>
@@ -135,65 +130,60 @@ export function WorkspaceOffboardingPanel({
                 Last activity: {formatDateTime(entry.directory.lastActivityAt)}
               </p>
               {entry.summary.blockerCodes.length ? (
-                <div
-                  className={`rounded-xl border p-3 ${getNoticeClass("error")}`}
+                <OpsStatusNotice
+                  title="Archive blocked"
+                  tone="error"
+                  className="mt-0"
                 >
-                  <strong className="block font-semibold">
-                    Archive blocked
-                  </strong>
-                  <p className="mt-1 text-sm">
+                  <p>
                     Resolve{" "}
                     {entry.summary.blockerCodes.map(formatCode).join(", ")}{" "}
                     before offboarding this workspace.
                   </p>
-                </div>
+                </OpsStatusNotice>
               ) : null}
               {!entry.summary.blockerCodes.length &&
               entry.summary.cautionCodes.length ? (
-                <div
-                  className={`rounded-xl border p-3 ${getNoticeClass("info")}`}
+                <OpsStatusNotice
+                  title="Review before archive"
+                  tone="info"
+                  className="mt-0"
                 >
-                  <strong className="block font-semibold">
-                    Review before archive
-                  </strong>
-                  <p className="mt-1 text-sm">
+                  <p>
                     Check{" "}
                     {entry.summary.cautionCodes.map(formatCode).join(", ")}{" "}
                     before final offboarding.
                   </p>
-                </div>
+                </OpsStatusNotice>
               ) : null}
               {!entry.summary.blockerCodes.length &&
               !entry.summary.cautionCodes.length ? (
-                <div
-                  className={`rounded-xl border p-3 ${getNoticeClass("success")}`}
+                <OpsStatusNotice
+                  title="Archive-ready"
+                  tone="success"
+                  className="mt-0"
                 >
-                  <strong className="block font-semibold">Archive-ready</strong>
-                  <p className="mt-1 text-sm">
+                  <p>
                     No active operational blockers are currently attached to
                     this workspace.
                   </p>
-                </div>
+                </OpsStatusNotice>
               ) : null}
               {entry.decommission ? (
-                <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3">
-                  <strong className="block font-semibold">
-                    Decommission scheduled
-                  </strong>
-                  <p className="mt-1 text-sm text-[color:var(--color-muted)]">
+                <OpsStatusNotice title="Decommission scheduled" tone="info">
+                  <p>
                     Retention window ends on{" "}
                     {formatDateTime(entry.decommission.executeAfter)}.
                   </p>
-                </div>
+                </OpsStatusNotice>
               ) : null}
               {entry.decommission ? (
-                <div
-                  className={`rounded-xl border p-3 ${getNoticeClass("info")}`}
+                <OpsStatusNotice
+                  title="Notice workflow"
+                  tone="info"
+                  className="mt-0"
                 >
-                  <strong className="block font-semibold">
-                    Notice workflow
-                  </strong>
-                  <p className="mt-1 text-sm">
+                  <p>
                     {entry.decommissionWorkflow.notificationCount} recorded
                     notice(s)
                     {entry.decommissionWorkflow.nextDueKind
@@ -210,16 +200,15 @@ export function WorkspaceOffboardingPanel({
                       : ""}
                     .
                   </p>
-                </div>
+                </OpsStatusNotice>
               ) : null}
               {entry.lifecycleDelivery.latestDelivery ? (
-                <div
-                  className={`rounded-xl border p-3 ${getNoticeClass("info")}`}
+                <OpsStatusNotice
+                  title="Lifecycle delivery"
+                  tone="info"
+                  className="mt-0"
                 >
-                  <strong className="block font-semibold">
-                    Lifecycle delivery
-                  </strong>
-                  <p className="mt-1 text-sm">
+                  <p>
                     Policy webhook{" "}
                     {entry.lifecycleDeliveryPolicy.webhookEnabled
                       ? "enabled"
@@ -250,15 +239,14 @@ export function WorkspaceOffboardingPanel({
                     )}
                     .
                   </p>
-                </div>
+                </OpsStatusNotice>
               ) : null}
-              <div
-                className={`rounded-xl border p-3 ${getNoticeClass("info")}`}
+              <OpsStatusNotice
+                title="Lifecycle automation"
+                tone="info"
+                className="mt-0"
               >
-                <strong className="block font-semibold">
-                  Lifecycle automation
-                </strong>
-                <p className="mt-1 text-sm">
+                <p>
                   Scheduler{" "}
                   {entry.lifecycleAutomationPolicy.enabled
                     ? "enabled"
@@ -273,14 +261,13 @@ export function WorkspaceOffboardingPanel({
                     : "disabled"}
                   .
                 </p>
-              </div>
-              <div
-                className={`rounded-xl border p-3 ${getNoticeClass(
-                  getSlaTone(entry.lifecycleSlaSummary.status)
-                )}`}
+              </OpsStatusNotice>
+              <OpsStatusNotice
+                className="mt-0"
+                title="Lifecycle SLA"
+                tone={getSlaTone(entry.lifecycleSlaSummary.status)}
               >
-                <strong className="block font-semibold">Lifecycle SLA</strong>
-                <p className="mt-1 text-sm">
+                <p>
                   {entry.lifecycleSlaSummary.message} Policy max age{" "}
                   {entry.lifecycleSlaPolicy.automationMaxAgeMinutes}m · webhook
                   threshold {entry.lifecycleSlaPolicy.webhookFailureThreshold} ·
@@ -292,7 +279,7 @@ export function WorkspaceOffboardingPanel({
                     : ""}
                   .
                 </p>
-              </div>
+              </OpsStatusNotice>
               {entry.workspace.role === "owner" ? (
                 <div className="flex flex-wrap gap-2">
                   <ActionLink

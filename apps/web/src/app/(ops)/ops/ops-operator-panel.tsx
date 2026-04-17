@@ -76,34 +76,6 @@ const alertScheduleDayLabelByValue: Record<OpsAlertScheduleDay, string> = {
   wed: "Wed"
 };
 
-function formatBannerToneClass(tone: "error" | "info" | "success") {
-  if (tone === "error") {
-    return "border-red-500/45 bg-red-500/12 text-red-50";
-  }
-
-  if (tone === "success") {
-    return "border-emerald-500/45 bg-emerald-500/12 text-emerald-50";
-  }
-
-  return "border-blue-500/35 bg-blue-500/12 text-blue-50";
-}
-
-function resolveOpsStatusBannerToneClass(tone: string) {
-  if (tone === "error" || tone === "critical") {
-    return formatBannerToneClass("error");
-  }
-
-  if (tone === "success") {
-    return formatBannerToneClass("success");
-  }
-
-  if (tone === "warning") {
-    return "border-amber-400/45 bg-amber-400/12 text-amber-100";
-  }
-
-  return formatBannerToneClass("info");
-}
-
 function resolveOpsGridClass() {
   return "grid gap-4 xl:grid-cols-6";
 }
@@ -902,15 +874,14 @@ function AlertDeliveryItem({
         <Pill>{delivery.severity}</Pill>
         <Pill>{delivery.deliveryChannel}</Pill>
       </div>
-      <div
-        className={cn(
-          "rounded-xl border p-3 text-sm",
+      <StatusBanner
+        tone={
           delivery.deliveryState === "failed"
-            ? "border-red-500/45 bg-red-500/12 text-red-50"
+            ? "error"
             : delivery.severity === "critical"
-              ? "border-blue-500/35 bg-blue-500/12 text-blue-50"
-              : "border-emerald-500/45 bg-emerald-500/12 text-emerald-50"
-        )}
+              ? "info"
+              : "success"
+        }
       >
         <strong>
           {delivery.deliveredAt
@@ -921,7 +892,7 @@ function AlertDeliveryItem({
           {delivery.failureMessage ??
             "This alert was persisted through an operator delivery channel."}
         </span>
-      </div>
+      </StatusBanner>
     </OpsPanelCard>
   );
 }
@@ -968,14 +939,7 @@ function ActiveAlertItem({
             : "Delivery active"}
         </Pill>
       </div>
-      <div
-        className={cn(
-          "rounded-xl border p-3 text-sm",
-          alert.severity === "critical"
-            ? "border-red-500/45 bg-red-500/12 text-red-50"
-            : "border-blue-500/35 bg-blue-500/12 text-blue-50"
-        )}
-      >
+      <StatusBanner tone={alert.severity === "critical" ? "error" : "info"}>
         <strong>First seen {formatDateTime(alert.firstObservedAt)}</strong>
         <span>Last seen {formatDateTime(alert.lastObservedAt)}</span>
         <span>
@@ -984,7 +948,7 @@ function ActiveAlertItem({
             ? formatDateTime(alert.lastDeliveredAt)
             : "not recorded"}
         </span>
-      </div>
+      </StatusBanner>
       <div className={resolveOpsActionRowClass()}>
         {!alert.acknowledgedAt ? (
           <OpsActionButton
@@ -2081,15 +2045,13 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                 {derivedAlerts.length ? (
                   <div className="space-y-2.5">
                     {derivedAlerts.map((alert) => (
-                      <div
-                        className={resolveOpsStatusBannerToneClass(
-                          alert.severity === "critical" ? "error" : "info"
-                        )}
+                      <StatusBanner
                         key={alert.code}
+                        tone={alert.severity === "critical" ? "error" : "info"}
                       >
                         <strong>{alert.title}</strong>
                         <span>{alert.message}</span>
-                      </div>
+                      </StatusBanner>
                     ))}
                   </div>
                 ) : (
@@ -2271,15 +2233,11 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
           >
             {queue ? (
               <>
-                <div
-                  className={resolveOpsStatusBannerToneClass(
-                    queue.status === "ok" ? "info" : "error"
-                  )}
-                >
+                <StatusBanner tone={queue.status === "ok" ? "info" : "error"}>
                   <strong>{queue.queueName}</strong>
                   <span>{queue.message}</span>
                   <span>Checked {formatDateTime(queue.checkedAt)}</span>
-                </div>
+                </StatusBanner>
                 <div className={resolveOpsPillRowClass()}>
                   <Pill>{queue.service ?? "Worker service unavailable"}</Pill>
                   <Pill>{queue.workerAdapter ?? "Unknown adapter"}</Pill>
@@ -2388,14 +2346,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
           >
             {captureAutomation ? (
               <>
-                <div
-                  className={resolveOpsStatusBannerToneClass(
-                    captureAutomationTone
-                  )}
-                >
+                <StatusBanner tone={captureAutomationTone}>
                   <strong>{captureAutomation.status}</strong>
                   <span>{captureAutomation.message}</span>
-                </div>
+                </StatusBanner>
                 <div className={resolveOpsPillRowClass()}>
                   <Pill>
                     {captureAutomation.enabled
@@ -2456,14 +2410,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
           >
             {reconciliationAutomation ? (
               <>
-                <div
-                  className={resolveOpsStatusBannerToneClass(
-                    reconciliationAutomationTone
-                  )}
-                >
+                <StatusBanner tone={reconciliationAutomationTone}>
                   <strong>{reconciliationAutomation.status}</strong>
                   <span>{reconciliationAutomation.message}</span>
-                </div>
+                </StatusBanner>
                 <div className={resolveOpsPillRowClass()}>
                   <Pill>
                     Interval{" "}
@@ -2560,12 +2510,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                     </span>
                   </StatusBanner>
                 ) : null}
-                <div
-                  className={resolveOpsStatusBannerToneClass(alertRoutingTone)}
-                >
+                <StatusBanner tone={alertRoutingTone}>
                   <strong>{alertRouting.status}</strong>
                   <span>{alertRouting.message}</span>
-                </div>
+                </StatusBanner>
                 <div className={resolveOpsPillRowClass()}>
                   <Pill>
                     {alertRouting.webhookConfigured
@@ -2666,12 +2614,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                     </span>
                   </StatusBanner>
                 ) : null}
-                <div
-                  className={resolveOpsStatusBannerToneClass(alertScheduleTone)}
-                >
+                <StatusBanner tone={alertScheduleTone}>
                   <strong>{alertSchedule.status}</strong>
                   <span>{alertSchedule.message}</span>
-                </div>
+                </StatusBanner>
                 <div className={resolveOpsPillRowClass()}>
                   <Pill>
                     {alertSchedule.webhookConfigured
@@ -2874,14 +2820,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                     </span>
                   </StatusBanner>
                 ) : null}
-                <div
-                  className={resolveOpsStatusBannerToneClass(
-                    alertEscalationTone
-                  )}
-                >
+                <StatusBanner tone={alertEscalationTone}>
                   <strong>{alertEscalation.status}</strong>
                   <span>{alertEscalation.message}</span>
-                </div>
+                </StatusBanner>
                 <div className={resolveOpsPillRowClass()}>
                   <Pill>
                     {alertEscalation.webhookConfigured

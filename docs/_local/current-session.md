@@ -526,3 +526,21 @@ Finish the production-grade consistency phase on remaining high-traffic Studio/O
 - Continue a final ops audit for duplicated command-row helpers before declaring this phase complete:
   - table shell treatments in `ops-fleet-client.tsx` are already mostly stable;
   - move only if the same non-utility shell contract repeats outside these touched files.
+
+## Latest Checkpoint (Ops Operator Notice Polishing)
+- Completed a focused production-grade Ops cleanup in high-density command surfaces:
+  - `apps/web/src/app/(ops)/ops/ops-operator-panel.tsx`:
+    - removed remaining inline banner class shells from alert/detail sections;
+    - replaced those sections with shared `StatusBanner` variants.
+  - `apps/web/src/components/workspace-offboarding-panel.tsx`:
+    - removed repeated manual notice shells and color helpers;
+    - replaced with shared `OpsStatusNotice` / `OpsEmptyState`.
+- Kept behavior unchanged; only visual shell composition and notice primitives were standardized.
+
+## Verification (Ops Operator Notice Polishing)
+- `pnpm exec prettier --write "apps/web/src/app/(ops)/ops/ops-operator-panel.tsx" "apps/web/src/components/workspace-offboarding-panel.tsx"`
+- `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+- `pnpm --filter @ai-nft-forge/web build`
+
+## Next Follow-up
+- Audit any remaining duplicated, high-friction command-row blocks in `ops` surfaces for potential shared `Packages/ui` extraction; if no direct repetition exists, keep the current restrained layout and move to final production polish pass on public/storefront/creator balance.
