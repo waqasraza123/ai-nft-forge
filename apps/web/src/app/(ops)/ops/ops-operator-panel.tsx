@@ -9,8 +9,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import {
-  StatusBanner,
   ActionLink,
+  StatusBanner,
   cn,
   FieldLabel,
   FieldStack,
@@ -19,9 +19,14 @@ import {
   OpsCommandModule,
   OpsCommandSection,
   OpsCommandSignal,
+  OpsCommandSignalGrid,
   OpsCommandTone,
   OpsPanelCard,
   OpsEmptyState,
+  OpsGrid,
+  OpsSettingsGrid,
+  OpsActionRow,
+  OpsPillRow,
   OpsStatusNotice,
   MetricTile,
   Pill
@@ -76,32 +81,12 @@ const alertScheduleDayLabelByValue: Record<OpsAlertScheduleDay, string> = {
   wed: "Wed"
 };
 
-function resolveOpsGridClass() {
-  return "grid gap-4 xl:grid-cols-6";
-}
-
-function resolveOpsSettingsGridClass() {
-  return "grid gap-3 md:grid-cols-2 xl:grid-cols-4";
-}
-
 function resolveOpsCheckboxClass() {
   return "flex items-center gap-2.5 text-sm text-[color:var(--color-text)]";
 }
 
 function resolveOpsCheckboxInputClass() {
   return "size-4 rounded border border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]";
-}
-
-function resolveOpsPillRowClass() {
-  return "flex flex-wrap gap-2";
-}
-
-function resolveOpsActionRowClass() {
-  return "mt-2 flex flex-wrap gap-2";
-}
-
-function resolveOpsCommandSignalGridClass() {
-  return "grid gap-4 xl:grid-cols-3";
 }
 
 function formatDateTime(value: string) {
@@ -570,7 +555,7 @@ function ActivityItem({
         </div>
       ) : null}
       {onRetry ? (
-        <div className={resolveOpsActionRowClass()}>
+        <OpsActionRow>
           <OpsActionButton
             disabled={retrying}
             onClick={() => {
@@ -580,7 +565,7 @@ function ActivityItem({
           >
             {retrying ? "Retrying…" : "Retry generation"}
           </OpsActionButton>
-        </div>
+        </OpsActionRow>
       ) : null}
     </OpsPanelCard>
   );
@@ -787,7 +772,7 @@ function ActiveAlertItem({
             : "not recorded"}
         </span>
       </StatusBanner>
-      <div className={resolveOpsActionRowClass()}>
+      <OpsActionRow>
         {!alert.acknowledgedAt ? (
           <OpsActionButton
             disabled={acknowledging}
@@ -837,7 +822,7 @@ function ActiveAlertItem({
             {clearingMute ? "Clearing mute…" : "Clear mute"}
           </OpsActionButton>
         ) : null}
-      </div>
+      </OpsActionRow>
     </OpsPanelCard>
   );
 }
@@ -860,7 +845,7 @@ function ActiveMuteItem({
         </div>
         <Pill>mute</Pill>
       </div>
-      <div className={resolveOpsActionRowClass()}>
+      <OpsActionRow>
         <OpsActionButton
           disabled={clearing}
           onClick={() => {
@@ -870,7 +855,7 @@ function ActiveMuteItem({
         >
           {clearing ? "Clearing mute…" : "Clear mute"}
         </OpsActionButton>
-      </div>
+      </OpsActionRow>
     </OpsPanelCard>
   );
 }
@@ -885,10 +870,6 @@ function resolveOpsCaptureWindowTone(tone: OpsCommandTone) {
   }
 
   return "border-[color:var(--color-line)]";
-}
-
-function resolveOpsCommandWindowClass() {
-  return "grid gap-2";
 }
 
 export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
@@ -1723,7 +1704,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
           {notice.message}
         </OpsStatusNotice>
       ) : null}
-      <div className={resolveOpsCommandSignalGridClass()}>
+      <OpsCommandSignalGrid>
         <OpsCommandSignal
           detail={`${activeAlerts.length} persisted alerts · ${openIssues.length} reconciliation issues`}
           label="Needs attention"
@@ -1826,13 +1807,13 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
           tone={historyTone}
           value={history?.status ?? "unavailable"}
         />
-      </div>
+      </OpsCommandSignalGrid>
       <OpsCommandSection
         description="Critical alerts and open reconciliation drift stay at the top of the command surface so an operator can see what is broken and act immediately."
         eyebrow="Attention now"
         title="Triage and remediation"
       >
-        <div className={resolveOpsGridClass()}>
+        <OpsGrid>
           <OpsCommandModule
             description={
               observability
@@ -1998,7 +1979,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       </div>
                       <Pill>{issue.severity}</Pill>
                     </div>
-                    <div className={resolveOpsPillRowClass()}>
+                    <OpsPillRow>
                       <Pill>{issue.kind}</Pill>
                       <Pill>
                         Detected {formatDateTime(issue.lastDetectedAt)}
@@ -2006,7 +1987,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       <Pill>
                         {issue.repairable ? "Repairable" : "Manual only"}
                       </Pill>
-                    </div>
+                    </OpsPillRow>
                     <div className="grid gap-1 text-xs text-[color:var(--color-muted)] md:grid-cols-2">
                       {Object.entries(issue.detail).map(([key, value]) => (
                         <span key={key}>
@@ -2014,7 +1995,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                         </span>
                       ))}
                     </div>
-                    <div className={resolveOpsActionRowClass()}>
+                    <OpsActionRow>
                       <OpsActionButton
                         disabled={
                           !issue.repairable ||
@@ -2040,7 +2021,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                           ? "Ignoring…"
                           : "Ignore issue"}
                       </OpsActionButton>
-                    </div>
+                    </OpsActionRow>
                   </OpsPanelCard>
                 ))}
               </div>
@@ -2050,14 +2031,14 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
               </OpsEmptyState>
             )}
           </OpsCommandModule>
-        </div>
+        </OpsGrid>
       </OpsCommandSection>
       <OpsCommandSection
         description="Queue state, active generation work, retryable failures, and recurring automation health stay grouped together for rapid operational scanning."
         eyebrow="Current system state"
         title="Runtime and automation"
       >
-        <div className={resolveOpsGridClass()}>
+        <OpsGrid>
           <OpsCommandModule
             description={
               queue?.status === "ok"
@@ -2076,7 +2057,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                   <span>{queue.message}</span>
                   <span>Checked {formatDateTime(queue.checkedAt)}</span>
                 </StatusBanner>
-                <div className={resolveOpsPillRowClass()}>
+                <OpsPillRow>
                   <Pill>{queue.service ?? "Worker service unavailable"}</Pill>
                   <Pill>{queue.workerAdapter ?? "Unknown adapter"}</Pill>
                   <Pill>
@@ -2084,7 +2065,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       ? `${queue.concurrency}x concurrency`
                       : "No concurrency signal"}
                   </Pill>
-                </div>
+                </OpsPillRow>
                 {queue.counts ? (
                   <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
                     <MetricTile
@@ -2188,7 +2169,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                   <strong>{captureAutomation.status}</strong>
                   <span>{captureAutomation.message}</span>
                 </StatusBanner>
-                <div className={resolveOpsPillRowClass()}>
+                <OpsPillRow>
                   <Pill>
                     {captureAutomation.enabled
                       ? "Scheduler enabled"
@@ -2225,7 +2206,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       ? `${formatDurationSeconds(captureAutomation.lastCaptureAgeSeconds)} ago`
                       : "n/a"}
                   </Pill>
-                </div>
+                </OpsPillRow>
               </>
             ) : null}
           </OpsCommandModule>
@@ -2252,7 +2233,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                   <strong>{reconciliationAutomation.status}</strong>
                   <span>{reconciliationAutomation.message}</span>
                 </StatusBanner>
-                <div className={resolveOpsPillRowClass()}>
+                <OpsPillRow>
                   <Pill>
                     Interval{" "}
                     {reconciliationAutomation.intervalSeconds !== null
@@ -2290,7 +2271,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       ? `${formatDurationSeconds(reconciliationAutomation.lastRunAgeSeconds)} ago`
                       : "n/a"}
                   </Pill>
-                </div>
+                </OpsPillRow>
               </>
             ) : null}
           </OpsCommandModule>
@@ -2320,14 +2301,14 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
               </OpsEmptyState>
             )}
           </OpsCommandModule>
-        </div>
+        </OpsGrid>
       </OpsCommandSection>
       <OpsCommandSection
         description="Alert routing, schedule, escalation, and mute state remain grouped as trustworthy control modules rather than scattered diagnostic cards."
         eyebrow="Control and policy"
         title="Alert delivery controls"
       >
-        <div className={resolveOpsGridClass()}>
+        <OpsGrid>
           <OpsCommandModule
             description={
               alertRouting?.message ??
@@ -2352,7 +2333,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                   <strong>{alertRouting.status}</strong>
                   <span>{alertRouting.message}</span>
                 </StatusBanner>
-                <div className={resolveOpsPillRowClass()}>
+                <OpsPillRow>
                   <Pill>
                     {alertRouting.webhookConfigured
                       ? "Webhook configured"
@@ -2366,8 +2347,8 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       ? formatDateTime(alertRouting.policy.updatedAt)
                       : "default"}
                   </Pill>
-                </div>
-                <div className={resolveOpsActionRowClass()}>
+                </OpsPillRow>
+                <OpsActionRow>
                   <OpsActionButton
                     disabled={
                       !canManageOpsPolicy ||
@@ -2428,7 +2409,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                         : "Use default"}
                     </OpsActionButton>
                   ) : null}
-                </div>
+                </OpsActionRow>
               </>
             ) : null}
           </OpsCommandModule>
@@ -2456,7 +2437,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                   <strong>{alertSchedule.status}</strong>
                   <span>{alertSchedule.message}</span>
                 </StatusBanner>
-                <div className={resolveOpsPillRowClass()}>
+                <OpsPillRow>
                   <Pill>
                     {alertSchedule.webhookConfigured
                       ? "Webhook configured"
@@ -2486,8 +2467,8 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       alertScheduleDraft.timezone}
                   </Pill>
                   <Pill>Local now {alertSchedule.localTimeLabel ?? "n/a"}</Pill>
-                </div>
-                <div className={resolveOpsSettingsGridClass()}>
+                </OpsPillRow>
+                <OpsSettingsGrid>
                   <FieldStack>
                     <FieldLabel>Timezone</FieldLabel>
                     <InputField
@@ -2561,8 +2542,8 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                     />
                     <span>All day on active days</span>
                   </label>
-                </div>
-                <div className={resolveOpsPillRowClass()}>
+                </OpsSettingsGrid>
+                <OpsPillRow>
                   {opsAlertScheduleDayValues.map((activeDay) => {
                     const selected =
                       alertScheduleDraft.activeDays.includes(activeDay);
@@ -2600,8 +2581,8 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       </OpsActionButton>
                     );
                   })}
-                </div>
-                <div className={resolveOpsActionRowClass()}>
+                </OpsPillRow>
+                <OpsActionRow>
                   <OpsActionButton
                     disabled={
                       !canManageOpsPolicy || savingAlertScheduleAction !== null
@@ -2631,7 +2612,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                         : "Use default"}
                     </OpsActionButton>
                   ) : null}
-                </div>
+                </OpsActionRow>
               </>
             ) : null}
           </OpsCommandModule>
@@ -2659,7 +2640,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                   <strong>{alertEscalation.status}</strong>
                   <span>{alertEscalation.message}</span>
                 </StatusBanner>
-                <div className={resolveOpsPillRowClass()}>
+                <OpsPillRow>
                   <Pill>
                     {alertEscalation.webhookConfigured
                       ? "Webhook configured"
@@ -2690,8 +2671,8 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       ? formatDateTime(alertEscalation.policy.updatedAt)
                       : "default"}
                   </Pill>
-                </div>
-                <div className={resolveOpsSettingsGridClass()}>
+                </OpsPillRow>
+                <OpsSettingsGrid>
                   <FieldStack>
                     <FieldLabel>First reminder (minutes)</FieldLabel>
                     <InputField
@@ -2730,8 +2711,8 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                       value={alertEscalationDraft.repeatReminderIntervalMinutes}
                     />
                   </FieldStack>
-                </div>
-                <div className={resolveOpsActionRowClass()}>
+                </OpsSettingsGrid>
+                <OpsActionRow>
                   <OpsActionButton
                     disabled={
                       !canManageOpsPolicy ||
@@ -2762,7 +2743,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                         : "Use default"}
                     </OpsActionButton>
                   ) : null}
-                </div>
+                </OpsActionRow>
               </>
             ) : null}
           </OpsCommandModule>
@@ -2794,14 +2775,14 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
               </OpsEmptyState>
             )}
           </OpsCommandModule>
-        </div>
+        </OpsGrid>
       </OpsCommandSection>
       <OpsCommandSection
         description="Historical captures and delivery records stay lower on the page to support diagnosis without crowding the live attention and control zones."
         eyebrow="Evidence and history"
         title="Operational trail"
       >
-        <div className={resolveOpsGridClass()}>
+        <OpsGrid>
           <OpsCommandModule
             description={
               history?.status === "ok"
@@ -2859,7 +2840,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
               </OpsEmptyState>
             )}
           </OpsCommandModule>
-        </div>
+        </OpsGrid>
       </OpsCommandSection>
     </div>
   );

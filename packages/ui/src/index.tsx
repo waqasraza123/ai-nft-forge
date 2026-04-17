@@ -447,6 +447,26 @@ type OpsCommandModuleProps = PropsWithChildren<{
   title: string;
 }>;
 
+type OpsGridProps = PropsWithChildren<{
+  className?: string;
+}>;
+
+type OpsSettingsGridProps = PropsWithChildren<{
+  className?: string;
+}>;
+
+type OpsPillRowProps = PropsWithChildren<{
+  className?: string;
+}>;
+
+type OpsActionRowProps = PropsWithChildren<{
+  className?: string;
+}>;
+
+type OpsCommandSignalGridProps = PropsWithChildren<{
+  className?: string;
+}>;
+
 type ActionRowProps = PropsWithChildren<{
   className?: string;
   compact?: boolean;
@@ -864,6 +884,41 @@ export function OpsCommandSignal({
       <span className="text-sm text-[color:var(--color-muted)]">{detail}</span>
       <span className="text-xs text-[color:var(--color-muted)]">{meta}</span>
     </OpsPanelCard>
+  );
+}
+
+export function OpsGrid({ children, className }: OpsGridProps) {
+  return (
+    <div className={cn("grid gap-4 xl:grid-cols-6", className)}>{children}</div>
+  );
+}
+
+export function OpsSettingsGrid({ children, className }: OpsSettingsGridProps) {
+  return (
+    <div className={cn("grid gap-3 md:grid-cols-2 xl:grid-cols-4", className)}>
+      {children}
+    </div>
+  );
+}
+
+export function OpsPillRow({ children, className }: OpsPillRowProps) {
+  return (
+    <div className={cn("flex flex-wrap gap-2", className)}>{children}</div>
+  );
+}
+
+export function OpsActionRow({ children, className }: OpsActionRowProps) {
+  return (
+    <div className={cn("mt-2 flex flex-wrap gap-2", className)}>{children}</div>
+  );
+}
+
+export function OpsCommandSignalGrid({
+  children,
+  className
+}: OpsCommandSignalGridProps) {
+  return (
+    <div className={cn("grid gap-4 xl:grid-cols-3", className)}>{children}</div>
   );
 }
 

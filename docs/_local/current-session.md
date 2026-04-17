@@ -3,6 +3,21 @@
 ## Date
 2026-04-17
 
+## Latest Checkpoint (Ops Operator Surface Finalization)
+- Completed the current production-grade ops command-shell sweep by fully adopting shared ops layout primitives in `apps/web/src/app/(ops)/ops/ops-operator-panel.tsx`:
+  - Added `OpsGrid`, `OpsSettingsGrid`, `OpsPillRow`, `OpsActionRow`, and `OpsCommandSignalGrid` to `packages/ui/src/index.tsx`.
+  - Removed route-local command layout helpers and switched all corresponding command panel rows/signals/modules to shared components.
+  - Kept checkbox policy/edit controls intentionally local where shared controls are not yet specialized.
+  - Removed one dead unused helper (`resolveOpsCommandWindowClass`) to complete the cleanup.
+- Verification:
+  - `pnpm exec prettier --write packages/ui/src/index.tsx apps/web/src/app/'(ops)'/ops/ops-operator-panel.tsx`
+  - `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+  - `pnpm --filter @ai-nft-forge/web build`
+
+## Current Objective
+- Shared UI Primitive Consolidation
+- Current step: finalize the remaining Studio/Ops route-local shell parity sweep (`studio-assets-client.tsx`, `studio-commerce-client.tsx`, legacy command surfaces) and then complete production UI sign-off for responsive rhythm and art-direction consistency.
+
 ## Latest Checkpoint (Public Storefront Finalization)
 - Completed the single production-grade storefront finish pass on the public campaign/collection routes introduced in the previous art-direction cycle.
 - Added reusable Storefront primitives to `packages/ui/src/index.tsx`:
@@ -706,3 +721,27 @@ Finish the production-grade consistency phase on remaining high-traffic Studio/O
   - `pnpm --filter @ai-nft-forge/ui typecheck`
   - `pnpm --filter @ai-nft-forge/web build`
 - Current phase status: Shared UI Primitive Consolidation reaches a production-ready baseline for Studio assets/commerce command surfaces; remaining work is a final visual parity audit of any other legacy shell variants outside these two routes.
+
+## Latest Checkpoint (Ops Command Primitive Extraction)
+- Completed the next production-grade `Shared UI Primitive Consolidation` step in `packages/ui`:
+  - Added reusable `OpsActionButton`, `OpsCommandSection`, `OpsCommandModule`, and `OpsCommandSignal` in `packages/ui/src/index.tsx` (with `OpsCommandTone`).
+  - Rewired `apps/web/src/app/(ops)/ops/ops-operator-panel.tsx` to consume these shared components and remove duplicated local command-shell helpers.
+- Verification:
+  - `pnpm exec prettier --write "apps/web/src/app/\\(ops\\)/ops/ops-operator-panel.tsx" packages/ui/src/index.tsx`
+  - `pnpm --filter @ai-nft-forge/ui typecheck`
+  - `pnpm --filter @ai-nft-forge/web build`
+- Current phase status: `Shared UI Primitive Consolidation`
+- Current phase step: final visual parity sweep of remaining Studio/Ops shells before release-ready stabilization, then no-additional decoration pass on ops and a final art-direction acceptance review.
+
+## Latest Checkpoint (Ops Surface Shell Consolidation)
+- Advanced the same `Shared UI Primitive Consolidation` track by normalizing residual Ops route shell layout to shared primitives:
+  - `apps/web/src/app/(ops)/ops/page.tsx`
+    - Replaced the command-center hero shell with `SurfacePanel` instead of local bordered section markup.
+  - `apps/web/src/app/(ops)/ops/workspaces/page.tsx`
+    - Replaced ad-hoc 2-column grid shell with shared `SurfaceGrid` for card rail layout.
+- Verification:
+  - `pnpm exec prettier --write "apps/web/src/app/\\(ops\\)/ops/page.tsx" "apps/web/src/app/\\(ops\\)/ops/workspaces/page.tsx"`
+  - `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+  - `pnpm --filter @ai-nft-forge/web build`
+- Current phase status: `Shared UI Primitive Consolidation`
+- Current phase step: continue the Ops/Studio final parity pass on high-traffic detail panels, then lock milestone and run final accessibility/visual review notes.
