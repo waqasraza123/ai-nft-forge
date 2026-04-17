@@ -616,3 +616,22 @@ Finish the production-grade consistency phase on remaining high-traffic Studio/O
   - `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
   - `pnpm --filter @ai-nft-forge/web build`
 - Current phase status: `Shared UI Primitive Consolidation` remains active; next target is a final Studio/Ops cross-surface spacing and rhythm pass after all high-traffic routes are free of duplicate local shell patterns.
+
+## Latest Checkpoint (Studio Settings Control Consolidation)
+- Completed a large production-grade form-consolidation step in `apps/web/src/app/(studio)/studio/settings/studio-settings-client.tsx`:
+  - Replaced legacy grid-form fields with shared `FieldStack` + `FieldLabel`.
+  - Migrated all settings, brand, lifecycle, retention, invitation, role escalation, SLA, decommission, and workspace-create controls from native `input` / `select` / `textarea` to:
+    - `InputField`
+    - `SelectField`
+    - `TextAreaField`
+  - Kept all settings and governance behavior unchanged (save actions, workspace switches, lifecycle state transitions, escalation workflows, and offboarding/decommission actions).
+- Verification:
+  - `pnpm exec prettier --write apps/web/src/app/'(studio)'/studio/settings/studio-settings-client.tsx`
+  - `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+  - `pnpm --filter @ai-nft-forge/web build`
+- Current phase status: `Shared UI Primitive Consolidation` advanced; studio routes now use shared form controls in the highest-complexity settings surface.
+
+## Current Next Follow-up
+- Remaining work before production-complete quality is:
+  - One final sweep for any remaining non-shared spacing/notice shells outside current hot paths (`studio-commerce-client.tsx`, `studio-assets-client.tsx`, ops command surfaces).
+  - Final acceptance pass against responsive rhythm and label/action density across public/storefront + studio settings.

@@ -64,20 +64,25 @@ import {
   ActionRow,
   EmptyState as SettingsEmptyState,
   FormPanel,
+  FieldLabel,
+  FieldStack,
   MetricTile,
   PanelHeading as SettingsPanelHeading,
   PageShell,
   Pill,
   RailCard as SettingsRailCard,
+  InputField,
   RecordActions as SettingsRecordActions,
   RecordCard as SettingsRecordCard,
   RecordCopy as SettingsRecordCopy,
   RecordList as SettingsRecordList,
   SectionHeading as SettingsSectionHeading,
   SignalCard as SettingsSignalCard,
+  SelectField,
   SurfaceCard,
   SurfaceGrid,
   StatusBanner,
+  TextAreaField,
   cn
 } from "@ai-nft-forge/ui";
 
@@ -2306,11 +2311,9 @@ export function StudioSettingsClient({
                             lead="The workspace name and slug define the current administration context across Studio and Ops."
                             title="Workspace identity"
                           />
-                          <label className="grid gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                              Workspace name
-                            </span>
-                            <input
+                          <FieldStack>
+                            <FieldLabel>Workspace name</FieldLabel>
+                            <InputField
                               className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={120}
                               onChange={(event) => {
@@ -2323,12 +2326,10 @@ export function StudioSettingsClient({
                               required
                               value={editorState.workspaceName}
                             />
-                          </label>
-                          <label className="grid gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                              Workspace slug
-                            </span>
-                            <input
+                          </FieldStack>
+                          <FieldStack>
+                            <FieldLabel>Workspace slug</FieldLabel>
+                            <InputField
                               className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={80}
                               onChange={(event) => {
@@ -2342,18 +2343,18 @@ export function StudioSettingsClient({
                               required
                               value={editorState.workspaceSlug}
                             />
-                          </label>
+                          </FieldStack>
                         </FormPanel>
                         <FormPanel>
                           <SettingsPanelHeading
                             lead="These values govern future decommission schedules and offboarding requirements for this workspace."
                             title="Retention defaults"
                           />
-                          <label className="grid gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                          <FieldStack>
+                            <FieldLabel>
                               Default decommission retention
-                            </span>
-                            <input
+                            </FieldLabel>
+                            <InputField
                               className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               max={365}
                               min={editorState.minimumDecommissionRetentionDays}
@@ -2371,12 +2372,12 @@ export function StudioSettingsClient({
                                 editorState.defaultDecommissionRetentionDays
                               }
                             />
-                          </label>
-                          <label className="grid gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                          </FieldStack>
+                          <FieldStack>
+                            <FieldLabel>
                               Minimum decommission retention
-                            </span>
-                            <input
+                            </FieldLabel>
+                            <InputField
                               className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               max={365}
                               min={7}
@@ -2398,12 +2399,10 @@ export function StudioSettingsClient({
                                 editorState.minimumDecommissionRetentionDays
                               }
                             />
-                          </label>
-                          <label className="grid gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                              Require decommission reason
-                            </span>
-                            <select
+                          </FieldStack>
+                          <FieldStack>
+                            <FieldLabel>Require decommission reason</FieldLabel>
+                            <SelectField
                               className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               onChange={(event) => {
                                 setEditorState((current) => ({
@@ -2420,19 +2419,17 @@ export function StudioSettingsClient({
                             >
                               <option value="optional">Optional</option>
                               <option value="required">Required</option>
-                            </select>
-                          </label>
+                            </SelectField>
+                          </FieldStack>
                         </FormPanel>
                         <FormPanel>
                           <SettingsPanelHeading
                             lead="Delivery controls decide whether reminder and decommission events fan out to configured webhook providers in addition to the audit-log leg."
                             title="Lifecycle delivery policy"
                           />
-                          <label className="grid gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                              Lifecycle webhook delivery
-                            </span>
-                            <select
+                          <FieldStack>
+                            <FieldLabel>Lifecycle webhook delivery</FieldLabel>
+                            <SelectField
                               className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               onChange={(event) => {
                                 setEditorState((current) => ({
@@ -2449,13 +2446,13 @@ export function StudioSettingsClient({
                             >
                               <option value="disabled">Disabled</option>
                               <option value="enabled">Enabled</option>
-                            </select>
-                          </label>
-                          <label className="grid gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                            </SelectField>
+                          </FieldStack>
+                          <FieldStack>
+                            <FieldLabel>
                               Invitation reminder delivery
-                            </span>
-                            <select
+                            </FieldLabel>
+                            <SelectField
                               className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               disabled={!editorState.webhookEnabled}
                               onChange={(event) => {
@@ -2473,13 +2470,13 @@ export function StudioSettingsClient({
                             >
                               <option value="enabled">Enabled</option>
                               <option value="disabled">Disabled</option>
-                            </select>
-                          </label>
-                          <label className="grid gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                            </SelectField>
+                          </FieldStack>
+                          <FieldStack>
+                            <FieldLabel>
                               Decommission notice delivery
-                            </span>
-                            <select
+                            </FieldLabel>
+                            <SelectField
                               className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               disabled={!editorState.webhookEnabled}
                               onChange={(event) => {
@@ -2497,8 +2494,8 @@ export function StudioSettingsClient({
                             >
                               <option value="enabled">Enabled</option>
                               <option value="disabled">Disabled</option>
-                            </select>
-                          </label>
+                            </SelectField>
+                          </FieldStack>
                           <ActionRow compact>
                             <Pill>
                               Webhook{" "}
@@ -2775,11 +2772,9 @@ export function StudioSettingsClient({
                             title="Brand routing"
                           />
                           {settings?.brands.length ? (
-                            <label className="grid gap-1.5">
-                              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                                Editing brand
-                              </span>
-                              <select
+                            <FieldStack>
+                              <FieldLabel>Editing brand</FieldLabel>
+                              <SelectField
                                 className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                                 onChange={(event) => {
                                   setSelectedBrandId(
@@ -2793,14 +2788,12 @@ export function StudioSettingsClient({
                                     {brand.name} · /brands/{brand.slug}
                                   </option>
                                 ))}
-                              </select>
-                            </label>
+                              </SelectField>
+                            </FieldStack>
                           ) : null}
-                          <label className="grid gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                              Brand name
-                            </span>
-                            <input
+                          <FieldStack>
+                            <FieldLabel>Brand name</FieldLabel>
+                            <InputField
                               className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={120}
                               onChange={(event) => {
@@ -2813,12 +2806,10 @@ export function StudioSettingsClient({
                               required
                               value={editorState.brandName}
                             />
-                          </label>
-                          <label className="grid gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                              Brand slug
-                            </span>
-                            <input
+                          </FieldStack>
+                          <FieldStack>
+                            <FieldLabel>Brand slug</FieldLabel>
+                            <InputField
                               className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={80}
                               onChange={(event) => {
@@ -2832,12 +2823,10 @@ export function StudioSettingsClient({
                               required
                               value={editorState.brandSlug}
                             />
-                          </label>
-                          <label className="grid gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                              Custom domain
-                            </span>
-                            <input
+                          </FieldStack>
+                          <FieldStack>
+                            <FieldLabel>Custom domain</FieldLabel>
+                            <InputField
                               className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={253}
                               onChange={(event) => {
@@ -2849,12 +2838,10 @@ export function StudioSettingsClient({
                               placeholder="collections.example.com"
                               value={editorState.customDomain}
                             />
-                          </label>
-                          <label className="grid gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                              Theme preset
-                            </span>
-                            <select
+                          </FieldStack>
+                          <FieldStack>
+                            <FieldLabel>Theme preset</FieldLabel>
+                            <SelectField
                               className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               onChange={(event) => {
                                 setEditorState((current) => ({
@@ -2874,14 +2861,12 @@ export function StudioSettingsClient({
                               <option value="midnight_launch">
                                 Midnight launch
                               </option>
-                            </select>
-                          </label>
-                          <label className="grid gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                              Accent color
-                            </span>
+                            </SelectField>
+                          </FieldStack>
+                          <FieldStack>
+                            <FieldLabel>Accent color</FieldLabel>
                             <div className="color-input-row">
-                              <input
+                              <InputField
                                 className="color-swatch-input"
                                 onChange={(event) => {
                                   setEditorState((current) => ({
@@ -2892,7 +2877,7 @@ export function StudioSettingsClient({
                                 type="color"
                                 value={editorState.accentColor}
                               />
-                              <input
+                              <InputField
                                 className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                                 maxLength={7}
                                 onChange={(event) => {
@@ -2906,18 +2891,16 @@ export function StudioSettingsClient({
                                 value={editorState.accentColor}
                               />
                             </div>
-                          </label>
+                          </FieldStack>
                         </section>
                         <section className="grid gap-4 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)]/60 p-4">
                           <SettingsPanelHeading
                             lead="These fields shape how the public brand route frames published collection releases."
                             title="Landing narrative"
                           />
-                          <label className="grid gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                              Landing headline
-                            </span>
-                            <input
+                          <FieldStack>
+                            <FieldLabel>Landing headline</FieldLabel>
+                            <InputField
                               className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={120}
                               onChange={(event) => {
@@ -2930,12 +2913,10 @@ export function StudioSettingsClient({
                               required
                               value={editorState.landingHeadline}
                             />
-                          </label>
-                          <label className="grid gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                              Landing description
-                            </span>
-                            <textarea
+                          </FieldStack>
+                          <FieldStack>
+                            <FieldLabel>Landing description</FieldLabel>
+                            <TextAreaField
                               className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] min-h-[10rem] resize-y focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={280}
                               onChange={(event) => {
@@ -2947,12 +2928,10 @@ export function StudioSettingsClient({
                               rows={5}
                               value={editorState.landingDescription}
                             />
-                          </label>
-                          <label className="grid gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                              Wordmark
-                            </span>
-                            <input
+                          </FieldStack>
+                          <FieldStack>
+                            <FieldLabel>Wordmark</FieldLabel>
+                            <InputField
                               className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={40}
                               onChange={(event) => {
@@ -2964,12 +2943,10 @@ export function StudioSettingsClient({
                               placeholder="Forge Editions"
                               value={editorState.wordmark}
                             />
-                          </label>
-                          <label className="grid gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                              Hero kicker
-                            </span>
-                            <input
+                          </FieldStack>
+                          <FieldStack>
+                            <FieldLabel>Hero kicker</FieldLabel>
+                            <InputField
                               className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={60}
                               onChange={(event) => {
@@ -2981,12 +2958,10 @@ export function StudioSettingsClient({
                               placeholder="Season three launch"
                               value={editorState.heroKicker}
                             />
-                          </label>
-                          <label className="grid gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                              Story headline
-                            </span>
-                            <input
+                          </FieldStack>
+                          <FieldStack>
+                            <FieldLabel>Story headline</FieldLabel>
+                            <InputField
                               className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={120}
                               onChange={(event) => {
@@ -2998,12 +2973,10 @@ export function StudioSettingsClient({
                               placeholder="A collectible portrait program built for premium launches."
                               value={editorState.storyHeadline}
                             />
-                          </label>
-                          <label className="grid gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                              Story body
-                            </span>
-                            <textarea
+                          </FieldStack>
+                          <FieldStack>
+                            <FieldLabel>Story body</FieldLabel>
+                            <TextAreaField
                               className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] min-h-[10rem] resize-y focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={600}
                               onChange={(event) => {
@@ -3015,18 +2988,16 @@ export function StudioSettingsClient({
                               rows={5}
                               value={editorState.storyBody}
                             />
-                          </label>
+                          </FieldStack>
                         </section>
                         <section className="grid gap-4 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)]/60 p-4">
                           <SettingsPanelHeading
                             lead="Keep featured release language and CTA labels aligned with the current brand voice."
                             title="Storefront actions"
                           />
-                          <label className="grid gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                              Featured release label
-                            </span>
-                            <input
+                          <FieldStack>
+                            <FieldLabel>Featured release label</FieldLabel>
+                            <InputField
                               className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={40}
                               onChange={(event) => {
@@ -3039,12 +3010,10 @@ export function StudioSettingsClient({
                               required
                               value={editorState.featuredReleaseLabel}
                             />
-                          </label>
-                          <label className="grid gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                              Primary CTA label
-                            </span>
-                            <input
+                          </FieldStack>
+                          <FieldStack>
+                            <FieldLabel>Primary CTA label</FieldLabel>
+                            <InputField
                               className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={40}
                               onChange={(event) => {
@@ -3056,12 +3025,10 @@ export function StudioSettingsClient({
                               placeholder="View featured release"
                               value={editorState.primaryCtaLabel}
                             />
-                          </label>
-                          <label className="grid gap-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                              Secondary CTA label
-                            </span>
-                            <input
+                          </FieldStack>
+                          <FieldStack>
+                            <FieldLabel>Secondary CTA label</FieldLabel>
+                            <InputField
                               className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={40}
                               onChange={(event) => {
@@ -3073,7 +3040,7 @@ export function StudioSettingsClient({
                               placeholder="Browse archive"
                               value={editorState.secondaryCtaLabel}
                             />
-                          </label>
+                          </FieldStack>
                           <div className="flex flex-wrap items-center gap-2">
                             <Pill>
                               {editorState.brandSlug
@@ -3206,11 +3173,9 @@ export function StudioSettingsClient({
                       disabled={!canEditCurrentWorkspace || isCreatingBrand}
                     >
                       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                        <label className="grid gap-1.5">
-                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                            Brand name
-                          </span>
-                          <input
+                        <FieldStack>
+                          <FieldLabel>Brand name</FieldLabel>
+                          <InputField
                             className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                             maxLength={120}
                             onChange={(event) => {
@@ -3223,12 +3188,10 @@ export function StudioSettingsClient({
                             required
                             value={newBrandState.brandName}
                           />
-                        </label>
-                        <label className="grid gap-1.5">
-                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                            Brand slug
-                          </span>
-                          <input
+                        </FieldStack>
+                        <FieldStack>
+                          <FieldLabel>Brand slug</FieldLabel>
+                          <InputField
                             className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                             maxLength={80}
                             onChange={(event) => {
@@ -3242,12 +3205,10 @@ export function StudioSettingsClient({
                             required
                             value={newBrandState.brandSlug}
                           />
-                        </label>
-                        <label className="grid gap-1.5">
-                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                            Theme preset
-                          </span>
-                          <select
+                        </FieldStack>
+                        <FieldStack>
+                          <FieldLabel>Theme preset</FieldLabel>
+                          <SelectField
                             className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                             onChange={(event) => {
                               setNewBrandState((current) => ({
@@ -3267,14 +3228,12 @@ export function StudioSettingsClient({
                             <option value="midnight_launch">
                               Midnight launch
                             </option>
-                          </select>
-                        </label>
-                        <label className="grid gap-1.5">
-                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                            Accent color
-                          </span>
+                          </SelectField>
+                        </FieldStack>
+                        <FieldStack>
+                          <FieldLabel>Accent color</FieldLabel>
                           <div className="color-input-row">
-                            <input
+                            <InputField
                               className="color-swatch-input"
                               onChange={(event) => {
                                 setNewBrandState((current) => ({
@@ -3285,7 +3244,7 @@ export function StudioSettingsClient({
                               type="color"
                               value={newBrandState.accentColor}
                             />
-                            <input
+                            <InputField
                               className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                               maxLength={7}
                               onChange={(event) => {
@@ -3299,7 +3258,7 @@ export function StudioSettingsClient({
                               value={newBrandState.accentColor}
                             />
                           </div>
-                        </label>
+                        </FieldStack>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         <Pill>
@@ -3511,11 +3470,9 @@ export function StudioSettingsClient({
                     <fieldset
                       disabled={!canMutateMembers || isCreatingInvitation}
                     >
-                      <label className="grid gap-1.5">
-                        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                          Invite operator wallet
-                        </span>
-                        <input
+                      <FieldStack>
+                        <FieldLabel>Invite operator wallet</FieldLabel>
+                        <InputField
                           className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                           onChange={(event) => {
                             setMemberState({
@@ -3526,7 +3483,7 @@ export function StudioSettingsClient({
                           required
                           value={memberState.walletAddress}
                         />
-                      </label>
+                      </FieldStack>
                       <div className="flex flex-wrap items-center gap-3 pt-2">
                         <ActionButton
                           disabled={!canMutateMembers || isCreatingInvitation}
@@ -3638,11 +3595,9 @@ export function StudioSettingsClient({
                               Boolean(pendingRoleEscalationRequest)
                             }
                           >
-                            <label className="grid gap-1.5">
-                              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                                Request note
-                              </span>
-                              <textarea
+                            <FieldStack>
+                              <FieldLabel>Request note</FieldLabel>
+                              <TextAreaField
                                 className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] min-h-[10rem] resize-y focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                                 maxLength={280}
                                 onChange={(event) => {
@@ -3654,7 +3609,7 @@ export function StudioSettingsClient({
                                 rows={5}
                                 value={roleEscalationJustification}
                               />
-                            </label>
+                            </FieldStack>
                             <div className="flex flex-wrap items-center gap-3 pt-2">
                               <ActionButton
                                 disabled={
@@ -3820,11 +3775,9 @@ export function StudioSettingsClient({
                           isSavingLifecycleAutomationPolicy
                         }
                       >
-                        <label className="grid gap-1.5">
-                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                            Automation status
-                          </span>
-                          <select
+                        <FieldStack>
+                          <FieldLabel>Automation status</FieldLabel>
+                          <SelectField
                             className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                             onChange={(event) => {
                               setEditorState((current) => ({
@@ -3841,13 +3794,13 @@ export function StudioSettingsClient({
                           >
                             <option value="enabled">Enabled</option>
                             <option value="disabled">Disabled</option>
-                          </select>
-                        </label>
-                        <label className="grid gap-1.5">
-                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                          </SelectField>
+                        </FieldStack>
+                        <FieldStack>
+                          <FieldLabel>
                             Invitation reminder automation
-                          </span>
-                          <select
+                          </FieldLabel>
+                          <SelectField
                             className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                             disabled={!editorState.automationEnabled}
                             onChange={(event) => {
@@ -3865,13 +3818,13 @@ export function StudioSettingsClient({
                           >
                             <option value="enabled">Enabled</option>
                             <option value="disabled">Disabled</option>
-                          </select>
-                        </label>
-                        <label className="grid gap-1.5">
-                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                          </SelectField>
+                        </FieldStack>
+                        <FieldStack>
+                          <FieldLabel>
                             Decommission notice automation
-                          </span>
-                          <select
+                          </FieldLabel>
+                          <SelectField
                             className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                             disabled={!editorState.automationEnabled}
                             onChange={(event) => {
@@ -3889,8 +3842,8 @@ export function StudioSettingsClient({
                           >
                             <option value="enabled">Enabled</option>
                             <option value="disabled">Disabled</option>
-                          </select>
-                        </label>
+                          </SelectField>
+                        </FieldStack>
                         <div className="flex flex-wrap items-center gap-2">
                           <Pill>
                             Current{" "}
@@ -3956,11 +3909,9 @@ export function StudioSettingsClient({
                           isSavingLifecycleSlaPolicy
                         }
                       >
-                        <label className="grid gap-1.5">
-                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                            SLA monitoring
-                          </span>
-                          <select
+                        <FieldStack>
+                          <FieldLabel>SLA monitoring</FieldLabel>
+                          <SelectField
                             className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                             onChange={(event) => {
                               setEditorState((current) => ({
@@ -3977,13 +3928,11 @@ export function StudioSettingsClient({
                           >
                             <option value="enabled">Enabled</option>
                             <option value="disabled">Disabled</option>
-                          </select>
-                        </label>
-                        <label className="grid gap-1.5">
-                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                            Automation max age (minutes)
-                          </span>
-                          <input
+                          </SelectField>
+                        </FieldStack>
+                        <FieldStack>
+                          <FieldLabel>Automation max age (minutes)</FieldLabel>
+                          <InputField
                             className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                             min={5}
                             onChange={(event) => {
@@ -4003,12 +3952,10 @@ export function StudioSettingsClient({
                               editorState.lifecycleSlaAutomationMaxAgeMinutes
                             }
                           />
-                        </label>
-                        <label className="grid gap-1.5">
-                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                            Webhook failure threshold
-                          </span>
-                          <input
+                        </FieldStack>
+                        <FieldStack>
+                          <FieldLabel>Webhook failure threshold</FieldLabel>
+                          <InputField
                             className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                             min={1}
                             onChange={(event) => {
@@ -4028,7 +3975,7 @@ export function StudioSettingsClient({
                               editorState.lifecycleSlaWebhookFailureThreshold
                             }
                           />
-                        </label>
+                        </FieldStack>
                         <StatusBanner
                           tone={
                             getSlaTone(
@@ -4559,7 +4506,7 @@ export function StudioSettingsClient({
                           >
                             Confirm workspace slug to execute
                           </label>
-                          <input
+                          <InputField
                             className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                             id="decommission-execute-slug"
                             onChange={(event) => {
@@ -4664,7 +4611,7 @@ export function StudioSettingsClient({
                           >
                             Retention window
                           </label>
-                          <input
+                          <InputField
                             className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                             id="decommission-retention"
                             max={365}
@@ -4698,7 +4645,7 @@ export function StudioSettingsClient({
                           >
                             Confirm workspace slug
                           </label>
-                          <input
+                          <InputField
                             className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                             id="decommission-slug"
                             onChange={(event) => {
@@ -4726,7 +4673,7 @@ export function StudioSettingsClient({
                               ? " (required)"
                               : " (optional)"}
                           </label>
-                          <textarea
+                          <TextAreaField
                             className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                             id="decommission-reason"
                             onChange={(event) => {
@@ -4791,11 +4738,9 @@ export function StudioSettingsClient({
                     <fieldset
                       disabled={!canManageWorkspace || isCreatingWorkspace}
                     >
-                      <label className="grid gap-1.5">
-                        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                          Workspace name
-                        </span>
-                        <input
+                      <FieldStack>
+                        <FieldLabel>Workspace name</FieldLabel>
+                        <InputField
                           className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                           maxLength={120}
                           onChange={(event) => {
@@ -4808,12 +4753,10 @@ export function StudioSettingsClient({
                           required
                           value={workspaceCreateState.workspaceName}
                         />
-                      </label>
-                      <label className="grid gap-1.5">
-                        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                          Workspace slug
-                        </span>
-                        <input
+                      </FieldStack>
+                      <FieldStack>
+                        <FieldLabel>Workspace slug</FieldLabel>
+                        <InputField
                           className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                           maxLength={80}
                           onChange={(event) => {
@@ -4827,12 +4770,10 @@ export function StudioSettingsClient({
                           required
                           value={workspaceCreateState.workspaceSlug}
                         />
-                      </label>
-                      <label className="grid gap-1.5">
-                        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                          Initial brand name
-                        </span>
-                        <input
+                      </FieldStack>
+                      <FieldStack>
+                        <FieldLabel>Initial brand name</FieldLabel>
+                        <InputField
                           className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                           maxLength={120}
                           onChange={(event) => {
@@ -4845,12 +4786,10 @@ export function StudioSettingsClient({
                           required
                           value={workspaceCreateState.brandName}
                         />
-                      </label>
-                      <label className="grid gap-1.5">
-                        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                          Initial brand slug
-                        </span>
-                        <input
+                      </FieldStack>
+                      <FieldStack>
+                        <FieldLabel>Initial brand slug</FieldLabel>
+                        <InputField
                           className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                           maxLength={80}
                           onChange={(event) => {
@@ -4864,12 +4803,10 @@ export function StudioSettingsClient({
                           required
                           value={workspaceCreateState.brandSlug}
                         />
-                      </label>
-                      <label className="grid gap-1.5">
-                        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                          Accent color
-                        </span>
-                        <input
+                      </FieldStack>
+                      <FieldStack>
+                        <FieldLabel>Accent color</FieldLabel>
+                        <InputField
                           className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                           onChange={(event) => {
                             setWorkspaceCreateState((current) => ({
@@ -4880,12 +4817,10 @@ export function StudioSettingsClient({
                           type="color"
                           value={workspaceCreateState.accentColor}
                         />
-                      </label>
-                      <label className="grid gap-1.5">
-                        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
-                          Theme preset
-                        </span>
-                        <select
+                      </FieldStack>
+                      <FieldStack>
+                        <FieldLabel>Theme preset</FieldLabel>
+                        <SelectField
                           className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                           onChange={(event) => {
                             setWorkspaceCreateState((current) => ({
@@ -4901,8 +4836,8 @@ export function StudioSettingsClient({
                           <option value="midnight_launch">
                             Midnight launch
                           </option>
-                        </select>
-                      </label>
+                        </SelectField>
+                      </FieldStack>
                       <div className="flex flex-wrap items-center gap-3 pt-2">
                         <ActionButton type="submit">
                           {isCreatingWorkspace
