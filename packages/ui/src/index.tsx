@@ -1,6 +1,7 @@
 import type {
   AnchorHTMLAttributes,
   InputHTMLAttributes,
+  SelectHTMLAttributes,
   TextareaHTMLAttributes,
   PropsWithChildren,
   ReactElement,
@@ -214,6 +215,10 @@ const inputFieldVariants = cva(
   }
 );
 
+const selectFieldVariants = cva(
+  "w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+);
+
 const textAreaVariants = cva(
   `${inputFieldVariants({ tone: "default" })} min-h-[10rem] resize-y`
 );
@@ -241,6 +246,11 @@ type InputFieldProps = Omit<
 > & {
   tone?: "default" | "file";
 };
+
+type SelectFieldProps = Omit<
+  SelectHTMLAttributes<HTMLSelectElement>,
+  "prefix" | "suffix"
+>;
 
 type TextAreaFieldProps = Omit<
   TextareaHTMLAttributes<HTMLTextAreaElement>,
@@ -760,6 +770,10 @@ export const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
 );
 
 InputField.displayName = "InputField";
+
+export function SelectField({ className, ...props }: SelectFieldProps) {
+  return <select className={cn(selectFieldVariants(), className)} {...props} />;
+}
 
 export function TextAreaField({ className, ...props }: TextAreaFieldProps) {
   return <textarea className={cn(textAreaVariants(), className)} {...props} />;

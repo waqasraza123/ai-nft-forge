@@ -19,6 +19,7 @@ import {
   ActionLink,
   FieldLabel,
   FieldStack,
+  SelectField,
   Pill,
   EmptyState,
   OpsPanelCard,
@@ -273,32 +274,24 @@ export function OpsAuditClient({
           <div className="grid gap-3">
             <FieldStack>
               <FieldLabel>Category</FieldLabel>
-              <select
-                className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
-                onChange={handleCategoryChange}
-                value={category}
-              >
+              <SelectField onChange={handleCategoryChange} value={category}>
                 {auditCategoryOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </FieldStack>
             <FieldStack>
               <FieldLabel>Action</FieldLabel>
-              <select
-                className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
-                onChange={handleActionChange}
-                value={selectedAction}
-              >
+              <SelectField onChange={handleActionChange} value={selectedAction}>
                 <option value="">All actions</option>
                 {availableActions.map((action) => (
                   <option key={action} value={action}>
                     {action.replaceAll("_", " ")}
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </FieldStack>
             <div className="flex flex-wrap gap-2">
               <ActionButton

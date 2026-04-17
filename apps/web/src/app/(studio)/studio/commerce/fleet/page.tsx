@@ -1,9 +1,11 @@
-import Link from "next/link";
-
 import {
   MetricTile,
   ActionLink,
+  EmptyState,
   PageShell,
+  RecordCard,
+  RecordCopy,
+  RecordList,
   Pill,
   SurfaceCard,
   SurfaceGrid
@@ -94,57 +96,49 @@ export default async function StudioCommerceFleetPage() {
             <Pill>{report.report.generatedAt}</Pill>
           </div>
         </SurfaceCard>
-        <div className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 md:col-span-12">
-          <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-accent)]">
-              Workspace rollups
-            </p>
-            <h2 className="text-xl font-semibold">
-              Cross-workspace commerce status
-            </h2>
-          </div>
-            <div className="mt-3 space-y-2">
-              {report.report.workspaces.length ? (
-                report.report.workspaces.map((workspace) => (
-                  <div
-                    className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3"
-                    key={workspace.workspace.id}
-                  >
-                    <div className="grid gap-1 text-sm text-[color:var(--color-muted)]">
-                      <strong>
-                        {workspace.workspace.name} · /{workspace.workspace.slug}
-                      </strong>
-                      <span>
-                        {workspace.workspace.role} ·{" "}
-                        {workspace.workspace.status}
-                        {workspace.current ? " · current selection" : ""}
-                      </span>
-                      <span>
-                        {workspace.brandCount} brands ·{" "}
-                        {workspace.livePublicationCount} live publications
-                      </span>
-                      <span>
-                        {workspace.openCheckoutCount} open ·{" "}
-                        {workspace.completedCheckoutCount} completed ·{" "}
-                        {workspace.unfulfilledCheckoutCount} unfulfilled ·{" "}
-                        {workspace.automationFailedCheckoutCount} automation
-                        failed
-                      </span>
-                      <span>
-                        Last activity{" "}
-                        {formatTimestamp(workspace.lastActivityAt)}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-xl border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] p-4 text-sm text-[color:var(--color-muted)]">
-                  No accessible workspaces are available for fleet commerce
-                  reporting.
-                </div>
-              )}
-            </div>
-        </div>
+        <SurfaceCard
+          body="Workspace rows are grouped for fleet visibility so operators can assess cross-workspace rollout health at a glance without leaving this selected workspace context."
+          eyebrow="Workspace rollups"
+          span={12}
+          title="Cross-workspace commerce status"
+        >
+          {report.report.workspaces.length ? (
+            <RecordList className="mt-3">
+              {report.report.workspaces.map((workspace) => (
+                <RecordCard key={workspace.workspace.id}>
+                  <RecordCopy>
+                    <strong>
+                      {workspace.workspace.name} · /{workspace.workspace.slug}
+                    </strong>
+                    <span>
+                      {workspace.workspace.role} · {workspace.workspace.status}
+                      {workspace.current ? " · current selection" : ""}
+                    </span>
+                    <span>
+                      {workspace.brandCount} brands ·{" "}
+                      {workspace.livePublicationCount} live publications
+                    </span>
+                    <span>
+                      {workspace.openCheckoutCount} open ·{" "}
+                      {workspace.completedCheckoutCount} completed ·{" "}
+                      {workspace.unfulfilledCheckoutCount} unfulfilled ·{" "}
+                      {workspace.automationFailedCheckoutCount} automation
+                      failed
+                    </span>
+                    <span>
+                      Last activity {formatTimestamp(workspace.lastActivityAt)}
+                    </span>
+                  </RecordCopy>
+                </RecordCard>
+              ))}
+            </RecordList>
+          ) : (
+            <EmptyState className="mt-3">
+              No accessible workspaces are available for fleet commerce
+              reporting.
+            </EmptyState>
+          )}
+        </SurfaceCard>
       </SurfaceGrid>
     </PageShell>
   );

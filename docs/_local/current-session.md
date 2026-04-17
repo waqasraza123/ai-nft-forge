@@ -544,3 +544,22 @@ Finish the production-grade consistency phase on remaining high-traffic Studio/O
 
 ## Next Follow-up
 - Audit any remaining duplicated, high-friction command-row blocks in `ops` surfaces for potential shared `Packages/ui` extraction; if no direct repetition exists, keep the current restrained layout and move to final production polish pass on public/storefront/creator balance.
+
+## Latest Checkpoint (Select Primitive and Fleet Shell Consolidation)
+- Added shared select-field normalization for remaining inline select-heavy controls:
+  - Added `SelectField` in `packages/ui/src/index.tsx`.
+  - Migrated inline select styling in:
+    - `apps/web/src/app/(ops)/ops/audit/ops-audit-client.tsx`
+    - `apps/web/src/app/(studio)/studio/commerce/studio-commerce-client.tsx`
+- Normalized `apps/web/src/app/(studio)/studio/commerce/fleet/page.tsx` shell composition with shared record/card shells and empty-state treatment:
+  - `SurfaceCard`
+  - `RecordList`
+  - `RecordCard`
+  - `RecordCopy`
+  - `EmptyState`
+- Verification completed:
+  - `pnpm exec prettier --write packages/ui/src/index.tsx "apps/web/src/app/\\(ops\\)/ops/audit/ops-audit-client.tsx" "apps/web/src/app/\\(studio\\)/studio/commerce/studio-commerce-client.tsx" "apps/web/src/app/\\(studio\\)/studio/commerce/fleet/page.tsx"`
+  - `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+  - `pnpm --filter @ai-nft-forge/ui typecheck`
+  - `pnpm --filter @ai-nft-forge/web build`
+- Current phase status: production-grade UI consolidation continues; next target is a focused settings/form control pass and final cross-screen spacing audit before broad release readiness sign-off.

@@ -27,6 +27,7 @@ import {
   EmptyState,
   FieldLabel,
   FieldStack,
+  SelectField,
   InsetMetric as CommerceInsetMetric,
   PageShell,
   Pill,
@@ -1086,8 +1087,7 @@ export function StudioCommerceClient({
               />
               <FieldStack emphasis="compact">
                 <FieldLabel>Active commerce scope</FieldLabel>
-                <select
-                  className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+                <SelectField
                   onChange={(event) => {
                     void handleBrandScopeChange(event.target.value || null);
                   }}
@@ -1099,7 +1099,7 @@ export function StudioCommerceClient({
                       {brand.brandName} · {brand.totalCheckoutCount} sessions
                     </option>
                   ))}
-                </select>
+                </SelectField>
               </FieldStack>
               <div className="grid gap-3 md:grid-cols-2">
                 <CommerceInsetMetric
