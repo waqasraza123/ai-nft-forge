@@ -135,3 +135,39 @@ Complete the Tailwind migration checkpoint in `apps/web` and `packages/ui`, stab
 ## Remaining Follow-up
 - Re-audit `studio-collections-client` and `studio-commerce-client` for similar preview/card treatment once their remaining legacy semantic classes are reduced.
 - Keep ops pages clarity-first; only add illustration later for empty/zero-data/success states if needed.
+
+## Latest Checkpoint (Studio Collections Migration)
+- Completed the next flagship Studio migration slice in `apps/web/src/app/(studio)/studio/collections/studio-collections-client.tsx`.
+- Removed the route's remaining legacy semantic layout contracts including:
+  - `studio-collections-workspace__rail`
+  - `studio-form`
+  - `studio-action-row`
+  - `studio-collections-launch-grid`
+  - `studio-collections-launch-card`
+  - `publication-target-card`
+  - `studio-collections-link-grid`
+  - `studio-collections-fieldset`
+  - `studio-collections-form-grid`
+  - `toggle-field`
+  - `studio-collections-mint-list`
+  - `studio-collections-mint-card`
+  - `collection-empty-state`
+- Added route-local production-grade composition for:
+  - release browser cards with collectible framing
+  - active release hero/preview presentation
+  - launch rail status notes and control metrics
+  - publication target summary and launch links
+  - merchandising form layout
+  - onchain control surface and mint record list
+- Reused `apps/web/src/components/collectible-visuals.tsx` primitives so Studio collections now shares the same premium preview language as the upgraded public/storefront routes while keeping creator controls readable.
+- Kept all existing collection draft, publication, merchandising, deployment, mint, reorder, and wallet-flow behavior intact.
+
+## Verification (Studio Collections Migration)
+- `pnpm exec prettier --write apps/web/src/app/'(studio)'/studio/collections/studio-collections-client.tsx` ✅
+- `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false` ✅
+- `pnpm --filter @ai-nft-forge/web build` ✅
+  - Required network-enabled rerun because `next/font` fetched Google Fonts (`Inter`, `Manrope`) during production build.
+
+## Updated Follow-up
+- `studio-commerce-client` is now the highest-priority remaining Studio route for a full premium migration and visual/system audit.
+- After commerce, the next quality pass should unify repeated route-local helpers from settings/collections into broader shared `packages/ui` variants where the patterns have stabilized.

@@ -48,6 +48,11 @@ import {
 } from "@ai-nft-forge/ui";
 
 import {
+  CollectibleEditorialBand,
+  CollectiblePreviewCard,
+  StudioSceneCard
+} from "../../../../components/collectible-visuals";
+import {
   createWalletAddChainParameters,
   getWalletChainByKey,
   getWalletChainLabel
@@ -67,7 +72,7 @@ const collectionFieldGridClasses = "grid gap-3 md:grid-cols-2";
 const collectionFieldLabelClasses =
   "text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]";
 const collectionEmptyStateClasses =
-  "rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)]";
+  "rounded-2xl border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)]/55 p-4 text-sm leading-6 text-[color:var(--color-muted)]";
 
 const collectionInputFieldClasses =
   "rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30";
@@ -84,19 +89,25 @@ const collectionFocusMediaClasses =
   "overflow-hidden rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)]";
 const collectionFocusSummaryClasses = "grid gap-3";
 const collectionStatGridClasses = "grid gap-2 md:grid-cols-2 xl:grid-cols-3";
-const collectionArtGridClasses =
-  "grid gap-3 md:grid-cols-2 xl:grid-cols-3";
+const collectionArtGridClasses = "grid gap-3 md:grid-cols-2 xl:grid-cols-3";
 const collectionArtCardWideGridClasses =
   "grid gap-3 md:grid-cols-2 xl:grid-cols-2";
 const collectionLaunchGridClasses = "grid gap-3 sm:grid-cols-3";
-const collectionLaunchCardClasses = "grid gap-1 rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3";
+const collectionLaunchCardClasses =
+  "grid gap-1 rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3";
 const collectionLinkGridClasses = "grid gap-1.5 md:grid-cols-2";
 const collectionMintListClasses = "grid gap-3";
 const collectionMintCardClasses =
-  "grid gap-1 rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3";
+  "grid gap-1 rounded-2xl border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.03))] p-4 shadow-[var(--shadow-surface)]";
+const collectionFormSectionClasses =
+  "grid gap-4 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)]/60 p-4";
+const collectionStickyRailClasses = "grid gap-4 xl:sticky xl:top-24";
+const collectionStatusCardClasses =
+  "flex flex-col gap-2 rounded-2xl border p-4 shadow-[var(--shadow-surface)]";
 
 const collectionCardStateToneClasses = {
-  default: "border-[color:var(--color-line)] bg-[color:var(--color-surface)]/75",
+  default:
+    "border-[color:var(--color-line)] bg-[color:var(--color-surface)]/75",
   success: "border-emerald-500/45 bg-emerald-500/12 text-emerald-50",
   warning: "border-amber-400/45 bg-amber-400/12 text-amber-100",
   danger: "border-red-500/45 bg-red-500/12 text-red-50"
@@ -114,9 +125,7 @@ const statusBannerToneClasses = {
   warning: "border-amber-400/45 bg-amber-400/12 text-amber-100"
 } as const;
 
-function getStatusBannerToneClass(
-  tone: keyof typeof statusBannerToneClasses
-) {
+function getStatusBannerToneClass(tone: keyof typeof statusBannerToneClasses) {
   return statusBannerToneClasses[tone];
 }
 
@@ -489,7 +498,7 @@ function CollectionDraftBrowserCard({
   return (
     <button
       className={cn(
-        "grid gap-3 rounded-2xl border bg-[color:var(--color-surface)] p-3 text-left transition",
+        "grid gap-3 rounded-[1.75rem] border bg-[linear-gradient(180deg,rgba(255,255,255,0.11),rgba(255,255,255,0.03))] p-3 text-left shadow-[var(--shadow-surface)] transition",
         "border-[color:var(--color-line)] hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-surface-strong)]",
         isSelected
           ? "border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)]/40"
@@ -499,17 +508,15 @@ function CollectionDraftBrowserCard({
       type="button"
     >
       <div className="grid gap-2">
-        {previewUrl ? (
-          <img
-            alt={draft.title}
-            className="h-28 w-full rounded-lg border border-[color:var(--color-line)] object-cover"
-            src={previewUrl}
-          />
-        ) : (
-          <div className="flex h-28 items-center justify-center rounded-lg border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] px-3 py-4 text-sm text-[color:var(--color-muted)]">
-            <span>{draft.slug}</span>
-          </div>
-        )}
+        <CollectiblePreviewCard
+          badge={attentionLabel}
+          className="bg-transparent p-0 shadow-none"
+          imageAlt={draft.title}
+          imageUrl={previewUrl}
+          meta={draft.publication ? "Published route" : "Draft in workspace"}
+          subtitle={draft.slug}
+          title={draft.title}
+        />
         <div className="flex flex-wrap justify-end gap-2">
           <Pill>{attentionLabel}</Pill>
         </div>
@@ -565,37 +572,77 @@ function CollectionArtworkCard({
           ? collectionCardStateToneClasses.danger
           : collectionCardStateToneClasses.default;
   return (
-    <article className="overflow-hidden rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)]">
-      <div className="grid gap-2">
-        {previewUrl ? (
-          <img
-            alt={title}
-            className="h-36 w-full border-b border-[color:var(--color-line)] object-cover"
-            src={previewUrl}
-          />
-        ) : (
-          <div className="flex h-36 items-center justify-center rounded-t-lg border-b border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] px-4 text-center text-sm text-[color:var(--color-muted)]">
-            <span>{subtitle}</span>
-          </div>
+    <article className="overflow-hidden rounded-[1.75rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.03))] p-3 shadow-[0_24px_60px_rgba(15,23,42,0.18)]">
+      <CollectiblePreviewCard
+        badge={statusLabel}
+        className="bg-transparent p-0 shadow-none"
+        imageAlt={title}
+        imageUrl={previewUrl}
+        meta={subtitle}
+        subtitle="Collectible frame"
+        title={title}
+      />
+      <div
+        className={cn(
+          "mt-3 rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em]",
+          statusToneClass
         )}
-        <div
-          className={cn(
-            "rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em]",
-            statusToneClass
-          )}
-        >
-          {statusLabel}
-        </div>
+      >
+        {statusLabel}
       </div>
-      <div className="grid gap-1.5 p-3">
+      <div className="mt-3 grid gap-1.5 px-1">
         <strong>{title}</strong>
-        <span>{subtitle}</span>
+        <span className="text-sm text-[color:var(--color-muted)]">
+          {subtitle}
+        </span>
         <div className="flex flex-wrap gap-2 text-xs text-[color:var(--color-muted)]">
           {meta}
         </div>
       </div>
-      <div className="border-t border-[color:var(--color-line)] p-3">{actions}</div>
+      <div className="mt-4 border-t border-[color:var(--color-line)] p-3">
+        <div className="flex flex-wrap gap-2">{actions}</div>
+      </div>
     </article>
+  );
+}
+
+function CollectionStatusNote(input: {
+  body: string;
+  title: string;
+  tone: "error" | "info" | "success";
+}) {
+  return (
+    <div
+      className={cn(collectionStatusCardClasses, {
+        "border-blue-500/35 bg-blue-500/12 text-blue-50": input.tone === "info",
+        "border-emerald-500/45 bg-emerald-500/12 text-emerald-50":
+          input.tone === "success",
+        "border-red-500/45 bg-red-500/12 text-red-50": input.tone === "error"
+      })}
+    >
+      <strong>{input.title}</strong>
+      <span className="text-sm leading-6 text-current/85">{input.body}</span>
+    </div>
+  );
+}
+
+function CollectionControlMetric(input: {
+  label: string;
+  note: string;
+  value: string;
+}) {
+  return (
+    <div className={collectionLaunchCardClasses}>
+      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+        {input.label}
+      </span>
+      <strong className="text-base text-[color:var(--color-text)]">
+        {input.value}
+      </strong>
+      <small className="text-xs leading-5 text-[color:var(--color-muted)]">
+        {input.note}
+      </small>
+    </div>
   );
 }
 
@@ -2146,16 +2193,10 @@ export function StudioCollectionsClient({
           >
             {isRefreshing ? "Refreshing…" : "Refresh workspace"}
           </ActionButton>
-          <ActionLink
-            href="/studio/assets"
-            tone="action"
-          >
+          <ActionLink href="/studio/assets" tone="action">
             Open assets
           </ActionLink>
-          <ActionLink
-            href="/studio/settings"
-            tone="action"
-          >
+          <ActionLink href="/studio/settings" tone="action">
             Open settings
           </ActionLink>
           <ActionLink href="/studio" tone="inline">
@@ -2198,12 +2239,11 @@ export function StudioCollectionsClient({
                 <Pill>{generatedAssetCandidates.length} recent candidates</Pill>
                 <Pill>Owner {shortHex(ownerWalletAddress)}</Pill>
               </div>
-              <form
-                className="grid gap-4"
-                onSubmit={handleCreateDraft}
-              >
+              <form className="grid gap-4" onSubmit={handleCreateDraft}>
                 <div className={collectionPanelHeaderClasses}>
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Create draft</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                    Create draft
+                  </p>
                   <h2>Start a new release object</h2>
                   <p>
                     Create the shell first, then shape its story, composition,
@@ -2237,17 +2277,14 @@ export function StudioCollectionsClient({
                   />
                 </FieldStack>
                 <div className={collectionActionRowClasses}>
-                  <ActionButton
-                    disabled={isCreating}
-                    type="submit"
-                  >
+                  <ActionButton disabled={isCreating} type="submit">
                     {isCreating ? "Creating…" : "Create release draft"}
                   </ActionButton>
                 </div>
               </form>
               <div className="grid gap-3">
                 {drafts.length === 0 ? (
-                  <div className="collection-empty-state">
+                  <div className={collectionEmptyStateClasses}>
                     No collection drafts exist yet. Create one to begin the
                     release workflow.
                   </div>
@@ -2291,79 +2328,88 @@ export function StudioCollectionsClient({
                 eyebrow="Active release"
                 title={selectedDraft.title}
               >
-                <div className={collectionFocusPanelClasses}>
-                  <div className={collectionFocusPanelClasses}>
-                    <div className={collectionFocusMediaClasses}>
-                      {selectedDraftPreviewUrl ? (
-                        <img
-                          alt={selectedDraft.title}
-                          className="h-full w-full object-cover"
-                          src={selectedDraftPreviewUrl}
-                        />
-                      ) : (
-                        <div className="flex h-52 items-center justify-center p-4 text-sm text-[color:var(--color-muted)]">
-                          <strong>{selectedDraft.slug}</strong>
-                          <span>
-                            Curate art to give this release a visual center.
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className={collectionFocusSummaryClasses}>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Pill>{formatDraftStatus(selectedDraft.status)}</Pill>
-                        <Pill>{selectedDraft.itemCount} curated items</Pill>
-                        <Pill>
-                          Updated{" "}
-                          {formatCandidateTimestamp(selectedDraft.updatedAt)}
-                        </Pill>
-                        {selectedDraft.publication ? (
-                          <Pill>Published</Pill>
-                        ) : null}
-                        {selectedDraft.publication?.isFeatured ? (
-                          <Pill>Featured release</Pill>
-                        ) : null}
-                        {selectedDraftHasInvalidItems ? (
+                <div className="grid gap-5">
+                  <CollectibleEditorialBand>
+                    <div className={collectionFocusPanelClasses}>
+                      <CollectiblePreviewCard
+                        badge={
+                          selectedDraft.publication
+                            ? "Live release shell"
+                            : "Draft shell"
+                        }
+                        className="bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))]"
+                        imageAlt={selectedDraft.title}
+                        imageUrl={selectedDraftPreviewUrl}
+                        meta={`${selectedDraft.itemCount} curated items · ${formatCandidateTimestamp(
+                          selectedDraft.updatedAt
+                        )}`}
+                        subtitle={selectedDraft.slug}
+                        title={selectedDraft.title}
+                      />
+                      <div className={collectionFocusSummaryClasses}>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Pill>{formatDraftStatus(selectedDraft.status)}</Pill>
+                          <Pill>{selectedDraft.itemCount} curated items</Pill>
                           <Pill>
-                            {selectedDraftInvalidItems.length} invalid item
-                            {selectedDraftInvalidItems.length === 1 ? "" : "s"}
+                            Updated{" "}
+                            {formatCandidateTimestamp(selectedDraft.updatedAt)}
                           </Pill>
-                        ) : null}
-                      </div>
-                      <div className="grid gap-2">
-                        <h2>{selectedDraft.title}</h2>
-                        <p>
-                          {selectedDraft.description?.trim() ||
-                            "Add internal story framing so reviewers and operators understand the release intent."}
-                        </p>
-                      </div>
-                      <div className={collectionStatGridClasses}>
-                        <div className="grid gap-0.5 rounded-lg border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-2 text-sm">
-                          <span>Route</span>
-                          <strong>{selectedDraftPublicPath}</strong>
+                          {selectedDraft.publication ? (
+                            <Pill>Published</Pill>
+                          ) : null}
+                          {selectedDraft.publication?.isFeatured ? (
+                            <Pill>Featured release</Pill>
+                          ) : null}
+                          {selectedDraftHasInvalidItems ? (
+                            <Pill>
+                              {selectedDraftInvalidItems.length} invalid item
+                              {selectedDraftInvalidItems.length === 1
+                                ? ""
+                                : "s"}
+                            </Pill>
+                          ) : null}
                         </div>
-                        <div className="grid gap-0.5 rounded-lg border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-2 text-sm">
-                          <span>Publication</span>
-                          <strong>
-                            {selectedDraft.publication
-                              ? formatStorefrontStatus(
-                                  selectedDraft.publication.storefrontStatus
-                                )
-                              : "Not published"}
-                          </strong>
+                        <div className="grid gap-2">
+                          <h2>{selectedDraft.title}</h2>
+                          <p>
+                            {selectedDraft.description?.trim() ||
+                              "Add internal story framing so reviewers and operators understand the release intent."}
+                          </p>
                         </div>
-                        <div className="grid gap-0.5 rounded-lg border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-2 text-sm">
-                          <span>Onchain</span>
-                          <strong>
-                            {selectedDraft.publication?.activeDeployment
-                              ? selectedDraft.publication.activeDeployment.chain
-                                  .label
-                              : "No deployment"}
-                          </strong>
+                        <div className={collectionStatGridClasses}>
+                          <div className="grid gap-0.5 rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)]/75 p-3 text-sm">
+                            <span className="text-[color:var(--color-muted)]">
+                              Route
+                            </span>
+                            <strong>{selectedDraftPublicPath}</strong>
+                          </div>
+                          <div className="grid gap-0.5 rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)]/75 p-3 text-sm">
+                            <span className="text-[color:var(--color-muted)]">
+                              Publication
+                            </span>
+                            <strong>
+                              {selectedDraft.publication
+                                ? formatStorefrontStatus(
+                                    selectedDraft.publication.storefrontStatus
+                                  )
+                                : "Not published"}
+                            </strong>
+                          </div>
+                          <div className="grid gap-0.5 rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)]/75 p-3 text-sm">
+                            <span className="text-[color:var(--color-muted)]">
+                              Onchain
+                            </span>
+                            <strong>
+                              {selectedDraft.publication?.activeDeployment
+                                ? selectedDraft.publication.activeDeployment
+                                    .chain.label
+                                : "No deployment"}
+                            </strong>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </CollectibleEditorialBand>
                   <form className="grid gap-3" onSubmit={handleSaveDraft}>
                     <div className={collectionCreateFormGridClasses}>
                       <FieldStack>
@@ -2504,134 +2550,145 @@ export function StudioCollectionsClient({
                         meta={
                           <>
                             <span>{item.generatedAsset.pipelineKey}</span>
-                        <span>
-                          Source {item.generatedAsset.sourceAssetId}
-                        </span>
-                        <span>
-                          Added{" "}
-                          {formatCandidateTimestamp(item.generatedAsset.createdAt)}
-                        </span>
-                      </>
-                    }
-                    previewUrl={
-                      generatedAssetPreviewUrls[
-                        item.generatedAsset.generatedAssetId
-                      ] ?? null
-                    }
-                    statusLabel={formatModerationStatus(
-                      item.generatedAsset.moderationStatus
-                    )}
-                    statusTone={
-                      item.generatedAsset.moderationStatus === "approved"
-                        ? "success"
-                        : "danger"
-                    }
-                    subtitle={`Edition ${item.position}`}
-                    title={formatCandidateLabel(item.generatedAsset)}
-                  />
-                ))}
-              </div>
-            )}
-          </SurfaceCard>
+                            <span>
+                              Source {item.generatedAsset.sourceAssetId}
+                            </span>
+                            <span>
+                              Added{" "}
+                              {formatCandidateTimestamp(
+                                item.generatedAsset.createdAt
+                              )}
+                            </span>
+                          </>
+                        }
+                        previewUrl={
+                          generatedAssetPreviewUrls[
+                            item.generatedAsset.generatedAssetId
+                          ] ?? null
+                        }
+                        statusLabel={formatModerationStatus(
+                          item.generatedAsset.moderationStatus
+                        )}
+                        statusTone={
+                          item.generatedAsset.moderationStatus === "approved"
+                            ? "success"
+                            : "danger"
+                        }
+                        subtitle={`Edition ${item.position}`}
+                        title={formatCandidateLabel(item.generatedAsset)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </SurfaceCard>
 
-          <SurfaceCard
-            body="Approved outputs stay on deck here so operators can keep composing the release without bouncing back to the assets workspace."
-            eyebrow="Curation rail"
-            title="Recent generated outputs"
-          >
-            {generatedAssetCandidates.length === 0 ? (
-              <div className={collectionEmptyStateClasses}>
-                No generated assets are available yet. Generate variants in
-                `/studio/assets` first.
-              </div>
-            ) : (
-              <div className={collectionArtGridClasses}>
-                {generatedAssetCandidates.map((candidate) => {
-                  const isIncluded = includedGeneratedAssetIds.has(
-                    candidate.generatedAssetId
-                  );
-                  const isApproved = candidate.moderationStatus === "approved";
+              <SurfaceCard
+                body="Approved outputs stay on deck here so operators can keep composing the release without bouncing back to the assets workspace."
+                eyebrow="Curation rail"
+                title="Recent generated outputs"
+              >
+                {generatedAssetCandidates.length === 0 ? (
+                  <div className={collectionEmptyStateClasses}>
+                    No generated assets are available yet. Generate variants in
+                    `/studio/assets` first.
+                  </div>
+                ) : (
+                  <div className={collectionArtGridClasses}>
+                    {generatedAssetCandidates.map((candidate) => {
+                      const isIncluded = includedGeneratedAssetIds.has(
+                        candidate.generatedAssetId
+                      );
+                      const isApproved =
+                        candidate.moderationStatus === "approved";
 
-                  return (
-                    <CollectionArtworkCard
-                      actions={
-                        <>
-                          <Pill>Source {candidate.sourceAssetId}</Pill>
-                          <ActionButton
-                            disabled={
-                              !selectedDraft ||
-                              !isApproved ||
-                              isIncluded ||
-                              busyItemKey !== null ||
-                              savingDraftId !== null
-                            }
-                            onClick={() => {
-                              void addGeneratedAssetToSelectedDraft(
-                                candidate.generatedAssetId
-                              );
-                            }}
-                            type="button"
-                          >
-                            {isIncluded
+                      return (
+                        <CollectionArtworkCard
+                          actions={
+                            <>
+                              <Pill>Source {candidate.sourceAssetId}</Pill>
+                              <ActionButton
+                                disabled={
+                                  !selectedDraft ||
+                                  !isApproved ||
+                                  isIncluded ||
+                                  busyItemKey !== null ||
+                                  savingDraftId !== null
+                                }
+                                onClick={() => {
+                                  void addGeneratedAssetToSelectedDraft(
+                                    candidate.generatedAssetId
+                                  );
+                                }}
+                                type="button"
+                              >
+                                {isIncluded
+                                  ? "Included"
+                                  : isApproved
+                                    ? "Add to release"
+                                    : "Awaiting approval"}
+                              </ActionButton>
+                            </>
+                          }
+                          key={candidate.generatedAssetId}
+                          meta={
+                            <>
+                              <span>{candidate.pipelineKey}</span>
+                              <span>
+                                {formatCandidateTimestamp(candidate.createdAt)}
+                              </span>
+                              <span>
+                                {formatModerationStatus(
+                                  candidate.moderationStatus
+                                )}
+                              </span>
+                            </>
+                          }
+                          previewUrl={
+                            generatedAssetPreviewUrls[
+                              candidate.generatedAssetId
+                            ] ?? null
+                          }
+                          statusLabel={
+                            isIncluded
                               ? "Included"
-                              : isApproved
-                                ? "Add to release"
-                                : "Awaiting approval"}
-                          </ActionButton>
-                        </>
-                      }
-                      key={candidate.generatedAssetId}
-                      meta={
-                        <>
-                          <span>{candidate.pipelineKey}</span>
-                          <span>
-                            {formatCandidateTimestamp(candidate.createdAt)}
-                          </span>
-                          <span>
-                            {formatModerationStatus(candidate.moderationStatus)}
-                          </span>
-                        </>
-                      }
-                      previewUrl={
-                        generatedAssetPreviewUrls[
-                          candidate.generatedAssetId
-                        ] ?? null
-                      }
-                      statusLabel={
-                        isIncluded
-                          ? "Included"
-                          : formatModerationStatus(candidate.moderationStatus)
-                      }
-                      statusTone={
-                        isIncluded
-                          ? "success"
-                          : candidate.moderationStatus === "approved"
-                            ? "default"
-                            : "warning"
-                      }
-                      subtitle={`Variant ${candidate.variantIndex}`}
-                      title={formatCandidateLabel(candidate)}
-                    />
-                  );
-                })}
-              </div>
-            )}
-          </SurfaceCard>
-        </>
-      ) : (
-        <SurfaceCard
-          body="Create a draft from the browser column, then select it to begin composing the release, publication plan, and onchain path."
-          eyebrow="No release selected"
-          title="Choose a release draft"
-        >
-          <div className={collectionEmptyStateClasses}>
-            The launch workspace is ready, but no active release is selected yet.
-          </div>
-        </SurfaceCard>
-      )}
-    </section>
+                              : formatModerationStatus(
+                                  candidate.moderationStatus
+                                )
+                          }
+                          statusTone={
+                            isIncluded
+                              ? "success"
+                              : candidate.moderationStatus === "approved"
+                                ? "default"
+                                : "warning"
+                          }
+                          subtitle={`Variant ${candidate.variantIndex}`}
+                          title={formatCandidateLabel(candidate)}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </SurfaceCard>
+            </>
+          ) : (
+            <SurfaceCard
+              body="Create a draft from the browser column, then select it to begin composing the release, publication plan, and onchain path."
+              eyebrow="No release selected"
+              title="Choose a release draft"
+            >
+              <CollectibleEditorialBand>
+                <StudioSceneCard
+                  eyebrow="Launch workspace"
+                  note="The collections workspace is ready. Select a release draft to unlock composition, publication controls, and onchain supervision."
+                  title="No active release selected"
+                />
+              </CollectibleEditorialBand>
+            </SurfaceCard>
+          )}
+        </section>
 
-        <aside className="studio-collections-workspace__rail">
+        <aside className={collectionStickyRailClasses}>
           {notice ? (
             <SurfaceCard
               body={notice.message}
@@ -2640,17 +2697,19 @@ export function StudioCollectionsClient({
                 notice.tone === "error" ? "Action failed" : "Latest update"
               }
             >
-              <div
-                className={`rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] ${getStatusBannerToneClass(
+              <CollectionStatusNote
+                body={notice.message}
+                title={
+                  notice.tone === "error" ? "Action failed" : "Latest update"
+                }
+                tone={
                   notice.tone === "error"
                     ? "error"
                     : notice.tone === "success"
                       ? "success"
                       : "info"
-                )}`}
-              >
-                <span>{notice.message}</span>
-              </div>
+                }
+              />
             </SurfaceCard>
           ) : null}
 
@@ -2664,85 +2723,85 @@ export function StudioCollectionsClient({
             }
           >
             {selectedDraft ? (
-              <div className="studio-form">
-                <div className="studio-collections-launch-grid">
-                  <div className="studio-collections-launch-card">
-                    <span>Draft state</span>
-                    <strong>{formatDraftStatus(selectedDraft.status)}</strong>
-                    <small>{selectedDraft.itemCount} curated items</small>
-                  </div>
-                  <div className="studio-collections-launch-card">
-                    <span>Publication</span>
-                    <strong>
-                      {selectedDraft.publication
+              <div className="grid gap-4">
+                <div className={collectionLaunchGridClasses}>
+                  <CollectionControlMetric
+                    label="Draft state"
+                    note={`${selectedDraft.itemCount} curated items`}
+                    value={formatDraftStatus(selectedDraft.status)}
+                  />
+                  <CollectionControlMetric
+                    label="Publication"
+                    note={selectedDraftPublicPath ?? "Route pending"}
+                    value={
+                      selectedDraft.publication
                         ? formatStorefrontStatus(
                             selectedDraft.publication.storefrontStatus
                           )
-                        : "Not published"}
-                    </strong>
-                    <small>{selectedDraftPublicPath}</small>
-                  </div>
-                  <div className="studio-collections-launch-card">
-                    <span>Onchain</span>
-                    <strong>
-                      {selectedDraft.publication?.activeDeployment
-                        ? selectedDraft.publication.activeDeployment.chain.label
-                        : "No deployment"}
-                    </strong>
-                    <small>
-                      {selectedDraft.publication
+                        : "Not published"
+                    }
+                  />
+                  <CollectionControlMetric
+                    label="Onchain"
+                    note={
+                      selectedDraft.publication
                         ? `${selectedDraft.publication.mintedTokenCount} recorded mints`
-                        : "Publish first"}
-                    </small>
-                  </div>
+                        : "Publish first"
+                    }
+                    value={
+                      selectedDraft.publication?.activeDeployment
+                        ? selectedDraft.publication.activeDeployment.chain.label
+                        : "No deployment"
+                    }
+                  />
                 </div>
 
                 {!canManagePublication ? (
-                  <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
-                    <strong>Owner action required</strong>
-                    <span>
-                      Operators can shape the release, but publication and
-                      merchandising stay owner-only.
-                    </span>
-                  </div>
+                  <CollectionStatusNote
+                    body="Operators can shape the release, but publication and merchandising stay owner-only."
+                    title="Owner action required"
+                    tone="info"
+                  />
                 ) : null}
 
                 {selectedDraftLaunchNotes.map((note) => (
-                  <div
-                    className={`rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] ${
-                      note.tone === "error"
-                        ? "border-red-500/45 bg-red-500/12 text-red-50"
-                        : note.tone === "success"
-                          ? "border-emerald-500/45 bg-emerald-500/12 text-emerald-50"
-                          : "border-blue-500/35 bg-blue-500/12 text-blue-50"
-                    }`}
+                  <CollectionStatusNote
+                    body={note.body}
                     key={`${note.title}-${note.body}`}
-                  >
-                    <strong>{note.title}</strong>
-                    <span>{note.body}</span>
-                  </div>
+                    title={note.title}
+                    tone={note.tone}
+                  />
                 ))}
 
                 {selectedPublicationTarget ? (
-                  <div className="publication-target-card">
-                    <div className="publication-target-card__copy">
+                  <div className="grid gap-3 rounded-2xl border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.03))] p-4 shadow-[var(--shadow-surface)]">
+                    <div className="grid gap-1">
                       <strong>{selectedPublicationTarget.brandName}</strong>
-                      <span>{selectedPublicationTarget.publicBrandPath}</span>
-                      <span>Selected route: {selectedDraftPublicPath}</span>
+                      <span className="text-sm text-[color:var(--color-muted)]">
+                        {selectedPublicationTarget.publicBrandPath}
+                      </span>
+                      <span className="text-sm text-[color:var(--color-muted)]">
+                        Selected route: {selectedDraftPublicPath}
+                      </span>
                     </div>
-                    <Link className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm" href="/studio/settings">
+                    <Link
+                      className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
+                      href="/studio/settings"
+                    >
                       Edit targets
                     </Link>
                   </div>
                 ) : (
-                  <div className="collection-empty-state">
+                  <div className={collectionEmptyStateClasses}>
                     Configure `/studio/settings` before publishing a release.
                   </div>
                 )}
 
                 {publicationTargets.length > 1 ? (
                   <label className="grid gap-1.5">
-                    <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Publication brand</span>
+                    <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                      Publication brand
+                    </span>
                     <select
                       className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                       disabled={!canManagePublication}
@@ -2766,14 +2825,11 @@ export function StudioCollectionsClient({
                 selectedPublicationTarget &&
                 selectedDraft.publication.brandSlug !==
                   selectedPublicationTarget.brandSlug ? (
-                  <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
-                    <strong>Republish will move the route</strong>
-                    <span>
-                      Republishing will move this release from{" "}
-                      {selectedDraft.publication.publicPath} to{" "}
-                      {selectedDraftPublicPath}.
-                    </span>
-                  </div>
+                  <CollectionStatusNote
+                    body={`Republishing will move this release from ${selectedDraft.publication.publicPath} to ${selectedDraftPublicPath}.`}
+                    title="Republish will move the route"
+                    tone="info"
+                  />
                 ) : null}
 
                 <div className="flex flex-wrap items-center gap-2">
@@ -2800,10 +2856,9 @@ export function StudioCollectionsClient({
                   ) : null}
                 </div>
 
-                <form className="studio-form" onSubmit={handlePublishDraft}>
-                  <div className="studio-action-row">
-                    <button
-                      className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+                <form className="grid gap-3" onSubmit={handlePublishDraft}>
+                  <div className={collectionActionRowClasses}>
+                    <ActionButton
                       disabled={
                         !canManagePublication ||
                         !selectedPublicationTarget ||
@@ -2818,9 +2873,8 @@ export function StudioCollectionsClient({
                         : selectedDraft.publication
                           ? "Republish release"
                           : "Publish release"}
-                    </button>
-                    <button
-                      className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+                    </ActionButton>
+                    <ActionButton
                       disabled={
                         !canManagePublication ||
                         !selectedDraft.publication ||
@@ -2829,18 +2883,22 @@ export function StudioCollectionsClient({
                       onClick={() => {
                         void handleUnpublishDraft();
                       }}
+                      tone="secondary"
                       type="button"
                     >
                       {unpublishingDraftId === selectedDraft.id
                         ? "Unpublishing…"
                         : "Unpublish"}
-                    </button>
+                    </ActionButton>
                   </div>
                 </form>
 
-                <div className="studio-collections-link-grid">
+                <div className={collectionLinkGridClasses}>
                   {!selectedPublicationTarget ? (
-                    <Link className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm" href="/studio/settings">
+                    <Link
+                      className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
+                      href="/studio/settings"
+                    >
                       Configure publication targets
                     </Link>
                   ) : null}
@@ -2906,7 +2964,7 @@ export function StudioCollectionsClient({
                 </div>
               </div>
             ) : (
-              <div className="collection-empty-state">
+              <div className={collectionEmptyStateClasses}>
                 Select a draft to inspect publication state and launch controls.
               </div>
             )}
@@ -2919,19 +2977,21 @@ export function StudioCollectionsClient({
               title="Merchandising and release timing"
             >
               <form
-                className="studio-form"
+                className="grid gap-4"
                 onSubmit={handleSavePublicationMerchandising}
               >
                 <fieldset
-                  className="studio-collections-fieldset"
+                  className="grid gap-4"
                   disabled={
                     !canManagePublication ||
                     savingPublicationDraftId === selectedDraft.id
                   }
                 >
-                  <div className="studio-collections-form-grid">
+                  <div className="grid gap-4 md:grid-cols-2">
                     <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Storefront status</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                        Storefront status
+                      </span>
                       <select
                         className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                         onChange={(event) => {
@@ -2953,7 +3013,9 @@ export function StudioCollectionsClient({
                       </select>
                     </label>
                     <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Display order</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                        Display order
+                      </span>
                       <input
                         className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                         min={0}
@@ -2971,7 +3033,9 @@ export function StudioCollectionsClient({
                       />
                     </label>
                     <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Launch time</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                        Launch time
+                      </span>
                       <input
                         className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                         onChange={(event) => {
@@ -2985,7 +3049,9 @@ export function StudioCollectionsClient({
                       />
                     </label>
                     <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">End time</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                        End time
+                      </span>
                       <input
                         className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                         onChange={(event) => {
@@ -2999,7 +3065,9 @@ export function StudioCollectionsClient({
                       />
                     </label>
                     <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Price label</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                        Price label
+                      </span>
                       <input
                         className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                         maxLength={60}
@@ -3014,7 +3082,9 @@ export function StudioCollectionsClient({
                       />
                     </label>
                     <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Price amount (minor)</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                        Price amount (minor)
+                      </span>
                       <input
                         className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                         min={1}
@@ -3030,7 +3100,9 @@ export function StudioCollectionsClient({
                       />
                     </label>
                     <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Price currency</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                        Price currency
+                      </span>
                       <input
                         className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                         maxLength={3}
@@ -3045,7 +3117,9 @@ export function StudioCollectionsClient({
                       />
                     </label>
                     <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Total supply</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                        Total supply
+                      </span>
                       <input
                         className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                         min={1}
@@ -3060,7 +3134,9 @@ export function StudioCollectionsClient({
                       />
                     </label>
                     <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Sold count</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                        Sold count
+                      </span>
                       <input
                         className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                         min={0}
@@ -3075,7 +3151,9 @@ export function StudioCollectionsClient({
                       />
                     </label>
                     <label className="grid gap-1.5 md:col-span-2">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Hero asset</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                        Hero asset
+                      </span>
                       <select
                         className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                         onChange={(event) => {
@@ -3100,7 +3178,9 @@ export function StudioCollectionsClient({
                       </select>
                     </label>
                     <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Storefront headline</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                        Storefront headline
+                      </span>
                       <input
                         className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                         maxLength={120}
@@ -3115,7 +3195,9 @@ export function StudioCollectionsClient({
                       />
                     </label>
                     <label className="grid gap-1.5 md:col-span-2">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Storefront body</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                        Storefront body
+                      </span>
                       <textarea
                         className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] min-h-[10rem] resize-y focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                         maxLength={600}
@@ -3130,7 +3212,9 @@ export function StudioCollectionsClient({
                       />
                     </label>
                     <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Primary CTA label</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                        Primary CTA label
+                      </span>
                       <input
                         className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                         maxLength={40}
@@ -3145,7 +3229,9 @@ export function StudioCollectionsClient({
                       />
                     </label>
                     <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Primary CTA URL</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                        Primary CTA URL
+                      </span>
                       <input
                         className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                         onChange={(event) => {
@@ -3160,7 +3246,9 @@ export function StudioCollectionsClient({
                       />
                     </label>
                     <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Secondary CTA label</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                        Secondary CTA label
+                      </span>
                       <input
                         className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                         maxLength={40}
@@ -3175,7 +3263,9 @@ export function StudioCollectionsClient({
                       />
                     </label>
                     <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Secondary CTA URL</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                        Secondary CTA URL
+                      </span>
                       <input
                         className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                         onChange={(event) => {
@@ -3190,9 +3280,10 @@ export function StudioCollectionsClient({
                       />
                     </label>
                   </div>
-                  <label className="toggle-field">
+                  <label className="flex items-center gap-3 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)]/55 px-4 py-3 text-sm text-[color:var(--color-text)]">
                     <input
                       checked={publicationMerchandisingState.isFeatured}
+                      className="h-4 w-4 rounded border-[color:var(--color-line)] text-[color:var(--color-accent)] focus:ring-[color:var(--color-accent)]"
                       onChange={(event) => {
                         setPublicationMerchandisingState((current) => ({
                           ...current,
@@ -3203,9 +3294,8 @@ export function StudioCollectionsClient({
                     />
                     <span>Feature this release on the brand landing page</span>
                   </label>
-                  <div className="studio-action-row">
-                    <button
-                      className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+                  <div className={collectionActionRowClasses}>
+                    <ActionButton
                       disabled={
                         !canManagePublication ||
                         savingPublicationDraftId === selectedDraft.id
@@ -3215,7 +3305,7 @@ export function StudioCollectionsClient({
                       {savingPublicationDraftId === selectedDraft.id
                         ? "Saving merchandising…"
                         : "Save merchandising"}
-                    </button>
+                    </ActionButton>
                   </div>
                 </fieldset>
               </form>
@@ -3228,15 +3318,13 @@ export function StudioCollectionsClient({
             title="Deployment and minting"
           >
             {selectedDraft?.publication ? (
-              <div className="studio-form">
+              <div className="grid gap-4">
                 {!canManageOnchain ? (
-                  <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
-                    <strong>Owner action required</strong>
-                    <span>
-                      Deployment and mint recording stay owner-only because they
-                      depend on verified owner wallet activity.
-                    </span>
-                  </div>
+                  <CollectionStatusNote
+                    body="Deployment and mint recording stay owner-only because they depend on verified owner wallet activity."
+                    title="Owner action required"
+                    tone="info"
+                  />
                 ) : null}
                 <div className="flex flex-wrap items-center gap-2">
                   <Pill>
@@ -3281,12 +3369,11 @@ export function StudioCollectionsClient({
                       : "s"}
                   </Pill>
                 </div>
-                <fieldset
-                  className="studio-collections-fieldset"
-                  disabled={!canManageOnchain}
-                >
+                <fieldset className="grid gap-4" disabled={!canManageOnchain}>
                   <label className="grid gap-1.5">
-                    <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Wallet path</span>
+                    <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                      Wallet path
+                    </span>
                     <select
                       className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                       onChange={(event) => {
@@ -3306,52 +3393,54 @@ export function StudioCollectionsClient({
                       ) : null}
                     </select>
                   </label>
-                  <div className="studio-action-row">
-                    <button
-                      className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+                  <div className={collectionActionRowClasses}>
+                    <ActionButton
                       disabled={!walletProviderAvailable}
                       onClick={() => {
                         void handleConnectWallet();
                       }}
+                      tone="secondary"
                       type="button"
                     >
                       Connect selected wallet
-                    </button>
+                    </ActionButton>
                     {connectedWalletConnector ? (
-                      <button
-                        className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+                      <ActionButton
                         onClick={() => {
                           void handleDisconnectWallet();
                         }}
+                        tone="ghost"
                         type="button"
                       >
                         Disconnect wallet
-                      </button>
+                      </ActionButton>
                     ) : null}
                   </div>
                   {onchainFlowState ? (
-                    <div
-                      className={`rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] ${
-                        onchainFlowState.status === "failed"
-                          ? "border-red-500/45 bg-red-500/12 text-red-50"
-                          : onchainFlowState.status === "success"
-                            ? "border-emerald-500/45 bg-emerald-500/12 text-emerald-50"
-                            : "border-blue-500/35 bg-blue-500/12 text-blue-50"
+                    <CollectionStatusNote
+                      body={`${onchainFlowState.message}${
+                        onchainFlowState.txHash
+                          ? ` Tx: ${onchainFlowState.txHash}`
+                          : ""
                       }`}
-                    >
-                      <strong>
-                        {onchainFlowState.kind === "deployment"
+                      title={
+                        onchainFlowState.kind === "deployment"
                           ? "Deployment flow"
-                          : "Mint flow"}
-                      </strong>
-                      <span>{onchainFlowState.message}</span>
-                      {onchainFlowState.txHash ? (
-                        <span>Tx: {onchainFlowState.txHash}</span>
-                      ) : null}
-                    </div>
+                          : "Mint flow"
+                      }
+                      tone={
+                        onchainFlowState.status === "failed"
+                          ? "error"
+                          : onchainFlowState.status === "success"
+                            ? "success"
+                            : "info"
+                      }
+                    />
                   ) : null}
                   <label className="grid gap-1.5">
-                    <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Deployment chain</span>
+                    <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                      Deployment chain
+                    </span>
                     <select
                       className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                       onChange={(event) => {
@@ -3365,9 +3454,8 @@ export function StudioCollectionsClient({
                       <option value="base">Base</option>
                     </select>
                   </label>
-                  <div className="studio-action-row">
-                    <button
-                      className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+                  <div className={collectionActionRowClasses}>
+                    <ActionButton
                       disabled={
                         deployingDraftId === selectedDraft.id ||
                         Boolean(selectedDraft.publication.activeDeployment)
@@ -3380,19 +3468,19 @@ export function StudioCollectionsClient({
                       {deployingDraftId === selectedDraft.id
                         ? "Processing deployment…"
                         : "Deploy with wallet"}
-                    </button>
+                    </ActionButton>
                     {pendingDeploymentTxHash &&
                     !selectedDraft.publication.activeDeployment ? (
-                      <button
-                        className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+                      <ActionButton
                         disabled={deployingDraftId === selectedDraft.id}
                         onClick={() => {
                           void handleRetryDeploymentRecord();
                         }}
+                        tone="secondary"
                         type="button"
                       >
                         Retry deployment confirmation
-                      </button>
+                      </ActionButton>
                     ) : null}
                   </div>
                   {deploymentIntentJson ? (
@@ -3408,9 +3496,11 @@ export function StudioCollectionsClient({
                       />
                     </label>
                   ) : null}
-                  <div className="studio-form">
+                  <div className={collectionFormSectionClasses}>
                     <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Recipient wallet</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                        Recipient wallet
+                      </span>
                       <input
                         className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                         onChange={(event) => {
@@ -3424,7 +3514,9 @@ export function StudioCollectionsClient({
                       />
                     </label>
                     <label className="grid gap-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Token ID</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                        Token ID
+                      </span>
                       <input
                         className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                         min={1}
@@ -3438,9 +3530,8 @@ export function StudioCollectionsClient({
                         value={mintRequestState.tokenId}
                       />
                     </label>
-                    <div className="studio-action-row">
-                      <button
-                        className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+                    <div className={collectionActionRowClasses}>
+                      <ActionButton
                         disabled={
                           mintingDraftId === selectedDraft.id ||
                           !selectedDraft.publication.activeDeployment
@@ -3453,23 +3544,25 @@ export function StudioCollectionsClient({
                         {mintingDraftId === selectedDraft.id
                           ? "Processing mint…"
                           : "Mint with wallet"}
-                      </button>
+                      </ActionButton>
                       {pendingMintTxHash ? (
-                        <button
-                          className="inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 hover:brightness-95"
+                        <ActionButton
                           disabled={mintingDraftId === selectedDraft.id}
                           onClick={() => {
                             void handleRetryMintRecord();
                           }}
+                          tone="secondary"
                           type="button"
                         >
                           Retry mint confirmation
-                        </button>
+                        </ActionButton>
                       ) : null}
                     </div>
                     {mintIntentJson ? (
                       <label className="grid gap-1.5">
-                        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">Mint intent JSON</span>
+                        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+                          Mint intent JSON
+                        </span>
                         <textarea
                           className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] min-h-[10rem] resize-y focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                           readOnly
@@ -3481,15 +3574,16 @@ export function StudioCollectionsClient({
                   </div>
                 </fieldset>
                 {selectedDraft.publication.mints.length > 0 ? (
-                  <div className="studio-collections-mint-list">
+                  <div className={collectionMintListClasses}>
                     {selectedDraft.publication.mints.map((mint) => (
-                      <div
-                        className="studio-collections-mint-card"
-                        key={mint.id}
-                      >
+                      <div className={collectionMintCardClasses} key={mint.id}>
                         <strong>Token #{mint.tokenId}</strong>
-                        <span>{mint.recipientWalletAddress}</span>
-                        <span>{formatCandidateTimestamp(mint.mintedAt)}</span>
+                        <span className="text-sm text-[color:var(--color-muted)]">
+                          {mint.recipientWalletAddress}
+                        </span>
+                        <span className="text-sm text-[color:var(--color-muted)]">
+                          {formatCandidateTimestamp(mint.mintedAt)}
+                        </span>
                         <Pill>{shortHex(mint.txHash)}</Pill>
                       </div>
                     ))}
@@ -3497,7 +3591,7 @@ export function StudioCollectionsClient({
                 ) : null}
               </div>
             ) : (
-              <div className="collection-empty-state">
+              <div className={collectionEmptyStateClasses}>
                 Publish a release before preparing deployment or minting.
               </div>
             )}
