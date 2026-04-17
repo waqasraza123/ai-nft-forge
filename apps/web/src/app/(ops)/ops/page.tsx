@@ -1,4 +1,5 @@
 import {
+  SurfacePanel,
   OpsQuickActions,
   OpsSummaryCard,
   PageShell,
@@ -124,7 +125,7 @@ export default async function OpsPage() {
       tone="ops"
     >
       <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_1fr] xl:items-start">
-        <section className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-5 shadow-[var(--shadow-surface)]">
+        <SurfacePanel>
           <div className="space-y-5">
             <div className="space-y-2">
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">
@@ -194,7 +195,7 @@ export default async function OpsPage() {
               />
             </div>
           </div>
-        </section>
+        </SurfacePanel>
 
         <aside className="grid gap-5">
           <SurfaceCard

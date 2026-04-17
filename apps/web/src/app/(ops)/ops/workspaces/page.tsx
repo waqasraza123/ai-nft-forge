@@ -1,4 +1,9 @@
-import { OpsQuickActions, PageShell, SurfaceCard } from "@ai-nft-forge/ui";
+import {
+  OpsQuickActions,
+  PageShell,
+  SurfaceCard,
+  SurfaceGrid
+} from "@ai-nft-forge/ui";
 
 import { WorkspaceDirectoryPanel } from "../../../../components/workspace-directory-panel";
 import { WorkspaceOffboardingPanel } from "../../../../components/workspace-offboarding-panel";
@@ -58,7 +63,7 @@ export default async function OpsWorkspacesPage() {
       }
       tone="ops"
     >
-      <div className="grid gap-5 md:grid-cols-2">
+      <SurfaceGrid>
         <WorkspaceDirectoryPanel
           body="Switching still keeps one active workspace at a time, but this directory makes the current accessible estate auditable before you pivot between owner and operator contexts."
           entries={workspaceDirectory.workspaces}
@@ -82,7 +87,7 @@ export default async function OpsWorkspacesPage() {
           span={12}
           title="Archive readiness and export"
         />
-      </div>
+      </SurfaceGrid>
 
       <SurfaceCard
         body="The active workspace cookie still drives the rest of the ops and studio routes. Use this control after reviewing the current accessible estate above."
