@@ -291,3 +291,30 @@ Complete the Tailwind migration checkpoint in `apps/web` and `packages/ui`, stab
 
 ## Verification (Studio Home Consistency)
 - `pnpm exec prettier --write apps/web/src/app/'(studio)'/studio/page.tsx`
+
+## Latest Checkpoint (Studio Assets Consistency)
+- Completed the next production consistency step on `apps/web/src/app/(studio)/studio/assets/studio-assets-client.tsx`:
+  - normalized action controls with shared `ActionRow` and `ActionButton` composition.
+  - converted the source-intake shell to shared `FormPanel` for consistent inset form rhythm.
+  - replaced hand-rolled empty-state shells with shared `EmptyState`.
+  - preserved all existing upload, dispatch, and moderation behavior while reducing local panel style variance.
+
+## Verification (Studio Assets Consistency)
+- `pnpm exec prettier --write apps/web/src/app/'(studio)'/studio/assets/studio-assets-client.tsx`
+
+## Latest Checkpoint (Studio Assets Depth Upgrade)
+- Completed the next production-grade polish pass for `apps/web/src/app/(studio)/studio/assets/studio-assets-client.tsx`:
+  - added a restrained `CollectibleEditorialBand` + `StudioSceneCard` visual section between utility cards;
+  - preserved operational clarity by keeping the section layout and controls functionally unchanged;
+  - retained shared primitives (`ActionRow`, `FormPanel`, `EmptyState`) from the prior consistency checkpoint.
+
+## Verification (Studio Assets Depth Upgrade)
+- `pnpm exec prettier --write apps/web/src/app/'(studio)'/studio/assets/studio-assets-client.tsx`
+- `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+- `pnpm --filter @ai-nft-forge/web build`
+
+## Updated Next Follow-up
+- Begin the next consistency pass on remaining Studio surfaces:
+  - tighten repeated action/notice spacing patterns in `studio-settings-client.tsx`;
+  - standardize spacing rhythm for dense detail sections in collections/commerce rails where safe;
+  - keep art direction selective and never decorative in moderation/compliance-heavy controls.

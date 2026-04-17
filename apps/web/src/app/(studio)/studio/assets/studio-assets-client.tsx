@@ -23,12 +23,15 @@ import {
   type StudioSourceAssetSummary
 } from "@ai-nft-forge/shared";
 import {
+  ActionRow,
   MetricTile,
   cn,
+  EmptyState,
   PageShell,
   Pill,
   ActionButton,
   ActionLink,
+  FormPanel,
   FieldLabel,
   FieldStack,
   InputField,
@@ -38,6 +41,10 @@ import {
 } from "@ai-nft-forge/ui";
 
 import { StudioAssetCard } from "./studio-asset-card";
+import {
+  CollectibleEditorialBand,
+  StudioSceneCard
+} from "../../../../components/collectible-visuals";
 
 type StudioAssetsClientProps = {
   initialAssets: StudioSourceAssetSummary[];
@@ -959,7 +966,7 @@ export function StudioAssetsClient({
       title="Upload, dispatch, review history, and retrieve generated outputs"
       lead="Use this as a lane-based operator workspace: upload sources quickly, run generation jobs, compare run history, and promote or retry outputs from a single panel."
       actions={
-        <>
+        <ActionRow>
           <ActionLink href="/studio" tone="inline">
             Back to studio
           </ActionLink>
@@ -970,7 +977,7 @@ export function StudioAssetsClient({
           >
             {isRefreshing ? "Refreshing..." : "Refresh assets"}
           </ActionButton>
-        </>
+        </ActionRow>
       }
       tone="studio"
     >
@@ -981,13 +988,12 @@ export function StudioAssetsClient({
           span={12}
           title="Pipeline command center"
         >
-          <div className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 md:p-5">
+          <FormPanel>
             <form className="grid gap-3" onSubmit={handleUploadSubmit}>
               <FieldStack htmlFor={fileInputId}>
                 <FieldLabel>Source files</FieldLabel>
                 <InputField
                   accept={acceptedSourceAssetInputValue}
-                  className="file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[color:var(--color-surface-strong)] file:px-3 file:py-2 file:text-sm file:text-[color:var(--color-text)] file:shadow-sm"
                   disabled={isUploading}
                   id={fileInputId}
                   multiple
@@ -1001,7 +1007,7 @@ export function StudioAssetsClient({
                   type="file"
                 />
               </FieldStack>
-              <div className="flex flex-wrap items-start justify-between gap-3">
+              <ActionRow>
                 <ActionButton
                   disabled={isUploading || selectedFiles.length === 0}
                   tone="accent"
@@ -1016,7 +1022,7 @@ export function StudioAssetsClient({
                 <span className="max-w-sm text-sm text-[color:var(--color-muted)]">
                   Supports AVIF, HEIC, HEIF, JPEG, PNG, and WEBP.
                 </span>
-              </div>
+              </ActionRow>
             </form>
             {selectedFiles.length > 0 ? (
               <div className="mt-3 flex flex-wrap gap-2">
@@ -1064,29 +1070,36 @@ export function StudioAssetsClient({
                 ))}
               </div>
             ) : null}
-            <div className="mt-4">
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                <MetricTile label="Owner" value={ownerWalletAddress} />
-                <MetricTile label="Assets" value={String(assets.length)} />
-                <MetricTile label="Uploaded" value={String(uploadedAssets)} />
-                <MetricTile label="Queued" value={String(queuedAssets)} />
-                <MetricTile label="Running" value={String(runningAssets)} />
-                <MetricTile
-                  label="Failed runs"
-                  value={String(failedGenerationRunCount)}
-                />
-                <MetricTile
-                  label="Outputs"
-                  value={String(generatedOutputCount)}
-                />
-                <MetricTile
-                  label="Pending review"
-                  value={String(pendingReviewOutputCount)}
-                />
-              </div>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <MetricTile label="Owner" value={ownerWalletAddress} />
+              <MetricTile label="Assets" value={String(assets.length)} />
+              <MetricTile label="Uploaded" value={String(uploadedAssets)} />
+              <MetricTile label="Queued" value={String(queuedAssets)} />
+              <MetricTile label="Running" value={String(runningAssets)} />
+              <MetricTile
+                label="Failed runs"
+                value={String(failedGenerationRunCount)}
+              />
+              <MetricTile
+                label="Outputs"
+                value={String(generatedOutputCount)}
+              />
+              <MetricTile
+                label="Pending review"
+                value={String(pendingReviewOutputCount)}
+              />
             </div>
-          </div>
+          </FormPanel>
         </SurfaceCard>
+
+        <CollectibleEditorialBand className="lg:col-span-12">
+          <StudioSceneCard
+            eyebrow="Studio depth cue"
+            title="Source-first collectibility"
+            note="The Studio assets route stays workflow-first, but the collectible scene layer adds hierarchy and continuity so operators can orient quickly between intake, generation, and review."
+          />
+        </CollectibleEditorialBand>
+
         <SurfaceCard
           body="Use the source list to pick the current workspace focus, compare history in the right pane, and move quickly between active generation runs and moderation actions."
           eyebrow="Source pipeline"
@@ -1097,7 +1110,7 @@ export function StudioAssetsClient({
             <section className="space-y-3" aria-live="polite">
               <FieldLabel>Source assets</FieldLabel>
               {workspaceAssets.length === 0 ? (
-                <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-4 py-3">
+                <EmptyState className="bg-[color:var(--color-surface-strong)]/50 px-4 py-3">
                   <strong>
                     {selectedAsset
                       ? "No other source assets in the current workspace view."
@@ -1108,7 +1121,7 @@ export function StudioAssetsClient({
                       ? "Start a new workflow to compare multiple source assets in one scan."
                       : "Upload one or more supported images to begin."}
                   </p>
-                </div>
+                </EmptyState>
               ) : (
                 <div className="grid gap-3">
                   {workspaceAssets.map((asset) => (
@@ -1206,7 +1219,7 @@ export function StudioAssetsClient({
                   }
                 />
               ) : (
-                <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-4 py-3">
+                <EmptyState className="bg-[color:var(--color-surface-strong)]/50 px-4 py-3">
                   <strong>
                     Open a source asset to inspect history and outputs.
                   </strong>
@@ -1214,7 +1227,7 @@ export function StudioAssetsClient({
                     Upload a source image first, then use a lane card on the
                     left.
                   </p>
-                </div>
+                </EmptyState>
               )}
               {isPrimingPreviews ? (
                 <p className="text-sm text-[color:var(--color-muted)]">
