@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   startTransition,
   type FormEvent,
@@ -2762,12 +2761,9 @@ export function StudioCollectionsClient({
                         Selected route: {selectedDraftPublicPath}
                       </span>
                     </div>
-                    <Link
-                      className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
-                      href="/studio/settings"
-                    >
+                    <ActionLink tone="inline" href="/studio/settings">
                       Edit targets
-                    </Link>
+                    </ActionLink>
                   </div>
                 ) : (
                   <EmptyState className="bg-[color:var(--color-surface-strong)]/55 leading-6">
@@ -2873,43 +2869,40 @@ export function StudioCollectionsClient({
 
                 <div className={collectionLinkGridClasses}>
                   {!selectedPublicationTarget ? (
-                    <Link
-                      className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
-                      href="/studio/settings"
-                    >
+                    <ActionLink tone="inline" href="/studio/settings">
                       Configure publication targets
-                    </Link>
+                    </ActionLink>
                   ) : null}
                   {selectedDraft.publication ? (
-                    <Link
-                      className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
+                    <ActionLink
+                      tone="inline"
                       href={selectedDraft.publication.publicPath}
                       target="_blank"
                     >
                       Open public route
-                    </Link>
+                    </ActionLink>
                   ) : null}
                   {selectedDraftContractPath ? (
-                    <Link
-                      className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
+                    <ActionLink
+                      tone="inline"
                       href={selectedDraftContractPath}
                       target="_blank"
                     >
                       Open contract manifest
-                    </Link>
+                    </ActionLink>
                   ) : null}
                   {selectedDraftMetadataPath ? (
-                    <Link
-                      className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
+                    <ActionLink
+                      tone="inline"
                       href={selectedDraftMetadataPath}
                       target="_blank"
                     >
                       Open metadata manifest
-                    </Link>
+                    </ActionLink>
                   ) : null}
                   {selectedDraft.publication && selectedDraft.items[0] ? (
-                    <Link
-                      className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
+                    <ActionLink
+                      tone="inline"
                       href={createCollectionTokenUriPath({
                         brandSlug: selectedDraft.publication.brandSlug,
                         collectionSlug:
@@ -2919,25 +2912,25 @@ export function StudioCollectionsClient({
                       target="_blank"
                     >
                       Open first token URI
-                    </Link>
+                    </ActionLink>
                   ) : null}
                   {selectedDraftMetadataPath && selectedDraft.items[0] ? (
-                    <Link
-                      className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
+                    <ActionLink
+                      tone="inline"
                       href={`${selectedDraftMetadataPath}/${selectedDraft.items[0].position}`}
                       target="_blank"
                     >
                       Open first edition metadata
-                    </Link>
+                    </ActionLink>
                   ) : null}
                   {selectedDraft.publication && selectedPublicationTarget ? (
-                    <Link
-                      className="text-[color:var(--color-accent)] hover:underline hover:underline-offset-4 text-sm"
+                    <ActionLink
+                      tone="inline"
                       href={selectedPublicationTarget.publicBrandPath}
                       target="_blank"
                     >
                       Open brand landing
-                    </Link>
+                    </ActionLink>
                   ) : null}
                 </div>
               </div>

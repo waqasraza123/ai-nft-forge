@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   startTransition,
@@ -24,6 +23,7 @@ import {
 import {
   ActionRow,
   ActionButton,
+  ActionLink,
   EmptyState,
   FieldLabel,
   FieldStack,
@@ -841,24 +841,15 @@ export function StudioCommerceClient({
           >
             {isRefreshing ? "Refreshing…" : "Refresh workspace"}
           </ActionButton>
-          <Link
-            className="inline-flex items-center rounded-full border border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)] px-3 py-1.5 text-sm font-medium text-[color:var(--color-text)] transition hover:bg-[color:var(--color-accent)] hover:text-white"
-            href="/studio/collections"
-          >
+          <ActionLink href="/studio/collections" tone="action">
             Collections
-          </Link>
-          <Link
-            className="inline-flex items-center rounded-full border border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)] px-3 py-1.5 text-sm font-medium text-[color:var(--color-text)] transition hover:bg-[color:var(--color-accent)] hover:text-white"
-            href="/studio/commerce/fleet"
-          >
+          </ActionLink>
+          <ActionLink href="/studio/commerce/fleet" tone="action">
             Fleet view
-          </Link>
-          <Link
-            className="text-sm text-[color:var(--color-accent)] hover:underline hover:underline-offset-4"
-            href="/studio"
-          >
+          </ActionLink>
+          <ActionLink href="/studio" tone="inline">
             Back to studio
-          </Link>
+          </ActionLink>
         </>
       }
       tone="studio"
@@ -1216,14 +1207,15 @@ export function StudioCommerceClient({
                           verification and buyer-path QA.
                         </span>
                       </div>
-                      <Link
-                        className="mt-4 inline-flex items-center text-sm text-[color:var(--color-accent)] hover:text-white"
+                      <ActionLink
+                        className="mt-4 text-sm"
                         href={collection.collectionPublicPath}
                         rel="noreferrer"
                         target="_blank"
+                        tone="inline"
                       >
                         Public page
-                      </Link>
+                      </ActionLink>
                     </article>
                   ))}
                 </div>
@@ -1255,20 +1247,18 @@ export function StudioCommerceClient({
                 />
               </div>
               <ActionRow>
-                <a
-                  className="inline-flex items-center rounded-full border border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)] px-3 py-1.5 text-sm font-medium text-[color:var(--color-text)] transition hover:bg-[color:var(--color-accent)] hover:text-white"
-                  href={commerceReportCsvPath}
-                >
+                <ActionLink href={commerceReportCsvPath} tone="action">
                   Export CSV
-                </a>
-                <a
-                  className="text-sm text-[color:var(--color-accent)] hover:text-white"
+                </ActionLink>
+                <ActionLink
+                  className="text-sm"
                   href={commerceReportPath}
                   rel="noreferrer"
                   target="_blank"
+                  tone="inline"
                 >
                   Open report JSON
-                </a>
+                </ActionLink>
               </ActionRow>
               <ActionRow compact>
                 <Pill>
