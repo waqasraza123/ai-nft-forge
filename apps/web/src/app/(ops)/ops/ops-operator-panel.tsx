@@ -26,6 +26,7 @@ import {
   OpsGrid,
   OpsSettingsGrid,
   OpsActionRow,
+  OpsSplitRow,
   OpsPillRow,
   OpsStatusNotice,
   MetricTile,
@@ -518,13 +519,13 @@ function ActivityItem({
 
   return (
     <OpsPanelCard tone={itemTone}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <OpsSplitRow>
         <div className="grid gap-1">
           <strong>{activity.sourceAsset.originalFilename}</strong>
           <span>{renderActivityTiming(activity)}</span>
         </div>
         <Pill>{activity.status}</Pill>
-      </div>
+      </OpsSplitRow>
       <OpsPillRow>
         <Pill>{activity.pipelineKey}</Pill>
         <Pill>{activity.requestedVariantCount} variants</Pill>
@@ -579,13 +580,13 @@ function WindowSummary({ window }: { window: OpsGenerationWindowSummary }) {
         resolveOpsCaptureWindowTone("neutral")
       )}
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <OpsSplitRow>
         <div className="grid gap-1">
           <strong>{window.label}</strong>
           <span>From {formatDateTime(window.from)}</span>
         </div>
         <Pill>{window.windowKey}</Pill>
-      </div>
+      </OpsSplitRow>
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <MetricTile label="Requests" value={String(window.totalCount)} />
         <MetricTile label="Queued" value={String(window.queuedCount)} />
@@ -632,13 +633,13 @@ function PersistedCaptureItem({
         resolveOpsCaptureWindowTone(itemTone)
       )}
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <OpsSplitRow>
         <div className="grid gap-1">
           <strong>{formatDateTime(capture.capturedAt)}</strong>
           <span>{capture.observabilityMessage}</span>
         </div>
         <Pill>{capture.observabilityStatus}</Pill>
-      </div>
+      </OpsSplitRow>
       <OpsPillRow>
         <Pill>{capture.backendReadinessStatus}</Pill>
         <Pill>{capture.queueStatus}</Pill>
@@ -685,13 +686,13 @@ function AlertDeliveryItem({
 
   return (
     <OpsPanelCard tone={tone}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <OpsSplitRow>
         <div className="grid gap-1">
           <strong>{delivery.title}</strong>
           <span>{delivery.message}</span>
         </div>
         <Pill>{delivery.deliveryState}</Pill>
-      </div>
+      </OpsSplitRow>
       <OpsPillRow>
         <Pill>{delivery.code}</Pill>
         <Pill>{delivery.severity}</Pill>
@@ -741,13 +742,13 @@ function ActiveAlertItem({
 
   return (
     <OpsPanelCard tone={tone}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <OpsSplitRow>
         <div className="grid gap-1">
           <strong>{alert.title}</strong>
           <span>{alert.message}</span>
         </div>
         <Pill>{alert.severity}</Pill>
-      </div>
+      </OpsSplitRow>
       <OpsPillRow>
         <Pill>{alert.code}</Pill>
         <Pill>{alert.status}</Pill>
@@ -838,13 +839,13 @@ function ActiveMuteItem({
 }) {
   return (
     <OpsPanelCard tone="neutral">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <OpsSplitRow>
         <div className="grid gap-1">
           <strong>{mute.code}</strong>
           <span>Muted until {formatDateTime(mute.mutedUntil)}</span>
         </div>
         <Pill>mute</Pill>
-      </div>
+      </OpsSplitRow>
       <OpsActionRow>
         <OpsActionButton
           disabled={clearing}
@@ -1972,13 +1973,13 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                     }
                     key={issue.id}
                   >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
+                    <OpsSplitRow>
                       <div className="grid gap-1">
                         <strong>{issue.title}</strong>
                         <span>{issue.message}</span>
                       </div>
                       <Pill>{issue.severity}</Pill>
-                    </div>
+                    </OpsSplitRow>
                     <OpsPillRow>
                       <Pill>{issue.kind}</Pill>
                       <Pill>

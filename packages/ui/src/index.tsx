@@ -459,6 +459,10 @@ type OpsPillRowProps = PropsWithChildren<{
   className?: string;
 }>;
 
+type OpsSplitRowProps = PropsWithChildren<{
+  className?: string;
+}>;
+
 type OpsActionRowProps = PropsWithChildren<{
   className?: string;
 }>;
@@ -904,6 +908,19 @@ export function OpsSettingsGrid({ children, className }: OpsSettingsGridProps) {
 export function OpsPillRow({ children, className }: OpsPillRowProps) {
   return (
     <div className={cn("flex flex-wrap gap-2", className)}>{children}</div>
+  );
+}
+
+export function OpsSplitRow({ children, className }: OpsSplitRowProps) {
+  return (
+    <div
+      className={cn(
+        "flex flex-wrap items-start justify-between gap-3",
+        className
+      )}
+    >
+      {children}
+    </div>
   );
 }
 
