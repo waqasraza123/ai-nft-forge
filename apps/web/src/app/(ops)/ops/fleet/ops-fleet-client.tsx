@@ -12,8 +12,11 @@ import {
 } from "@ai-nft-forge/shared";
 import {
   ActionButton,
+  ActionRow,
   cn,
   OpsEmptyState,
+  OpsActionRow,
+  OpsPillRow,
   OpsPanelCard,
   MetricTile,
   Pill,
@@ -325,7 +328,7 @@ export function OpsFleetClient({
             estate-wide so pressure is visible before it becomes a workflow
             blocker.
           </p>
-          <div className="flex flex-wrap gap-2">
+          <OpsPillRow>
             <Pill>
               {currentWorkspace?.workspace.slug ?? "no active workspace"}
             </Pill>
@@ -333,7 +336,7 @@ export function OpsFleetClient({
             <Pill>{workspaces.length} accessible</Pill>
             <Pill>{pressuredWorkspaceCount} pressured</Pill>
             <Pill>{formatTimestamp(fleet.summary.generatedAt)}</Pill>
-          </div>
+          </OpsPillRow>
           <OpsPanelCard tone="neutral" className="space-y-2">
             <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--color-muted)]">
               Top pressure
@@ -354,13 +357,13 @@ export function OpsFleetClient({
                       {formatWorkspaceStatus(workspace.workspace.status)}
                     </span>
                   </div>
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-[color:var(--color-muted)]">
+                  <OpsActionRow className="text-xs text-[color:var(--color-muted)]">
                     <Pill>{getWorkspacePressureScore(workspace)} pressure</Pill>
                     <Pill>{workspace.ops.activeAlertCount} alerts</Pill>
                     <Pill>
                       {workspace.ops.openReconciliationIssueCount} recon
                     </Pill>
-                  </div>
+                  </OpsActionRow>
                 </OpsPanelCard>
               ))}
             </div>
@@ -369,13 +372,13 @@ export function OpsFleetClient({
             tone="neutral"
             className="bg-[color:var(--color-surface-strong)] p-3"
           >
-            <div className="flex flex-wrap gap-2">
+            <OpsPillRow>
               <Pill>{pressuredWorkspaceCount} pressured</Pill>
               <Pill>{alertPressureWorkspaceCount} with alerts</Pill>
               <Pill>
                 {reconciliationPressureWorkspaceCount} with recon issues
               </Pill>
-            </div>
+            </OpsPillRow>
             <div className="mt-3 flex justify-end">
               <ActionButton
                 disabled={isRefreshing}
@@ -454,14 +457,14 @@ export function OpsFleetClient({
             value={fleet.summary.unfulfilledCheckoutCount.toString()}
           />
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <ActionRow compact className="mt-3">
           <Pill>{pressuredWorkspaceCount} pressured workspaces</Pill>
           <Pill>{alertPressureWorkspaceCount} alert-bearing workspaces</Pill>
           <Pill>
             {reconciliationPressureWorkspaceCount} reconciliation-bearing
             workspaces
           </Pill>
-        </div>
+        </ActionRow>
       </SurfaceCard>
       <SurfaceCard
         body="The most pressured workspaces float to the top using a derived pressure score based on alerts, reconciliation issues, and checkout friction."
@@ -540,7 +543,7 @@ export function OpsFleetClient({
                     {workspace.ops.warningAlertCount} warning
                   </span>
                 </div>
-                <div className="mt-2 flex flex-wrap gap-2">
+                <OpsActionRow>
                   <Pill>
                     {workspace.ops.openReconciliationIssueCount} recon
                   </Pill>
@@ -550,7 +553,7 @@ export function OpsFleetClient({
                   <Pill>
                     {workspace.publications.livePublicationCount} live pubs
                   </Pill>
-                </div>
+                </OpsActionRow>
               </OpsPanelCard>
             ))
           ) : (
@@ -587,7 +590,7 @@ export function OpsFleetClient({
                       seen {formatTimestamp(alert.lastObservedAt)}
                     </span>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <ActionRow compact className="mt-3">
                     <ActionButton
                       tone="secondary"
                       disabled={
@@ -667,7 +670,7 @@ export function OpsFleetClient({
                           ? "Muting…"
                           : "Mute 4h"}
                     </ActionButton>
-                  </div>
+                  </ActionRow>
                 </OpsPanelCard>
               );
             })
@@ -710,13 +713,13 @@ export function OpsFleetClient({
                     checkouts
                   </span>
                 </div>
-                <div className="mt-2 flex flex-wrap gap-2">
+                <OpsActionRow>
                   <Pill>{workspace.ops.criticalAlertCount} critical</Pill>
                   <Pill>{workspace.ops.activeAlertCount} alerts</Pill>
                   <Pill>
                     {formatTimestamp(workspace.directory.lastActivityAt)}
                   </Pill>
-                </div>
+                </OpsActionRow>
               </OpsPanelCard>
             ))
           ) : (

@@ -745,3 +745,18 @@ Finish the production-grade consistency phase on remaining high-traffic Studio/O
   - `pnpm --filter @ai-nft-forge/web build`
 - Current phase status: `Shared UI Primitive Consolidation`
 - Current phase step: continue the Ops/Studio final parity pass on high-traffic detail panels, then lock milestone and run final accessibility/visual review notes.
+
+## Latest Checkpoint (Ops Row Primitive Consolidation)
+- Completed the next production-grade pass in the remaining high-traffic ops command surfaces:
+  - `apps/web/src/app/(ops)/ops/page.tsx`
+    - Replaced hard-coded status chip row with shared `OpsPillRow`.
+  - `apps/web/src/app/(ops)/ops/audit/ops-audit-client.tsx`
+    - Replaced repeated `flex flex-wrap gap-2` controls and CTA rows with shared `ActionRow`/`OpsPillRow`.
+  - `apps/web/src/app/(ops)/ops/fleet/ops-fleet-client.tsx`
+    - Replaced repeated pill/action row markup with shared `OpsPillRow`, `OpsActionRow`, and `ActionRow` where spacing and top margin variants are required.
+- Verification:
+  - `pnpm exec prettier --write apps/web/src/app/'(ops)'/ops/page.tsx apps/web/src/app/'(ops)'/ops/audit/ops-audit-client.tsx apps/web/src/app/'(ops)'/ops/fleet/ops-fleet-client.tsx`
+  - `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+  - `pnpm --filter @ai-nft-forge/web build`
+- Current phase status: `Shared UI Primitive Consolidation`
+- Current phase step: final acceptance of remaining high-density studio and public rhythm patterns, then lock release-ready UI polish phase and start art-direction pass on composition surfaces only.

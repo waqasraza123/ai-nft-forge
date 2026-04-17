@@ -1,6 +1,7 @@
 import {
   SurfacePanel,
   OpsQuickActions,
+  OpsPillRow,
   OpsSummaryCard,
   PageShell,
   Pill,
@@ -140,7 +141,7 @@ export default async function OpsPage() {
                   : "Public runtime health remains visible here, but queue depth, alert controls, reconciliation, and retry actions only load after an authenticated studio session selects an accessible workspace."}
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <OpsPillRow>
               <Pill>{runtime.web.service}</Pill>
               <Pill>{runtime.web.phase}</Pill>
               <Pill>{formatDateTime(runtime.web.timestamp)}</Pill>
@@ -149,7 +150,7 @@ export default async function OpsPage() {
               </Pill>
               <Pill>{runtime.operator.access?.role ?? "unauthenticated"}</Pill>
               <Pill>{availableWorkspaceCount} accessible</Pill>
-            </div>
+            </OpsPillRow>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <OpsSummaryCard
                 detail="Web control plane"

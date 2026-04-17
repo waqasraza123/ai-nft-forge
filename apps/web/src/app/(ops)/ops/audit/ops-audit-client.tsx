@@ -17,12 +17,14 @@ import {
 import {
   ActionButton,
   ActionLink,
+  ActionRow,
   FieldLabel,
   FieldStack,
   SelectField,
   Pill,
   EmptyState,
   OpsPanelCard,
+  OpsPillRow,
   OpsStatusNotice,
   SurfaceCard,
   SurfaceGrid
@@ -293,7 +295,7 @@ export function OpsAuditClient({
                 ))}
               </SelectField>
             </FieldStack>
-            <div className="flex flex-wrap gap-2">
+            <ActionRow compact>
               <ActionButton
                 disabled={isRefreshing}
                 onClick={() => {
@@ -314,13 +316,13 @@ export function OpsAuditClient({
               >
                 Export CSV
               </ActionLink>
-            </div>
+            </ActionRow>
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <ActionRow compact className="mt-3">
             <Pill>{workspaceSlug}</Pill>
             <Pill>{audit.audit.entries.length} loaded</Pill>
             <Pill>{category.replaceAll("_", " ")}</Pill>
-          </div>
+          </ActionRow>
         </SurfaceCard>
         <SurfaceCard
           body="The audit stream now centralizes invitation, membership, and ownership-transfer lifecycle events so operators do not have to pivot between settings screens to reconstruct what happened."
@@ -328,7 +330,7 @@ export function OpsAuditClient({
           span={8}
           title="Workspace activity"
         >
-          <div className="flex flex-wrap gap-2">
+          <OpsPillRow>
             <Pill>{audit.audit.actions.length} matching actions</Pill>
             <Pill>
               {audit.audit.nextCursor
@@ -338,7 +340,7 @@ export function OpsAuditClient({
             <ActionLink href="/studio/settings" tone="inline">
               Settings audit source
             </ActionLink>
-          </div>
+          </OpsPillRow>
           {audit.audit.entries.length ? (
             <div className="mt-3 space-y-3">
               {audit.audit.entries.map((entry: OpsWorkspaceAuditEntry) => (
@@ -372,7 +374,7 @@ export function OpsAuditClient({
             </EmptyState>
           )}
           {audit.audit.nextCursor ? (
-            <div className="mt-3 flex flex-wrap gap-2">
+            <ActionRow compact className="mt-3">
               <ActionButton
                 disabled={isLoadingMore}
                 type="button"
@@ -383,7 +385,7 @@ export function OpsAuditClient({
               >
                 {isLoadingMore ? "Loading…" : "Load more"}
               </ActionButton>
-            </div>
+            </ActionRow>
           ) : null}
         </SurfaceCard>
       </SurfaceGrid>
