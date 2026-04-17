@@ -6,6 +6,7 @@ import {
   createCollectionTokenUriPath
 } from "@ai-nft-forge/contracts";
 import {
+  ActionRow,
   ActionLink,
   StorefrontPanel,
   StorefrontPill,
@@ -17,6 +18,7 @@ import {
   CollectibleEditorialBand,
   CollectibleHeroArtwork,
   CollectiblePreviewCard,
+  CollectibleGalleryRail,
   FloatingCollectibleCluster
 } from "../../../../../../components/collectible-visuals";
 import { createRuntimePublicCollectionService } from "../../../../../../server/collections/runtime";
@@ -226,7 +228,7 @@ function CollectionHeroSection(input: {
         <p className="text-sm leading-7 text-[color:var(--storefront-muted)] md:text-base">
           {input.description}
         </p>
-        <div className="flex flex-wrap gap-2">
+        <ActionRow compact>
           {fallbackCta ? (
             <ActionLink href={fallbackCta.href} tone="action">
               {fallbackCta.label}
@@ -240,7 +242,7 @@ function CollectionHeroSection(input: {
           <ActionLink href={input.brandPath} tone="inline">
             Back to brand release floor
           </ActionLink>
-        </div>
+        </ActionRow>
         <div className="grid gap-2 sm:grid-cols-2">
           <StorefrontPill tone="accent">Launch mode</StorefrontPill>
           <StorefrontPill>
@@ -403,17 +405,17 @@ function CollectionReserveZone(input: {
 }) {
   return (
     <StorefrontPanel tone="soft">
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+      <div className="mb-4 flex items-start justify-between gap-3">
         <SectionHeader
           kicker="Reserve module"
           title="Secure your edition before it sells out"
         />
-        <div className="flex flex-wrap gap-2">
+        <ActionRow compact>
           <StorefrontPill tone="accent">
             {input.availabilityLabel}
           </StorefrontPill>
           <StorefrontPill>Reserve-ready</StorefrontPill>
-        </div>
+        </ActionRow>
       </div>
       <div className="grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
         <PurchasePanel
@@ -479,7 +481,11 @@ function CollectionGallery(input: {
 }) {
   if (input.items.length === 0) {
     return (
-      <StorefrontPanel tone="soft">
+      <CollectibleGalleryRail
+        accentVar="--storefront-accent"
+        headline="Gallery wall"
+        summary={`Gallery waiting for published variants for ${input.title}`}
+      >
         <SectionHeader
           kicker="Gallery wall"
           title={`Gallery waiting for published variants for ${input.title}`}
@@ -487,12 +493,16 @@ function CollectionGallery(input: {
         <p className="text-sm text-[color:var(--storefront-muted)]">
           No artwork has been published for this release yet.
         </p>
-      </StorefrontPanel>
+      </CollectibleGalleryRail>
     );
   }
 
   return (
-    <StorefrontPanel tone="soft">
+    <CollectibleGalleryRail
+      accentVar="--storefront-accent"
+      headline="Curated collectible set"
+      summary={`${input.items.length} collectible variants`}
+    >
       <SectionHeader kicker="Gallery wall" title="Curated collectible set" />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {input.items.map((item) => (
@@ -515,7 +525,7 @@ function CollectionGallery(input: {
           </StorefrontTile>
         ))}
       </div>
-    </StorefrontPanel>
+    </CollectibleGalleryRail>
   );
 }
 
@@ -530,7 +540,11 @@ function CollectionTechnicalSection(input: {
   } | null;
 }) {
   return (
-    <StorefrontPanel tone="soft">
+    <CollectibleGalleryRail
+      accentVar="--storefront-accent"
+      headline="Manifest and contract references"
+      summary="Technical proof and public contract metadata for this release."
+    >
       <SectionHeader
         kicker="Technical proof"
         title="Manifest and contract references"
@@ -615,7 +629,7 @@ function CollectionTechnicalSection(input: {
           )}
         </StorefrontTile>
       </div>
-    </StorefrontPanel>
+    </CollectibleGalleryRail>
   );
 }
 
@@ -628,7 +642,11 @@ function CollectionRelatedSection(input: {
   }>;
 }) {
   return (
-    <StorefrontPanel tone="soft">
+    <CollectibleGalleryRail
+      accentVar="--storefront-accent"
+      headline="Connected brand releases"
+      summary="Related collectible drops from the same campaign family."
+    >
       <SectionHeader kicker="Related drops" title="Connected brand releases" />
       {input.relatedCollections.length === 0 ? (
         <p className="text-sm text-[color:var(--storefront-muted)]">
@@ -655,7 +673,7 @@ function CollectionRelatedSection(input: {
           ))}
         </div>
       )}
-    </StorefrontPanel>
+    </CollectibleGalleryRail>
   );
 }
 

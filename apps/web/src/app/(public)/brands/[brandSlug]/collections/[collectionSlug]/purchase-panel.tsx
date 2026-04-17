@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import {
   ActionButton,
+  ActionRow,
   FieldLabel,
   InputField,
   StorefrontPanel,
@@ -126,7 +127,7 @@ export function PurchasePanel(props: PurchasePanelProps) {
                 : "Reserve the next available edition"}
             </h2>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <ActionRow compact>
             <StorefrontPill className="text-[color:var(--storefront-text)]">
               {props.availableEditionCount} editions open
             </StorefrontPill>
@@ -140,7 +141,7 @@ export function PurchasePanel(props: PurchasePanelProps) {
                 {props.activeReservationCount} held right now
               </StorefrontPill>
             ) : null}
-          </div>
+          </ActionRow>
           {props.checkoutEnabled ? (
             <form className="space-y-3" onSubmit={handleSubmit}>
               <label className="grid gap-1.5">
@@ -182,7 +183,7 @@ export function PurchasePanel(props: PurchasePanelProps) {
                   {error}
                 </StorefrontTile>
               ) : null}
-              <div className="flex flex-wrap gap-2">
+              <ActionRow compact>
                 <ActionButton disabled={busy} tone="primary" type="submit">
                   {busy
                     ? "Starting checkout..."
@@ -190,7 +191,7 @@ export function PurchasePanel(props: PurchasePanelProps) {
                       ? "Reserve and continue to payment"
                       : "Reserve and continue"}
                 </ActionButton>
-              </div>
+              </ActionRow>
             </form>
           ) : (
             <StorefrontTile className="p-3" tone="muted">

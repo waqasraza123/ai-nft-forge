@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { ActionButton } from "@ai-nft-forge/ui";
+import { ActionButton, ActionRow } from "@ai-nft-forge/ui";
 
 type CheckoutClientProps = {
   brandSlug: string;
@@ -56,10 +56,7 @@ export function CheckoutClient(props: CheckoutClientProps) {
   }
 
   return (
-    <div
-      className="mt-4 flex flex-wrap gap-2"
-      role="group"
-    >
+    <ActionRow compact className="mt-4">
       {error ? (
         <p className="w-full rounded-xl border border-red-400/45 bg-red-500/12 p-2.5 text-sm text-red-100">
           {error}
@@ -87,6 +84,6 @@ export function CheckoutClient(props: CheckoutClientProps) {
             : "Release reservation"}
         </ActionButton>
       ) : null}
-    </div>
+    </ActionRow>
   );
 }

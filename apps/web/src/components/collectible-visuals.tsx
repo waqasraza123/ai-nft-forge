@@ -37,6 +37,14 @@ type StudioSceneCardProps = {
   title: string;
 };
 
+type CollectibleGalleryRailProps = {
+  accentVar?: string;
+  children: ReactNode;
+  headline: string;
+  className?: string;
+  summary?: string;
+};
+
 function accentValue(variableName: string) {
   return `var(${variableName})`;
 }
@@ -389,6 +397,45 @@ export function CollectibleEditorialBand({
       />
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.1),transparent)]" />
       <div className="relative">{children}</div>
+    </section>
+  );
+}
+
+export function CollectibleGalleryRail({
+  accentVar = "--color-accent",
+  children,
+  className,
+  headline,
+  summary
+}: CollectibleGalleryRailProps) {
+  const accent = accentValue(accentVar);
+
+  return (
+    <section
+      className={`relative overflow-hidden rounded-[2rem] border border-[color:var(--color-line)] bg-[color:var(--color-surface)]/85 p-6 shadow-[var(--shadow-surface)] transition ${className ?? ""}`}
+    >
+      <div
+        className="absolute -left-8 top-0 h-36 w-36 rounded-full blur-3xl"
+        style={{ backgroundColor: accent, opacity: 0.16 }}
+      />
+      <div
+        className="absolute -right-8 top-2 h-36 w-36 rounded-full blur-3xl"
+        style={{ backgroundColor: accent, opacity: 0.1 }}
+      />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.1),transparent)]" />
+      <div className="relative grid gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">
+            {headline}
+          </p>
+          {summary ? (
+            <p className="mt-1 text-sm text-[color:var(--color-muted)]">
+              {summary}
+            </p>
+          ) : null}
+        </div>
+        {children}
+      </div>
     </section>
   );
 }

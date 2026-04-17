@@ -17,6 +17,7 @@ import {
   CollectibleEditorialBand,
   CollectibleHeroArtwork,
   CollectiblePreviewCard,
+  CollectibleGalleryRail,
   FloatingCollectibleCluster
 } from "../../../../components/collectible-visuals";
 import { createRuntimePublicCollectionService } from "../../../../server/collections/runtime";
@@ -180,7 +181,7 @@ function BrandHeroVisual(input: {
             </span>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2 text-xs text-[color:var(--storefront-muted)]">
+        <ActionRow compact>
           <span>
             {input.release
               ? `${input.release.itemCount} works`
@@ -192,7 +193,7 @@ function BrandHeroVisual(input: {
               ? input.release.availabilityLabel
               : "Awaiting campaign"}
           </span>
-        </div>
+        </ActionRow>
         <div className="mt-2 grid gap-2 text-sm text-[color:var(--storefront-muted)]">
           <StorefrontTile className="px-4 py-3" tone="gallery">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--storefront-accent)]">
@@ -260,7 +261,7 @@ function BrandHeroSection(input: {
         <p className="max-w-2xl text-sm leading-7 text-[color:var(--storefront-muted)] md:text-base">
           {input.heroDescription}
         </p>
-        <div className="flex flex-wrap gap-3">
+        <ActionRow>
           {input.primaryCtaHref ? (
             <ActionLink href={input.primaryCtaHref} tone="action">
               {input.primaryCtaLabel}
@@ -271,12 +272,12 @@ function BrandHeroSection(input: {
               {input.secondaryCtaLabel}
             </ActionLink>
           ) : null}
-        </div>
+        </ActionRow>
         <StorefrontPanel>
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
             {input.heroKicker}
           </p>
-          <div className="flex flex-wrap gap-2">
+          <ActionRow compact>
             {input.campaignMetrics.map((metric) => (
               <StorefrontTile className="p-3" tone="muted" key={metric.label}>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--storefront-accent)]">
@@ -287,7 +288,7 @@ function BrandHeroSection(input: {
                 </p>
               </StorefrontTile>
             ))}
-          </div>
+          </ActionRow>
         </StorefrontPanel>
       </div>
       <BrandHeroVisual release={input.release} />
@@ -339,7 +340,7 @@ function BrandFeaturedReleaseCard(input: {
               : (release.description ??
                 "Published collectible drops are surfaced from immutable snapshots and arranged by brand campaign rhythm.")}
           </p>
-          <div className="flex flex-wrap gap-2">
+          <ActionRow compact>
             <StorefrontPill tone="accent">
               {formatStatusLabel(release.storefrontStatus)}
             </StorefrontPill>
@@ -352,7 +353,7 @@ function BrandFeaturedReleaseCard(input: {
                 status: release.storefrontStatus
               })}
             </StorefrontPill>
-          </div>
+          </ActionRow>
           <ul
             className="grid gap-1 text-sm text-[color:var(--storefront-muted)] md:grid-cols-2"
             aria-label={`${release.title} metadata`}
@@ -461,12 +462,12 @@ function BrandReleaseCard(input: {
           {input.release.description ??
             "Campaign entry for this campaign route."}
         </p>
-        <div className="flex flex-wrap gap-2">
+        <ActionRow compact>
           <StorefrontPill tone="accent">
             {formatStatusLabel(input.release.storefrontStatus)}
           </StorefrontPill>
           <StorefrontPill>{input.release.availabilityLabel}</StorefrontPill>
-        </div>
+        </ActionRow>
         <ul className="text-sm leading-6 text-[color:var(--storefront-muted)]">
           {metadata.map((metric) => (
             <li key={`${input.release.publicPath}-${metric}`}>• {metric}</li>
@@ -483,44 +484,44 @@ function BrandReleaseCard(input: {
 function BrandReleaseSection(input: BrandSection) {
   return (
     <section className="space-y-4" id={input.id}>
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
-          {brandSectionTitleByTone[input.tone]}
-        </p>
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-2xl font-semibold font-[var(--font-display)]">
-            {input.title}
-          </h2>
-          <StorefrontPill className="text-[color:var(--storefront-muted)]">
-            {input.collections.length} drops
-          </StorefrontPill>
+      <CollectibleGalleryRail
+        accentVar="--storefront-accent"
+        headline={brandSectionTitleByTone[input.tone]}
+        summary={brandSectionCopyByTone[input.tone]}
+      >
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-2xl font-semibold font-[var(--font-display)]">
+              {input.title}
+            </h2>
+            <StorefrontPill className="text-[color:var(--storefront-muted)]">
+              {input.collections.length} drops
+            </StorefrontPill>
+          </div>
         </div>
-        <p className="text-sm text-[color:var(--storefront-muted)]">
-          {brandSectionCopyByTone[input.tone]}
-        </p>
-      </div>
-      {input.collections.length === 0 ? (
-        <StorefrontPanel
-          tone="default"
-          className="text-sm text-[color:var(--storefront-muted)]"
-        >
-          {input.tone === "live"
-            ? "No live launches are active right now."
-            : input.tone === "upcoming"
-              ? "No upcoming launches are queued yet."
-              : "Archived campaigns are currently being recorded in this brand route."}
-        </StorefrontPanel>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {input.collections.map((release) => (
-            <BrandReleaseCard
-              key={release.publicPath}
-              release={release}
-              tone={input.tone}
-            />
-          ))}
-        </div>
-      )}
+        {input.collections.length === 0 ? (
+          <StorefrontPanel
+            tone="default"
+            className="text-sm text-[color:var(--storefront-muted)]"
+          >
+            {input.tone === "live"
+              ? "No live launches are active right now."
+              : input.tone === "upcoming"
+                ? "No upcoming launches are queued yet."
+                : "Archived campaigns are currently being recorded in this brand route."}
+          </StorefrontPanel>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {input.collections.map((release) => (
+              <BrandReleaseCard
+                key={release.publicPath}
+                release={release}
+                tone={input.tone}
+              />
+            ))}
+          </div>
+        )}
+      </CollectibleGalleryRail>
     </section>
   );
 }

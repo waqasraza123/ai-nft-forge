@@ -268,7 +268,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
                 <p className="text-sm leading-7 text-[color:var(--storefront-muted)]">
                   {checkoutLead}
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <ActionRow compact>
                   {checkout.checkout.priceLabel ? (
                     <Pill className={storefrontAccentPillClass}>
                       {checkout.checkout.priceLabel}
@@ -277,7 +277,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
                   <Pill className={storefrontNeutralPillClass}>
                     {statusProviderCopy.title}
                   </Pill>
-                </div>
+                </ActionRow>
               </div>
               <CollectiblePreviewCard
                 accentVar="--storefront-accent"
@@ -378,7 +378,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
               <p className="mt-2 text-sm text-[color:var(--storefront-text)]">
                 {actionCopy.providerLead}
               </p>
-              <div className="mt-4 flex flex-wrap gap-3">
+              <ActionRow className="mt-4">
                 {checkout.checkout.providerKind === "manual" ? (
                   <CheckoutClient
                     brandSlug={brandSlug}
@@ -410,7 +410,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
                     Start a fresh checkout
                   </ActionLink>
                 )}
-              </div>
+              </ActionRow>
             </article>
             <article className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/70 p-5 space-y-2">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
@@ -426,7 +426,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
                 Use the links below to review release details and related
                 campaigns.
               </p>
-              <div className="flex flex-wrap gap-2">
+              <ActionRow compact>
                 <ActionLink
                   className={storefrontAccentPillClass}
                   href={releasePath}
@@ -439,7 +439,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
                 >
                   Back to brand landing
                 </ActionLink>
-              </div>
+              </ActionRow>
             </article>
           </div>
         </section>
