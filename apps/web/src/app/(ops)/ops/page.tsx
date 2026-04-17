@@ -1,4 +1,9 @@
-import { ActionLink, PageShell, Pill, SurfaceCard } from "@ai-nft-forge/ui";
+import {
+  OpsQuickActions,
+  PageShell,
+  Pill,
+  SurfaceCard
+} from "@ai-nft-forge/ui";
 
 import { WorkspaceDirectoryPanel } from "../../../components/workspace-directory-panel";
 import { WorkspaceScopeSwitcher } from "../../../components/workspace-scope-switcher";
@@ -85,27 +90,44 @@ function OpsCommandSummaryCard({
 }
 
 function opsActions(runtimeBackendHealthUrl: string | null) {
+  const actions: Array<{
+    href: string;
+    label: string;
+    tone?: "action" | "inline" | "muted";
+    rel?: string;
+    target?: string;
+  } | null> = [
+    { href: "/ops/audit", label: "Audit" },
+    { href: "/ops/fleet", label: "Fleet" },
+    { href: "/ops/retention", label: "Retention" },
+    { href: "/ops/workspaces", label: "Directory" },
+    { href: "/api/health", label: "Web health" },
+    runtimeBackendHealthUrl
+      ? {
+          href: runtimeBackendHealthUrl,
+          label: "Backend health",
+          tone: "inline",
+          rel: "noreferrer",
+          target: "_blank"
+        }
+      : null,
+    { href: "/", label: "Back to marketing", tone: "muted" }
+  ];
+
   return (
-    <>
-      <ActionLink href="/ops/audit">Audit</ActionLink>
-      <ActionLink href="/ops/fleet">Fleet</ActionLink>
-      <ActionLink href="/ops/retention">Retention</ActionLink>
-      <ActionLink href="/ops/workspaces">Directory</ActionLink>
-      <ActionLink href="/api/health">Web health</ActionLink>
-      {runtimeBackendHealthUrl ? (
-        <ActionLink
-          href={runtimeBackendHealthUrl}
-          rel="noreferrer"
-          target="_blank"
-          tone="inline"
-        >
-          Backend health
-        </ActionLink>
-      ) : null}
-      <ActionLink href="/" tone="muted">
-        Back to marketing
-      </ActionLink>
-    </>
+    <OpsQuickActions
+      actions={actions.filter(
+        (
+          action
+        ): action is {
+          href: string;
+          label: string;
+          tone?: "action" | "inline" | "muted";
+          rel?: string;
+          target?: string;
+        } => action !== null
+      )}
+    />
   );
 }
 
@@ -234,15 +256,18 @@ export default async function OpsPage() {
             eyebrow="Route deck"
             title="Adjacent ops surfaces"
           >
-            <div className="mt-4 grid gap-2">
-              <ActionLink href="/ops/audit">Review audit evidence</ActionLink>
-              <ActionLink href="/ops/fleet">Open fleet triage</ActionLink>
-              <ActionLink href="/ops/retention">
-                Open retention review
-              </ActionLink>
-              <ActionLink href="/ops/workspaces">
-                Browse workspace directory
-              </ActionLink>
+            <div className="mt-4">
+              <OpsQuickActions
+                actions={[
+                  { href: "/ops/audit", label: "Review audit evidence" },
+                  { href: "/ops/fleet", label: "Open fleet triage" },
+                  { href: "/ops/retention", label: "Open retention review" },
+                  {
+                    href: "/ops/workspaces",
+                    label: "Browse workspace directory"
+                  }
+                ]}
+              />
             </div>
           </SurfaceCard>
           <SurfaceCard

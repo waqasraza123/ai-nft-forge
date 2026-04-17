@@ -1,9 +1,4 @@
-import {
-  ActionLink,
-  ActionRow,
-  PageShell,
-  SurfaceCard
-} from "@ai-nft-forge/ui";
+import { OpsQuickActions, PageShell, SurfaceCard } from "@ai-nft-forge/ui";
 
 import { WorkspaceDirectoryPanel } from "../../../../components/workspace-directory-panel";
 import { WorkspaceOffboardingPanel } from "../../../../components/workspace-offboarding-panel";
@@ -52,14 +47,14 @@ export default async function OpsWorkspacesPage() {
       title="Review the accessible workspace estate"
       lead="This route keeps workspace-wide operator context visible without flattening distinct workspaces into one dataset. Counts here come only from workspace-native settings, members, invitations, escalations, and audit records."
       actions={
-        <ActionRow>
-          <ActionLink href="/ops/audit">Audit activity</ActionLink>
-          <ActionLink href="/ops/retention">Retention review</ActionLink>
-          <ActionLink href="/ops">Runtime overview</ActionLink>
-          <ActionLink href="/" tone="inline">
-            Back to marketing
-          </ActionLink>
-        </ActionRow>
+        <OpsQuickActions
+          actions={[
+            { href: "/ops/audit", label: "Audit activity" },
+            { href: "/ops/retention", label: "Retention review" },
+            { href: "/ops", label: "Runtime overview" },
+            { href: "/", label: "Back to marketing", tone: "inline" }
+          ]}
+        />
       }
       tone="ops"
     >

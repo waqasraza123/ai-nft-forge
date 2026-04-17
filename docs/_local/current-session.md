@@ -437,3 +437,22 @@ Finish the production-grade consistency phase on remaining high-traffic Studio/O
 ## Updated Next Follow-up
 - Extract a shared Ops shell helper in `@ai-nft-forge/ui` only if the same card shell pattern is needed again outside the two touched routes (`/ops`, `/ops/retention`, `/ops/workspaces`).
 - Begin the next production UI pass by auditing route-level action rhythm in ops pages for any duplicated action-link groups that still sit outside shared helpers.
+
+## Latest Checkpoint (Ops Route Action Rhythm)
+- Completed the next production-grade ops UX pass by introducing `OpsQuickActions` in `packages/ui/src/index.tsx`:
+  - standardized route header action clusters using a shared, map-driven action-row primitive
+  - replaced duplicated inline action-link clusters in:
+    - `apps/web/src/app/(ops)/ops/page.tsx`
+    - `apps/web/src/app/(ops)/ops/fleet/page.tsx`
+    - `apps/web/src/app/(ops)/ops/workspaces/page.tsx`
+    - `apps/web/src/app/(ops)/ops/retention/page.tsx`
+    - `apps/web/src/app/(ops)/ops/audit/page.tsx`
+  - preserved behavior and route semantics while making action rhythm and spacing consistent across ops entry points.
+
+## Verification (Ops Route Action Rhythm)
+- `pnpm exec prettier --write packages/ui/src/index.tsx apps/web/src/app/'(ops)'/ops/page.tsx apps/web/src/app/'(ops)'/ops/workspaces/page.tsx apps/web/src/app/'(ops)'/ops/retention/page.tsx apps/web/src/app/'(ops)'/ops/fleet/page.tsx apps/web/src/app/'(ops)'/ops/audit/page.tsx`
+- `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+- `pnpm --filter @ai-nft-forge/web build`
+
+## Updated Next Follow-up
+- Keep this phase-level pass open on dense tables/commands by introducing a reusable empty-state/notice treatment only when the same ops pattern repeats in two+ command-heavy client surfaces.

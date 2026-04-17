@@ -1,4 +1,4 @@
-import { ActionLink, PageShell } from "@ai-nft-forge/ui";
+import { OpsQuickActions, PageShell } from "@ai-nft-forge/ui";
 
 import { getCurrentStudioAccess } from "../../../../server/studio/access";
 import { createRuntimeWorkspaceFleetService } from "../../../../server/workspaces/fleet-service";
@@ -24,20 +24,14 @@ export default async function OpsFleetPage() {
       title="Fleet triage workspace"
       lead="Compare alert concentration, reconciliation pressure, and checkout risk across the accessible estate before drilling into a single workspace."
       actions={
-        <>
-          <ActionLink href="/ops" tone="action">
-            Runtime overview
-          </ActionLink>
-          <ActionLink href="/ops/audit" tone="action">
-            Audit activity
-          </ActionLink>
-          <ActionLink href="/studio/commerce/fleet" tone="action">
-            Commerce fleet
-          </ActionLink>
-          <ActionLink href="/" tone="inline">
-            Back to marketing
-          </ActionLink>
-        </>
+        <OpsQuickActions
+          actions={[
+            { href: "/ops", label: "Runtime overview" },
+            { href: "/ops/audit", label: "Audit activity" },
+            { href: "/studio/commerce/fleet", label: "Commerce fleet" },
+            { href: "/", label: "Back to marketing", tone: "inline" }
+          ]}
+        />
       }
       tone="ops"
     >

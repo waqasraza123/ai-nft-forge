@@ -286,6 +286,21 @@ type ActionRowProps = PropsWithChildren<{
   padTop?: boolean;
 }>;
 
+type OpsQuickAction = {
+  href: string;
+  label: string;
+  tone?: "action" | "inline" | "muted";
+  rel?: string;
+  target?: string;
+};
+
+type OpsQuickActionsProps = {
+  actions: OpsQuickAction[];
+  compact?: boolean;
+  className?: string;
+  padTop?: boolean;
+};
+
 type FormPanelProps = PropsWithChildren<{
   className?: string;
 }>;
@@ -571,6 +586,29 @@ export function ActionRow({
     >
       {children}
     </div>
+  );
+}
+
+export function OpsQuickActions({
+  actions,
+  compact = false,
+  className,
+  padTop = false
+}: OpsQuickActionsProps) {
+  return (
+    <ActionRow compact={compact} padTop={padTop} className={className ?? ""}>
+      {actions.map((action) => (
+        <ActionLink
+          href={action.href}
+          key={action.label}
+          {...(action.rel ? { rel: action.rel } : null)}
+          {...(action.target ? { target: action.target } : null)}
+          {...(action.tone ? { tone: action.tone } : null)}
+        >
+          {action.label}
+        </ActionLink>
+      ))}
+    </ActionRow>
   );
 }
 

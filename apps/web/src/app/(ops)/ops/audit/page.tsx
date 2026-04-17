@@ -1,5 +1,5 @@
 import {
-  ActionLink,
+  OpsQuickActions,
   PageShell,
   Pill,
   SurfaceCard,
@@ -26,17 +26,13 @@ export default async function OpsAuditPage() {
       title="Workspace activity audit and export"
       lead="The ops audit surface now exposes durable workspace activity as a filterable operational timeline instead of limiting audit review to the short settings history widget."
       actions={
-        <>
-          <ActionLink href="/ops" tone="action">
-            Open ops
-          </ActionLink>
-          <ActionLink href="/studio/settings" tone="action">
-            Open settings
-          </ActionLink>
-          <ActionLink href="/" tone="inline">
-            Back to marketing
-          </ActionLink>
-        </>
+        <OpsQuickActions
+          actions={[
+            { href: "/ops", label: "Open ops" },
+            { href: "/studio/settings", label: "Open settings" },
+            { href: "/", label: "Back to marketing", tone: "inline" }
+          ]}
+        />
       }
       tone="ops"
     >

@@ -1,5 +1,5 @@
 import {
-  ActionLink,
+  OpsQuickActions,
   PageShell,
   SurfaceCard,
   SurfaceGrid
@@ -32,20 +32,14 @@ export default async function OpsRetentionPage() {
       title="Reviews offboarding and retained cleanup across accessible workspaces"
       lead="This route separates retention and decommission oversight from the live runtime and fleet triage pages so archive blockers, scheduled cleanup windows, and final operator-safe cancellation stay explicit."
       actions={
-        <>
-          <ActionLink href="/ops" tone="action">
-            Runtime overview
-          </ActionLink>
-          <ActionLink href="/ops/fleet" tone="action">
-            Fleet triage
-          </ActionLink>
-          <ActionLink href="/ops/workspaces" tone="action">
-            Workspace directory
-          </ActionLink>
-          <ActionLink href="/" tone="inline">
-            Back to marketing
-          </ActionLink>
-        </>
+        <OpsQuickActions
+          actions={[
+            { href: "/ops", label: "Runtime overview" },
+            { href: "/ops/fleet", label: "Fleet triage" },
+            { href: "/ops/workspaces", label: "Workspace directory" },
+            { href: "/", label: "Back to marketing", tone: "inline" }
+          ]}
+        />
       }
       tone="ops"
     >
