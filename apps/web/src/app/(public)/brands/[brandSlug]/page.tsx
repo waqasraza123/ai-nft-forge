@@ -6,7 +6,8 @@ import {
   ActionLink,
   StorefrontPanel,
   StorefrontPill,
-  StorefrontTile
+  StorefrontTile,
+  cn
 } from "@ai-nft-forge/ui";
 import type {
   CollectionPublicBrandPreview,
@@ -21,7 +22,10 @@ import {
   FloatingCollectibleCluster
 } from "../../../../components/collectible-visuals";
 import { createRuntimePublicCollectionService } from "../../../../server/collections/runtime";
-import { createStorefrontThemeStyle } from "../../../../lib/ui/storefront-theme";
+import {
+  createStorefrontThemeStyle,
+  resolveStorefrontThemeClasses
+} from "../../../../lib/ui/storefront-theme";
 
 type BrandPageProps = {
   params: Promise<{
@@ -620,7 +624,10 @@ export default async function BrandPage({ params }: BrandPageProps) {
 
   return (
     <div
-      className="min-h-screen bg-[var(--storefront-bg)] text-[color:var(--storefront-text)]"
+      className={cn(
+        "min-h-screen bg-[var(--storefront-bg)] text-[color:var(--storefront-text)]",
+        resolveStorefrontThemeClasses(brand.theme as CollectionPublicBrandTheme)
+      )}
       style={createStorefrontThemeStyle(
         brand.theme as CollectionPublicBrandTheme
       )}

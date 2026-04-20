@@ -176,8 +176,8 @@ The frozen technical direction remains:
 - Shared repo config lives in `packages/config`.
 - `apps/web` uses Next.js App Router route groups to keep marketing, studio, public, and ops concerns separate from the start.
 - `packages/ui` is the shared UI boundary for reusable shell primitives.
-- Browser UI styling has shifted toward a Tailwind-first path in `apps/web` and `packages/ui`; `globals.css` is now intentionally minimal (Tailwind directives + base tokens), and the styled-class abstraction layer is being removed route by route with reusable variants in UI primitives.
-- Internal app chrome styling is now defined through a 5-theme sidebar token system (`obsidian-amber`, `graphite-cyan`, `midnight-violet`, `forest-mint`, `ember-rose`) with local persistence and runtime CSS variable injection; Studio and Ops route surfaces consume `--app-*` tokens through Tailwind utility classes rather than semantic stylesheet classes.
+- Browser UI styling now uses a Tailwind-first shared design system in `apps/web` and `packages/ui`; `globals.css` is intentionally limited to Tailwind directives, shared visual tokens live in `apps/web/tailwind.config.ts`, and reusable surface/action/form primitives in `packages/ui` are the default styling boundary.
+- Internal chrome now uses one flagship dark "Cinematic Launch OS" theme family with a cinematic public shell and a tighter operator shell; the old sidebar theme switcher path was removed, while public storefront presets and runtime brand accents continue to flow through a narrow CSS-variable bridge driven from Tailwind class composition.
 - `packages/shared` is the shared boundary for auth and worker schemas plus env parsing helpers.
 - The worker runtime uses BullMQ with Redis and keeps product job families deferred behind a noop foundation queue.
 - `packages/database` owns the Prisma schema, migrations, and thin repository boundary for users, auth nonces, auth sessions, workspaces, brands, and audit logs.

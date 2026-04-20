@@ -10,7 +10,6 @@ import {
 
 import { WorkspaceDirectoryPanel } from "../../../components/workspace-directory-panel";
 import { WorkspaceScopeSwitcher } from "../../../components/workspace-scope-switcher";
-import { SidebarThemeSwitcher } from "../../../components/sidebar-theme-switcher";
 import { loadOpsRuntime } from "../../../server/ops/runtime";
 import { createRuntimeWorkspaceDirectoryService } from "../../../server/workspaces/directory-service";
 
@@ -212,7 +211,7 @@ export default async function OpsPage() {
             </div>
           </SurfaceCard>
           <SurfaceCard
-            body="Use dedicated routes for fleet triage, audit evidence, retention review, and workspace estate context."
+            body="Use dedicated routes for fleet triage, audit evidence, retention review, and workspace estate context without leaving the operator control family."
             eyebrow="Route deck"
             title="Adjacent ops surfaces"
           >
@@ -228,15 +227,6 @@ export default async function OpsPage() {
                   }
                 ]}
               />
-            </div>
-          </SurfaceCard>
-          <SurfaceCard
-            body="Choose one of five premium themes to change sidebar chrome, focus, and key accent language across Studio and Ops surfaces."
-            eyebrow="Internal chrome"
-            title="Internal sidebar theme"
-          >
-            <div className="mt-4">
-              <SidebarThemeSwitcher />
             </div>
           </SurfaceCard>
         </aside>

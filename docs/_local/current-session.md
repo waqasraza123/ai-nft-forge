@@ -1,7 +1,52 @@
 # Current Session
 
 ## Date
-2026-04-17
+2026-04-20
+
+## Latest Checkpoint (Single-Theme Tailwind Shell + Docs Alignment)
+- Finalized the current shell redesign around one premium dark Tailwind-first product family:
+  - Removed the internal sidebar theme-switcher path and deleted:
+    - `apps/web/src/components/sidebar-theme-context.tsx`
+    - `apps/web/src/components/sidebar-theme-switcher.tsx`
+    - `apps/web/src/lib/ui/sidebar-theme.ts`
+  - Reworked shell/theme ownership into:
+    - `apps/web/src/components/site-shell.tsx`
+    - `apps/web/src/lib/ui/storefront-theme.ts`
+    - `apps/web/src/app/layout.tsx`
+    - `apps/web/src/app/globals.css`
+    - `apps/web/tailwind.config.ts`
+  - Kept storefront preset backgrounds in Tailwind class composition and limited inline style usage to persisted arbitrary `--storefront-accent` values only.
+- Added durable UI architecture documentation in:
+  - `docs/architecture/ui-design-system.md`
+- Corrected repo memory and public docs to match the current implementation:
+  - `docs/project-state.md`
+  - `README.md`
+- Verification:
+  - Not run in this checkpoint by request; focus remained on code and documentation only.
+- Notes:
+  - Older current-session notes that mention the now-deleted sidebar theme system are historical only and superseded by this checkpoint.
+
+## Latest Checkpoint (Ops Operator Visual-Pragmatism Sweep)
+- Completed a scoped consistency pass that keeps ops minimal but polished:
+  - Added `OpsSplitRow` shared primitive to `packages/ui/src/index.tsx` for reusable header-style split layout in dense ops cards.
+  - Replaced repeated inline `flex flex-wrap items-start justify-between gap-3` usage in:
+    - `apps/web/src/app/(ops)/ops/ops-operator-panel.tsx` (`ActivityItem`, `WindowSummary`, `PersistedCaptureItem`, `AlertDeliveryItem`, `ActiveAlertItem`, `ActiveMuteItem`, and reconciliation issue cards).
+  - Kept behavior untouched and preserved ops readability focus.
+- Commit:
+  - `45218d2` (`refactor(ui): share ops split-row primitive in operator panel`)
+- Push:
+  - Pushed to `origin/main`.
+- Verification:
+  - `pnpm exec tsc --noEmit -p apps/web/tsconfig.json --pretty false`
+  - `pnpm --filter @ai-nft-forge/web build`
+
+## Current Objective
+- Shared UI Primitive Consolidation
+- Current phase: polish + visual QA hardening.
+- Current step: finish final route-level parity checks (`studio`/`ops` public row-pattern and visual rhythm scan), then lock phase and execute a curated “next-level production” pass for:
+  - stronger marketplace/launch compositions where visual weight is still low,
+  - selective art accents in studio empty/onboarding states,
+  - stricter visual restraint in ops empty/error/success surfaces.
 
 ## Latest Checkpoint (Polish + Visual QA)
 - Completed the next-phase polish and visual QA pass for storefront/studio composition with ops restrained:
@@ -844,3 +889,21 @@ Finish the production-grade consistency phase on remaining high-traffic Studio/O
 - Commit: `0dd01b2`
 - Current phase status: `Shared UI Primitive Consolidation`
 - Current phase step: tailwind utility-primitives migration is now complete for identified row-shell patterns across public, studio, and ops routes; next step is optional visual polish review and final QA on dense action density at breakpoints.
+
+## Latest Checkpoint (V1 Readiness Audit)
+- Audited durable state, release gates, and local working notes to answer what remains before calling the current product a real v1/public release.
+- Findings:
+  - `docs/project-state.md` still describes the product as functionally complete through current Phases 1-7 plus major post-phase wallet/onchain/commerce/workspace slices.
+  - The active remaining product work is mostly release-hardening, not net-new core features: optional final visual QA plus responsive density review on polished public/studio/ops routes.
+  - `pnpm lint` still fails in `@ai-nft-forge/database` on:
+    - `packages/database/scripts/cloud-neon-migrate.mjs` (`no-empty` at the `releaseLock` cleanup catch)
+    - `packages/database/src/repositories/workspace-decommission-request-repository.ts` (unused `WorkspaceDecommissionRequestStatus` import)
+  - Browser smoke remains blocked locally because `~/.docker/run/docker.sock` is absent, so the release checklist is not yet fully executable in this environment.
+  - Repo docs are out of sync on release posture:
+    - `docs/product/v1-scope.md` still describes only Phase 1 foundation scope.
+    - `README.md` still lists multi-brand administration as deferred even though durable state says it shipped.
+- Verification:
+  - `pnpm lint` ❌
+  - `ls -l ~/.docker/run/docker.sock` ❌ (`No such file or directory`)
+- Suggested next step:
+  - Fix the two database lint errors, restore Docker/browser-smoke execution, and then do one doc-sync pass (`README.md`, `docs/product/v1-scope.md`, release-state references) before tagging a public v1.

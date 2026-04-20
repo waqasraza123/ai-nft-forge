@@ -11,8 +11,10 @@ import { useRouter } from "next/navigation";
 
 import {
   ActionButton,
+  FieldLabel,
   OpsPanelCard,
   Pill,
+  SelectField,
   StatusBanner
 } from "@ai-nft-forge/ui";
 import {
@@ -128,16 +130,10 @@ export function WorkspaceScopeSwitcher({
   }
 
   return (
-    <OpsPanelCard tone="neutral" className="bg-[color:var(--color-surface)]/70">
+    <OpsPanelCard tone="neutral" className="bg-white/[0.03]">
       <label className="grid gap-2">
-        <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--color-muted)]">
-          Active workspace
-        </span>
-        <select
-          className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] px-3 py-2 text-sm text-[color:var(--color-text)]"
-          onChange={handleChange}
-          value={selectedWorkspaceSlug}
-        >
+        <FieldLabel>Active workspace</FieldLabel>
+        <SelectField onChange={handleChange} value={selectedWorkspaceSlug}>
           {workspaces.length === 0 ? (
             <option value="">No accessible workspaces</option>
           ) : null}
@@ -146,7 +142,7 @@ export function WorkspaceScopeSwitcher({
               {workspace.name} · {workspace.role} · {workspace.status}
             </option>
           ))}
-        </select>
+        </SelectField>
       </label>
       <div className="mt-3">
         <ActionButton

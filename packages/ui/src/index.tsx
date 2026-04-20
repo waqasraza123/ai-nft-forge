@@ -19,10 +19,10 @@ const pageShellVariants = cva("space-y-6", {
   variants: {
     tone: {
       default:
-        "border border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-text)] shadow-[var(--shadow-surface)]",
-      ops: "border border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-text)] shadow-[var(--shadow-surface)]",
+        "rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] px-5 py-6 text-[color:var(--color-text)] shadow-[var(--shadow-surface)] backdrop-blur-xl md:px-7 md:py-7",
+      ops: "rounded-[2rem] border border-cyan-400/10 bg-[linear-gradient(180deg,rgba(8,14,28,0.98),rgba(7,12,24,0.94))] px-5 py-6 text-[color:var(--color-text)] shadow-[var(--shadow-surface)] backdrop-blur-xl md:px-7 md:py-7",
       studio:
-        "border border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-text)] shadow-[var(--shadow-surface)]"
+        "rounded-[2rem] border border-violet-400/10 bg-[linear-gradient(180deg,rgba(12,18,32,0.94),rgba(8,13,24,0.92))] px-5 py-6 text-[color:var(--color-text)] shadow-[var(--shadow-surface)] backdrop-blur-xl md:px-7 md:py-7"
     }
   },
   defaultVariants: {
@@ -56,7 +56,7 @@ type SurfaceGridProps = PropsWithChildren<
 >;
 
 const surfaceCardVariants = cva(
-  "rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 shadow-[var(--shadow-surface)] backdrop-blur-sm",
+  "rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-4 shadow-[var(--shadow-surface)] backdrop-blur-xl",
   {
     variants: {
       span: {
@@ -115,15 +115,15 @@ const pillVariants = cva(
 );
 
 const storefrontPanelVariants = cva(
-  "rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]",
+  "rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] backdrop-blur-xl",
   {
     variants: {
       tone: {
-        default: "p-5",
-        soft: "bg-[color:var(--storefront-panel)]/60 p-6",
-        strong: "bg-[color:var(--storefront-panel)]/70 p-5",
+        default: "p-5 shadow-[0_24px_70px_rgba(2,6,23,0.32)]",
+        soft: "bg-[color:var(--storefront-panel)]/82 p-6 shadow-[0_28px_90px_rgba(2,6,23,0.36)]",
+        strong: "bg-[color:var(--storefront-panel)]/92 p-5 shadow-[0_22px_60px_rgba(2,6,23,0.32)]",
         elevated:
-          "bg-[color:var(--storefront-panel)]/70 p-5 shadow-[0_22px_55px_rgba(2,6,23,0.22)]"
+          "bg-[color:var(--storefront-panel)]/94 p-5 shadow-[0_30px_100px_rgba(2,6,23,0.42)]"
       }
     },
     defaultVariants: {
@@ -133,18 +133,18 @@ const storefrontPanelVariants = cva(
 );
 
 const storefrontTileVariants = cva(
-  "rounded-2xl border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-4",
+  "rounded-[1.75rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] p-4 backdrop-blur-xl",
   {
     variants: {
       tone: {
         default: "",
         muted: "bg-[color:var(--storefront-panel)]/30",
         gallery:
-          "bg-[color:var(--storefront-panel)]/30 shadow-[0_18px_45px_rgba(2,6,23,0.22)]"
+          "bg-[color:var(--storefront-panel)]/36 shadow-[0_22px_55px_rgba(2,6,23,0.32)]"
       },
       interactive: {
         false: "",
-        true: "transition hover:-translate-y-0.5 hover:border-[color:var(--storefront-accent)] hover:shadow-[0_12px_40px_rgba(255,255,255,0.06)]"
+        true: "transition duration-250 hover:-translate-y-1 hover:border-[color:var(--storefront-accent)] hover:shadow-[0_18px_50px_rgba(103,232,249,0.08)]"
       }
     },
     defaultVariants: {
@@ -180,20 +180,20 @@ type PillProps = PropsWithChildren<
 >;
 
 const actionButtonVariants = cva(
-  "inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60",
+  "inline-flex items-center justify-center rounded-2xl border px-4 py-2.5 text-sm font-semibold transition duration-250 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)]/40 disabled:cursor-not-allowed disabled:opacity-60",
   {
     variants: {
       tone: {
         accent:
-          "border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white hover:brightness-95",
+          "border-[color:var(--color-accent)] bg-[linear-gradient(135deg,var(--color-accent),#67e8f9)] text-slate-950 shadow-[0_12px_32px_rgba(103,232,249,0.2)] hover:brightness-105",
         surface:
-          "justify-start rounded-[1.5rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))] px-4 py-3 text-left transition hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-soft)]",
+          "justify-start rounded-[1.5rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.03))] px-4 py-3 text-left text-white shadow-[0_18px_44px_rgba(2,6,23,0.28)] hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-soft)]",
         ghost:
-          "border-[color:var(--color-line)] bg-transparent text-[color:var(--color-text)] hover:bg-[color:var(--color-accent-soft)]",
+          "border-white/10 bg-transparent text-[color:var(--color-text)] hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-soft)]",
         secondary:
-          "border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] text-[color:var(--color-text)] hover:border-[color:var(--color-accent)]",
+          "border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] text-[color:var(--color-text)] hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-soft)]",
         primary:
-          "border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-white hover:brightness-95"
+          "border-[color:var(--color-accent)] bg-[linear-gradient(135deg,var(--color-accent),#67e8f9)] text-slate-950 shadow-[0_14px_36px_rgba(103,232,249,0.18)] hover:brightness-105"
       }
     },
     defaultVariants: {
@@ -203,16 +203,16 @@ const actionButtonVariants = cva(
 );
 
 const actionLinkVariants = cva(
-  "inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)]",
+  "inline-flex items-center rounded-2xl px-4 py-2.5 text-sm font-semibold transition duration-250 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)]/40",
   {
     variants: {
       tone: {
         action:
-          "border border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)] text-[color:var(--color-text)] hover:bg-[color:var(--color-accent)] hover:text-white",
+          "border border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)] text-[color:var(--color-text)] hover:bg-[linear-gradient(135deg,var(--color-accent),#67e8f9)] hover:text-slate-950",
         inline:
-          "text-[color:var(--color-accent)] hover:underline hover:underline-offset-4",
+          "text-[color:var(--color-accent)] hover:text-white hover:underline hover:underline-offset-4",
         muted:
-          "text-[color:var(--color-muted)] hover:text-[color:var(--color-text)]"
+          "text-[color:var(--color-muted)] hover:text-white"
       }
     },
     defaultVariants: {
@@ -222,7 +222,7 @@ const actionLinkVariants = cva(
 );
 
 const statusBannerVariants = cva(
-  "rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)]",
+  "rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-3.5 text-sm text-[color:var(--color-text)] shadow-[0_16px_40px_rgba(2,6,23,0.22)]",
   {
     variants: {
       tone: {
@@ -241,11 +241,11 @@ const statusBannerVariants = cva(
 const opsPanelCardVariants = cva("rounded-2xl border p-4", {
   variants: {
     tone: {
-      critical: "border-rose-400/30 bg-[color:var(--color-surface)]",
-      healthy: "border-emerald-400/20 bg-[color:var(--color-surface)]/90",
+      critical: "border-rose-400/30 bg-[linear-gradient(180deg,rgba(71,14,28,0.56),rgba(15,7,14,0.92))]",
+      healthy: "border-emerald-400/20 bg-[linear-gradient(180deg,rgba(8,42,34,0.42),rgba(7,17,17,0.92))]",
       neutral:
-        "border-[color:var(--color-line)] bg-[color:var(--color-surface)]",
-      warning: "border-amber-400/30 bg-[color:var(--color-surface)]/85"
+        "border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))]",
+      warning: "border-amber-400/30 bg-[linear-gradient(180deg,rgba(82,48,8,0.42),rgba(19,12,7,0.92))]"
     }
   },
   defaultVariants: {
@@ -254,7 +254,7 @@ const opsPanelCardVariants = cva("rounded-2xl border p-4", {
 });
 
 const opsCommandModuleVariants = cva(
-  "rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 shadow-[var(--shadow-surface)] space-y-3",
+  "space-y-3 rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-4 shadow-[var(--shadow-surface)] backdrop-blur-xl",
   {
     variants: {
       span: {
@@ -289,14 +289,14 @@ const fieldStackVariants = cva("grid gap-1.5", {
 });
 
 const inputFieldVariants = cva(
-  "w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30",
+  "w-full rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] px-3.5 py-2.5 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/25",
   {
     variants: {
       tone: {
         default: "",
         storefront:
-          "border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] text-[color:var(--storefront-text)] placeholder:text-[color:var(--storefront-muted)] focus:border-[color:var(--storefront-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--storefront-accent)]/30",
-        file: "file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[color:var(--color-surface-strong)] file:px-3 file:py-2 file:text-sm file:text-[color:var(--color-text)] file:shadow-sm"
+          "border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] text-[color:var(--storefront-text)] placeholder:text-[color:var(--storefront-muted)] focus:border-[color:var(--storefront-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--storefront-accent)]/25",
+        file: "file:mr-3 file:cursor-pointer file:rounded-2xl file:border-0 file:bg-white/10 file:px-3.5 file:py-2.5 file:text-sm file:text-[color:var(--color-text)] file:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
       }
     },
     defaultVariants: {
@@ -306,7 +306,7 @@ const inputFieldVariants = cva(
 );
 
 const selectFieldVariants = cva(
-  "w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
+  "w-full rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] px-3.5 py-2.5 text-sm text-[color:var(--color-text)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/25"
 );
 
 const textAreaVariants = cva(
@@ -643,7 +643,7 @@ export function Pill({ children, className, tone }: PillProps) {
 
 export function MetricTile({ label, value }: MetricTileProps) {
   return (
-    <div className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-4 py-3">
+    <div className="rounded-[1.5rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] px-4 py-3 shadow-[0_16px_40px_rgba(2,6,23,0.18)]">
       <p className="text-xs font-semibold uppercase tracking-wide text-[color:var(--color-accent)]">
         {label}
       </p>
@@ -708,7 +708,7 @@ export function SignalCard({
   return (
     <article
       className={cn(
-        "flex h-full flex-col gap-2 rounded-2xl border p-4 shadow-[var(--shadow-surface)]",
+        "flex h-full flex-col gap-2 rounded-[1.5rem] border p-4 shadow-[var(--shadow-surface)] backdrop-blur-xl",
         toneClass,
         className
       )}
@@ -730,7 +730,7 @@ export function RecordCard({ children, className }: RecordShellProps) {
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 md:flex-row md:items-start md:justify-between",
+        "flex flex-col gap-3 rounded-[1.5rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-4 shadow-[0_18px_44px_rgba(2,6,23,0.2)] md:flex-row md:items-start md:justify-between",
         className
       )}
     >
@@ -769,7 +769,7 @@ export function EmptyState({ children, className }: EmptyStateProps) {
   return (
     <div
       className={cn(
-        "rounded-2xl border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)]/50 p-4 text-sm text-[color:var(--color-muted)]",
+        "rounded-[1.5rem] border border-dashed border-white/10 bg-white/[0.03] p-4 text-sm text-[color:var(--color-muted)]",
         className
       )}
     >
@@ -786,7 +786,7 @@ export function OpsEmptyState({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-dashed border-[color:var(--color-line)] bg-[color:var(--color-surface)]/40 p-4 text-sm text-[color:var(--color-muted)]",
+        "rounded-[1.5rem] border border-dashed border-white/10 bg-white/[0.02] p-4 text-sm text-[color:var(--color-muted)]",
         centered ? "text-center" : null,
         className
       )}
@@ -800,7 +800,7 @@ export function OpsActionButton({ className, ...props }: ActionButtonProps) {
   return (
     <ActionButton
       className={cn(
-        "border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-text)] hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]",
+        "border-white/10 bg-white/[0.04] text-[color:var(--color-text)] hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]",
         className
       )}
       tone="secondary"
@@ -819,7 +819,7 @@ export function OpsCommandSection({
   return (
     <section
       className={cn(
-        "space-y-3 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-background)] p-4",
+        "space-y-3 rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(9,14,28,0.92),rgba(6,10,20,0.92))] p-4 shadow-[var(--shadow-surface)]",
         className
       )}
     >
@@ -999,7 +999,7 @@ export function RailCard({
   return (
     <article
       className={cn(
-        "space-y-4 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-5 shadow-[var(--shadow-surface)]",
+        "space-y-4 rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] p-5 shadow-[var(--shadow-surface)] backdrop-blur-xl",
         className
       )}
     >
@@ -1028,7 +1028,7 @@ export function InsetMetric({
   return (
     <div
       className={cn(
-        "rounded-[1.35rem] border border-[color:var(--color-line)] bg-[color:var(--color-surface)]/75 p-4 shadow-[0_14px_30px_rgba(15,23,42,0.08)]",
+        "rounded-[1.35rem] border border-white/10 bg-white/[0.04] p-4 shadow-[0_18px_44px_rgba(2,6,23,0.22)]",
         className
       )}
     >
@@ -1094,7 +1094,7 @@ export function FormPanel({ children, className }: FormPanelProps) {
   return (
     <section
       className={cn(
-        "grid gap-4 rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)]/60 p-4",
+        "grid gap-4 rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))] p-4 shadow-[var(--shadow-surface)]",
         className
       )}
     >
@@ -1107,7 +1107,7 @@ export function SurfacePanel({ children, className }: SurfacePanelProps) {
   return (
     <section
       className={cn(
-        "rounded-[1.75rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.04))] p-4 shadow-[var(--shadow-surface)] backdrop-blur md:p-5",
+        "rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[var(--shadow-surface)] backdrop-blur-xl md:p-5",
         className
       )}
     >
@@ -1218,9 +1218,12 @@ export function TextAreaField({ className, ...props }: TextAreaFieldProps) {
 
 export function ActionButton({
   tone = "primary",
+  className,
   ...props
 }: ActionButtonProps) {
-  return <button className={actionButtonVariants({ tone })} {...props} />;
+  return (
+    <button className={cn(actionButtonVariants({ tone }), className)} {...props} />
+  );
 }
 
 export function ActionLink({

@@ -2,12 +2,15 @@ import { notFound } from "next/navigation";
 
 import { createRuntimeCollectionCommerceService } from "../../../../../../../../server/commerce/runtime";
 import { createRuntimePublicCollectionService } from "../../../../../../../../server/collections/runtime";
-import { createStorefrontThemeStyle } from "../../../../../../../../lib/ui/storefront-theme";
+import {
+  createStorefrontThemeStyle,
+  resolveStorefrontThemeClasses
+} from "../../../../../../../../lib/ui/storefront-theme";
 import {
   CollectibleEditorialBand,
   CollectiblePreviewCard
 } from "../../../../../../../../components/collectible-visuals";
-import { ActionLink, ActionRow, Pill } from "@ai-nft-forge/ui";
+import { ActionLink, ActionRow, Pill, cn } from "@ai-nft-forge/ui";
 
 import { CheckoutClient } from "./checkout-client";
 
@@ -235,7 +238,10 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
 
   return (
     <div
-      className="relative min-h-screen overflow-hidden bg-[var(--storefront-bg)] text-[color:var(--storefront-text)]"
+      className={cn(
+        "relative min-h-screen overflow-hidden bg-[var(--storefront-bg)] text-[color:var(--storefront-text)]",
+        resolveStorefrontThemeClasses(collection.collection.brandTheme)
+      )}
       style={createStorefrontThemeStyle(collection.collection.brandTheme)}
     >
       <div className="pointer-events-none absolute inset-x-0 top-[-14rem] mx-auto h-[22rem] w-[64rem] rounded-full bg-[color:var(--storefront-accent)]/10 blur-[120px]" />

@@ -2865,9 +2865,9 @@ export function StudioSettingsClient({
                           </FieldStack>
                           <FieldStack>
                             <FieldLabel>Accent color</FieldLabel>
-                            <div className="color-input-row">
+                            <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-2.5">
                               <InputField
-                                className="color-swatch-input"
+                                className="h-11 w-14 cursor-pointer rounded-xl border-white/10 bg-transparent p-0"
                                 onChange={(event) => {
                                   setEditorState((current) => ({
                                     ...current,
@@ -3232,9 +3232,9 @@ export function StudioSettingsClient({
                         </FieldStack>
                         <FieldStack>
                           <FieldLabel>Accent color</FieldLabel>
-                          <div className="color-input-row">
+                          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-2.5">
                             <InputField
-                              className="color-swatch-input"
+                              className="h-11 w-14 cursor-pointer rounded-xl border-white/10 bg-transparent p-0"
                               onChange={(event) => {
                                 setNewBrandState((current) => ({
                                   ...current,

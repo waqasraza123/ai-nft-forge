@@ -17,18 +17,18 @@ export function SiteFooter() {
   ];
 
   return (
-    <footer className="mx-auto mt-8 w-full max-w-7xl rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)]/70 p-4 backdrop-blur-sm">
+    <footer className="mx-auto mt-8 w-full max-w-cinematic rounded-cinematic border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))] p-5 shadow-panel backdrop-blur-xl">
       <div className="grid gap-4 sm:grid-cols-[1.4fr_1fr]">
         <div>
-          <span className="text-sm font-semibold">AI NFT Forge</span>
-          <p className="mt-2 max-w-2xl text-sm text-[color:var(--color-muted)]">
-            Premium surfaces for creator studios, operators, and marketplace
-            workflows with a single workspace-aware style language.
+          <span className="text-sm font-semibold text-white">AI NFT Forge</span>
+          <p className="mt-2 max-w-2xl text-sm text-slate-300">
+            Premium launch control for agencies, creator teams, and operators
+            running branded collectible releases with audit-grade clarity.
           </p>
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--color-muted)]">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
               Product
             </p>
             {productLinks.map((link) => (
@@ -38,7 +38,7 @@ export function SiteFooter() {
             ))}
           </div>
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--color-muted)]">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
               Operations
             </p>
             {supportLinks.map((link) => (

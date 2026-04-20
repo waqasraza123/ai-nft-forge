@@ -10,7 +10,8 @@ import {
   ActionLink,
   StorefrontPanel,
   StorefrontPill,
-  StorefrontTile
+  StorefrontTile,
+  cn
 } from "@ai-nft-forge/ui";
 import type { CollectionPublicBrandTheme } from "@ai-nft-forge/shared";
 
@@ -22,7 +23,10 @@ import {
   FloatingCollectibleCluster
 } from "../../../../../../components/collectible-visuals";
 import { createRuntimePublicCollectionService } from "../../../../../../server/collections/runtime";
-import { createStorefrontThemeStyle } from "../../../../../../lib/ui/storefront-theme";
+import {
+  createStorefrontThemeStyle,
+  resolveStorefrontThemeClasses
+} from "../../../../../../lib/ui/storefront-theme";
 import { PurchasePanel } from "./purchase-panel";
 
 type CollectionPageProps = {
@@ -715,7 +719,10 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
 
   return (
     <div
-      className="min-h-screen bg-[var(--storefront-bg)] text-[color:var(--storefront-text)]"
+      className={cn(
+        "min-h-screen bg-[var(--storefront-bg)] text-[color:var(--storefront-text)]",
+        resolveStorefrontThemeClasses(collection.brandTheme)
+      )}
       style={createStorefrontThemeStyle(collection.brandTheme)}
     >
       <div className="relative mx-auto grid w-full max-w-7xl gap-6 px-4 py-8 md:px-6 lg:px-8">

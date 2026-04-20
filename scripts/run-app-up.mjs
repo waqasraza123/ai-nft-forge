@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
+import { createServer } from "node:net";
 
 import {
   resolveAppRuntimeMode,
@@ -53,6 +54,123 @@ function runCleanupCommand(command, args, label) {
   }
 }
 
+function parsePort(rawValue, fallbackPort, label) {
+  const value = rawValue?.trim();
+
+  if (!value) {
+    return fallbackPort;
+  }
+
+  const parsedValue = Number.parseInt(value, 10);
+
+  if (
+    !Number.isInteger(parsedValue) ||
+    parsedValue < 1 ||
+    parsedValue > 65535
+  ) {
+    throw new Error(`${label} must be a valid TCP port.`);
+  }
+
+  return parsedValue;
+}
+
+async function canBindPort(port, host) {
+  await new Promise((resolvePromise, rejectPromise) => {
+    const probeServer = createServer();
+    const cleanupListeners = () => {
+      probeServer.removeAllListeners("error");
+      probeServer.removeAllListeners("listening");
+    };
+
+    probeServer.once("error", (error) => {
+      cleanupListeners();
+
+      if (error && error.code === "EADDRINUSE") {
+        resolvePromise(false);
+        return;
+      }
+
+      rejectPromise(error);
+    });
+
+    probeServer.once("listening", () => {
+      cleanupListeners();
+      probeServer.close((error) => {
+        if (error) {
+          rejectPromise(error);
+          return;
+        }
+
+        resolvePromise(true);
+      });
+    });
+
+    probeServer.listen(port, host);
+  });
+}
+
+async function resolveAvailablePort({ host, label, preferredPort }) {
+  for (let port = preferredPort; port <= 65535; port += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    const isAvailable = await canBindPort(port, host);
+
+    if (isAvailable) {
+      if (port !== preferredPort) {
+        console.warn(
+          `${label} port ${preferredPort} is already in use on ${host}; using ${port} for this run.`
+        );
+      }
+
+      return port;
+    }
+  }
+
+  throw new Error(
+    `Unable to find a free TCP port for ${label} starting at ${preferredPort}.`
+  );
+}
+
+function replaceUrlPort(urlValue, port, fallbackPathname) {
+  if (typeof urlValue === "string" && urlValue.trim().length > 0) {
+    const resolvedUrl = new URL(urlValue);
+    resolvedUrl.port = String(port);
+    return resolvedUrl.toString();
+  }
+
+  return `http://127.0.0.1:${port}${fallbackPathname}`;
+}
+
+async function resolveLocalProcessEnvironment() {
+  const runtimeEnvironment = resolveRepositoryEnvironment();
+  const webPort = await resolveAvailablePort({
+    host: "127.0.0.1",
+    label: "Web",
+    preferredPort: parsePort(runtimeEnvironment.PORT, 3000, "PORT")
+  });
+  const generationBackendPort = await resolveAvailablePort({
+    host:
+      runtimeEnvironment.GENERATION_BACKEND_BIND_HOST?.trim() || "127.0.0.1",
+    label: "Generation backend",
+    preferredPort: parsePort(
+      runtimeEnvironment.GENERATION_BACKEND_PORT,
+      8787,
+      "GENERATION_BACKEND_PORT"
+    )
+  });
+  const generationBackendUrl = replaceUrlPort(
+    runtimeEnvironment.GENERATION_BACKEND_URL,
+    generationBackendPort,
+    "/generate"
+  );
+
+  return {
+    ...process.env,
+    GENERATION_BACKEND_PORT: String(generationBackendPort),
+    GENERATION_BACKEND_URL: generationBackendUrl,
+    PORT: String(webPort)
+  };
+}
+
 function prefixStream(stream, prefix) {
   let pending = "";
 
@@ -73,11 +191,14 @@ function prefixStream(stream, prefix) {
   });
 }
 
-function spawnPrefixedProcess(label, command, args) {
+function spawnPrefixedProcess(label, command, args, envOverrides = {}) {
   const child = spawn(command, args, {
     cwd: repoRoot,
     detached: process.platform !== "win32",
-    env: process.env,
+    env: {
+      ...process.env,
+      ...envOverrides
+    },
     shell: false,
     stdio: ["inherit", "pipe", "pipe"]
   });
@@ -174,8 +295,8 @@ async function cleanup(mode) {
   }
 }
 
-function printStartupUrls(mode, runtimeMode) {
-  const runtimeEnvironment = resolveRepositoryEnvironment();
+function printStartupUrls(mode, runtimeMode, rawEnvironment = null) {
+  const runtimeEnvironment = rawEnvironment ?? resolveRepositoryEnvironment();
   const webPort =
     mode === "selfhost"
       ? (runtimeEnvironment.WEB_PORT_PUBLIC ?? defaultPorts.web)
@@ -259,6 +380,8 @@ async function runSelfhostMode() {
 }
 
 async function runLocalMode() {
+  const localProcessEnvironment = await resolveLocalProcessEnvironment();
+
   runBlockingCommand("pnpm", ["infra:up"], "Local infra startup");
   runBlockingCommand("pnpm", ["db:migrate:deploy"], "Database migrations");
   runBlockingCommand(
@@ -272,14 +395,15 @@ async function runLocalMode() {
     "Worker build"
   );
 
-  printStartupUrls("local", "docker");
+  printStartupUrls("local", "docker", localProcessEnvironment);
   registerSignalHandlers("local");
 
-  await runAppProcesses("local");
+  await runAppProcesses("local", localProcessEnvironment);
 }
 
 async function runCloudMode() {
   validateCloudRuntimeEnvironment(resolveRepositoryEnvironment());
+  const localProcessEnvironment = await resolveLocalProcessEnvironment();
   runBlockingCommand("pnpm", ["db:migrate:deploy"], "Database migrations");
   runBlockingCommand(
     "pnpm",
@@ -292,28 +416,31 @@ async function runCloudMode() {
     "Worker build"
   );
 
-  printStartupUrls("local", "cloud");
+  printStartupUrls("local", "cloud", localProcessEnvironment);
   registerSignalHandlers("cloud");
-  await runAppProcesses("cloud");
+  await runAppProcesses("cloud", localProcessEnvironment);
 }
 
-async function runAppProcesses(mode) {
+async function runAppProcesses(mode, childEnvironment) {
   const children = [
-    spawnPrefixedProcess("generation-backend", "pnpm", [
-      "--filter",
-      "@ai-nft-forge/generation-backend",
-      "start"
-    ]),
-    spawnPrefixedProcess("worker", "pnpm", [
-      "--filter",
-      "@ai-nft-forge/worker",
-      "start"
-    ]),
-    spawnPrefixedProcess("web", "pnpm", [
-      "--filter",
-      "@ai-nft-forge/web",
-      "dev"
-    ])
+    spawnPrefixedProcess(
+      "generation-backend",
+      "pnpm",
+      ["--filter", "@ai-nft-forge/generation-backend", "start"],
+      childEnvironment
+    ),
+    spawnPrefixedProcess(
+      "worker",
+      "pnpm",
+      ["--filter", "@ai-nft-forge/worker", "start"],
+      childEnvironment
+    ),
+    spawnPrefixedProcess(
+      "web",
+      "pnpm",
+      ["--filter", "@ai-nft-forge/web", "dev"],
+      childEnvironment
+    )
   ];
 
   activeLocalProcesses = children;

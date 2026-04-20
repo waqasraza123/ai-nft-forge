@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 
 import { WorkspaceScopeSwitcher } from "../../../components/workspace-scope-switcher";
-import { SidebarThemeSwitcher } from "../../../components/sidebar-theme-switcher";
 import {
   ActionLink,
   ActionRow,
@@ -98,8 +97,7 @@ export default async function StudioLayout({ children }: StudioLayoutProps) {
         </SurfaceCard>
 
         <SurfaceCard
-          body="Switch the workspace context that powers studio actions and update
-          ambient interface tone for this session."
+          body="Switch the workspace context that powers studio actions and keep the active launch environment explicit before you publish, fulfill, or mutate settings."
           eyebrow="Workspace controls"
           span={4}
           title="Accessible workspace"
@@ -108,7 +106,6 @@ export default async function StudioLayout({ children }: StudioLayoutProps) {
             currentWorkspaceSlug={workspace?.slug ?? null}
             workspaces={access?.availableWorkspaces ?? []}
           />
-          <SidebarThemeSwitcher className="mt-4" />
         </SurfaceCard>
 
         <SurfaceCard

@@ -22,11 +22,12 @@ The repository ships as a pnpm monorepo with a Next.js control plane, a BullMQ w
 ## Status
 
 - Phases 1 through 7 are complete, and post-phase onchain deployment/minting, wallet UX, chain-state reconciliation, and commerce checkout/admin slices are landed
+- Multi-workspace and multi-brand administration are landed for the current product slice
+- The browser UI now runs on a Tailwind-first shared design system built around a single premium dark "Cinematic Launch OS" shell
 - Deferred beyond the public release:
   - richer commerce fulfillment automation
-  - multi-brand administration
   - advanced multi-node orchestration
-- Durable project memory lives in `AGENTS.md`, `docs/project-state.md`, and the architecture docs under `docs/`
+- Durable project memory lives in `AGENTS.md`, `docs/project-state.md`, and the architecture docs under `docs/` including `docs/architecture/ui-design-system.md`
 
 ## What Ships
 
@@ -40,8 +41,10 @@ The repository ships as a pnpm monorepo with a Next.js control plane, a BullMQ w
 - Shared wallet connection UX for owner-signed contract deployment and mint flows with server-verified transaction recording for published collections
 - Public item-level reservations plus hosted checkout for live published collections, with manual and Stripe provider modes
 - Authenticated `/studio/commerce` administration for reservations, checkout recovery, payment confirmation, and fulfillment tracking
+- Multi-workspace provisioning, workspace switching, multi-brand publication targeting, and owner/operator administration flows
 - Authenticated ops diagnostics, persisted observability captures, alert delivery policy, and operator retry controls
 - Worker-owned reconciliation with persisted runs and issues, manual run/repair/ignore actions, `/ops` visibility, and onchain drift checks for recorded deployments and mints
+- Tailwind-first premium product chrome with shared public/storefront and private operator primitives
 - Dockerfiles and a single-node Docker Compose self-host path
 
 ## Repository Layout
