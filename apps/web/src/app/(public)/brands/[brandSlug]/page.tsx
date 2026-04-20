@@ -3,9 +3,10 @@ import { notFound } from "next/navigation";
 
 import {
   ActionRow,
-  ActionLink,
+  StorefrontActionLink,
   StorefrontPanel,
   StorefrontPill,
+  StorefrontSectionHeading,
   StorefrontTile,
   cn
 } from "@ai-nft-forge/ui";
@@ -267,20 +268,24 @@ function BrandHeroSection(input: {
         </p>
         <ActionRow>
           {input.primaryCtaHref ? (
-            <ActionLink href={input.primaryCtaHref} tone="action">
+            <StorefrontActionLink href={input.primaryCtaHref}>
               {input.primaryCtaLabel}
-            </ActionLink>
+            </StorefrontActionLink>
           ) : null}
           {input.secondaryCtaHref ? (
-            <ActionLink href={input.secondaryCtaHref} tone="inline">
+            <StorefrontActionLink
+              href={input.secondaryCtaHref}
+              tone="inline"
+            >
               {input.secondaryCtaLabel}
-            </ActionLink>
+            </StorefrontActionLink>
           ) : null}
         </ActionRow>
         <StorefrontPanel>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
-            {input.heroKicker}
-          </p>
+          <StorefrontSectionHeading
+            eyebrow={input.heroKicker}
+            title="Campaign telemetry"
+          />
           <ActionRow compact>
             {input.campaignMetrics.map((metric) => (
               <StorefrontTile className="p-3" tone="muted" key={metric.label}>
@@ -332,18 +337,16 @@ function BrandFeaturedReleaseCard(input: {
           title={release.title}
         />
         <div className="space-y-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
-            {input.featuredLabel ?? "Featured release"}
-          </p>
-          <h2 className="text-2xl font-semibold font-[var(--font-display)]">
-            {release.storefrontHeadline ?? release.title}
-          </h2>
-          <p className="text-sm leading-7 text-[color:var(--storefront-muted)]">
-            {release.storefrontHeadline
-              ? release.storefrontHeadline
-              : (release.description ??
-                "Published collectible drops are surfaced from immutable snapshots and arranged by brand campaign rhythm.")}
-          </p>
+          <StorefrontSectionHeading
+            eyebrow={input.featuredLabel ?? "Featured release"}
+            lead={
+              release.storefrontHeadline
+                ? release.storefrontHeadline
+                : (release.description ??
+                  "Published collectible drops are surfaced from immutable snapshots and arranged by brand campaign rhythm.")
+            }
+            title={release.storefrontHeadline ?? release.title}
+          />
           <ActionRow compact>
             <StorefrontPill tone="accent">
               {formatStatusLabel(release.storefrontStatus)}
@@ -369,9 +372,9 @@ function BrandFeaturedReleaseCard(input: {
             ))}
           </ul>
           <ActionRow compact>
-            <ActionLink href={release.publicPath} tone="action">
+            <StorefrontActionLink href={release.publicPath}>
               Open launch campaign
-            </ActionLink>
+            </StorefrontActionLink>
             <span className="text-xs text-[color:var(--storefront-muted)]">
               Launch {formatTimestamp(release.launchAt)} · Ends{" "}
               {formatTimestamp(release.endAt)}
@@ -392,15 +395,11 @@ function BrandStorySection(input: {
     <StorefrontPanel tone="soft">
       <div className="grid gap-4 md:grid-cols-[1.1fr_1fr] md:items-start">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
-            Brand manifesto
-          </p>
-          <h2 className="mt-1 text-2xl font-semibold font-[var(--font-display)]">
-            {input.headline}
-          </h2>
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-[color:var(--storefront-muted)]">
-            {input.body}
-          </p>
+          <StorefrontSectionHeading
+            eyebrow="Brand manifesto"
+            lead={input.body}
+            title={input.headline}
+          />
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
           {input.metrics.map((metric) => (
@@ -477,9 +476,12 @@ function BrandReleaseCard(input: {
             <li key={`${input.release.publicPath}-${metric}`}>• {metric}</li>
           ))}
         </ul>
-        <ActionLink href={input.release.publicPath} tone="inline">
+        <StorefrontActionLink
+          href={input.release.publicPath}
+          tone="inline"
+        >
           Open campaign
-        </ActionLink>
+        </StorefrontActionLink>
       </div>
     </StorefrontTile>
   );
@@ -489,19 +491,18 @@ function BrandReleaseSection(input: BrandSection) {
   return (
     <section className="space-y-4" id={input.id}>
       <CollectibleGalleryRail
-        accentVar="--storefront-accent"
-        headline={brandSectionTitleByTone[input.tone]}
-        summary={brandSectionCopyByTone[input.tone]}
-      >
-        <div className="space-y-2">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-2xl font-semibold font-[var(--font-display)]">
-              {input.title}
-            </h2>
-            <StorefrontPill className="text-[color:var(--storefront-muted)]">
-              {input.collections.length} drops
-            </StorefrontPill>
-          </div>
+      accentVar="--storefront-accent"
+      headline={brandSectionTitleByTone[input.tone]}
+      summary={brandSectionCopyByTone[input.tone]}
+    >
+        <div className="flex items-center justify-between gap-3">
+          <StorefrontSectionHeading
+            eyebrow={brandSectionTitleByTone[input.tone]}
+            title={input.title}
+          />
+          <StorefrontPill className="text-[color:var(--storefront-muted)]">
+            {input.collections.length} drops
+          </StorefrontPill>
         </div>
         {input.collections.length === 0 ? (
           <StorefrontPanel
@@ -662,9 +663,10 @@ export default async function BrandPage({ params }: BrandPageProps) {
         <CollectibleEditorialBand accentVar="--storefront-accent">
           <div className="space-y-4">
             <div className="mb-2 flex items-center justify-between gap-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
-                Featured spotlight
-              </p>
+              <StorefrontSectionHeading
+                eyebrow="Featured spotlight"
+                title="Current launch focus"
+              />
               <Link
                 className="text-xs font-semibold text-[color:var(--storefront-accent)] hover:underline"
                 href="#live-releases"

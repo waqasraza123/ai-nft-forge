@@ -47,7 +47,7 @@ These tokens are the default vocabulary for new UI work.
 [packages/ui/src/index.tsx](/Users/mc/development/blockchain/ethereum/ai-nft-forge/packages/ui/src/index.tsx) is the canonical shared primitive boundary. The main groups are:
 
 - shell and surface primitives: `PageShell`, `SurfaceGrid`, `SurfaceCard`, `SurfacePanel`, `FormPanel`, `RailCard`
-- public/storefront primitives: `StorefrontPanel`, `StorefrontTile`, `StorefrontPill`
+- public/storefront primitives: `StorefrontPanel`, `StorefrontTile`, `StorefrontPill`, `StorefrontSectionHeading`, `StorefrontActionLink`, `StorefrontActionButton`, `StorefrontMetaGrid`, `StorefrontMetaItem`
 - operator primitives: `OpsPanelCard`, `OpsSummaryCard`, `OpsCommandSection`, `OpsCommandModule`, `OpsStatusNotice`, `OpsGrid`, `OpsActionRow`
 - heading and information primitives: `SectionHeading`, `PanelHeading`, `MetricTile`, `SignalCard`, `InsetMetric`
 - record/list primitives: `RecordList`, `RecordCard`, `RecordCopy`, `RecordActions`, `EmptyState`, `OpsEmptyState`

@@ -7,9 +7,10 @@ import {
 } from "@ai-nft-forge/contracts";
 import {
   ActionRow,
-  ActionLink,
+  StorefrontActionLink,
   StorefrontPanel,
   StorefrontPill,
+  StorefrontSectionHeading,
   StorefrontTile,
   cn
 } from "@ai-nft-forge/ui";
@@ -175,19 +176,6 @@ function computeProofStats(input: {
   ];
 }
 
-function SectionHeader({ kicker, title }: { kicker: string; title: string }) {
-  return (
-    <div className="mb-3 space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
-        {kicker}
-      </p>
-      <h2 className="text-2xl font-semibold font-[var(--font-display)]">
-        {title}
-      </h2>
-    </div>
-  );
-}
-
 function CollectionHeroSection(input: {
   availabilityLabel: string;
   brandPath: string;
@@ -234,18 +222,21 @@ function CollectionHeroSection(input: {
         </p>
         <ActionRow compact>
           {fallbackCta ? (
-            <ActionLink href={fallbackCta.href} tone="action">
+            <StorefrontActionLink href={fallbackCta.href}>
               {fallbackCta.label}
-            </ActionLink>
+            </StorefrontActionLink>
           ) : null}
           {input.secondaryCtaLabel && input.secondaryCtaHref ? (
-            <ActionLink href={input.secondaryCtaHref} tone="inline">
+            <StorefrontActionLink
+              href={input.secondaryCtaHref}
+              tone="inline"
+            >
               {input.secondaryCtaLabel}
-            </ActionLink>
+            </StorefrontActionLink>
           ) : null}
-          <ActionLink href={input.brandPath} tone="inline">
+          <StorefrontActionLink href={input.brandPath} tone="inline">
             Back to brand release floor
-          </ActionLink>
+          </StorefrontActionLink>
         </ActionRow>
         <div className="grid gap-2 sm:grid-cols-2">
           <StorefrontPill tone="accent">Launch mode</StorefrontPill>
@@ -299,23 +290,17 @@ function CollectionLaunchStory(input: {
     <StorefrontPanel tone="soft">
       <div className="grid gap-4 md:grid-cols-[1fr_0.8fr] md:items-center">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
-            Launch story
-          </p>
-          <h2 className="mt-1 text-2xl font-semibold font-[var(--font-display)]">
-            {input.headline}
-          </h2>
-          <p className="mt-3 text-sm leading-7 text-[color:var(--storefront-muted)]">
-            {input.lead}
-          </p>
+          <StorefrontSectionHeading
+            eyebrow="Launch story"
+            lead={input.lead}
+            title={input.headline}
+          />
         </div>
         <StorefrontTile className="p-4" tone="muted">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
-            Collector proof
-          </p>
-          <h3 className="mt-2 text-xl font-semibold">
-            {formatStatusLabel(input.status)} runway
-          </h3>
+          <StorefrontSectionHeading
+            eyebrow="Collector proof"
+            title={`${formatStatusLabel(input.status)} runway`}
+          />
           <p className="mt-2 text-sm text-[color:var(--storefront-muted)]">
             {input.availabilityLabel} · {formatCount(input.mintedTokenCount)}{" "}
             minted proofs
@@ -357,8 +342,8 @@ function CollectionProofPanel(input: {
 
   return (
     <StorefrontPanel tone="soft">
-      <SectionHeader
-        kicker="Collector proof"
+      <StorefrontSectionHeading
+        eyebrow="Collector proof"
         title="Drop ledger and launch telemetry"
       />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -410,8 +395,8 @@ function CollectionReserveZone(input: {
   return (
     <StorefrontPanel tone="soft">
       <div className="mb-4 flex items-start justify-between gap-3">
-        <SectionHeader
-          kicker="Reserve module"
+        <StorefrontSectionHeading
+          eyebrow="Reserve module"
           title="Secure your edition before it sells out"
         />
         <ActionRow compact>
@@ -490,8 +475,8 @@ function CollectionGallery(input: {
         headline="Gallery wall"
         summary={`Gallery waiting for published variants for ${input.title}`}
       >
-        <SectionHeader
-          kicker="Gallery wall"
+        <StorefrontSectionHeading
+          eyebrow="Gallery wall"
           title={`Gallery waiting for published variants for ${input.title}`}
         />
         <p className="text-sm text-[color:var(--storefront-muted)]">
@@ -507,7 +492,10 @@ function CollectionGallery(input: {
       headline="Curated collectible set"
       summary={`${input.items.length} collectible variants`}
     >
-      <SectionHeader kicker="Gallery wall" title="Curated collectible set" />
+      <StorefrontSectionHeading
+        eyebrow="Gallery wall"
+        title="Curated collectible set"
+      />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {input.items.map((item) => (
           <StorefrontTile
@@ -549,8 +537,8 @@ function CollectionTechnicalSection(input: {
       headline="Manifest and contract references"
       summary="Technical proof and public contract metadata for this release."
     >
-      <SectionHeader
-        kicker="Technical proof"
+      <StorefrontSectionHeading
+        eyebrow="Technical proof"
         title="Manifest and contract references"
       />
       <div className="grid gap-4 xl:grid-cols-3">
@@ -583,20 +571,20 @@ function CollectionTechnicalSection(input: {
           </p>
           <h3 className="mt-2 text-xl font-semibold">Public metadata</h3>
           <div className="mt-3 flex flex-col gap-2">
-            <ActionLink
+            <StorefrontActionLink
               href={input.metadataPath}
-              tone={linkClass()}
               target="_blank"
+              tone={linkClass()}
             >
               Collection metadata JSON
-            </ActionLink>
-            <ActionLink
+            </StorefrontActionLink>
+            <StorefrontActionLink
               href={input.contractPath}
-              tone={linkClass()}
               target="_blank"
+              tone={linkClass()}
             >
               Contract manifest
-            </ActionLink>
+            </StorefrontActionLink>
           </div>
         </StorefrontTile>
 
@@ -607,24 +595,24 @@ function CollectionTechnicalSection(input: {
           <h3 className="mt-2 text-xl font-semibold">Edition example</h3>
           {input.firstEdition ? (
             <div className="mt-3 flex flex-col gap-2">
-              <ActionLink
+              <StorefrontActionLink
                 href={`${input.metadataPath}/${input.firstEdition.position}`}
-                tone={linkClass()}
                 target="_blank"
+                tone={linkClass()}
               >
                 Metadata #{input.firstEdition.position}
-              </ActionLink>
-              <ActionLink
+              </StorefrontActionLink>
+              <StorefrontActionLink
                 href={createCollectionTokenUriPath({
                   brandSlug: input.brandSlug,
                   collectionSlug: input.collectionSlug,
                   tokenId: input.firstEdition.position
                 })}
-                tone={linkClass()}
                 target="_blank"
+                tone={linkClass()}
               >
                 Token URI sample #{input.firstEdition.position}
-              </ActionLink>
+              </StorefrontActionLink>
             </div>
           ) : (
             <p className="mt-2 text-sm text-[color:var(--storefront-muted)]">
@@ -651,7 +639,10 @@ function CollectionRelatedSection(input: {
       headline="Connected brand releases"
       summary="Related collectible drops from the same campaign family."
     >
-      <SectionHeader kicker="Related drops" title="Connected brand releases" />
+      <StorefrontSectionHeading
+        eyebrow="Related drops"
+        title="Connected brand releases"
+      />
       {input.relatedCollections.length === 0 ? (
         <p className="text-sm text-[color:var(--storefront-muted)]">
           This brand has no other released drops yet.

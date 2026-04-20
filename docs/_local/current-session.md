@@ -3,6 +3,27 @@
 ## Date
 2026-04-20
 
+## Latest Checkpoint (Storefront Primitive Completion)
+- Completed the remaining public-side Tailwind normalization pass so brand, collection, reserve, and checkout routes use storefront-native shared primitives instead of mixed app-shell link styling or local heading helpers.
+- Added reusable storefront primitives in `packages/ui/src/index.tsx`:
+  - `StorefrontActionButton`
+  - `StorefrontActionLink`
+  - `StorefrontSectionHeading`
+  - `StorefrontMetaGrid`
+  - `StorefrontMetaItem`
+- Applied the new storefront primitives across:
+  - `apps/web/src/app/(public)/brands/[brandSlug]/page.tsx`
+  - `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/page.tsx`
+  - `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/purchase-panel.tsx`
+  - `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/checkout/[checkoutSessionId]/page.tsx`
+  - `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/checkout/[checkoutSessionId]/checkout-client.tsx`
+- Result:
+  - public CTA styling now respects storefront accents directly
+  - repeated public section headers now share one storefront heading primitive
+  - checkout summary/action cards now use shared storefront metadata primitives instead of route-local key/value markup
+- Verification:
+  - Not run in this checkpoint by request; focus remained on code and documentation only.
+
 ## Latest Checkpoint (Single-Theme Tailwind Shell + Docs Alignment)
 - Finalized the current shell redesign around one premium dark Tailwind-first product family:
   - Removed the internal sidebar theme-switcher path and deleted:
