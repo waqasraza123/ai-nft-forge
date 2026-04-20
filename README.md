@@ -19,6 +19,13 @@ AI NFT Forge is a self-hosted, white-label NFT launch platform for turning uploa
 
 The repository ships as a pnpm monorepo with a Next.js control plane, a BullMQ worker, a standalone generation backend, PostgreSQL, Redis, and S3-compatible object storage. It is licensed under Apache-2.0.
 
+## Screenshots
+
+![alt text](.github/screenshots/image1.jpg)
+![alt text](.github/screenshots/image4.jpg)
+![alt text](.github/screenshots/image5.jpg)
+![alt text](.github/screenshots/image6.jpg)
+
 ## Status
 
 - Phases 1 through 7 are complete, and post-phase onchain deployment/minting, wallet UX, chain-state reconciliation, and commerce checkout/admin slices are landed
