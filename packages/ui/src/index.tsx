@@ -173,6 +173,44 @@ const storefrontPillVariants = cva(
   }
 );
 
+const storefrontActionButtonVariants = cva(
+  "inline-flex items-center justify-center rounded-2xl border px-4 py-2.5 text-sm font-semibold transition duration-250 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--storefront-accent)]/35 disabled:cursor-not-allowed disabled:opacity-60",
+  {
+    variants: {
+      tone: {
+        ghost:
+          "border-[color:var(--storefront-border)] bg-transparent text-[color:var(--storefront-text)] hover:border-[color:var(--storefront-accent)] hover:bg-[color:var(--storefront-panel)]/70",
+        primary:
+          "border-[color:var(--storefront-accent)] bg-[linear-gradient(135deg,var(--storefront-accent),#67e8f9)] text-slate-950 shadow-[0_16px_40px_rgba(2,6,23,0.28)] hover:brightness-105",
+        secondary:
+          "border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] text-[color:var(--storefront-text)] hover:border-[color:var(--storefront-accent)] hover:bg-[color:var(--storefront-panel-strong)]"
+      }
+    },
+    defaultVariants: {
+      tone: "primary"
+    }
+  }
+);
+
+const storefrontActionLinkVariants = cva(
+  "inline-flex items-center justify-center rounded-2xl border px-4 py-2.5 text-sm font-semibold transition duration-250 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--storefront-accent)]/35",
+  {
+    variants: {
+      tone: {
+        inline:
+          "border-transparent bg-transparent px-0 py-0 text-[color:var(--storefront-accent)] hover:text-white hover:underline hover:underline-offset-4",
+        primary:
+          "border-[color:var(--storefront-accent)] bg-[color:var(--storefront-accent)]/15 text-[color:var(--storefront-accent)] hover:bg-[linear-gradient(135deg,var(--storefront-accent),#67e8f9)] hover:text-slate-950",
+        secondary:
+          "border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] text-[color:var(--storefront-text)] hover:border-[color:var(--storefront-accent)] hover:bg-[color:var(--storefront-panel-strong)]"
+      }
+    },
+    defaultVariants: {
+      tone: "primary"
+    }
+  }
+);
+
 type PillProps = PropsWithChildren<
   VariantProps<typeof pillVariants> & {
     className?: string;
@@ -318,8 +356,20 @@ type ActionLinkProps = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, never> & {
   tone?: "action" | "inline" | "muted";
 };
 
+type StorefrontActionLinkProps = Omit<
+  AnchorHTMLAttributes<HTMLAnchorElement>,
+  never
+> & {
+  href: string;
+  tone?: "inline" | "primary" | "secondary";
+};
+
 type ActionButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   tone?: "primary" | "accent" | "secondary" | "ghost" | "surface";
+};
+
+type StorefrontActionButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  tone?: "ghost" | "primary" | "secondary";
 };
 
 type StatusBannerProps = React.HTMLAttributes<HTMLDivElement> & {
@@ -513,6 +563,24 @@ type StorefrontPillProps = PropsWithChildren<{
   tone?: "accent" | "muted" | "subtle";
 }>;
 
+type StorefrontSectionHeadingProps = {
+  className?: string;
+  eyebrow: string;
+  lead?: string;
+  title: string;
+};
+
+type StorefrontMetaGridProps = PropsWithChildren<{
+  className?: string;
+}>;
+
+type StorefrontMetaItemProps = {
+  className?: string;
+  label: string;
+  value: ReactNode;
+  valueClassName?: string;
+};
+
 type SurfacePanelProps = PropsWithChildren<{
   className?: string;
 }>;
@@ -632,6 +700,54 @@ export function StorefrontPill({
     <span className={cn(storefrontPillVariants({ tone }), className)}>
       {children}
     </span>
+  );
+}
+
+export function StorefrontSectionHeading({
+  className,
+  eyebrow,
+  lead,
+  title
+}: StorefrontSectionHeadingProps) {
+  return (
+    <header className={cn("space-y-2", className)}>
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
+        {eyebrow}
+      </p>
+      <h2 className="font-[var(--font-display)] text-2xl font-semibold tracking-tight text-[color:var(--storefront-text)]">
+        {title}
+      </h2>
+      {lead ? (
+        <p className="max-w-3xl text-sm leading-7 text-[color:var(--storefront-muted)]">
+          {lead}
+        </p>
+      ) : null}
+    </header>
+  );
+}
+
+export function StorefrontMetaGrid({
+  children,
+  className
+}: StorefrontMetaGridProps) {
+  return <div className={cn("space-y-3 text-sm", className)}>{children}</div>;
+}
+
+export function StorefrontMetaItem({
+  className,
+  label,
+  value,
+  valueClassName
+}: StorefrontMetaItemProps) {
+  return (
+    <div className={cn("grid gap-1", className)}>
+      <span className="text-xs text-[color:var(--storefront-muted)]">
+        {label}
+      </span>
+      <strong className={cn("text-[color:var(--storefront-text)]", valueClassName)}>
+        {value}
+      </strong>
+    </div>
   );
 }
 
@@ -1236,6 +1352,37 @@ export function ActionLink({
   return (
     <a
       className={cn(actionLinkVariants({ tone }), className)}
+      href={href}
+      {...props}
+    >
+      {children}
+    </a>
+  );
+}
+
+export function StorefrontActionButton({
+  tone = "primary",
+  className,
+  ...props
+}: StorefrontActionButtonProps) {
+  return (
+    <button
+      className={cn(storefrontActionButtonVariants({ tone }), className)}
+      {...props}
+    />
+  );
+}
+
+export function StorefrontActionLink({
+  href,
+  tone = "primary",
+  className,
+  children,
+  ...props
+}: StorefrontActionLinkProps): ReactElement {
+  return (
+    <a
+      className={cn(storefrontActionLinkVariants({ tone }), className)}
       href={href}
       {...props}
     >

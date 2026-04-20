@@ -10,7 +10,17 @@ import {
   CollectibleEditorialBand,
   CollectiblePreviewCard
 } from "../../../../../../../../components/collectible-visuals";
-import { ActionLink, ActionRow, Pill, cn } from "@ai-nft-forge/ui";
+import {
+  ActionRow,
+  Pill,
+  StorefrontActionLink,
+  StorefrontMetaGrid,
+  StorefrontMetaItem,
+  StorefrontPanel,
+  StorefrontPill,
+  StorefrontSectionHeading,
+  cn
+} from "@ai-nft-forge/ui";
 
 import { CheckoutClient } from "./checkout-client";
 
@@ -183,11 +193,6 @@ function statusToneClass(status: CheckoutStatus): CheckoutStatusVisual {
   };
 }
 
-const storefrontAccentPillClass =
-  "border-[color:var(--storefront-accent)]/45 bg-[color:var(--storefront-accent)]/15 text-[color:var(--storefront-accent)]";
-const storefrontNeutralPillClass =
-  "border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] text-[color:var(--storefront-muted)]";
-
 export default async function CheckoutPage({ params }: CheckoutPageProps) {
   const { brandSlug, checkoutSessionId, collectionSlug } = await params;
   const checkout =
@@ -253,21 +258,15 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
           >
             <ActionRow compact className="mb-3">
               <Pill tone={statusVisual.tone}>{statusVisual.label}</Pill>
-              <Pill className={storefrontAccentPillClass}>
-                {statusProviderCopy.shortTitle}
-              </Pill>
-              <Pill className={storefrontNeutralPillClass}>
-                Live storefront
-              </Pill>
+              <StorefrontPill tone="accent">{statusProviderCopy.shortTitle}</StorefrontPill>
+              <StorefrontPill>Live storefront</StorefrontPill>
             </ActionRow>
             <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
               <div className="space-y-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--storefront-accent)]">
-                  Hosted checkout session
-                </p>
-                <h1 className="mt-2 text-3xl font-semibold leading-tight font-[var(--font-display)]">
-                  {checkout.checkout.title}
-                </h1>
+                <StorefrontSectionHeading
+                  eyebrow="Hosted checkout session"
+                  title={checkout.checkout.title}
+                />
                 <p className="mt-2 text-sm text-[color:var(--storefront-muted)]">
                   {editionIdentity}
                 </p>
@@ -276,13 +275,11 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
                 </p>
                 <ActionRow compact>
                   {checkout.checkout.priceLabel ? (
-                    <Pill className={storefrontAccentPillClass}>
+                    <StorefrontPill tone="accent">
                       {checkout.checkout.priceLabel}
-                    </Pill>
+                    </StorefrontPill>
                   ) : null}
-                  <Pill className={storefrontNeutralPillClass}>
-                    {statusProviderCopy.title}
-                  </Pill>
+                  <StorefrontPill>{statusProviderCopy.title}</StorefrontPill>
                 </ActionRow>
               </div>
               <CollectiblePreviewCard
@@ -297,90 +294,58 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
             </div>
           </CollectibleEditorialBand>
           <div className="grid gap-4 self-start">
-            <article className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/70 p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
-                Reservation summary
-              </p>
-              <h2 className="mt-1 text-xl font-semibold">
-                Collector checkpoint
-              </h2>
-              <div className="mt-3 space-y-3 text-sm">
-                <div className="grid gap-1">
-                  <span className="text-xs text-[color:var(--storefront-muted)]">
-                    Checkout status
-                  </span>
-                  <strong>
-                    {formatCheckoutStatus(checkout.checkout.status)}
-                  </strong>
-                </div>
-                <div className="grid gap-1">
-                  <span className="text-xs text-[color:var(--storefront-muted)]">
-                    Reserved edition
-                  </span>
-                  <strong>
-                    {reservedItem?.sourceAssetOriginalFilename
+            <StorefrontPanel as="article" className="bg-[color:var(--storefront-panel)]/70">
+              <StorefrontSectionHeading
+                eyebrow="Reservation summary"
+                title="Collector checkpoint"
+              />
+              <StorefrontMetaGrid className="mt-3">
+                <StorefrontMetaItem
+                  label="Checkout status"
+                  value={formatCheckoutStatus(checkout.checkout.status)}
+                />
+                <StorefrontMetaItem
+                  label="Reserved edition"
+                  value={
+                    reservedItem?.sourceAssetOriginalFilename
                       ? `${reservedItem.sourceAssetOriginalFilename} · v${reservedItem.variantIndex}`
-                      : editionIdentity}
-                  </strong>
-                </div>
-                <div className="grid gap-1">
-                  <span className="text-xs text-[color:var(--storefront-muted)]">
-                    Buyer email
-                  </span>
-                  <strong>{checkout.checkout.reservation.buyerEmail}</strong>
-                </div>
-                <div className="grid gap-1">
-                  <span className="text-xs text-[color:var(--storefront-muted)]">
-                    Wallet
-                  </span>
-                  <strong>
-                    {formatWalletAddress(
-                      checkout.checkout.reservation.buyerWalletAddress
-                    )}
-                  </strong>
-                </div>
-                <div className="grid gap-1">
-                  <span className="text-xs text-[color:var(--storefront-muted)]">
-                    Reservation expires
-                  </span>
-                  <strong>
-                    {formatTimestamp(checkout.checkout.expiresAt)}
-                  </strong>
-                </div>
-                <div className="grid gap-1">
-                  <span className="text-xs text-[color:var(--storefront-muted)]">
-                    Completed at
-                  </span>
-                  <strong>
-                    {formatTimestamp(checkout.checkout.completedAt)}
-                  </strong>
-                </div>
-                <div className="grid gap-1">
-                  <span className="text-xs text-[color:var(--storefront-muted)]">
-                    Provider session
-                  </span>
-                  <strong>
-                    {checkout.checkout.providerSessionId ?? "N/A"}
-                  </strong>
-                </div>
-                <div className="grid gap-1">
-                  <span className="text-xs text-[color:var(--storefront-muted)]">
-                    Reservation status
-                  </span>
-                  <strong>{checkout.checkout.reservation.status}</strong>
-                </div>
-              </div>
-            </article>
-            <article className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/70 p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
-                Collector action
-              </p>
-              <h2 className="mt-1 text-xl font-semibold">
-                {statusCopy.actionTitle}
-              </h2>
-              <p className="mt-2 text-sm leading-7 text-[color:var(--storefront-muted)]">
-                {statusCopy.actionSubtext}
-              </p>
+                      : editionIdentity
+                  }
+                />
+                <StorefrontMetaItem
+                  label="Buyer email"
+                  value={checkout.checkout.reservation.buyerEmail}
+                />
+                <StorefrontMetaItem
+                  label="Wallet"
+                  value={formatWalletAddress(
+                    checkout.checkout.reservation.buyerWalletAddress
+                  )}
+                />
+                <StorefrontMetaItem
+                  label="Reservation expires"
+                  value={formatTimestamp(checkout.checkout.expiresAt)}
+                />
+                <StorefrontMetaItem
+                  label="Completed at"
+                  value={formatTimestamp(checkout.checkout.completedAt)}
+                />
+                <StorefrontMetaItem
+                  label="Provider session"
+                  value={checkout.checkout.providerSessionId ?? "N/A"}
+                />
+                <StorefrontMetaItem
+                  label="Reservation status"
+                  value={checkout.checkout.reservation.status}
+                />
+              </StorefrontMetaGrid>
+            </StorefrontPanel>
+            <StorefrontPanel as="article" className="bg-[color:var(--storefront-panel)]/70">
+              <StorefrontSectionHeading
+                eyebrow="Collector action"
+                lead={statusCopy.actionSubtext}
+                title={statusCopy.actionTitle}
+              />
               <p className="mt-2 text-sm text-[color:var(--storefront-text)]">
                 {actionCopy.providerLead}
               </p>
@@ -395,34 +360,36 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
                   />
                 ) : isStripeOpen ? (
                   <>
-                    <ActionLink
-                      className={storefrontAccentPillClass}
+                    <StorefrontActionLink
                       href={checkout.checkout.checkoutUrl}
                     >
                       {actionCopy.buttonLabel}
-                    </ActionLink>
-                    <ActionLink
-                      className="border border-[color:var(--storefront-border)] bg-transparent px-4 py-2 text-sm font-semibold text-[color:var(--storefront-text)]"
+                    </StorefrontActionLink>
+                    <StorefrontActionLink
+                      tone="secondary"
                       href={`/brands/${brandSlug}/collections/${collectionSlug}/checkout/${checkoutSessionId}`}
                     >
                       {actionCopy.secondaryLabel}
-                    </ActionLink>
+                    </StorefrontActionLink>
                   </>
                 ) : (
-                  <ActionLink
-                    className="border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] px-4 py-2 text-sm font-semibold text-[color:var(--storefront-text)]"
+                  <StorefrontActionLink
+                    tone="secondary"
                     href={releasePath}
                   >
                     Start a fresh checkout
-                  </ActionLink>
+                  </StorefrontActionLink>
                 )}
               </ActionRow>
-            </article>
-            <article className="rounded-[2rem] border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]/70 p-5 space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
-                Release continuity
-              </p>
-              <h2 className="text-xl font-semibold">Claim context</h2>
+            </StorefrontPanel>
+            <StorefrontPanel
+              as="article"
+              className="space-y-2 bg-[color:var(--storefront-panel)]/70"
+            >
+              <StorefrontSectionHeading
+                eyebrow="Release continuity"
+                title="Claim context"
+              />
               <p className="text-sm leading-7 text-[color:var(--storefront-muted)]">
                 This checkpoint is part of the active collectible launch flow
                 for <strong>{checkout.checkout.title}</strong> and remains tied
@@ -433,20 +400,17 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
                 campaigns.
               </p>
               <ActionRow compact>
-                <ActionLink
-                  className={storefrontAccentPillClass}
-                  href={releasePath}
-                >
+                <StorefrontActionLink href={releasePath}>
                   Back to release page
-                </ActionLink>
-                <ActionLink
-                  className="border border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] px-4 py-2 text-sm font-semibold text-[color:var(--storefront-text)]"
+                </StorefrontActionLink>
+                <StorefrontActionLink
+                  tone="secondary"
                   href={`/brands/${brandSlug}`}
                 >
                   Back to brand landing
-                </ActionLink>
+                </StorefrontActionLink>
               </ActionRow>
-            </article>
+            </StorefrontPanel>
           </div>
         </section>
       </main>

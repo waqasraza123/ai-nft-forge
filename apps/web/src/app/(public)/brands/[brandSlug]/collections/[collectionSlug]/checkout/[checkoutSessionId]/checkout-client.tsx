@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { ActionButton, ActionRow } from "@ai-nft-forge/ui";
+import { ActionRow, StorefrontActionButton, StorefrontTile } from "@ai-nft-forge/ui";
 
 type CheckoutClientProps = {
   brandSlug: string;
@@ -58,22 +58,21 @@ export function CheckoutClient(props: CheckoutClientProps) {
   return (
     <ActionRow compact className="mt-4">
       {error ? (
-        <p className="w-full rounded-xl border border-red-400/45 bg-red-500/12 p-2.5 text-sm text-red-100">
+        <StorefrontTile className="w-full border-red-400/45 bg-red-500/12 p-2.5 text-sm text-red-100">
           {error}
-        </p>
+        </StorefrontTile>
       ) : null}
       {props.canComplete ? (
-        <ActionButton
-          tone="primary"
+        <StorefrontActionButton
           disabled={busyAction !== null}
           onClick={() => void runAction("complete")}
           type="button"
         >
           {busyAction === "complete" ? "Confirming claim..." : "Confirm claim"}
-        </ActionButton>
+        </StorefrontActionButton>
       ) : null}
       {props.canCancel ? (
-        <ActionButton
+        <StorefrontActionButton
           tone="ghost"
           disabled={busyAction !== null}
           onClick={() => void runAction("cancel")}
@@ -82,7 +81,7 @@ export function CheckoutClient(props: CheckoutClientProps) {
           {busyAction === "cancel"
             ? "Releasing reservation..."
             : "Release reservation"}
-        </ActionButton>
+        </StorefrontActionButton>
       ) : null}
     </ActionRow>
   );
