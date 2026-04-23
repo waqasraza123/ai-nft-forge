@@ -130,7 +130,10 @@ export function WorkspaceScopeSwitcher({
   }
 
   return (
-    <OpsPanelCard tone="neutral" className="bg-white/[0.03]">
+    <OpsPanelCard
+      tone="neutral"
+      className="bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(246,249,255,0.94))]"
+    >
       <label className="grid gap-2">
         <FieldLabel>Active workspace</FieldLabel>
         <SelectField onChange={handleChange} value={selectedWorkspaceSlug}>

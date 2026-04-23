@@ -2289,7 +2289,7 @@ export function StudioSettingsClient({
                   }
                 >
                   {!canManageWorkspace ? (
-                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                       <strong>Operator read-only</strong>
                       <span>
                         Operators can review workspace policy and identity, but
@@ -2298,7 +2298,7 @@ export function StudioSettingsClient({
                     </div>
                   ) : null}
                   {inactiveWorkspaceMessage && settings?.workspace ? (
-                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                       <strong>Workspace read-only</strong>
                       <span>{inactiveWorkspaceMessage}</span>
                     </div>
@@ -2546,7 +2546,7 @@ export function StudioSettingsClient({
                   title="Workspace lifecycle"
                 >
                   {!settings?.workspace ? (
-                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                       <strong>No workspace selected</strong>
                       <span>
                         Create a workspace before changing lifecycle state.
@@ -2563,13 +2563,13 @@ export function StudioSettingsClient({
                         <Pill>{access.role}</Pill>
                       </ActionRow>
                       {inactiveWorkspaceMessage ? (
-                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                           <strong>Read-only</strong>
                           <span>{inactiveWorkspaceMessage}</span>
                         </div>
                       ) : null}
                       {!canManageWorkspace ? (
-                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                           <strong>Owner only</strong>
                           <span>
                             Operators can review lifecycle state, but only
@@ -2638,7 +2638,7 @@ export function StudioSettingsClient({
                   title="Export and archive review"
                 >
                   {!settings?.workspace ? (
-                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                       <strong>No workspace selected</strong>
                       <span>
                         Choose a workspace before exporting or reviewing archive
@@ -2666,7 +2666,7 @@ export function StudioSettingsClient({
                         </Pill>
                       </ActionRow>
                       {offboardingSummary.blockerCodes.length ? (
-                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-red-500/45 bg-red-500/12 text-red-50">
+                        <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                           <strong>Archive blocked</strong>
                           <span>
                             Resolve{" "}
@@ -2679,7 +2679,7 @@ export function StudioSettingsClient({
                       ) : null}
                       {!offboardingSummary.blockerCodes.length &&
                       offboardingSummary.cautionCodes.length ? (
-                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                        <div className="rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm text-sky-700">
                           <strong>Review before archive</strong>
                           <span>
                             Check{" "}
@@ -2692,7 +2692,7 @@ export function StudioSettingsClient({
                       ) : null}
                       {!offboardingSummary.blockerCodes.length &&
                       !offboardingSummary.cautionCodes.length ? (
-                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-emerald-500/45 bg-emerald-500/12 text-emerald-50">
+                        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
                           <strong>Archive-ready</strong>
                           <span>
                             No active operational blockers are currently
@@ -2717,7 +2717,7 @@ export function StudioSettingsClient({
                           </ActionLink>
                         </ActionRow>
                       ) : (
-                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                           <strong>Owner only</strong>
                           <span>
                             Operators can review archive readiness, but only
@@ -2749,7 +2749,7 @@ export function StudioSettingsClient({
                   }
                 >
                   {!canManageWorkspace ? (
-                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                       <strong>Operator read-only</strong>
                       <span>
                         Operators can review brand configuration, but only
@@ -2758,7 +2758,7 @@ export function StudioSettingsClient({
                     </div>
                   ) : null}
                   {inactiveWorkspaceMessage && settings?.workspace ? (
-                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                       <strong>Workspace read-only</strong>
                       <span>{inactiveWorkspaceMessage}</span>
                     </div>
@@ -2855,19 +2855,21 @@ export function StudioSettingsClient({
                               value={editorState.themePreset}
                             >
                               <option value="editorial_warm">
-                                Editorial warm
+                                Editorial warm light
                               </option>
-                              <option value="gallery_mono">Gallery mono</option>
+                              <option value="gallery_mono">
+                                Gallery mono light
+                              </option>
                               <option value="midnight_launch">
-                                Midnight launch
+                                Lilac launch light
                               </option>
                             </SelectField>
                           </FieldStack>
                           <FieldStack>
                             <FieldLabel>Accent color</FieldLabel>
-                            <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-2.5">
+                            <div className="flex items-center gap-3 rounded-2xl border border-[color:var(--color-line)] bg-white/70 p-2.5">
                               <InputField
-                                className="h-11 w-14 cursor-pointer rounded-xl border-white/10 bg-transparent p-0"
+                                className="h-11 w-14 cursor-pointer rounded-xl border-[color:var(--color-line)] bg-transparent p-0"
                                 onChange={(event) => {
                                   setEditorState((current) => ({
                                     ...current,
@@ -3080,7 +3082,7 @@ export function StudioSettingsClient({
                 >
                   <div className="grid gap-4 rounded-[28px] border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)]/70 p-4 shadow-[var(--shadow-surface)]">
                     <div
-                      className="h-16 rounded-2xl border border-white/10 shadow-[var(--shadow-surface)]"
+                      className="h-16 rounded-2xl border border-[color:var(--color-line)] shadow-[var(--shadow-surface)]"
                       style={{ backgroundColor: editorState.accentColor }}
                     />
                     <div className="flex flex-col gap-1 text-sm leading-6 text-[color:var(--color-muted)]">
@@ -3155,7 +3157,7 @@ export function StudioSettingsClient({
                   title="Create brand"
                 >
                   {!canManageWorkspace ? (
-                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                       <strong>Owner action required</strong>
                       <span>
                         Only workspace owners can create additional brands.
@@ -3163,7 +3165,7 @@ export function StudioSettingsClient({
                     </div>
                   ) : null}
                   {inactiveWorkspaceMessage && settings?.workspace ? (
-                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                       <strong>Workspace read-only</strong>
                       <span>{inactiveWorkspaceMessage}</span>
                     </div>
@@ -3222,19 +3224,21 @@ export function StudioSettingsClient({
                             value={newBrandState.themePreset}
                           >
                             <option value="editorial_warm">
-                              Editorial warm
+                              Editorial warm light
                             </option>
-                            <option value="gallery_mono">Gallery mono</option>
+                            <option value="gallery_mono">
+                              Gallery mono light
+                            </option>
                             <option value="midnight_launch">
-                              Midnight launch
+                              Lilac launch light
                             </option>
                           </SelectField>
                         </FieldStack>
                         <FieldStack>
                           <FieldLabel>Accent color</FieldLabel>
-                          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-2.5">
+                          <div className="flex items-center gap-3 rounded-2xl border border-[color:var(--color-line)] bg-white/70 p-2.5">
                             <InputField
-                              className="h-11 w-14 cursor-pointer rounded-xl border-white/10 bg-transparent p-0"
+                              className="h-11 w-14 cursor-pointer rounded-xl border-[color:var(--color-line)] bg-transparent p-0"
                               onChange={(event) => {
                                 setNewBrandState((current) => ({
                                   ...current,
@@ -3311,13 +3315,13 @@ export function StudioSettingsClient({
                     <Pill>{settings?.members.length ?? 1} total members</Pill>
                   </ActionRow>
                   {!canManageMembers ? (
-                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                       <strong>Operator read-only</strong>
                       <span>Only workspace owners can remove members.</span>
                     </div>
                   ) : null}
                   {inactiveWorkspaceMessage && settings?.workspace ? (
-                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                       <strong>Workspace read-only</strong>
                       <span>{inactiveWorkspaceMessage}</span>
                     </div>
@@ -3383,7 +3387,7 @@ export function StudioSettingsClient({
                     </Pill>
                   </ActionRow>
                   {!canManageMembers ? (
-                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                       <strong>Operator read-only</strong>
                       <span>
                         Only workspace owners can create invitations, log
@@ -3392,7 +3396,7 @@ export function StudioSettingsClient({
                     </div>
                   ) : null}
                   {inactiveWorkspaceMessage && settings?.workspace ? (
-                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                       <strong>Workspace read-only</strong>
                       <span>{inactiveWorkspaceMessage}</span>
                     </div>
@@ -3529,7 +3533,7 @@ export function StudioSettingsClient({
                     </Pill>
                   </ActionRow>
                   {inactiveWorkspaceMessage && settings?.workspace ? (
-                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                       <strong>Workspace read-only</strong>
                       <span>{inactiveWorkspaceMessage}</span>
                     </div>
@@ -3574,7 +3578,7 @@ export function StudioSettingsClient({
                     ) : (
                       <>
                         {pendingRoleEscalationRequest ? (
-                          <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                          <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                             <strong>Owner review already pending</strong>
                             <span>
                               Another ownership transfer request is already open
@@ -3746,7 +3750,7 @@ export function StudioSettingsClient({
                   title="Lifecycle automation policy"
                 >
                   {!canManageWorkspace ? (
-                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                       <strong>Operator read-only</strong>
                       <span>
                         Operators can review lifecycle automation, but only
@@ -3755,7 +3759,7 @@ export function StudioSettingsClient({
                     </div>
                   ) : null}
                   {!settings?.workspace ? (
-                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                       <strong>No workspace selected</strong>
                       <span>
                         Choose a workspace before changing lifecycle automation.
@@ -3880,7 +3884,7 @@ export function StudioSettingsClient({
                   title="Lifecycle SLA policy"
                 >
                   {!canManageWorkspace ? (
-                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                       <strong>Operator read-only</strong>
                       <span>
                         Operators can review lifecycle SLA state, but only
@@ -3889,7 +3893,7 @@ export function StudioSettingsClient({
                     </div>
                   ) : null}
                   {!settings?.workspace ? (
-                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                       <strong>No workspace selected</strong>
                       <span>
                         Choose a workspace before changing lifecycle SLA policy.
@@ -4154,7 +4158,7 @@ export function StudioSettingsClient({
                   title="Lifecycle delivery health"
                 >
                   {!settings?.workspace ? (
-                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                       <strong>No workspace selected</strong>
                       <span>
                         Choose a workspace before reviewing lifecycle delivery
@@ -4289,7 +4293,7 @@ export function StudioSettingsClient({
                   title="Current workspace offboarding"
                 >
                   {!currentWorkspaceOffboardingState ? (
-                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                       <strong>No workspace offboarding data</strong>
                       <span>
                         Select a workspace to review its current archive and
@@ -4328,7 +4332,7 @@ export function StudioSettingsClient({
                       </ActionRow>
                       {currentWorkspaceOffboardingState.summary.blockerCodes
                         .length ? (
-                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-red-500/45 bg-red-500/12 text-red-50">
+                        <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                           <strong>Blocked</strong>
                           <span>
                             {currentWorkspaceOffboardingState.summary.blockerCodes
@@ -4339,7 +4343,7 @@ export function StudioSettingsClient({
                       ) : null}
                       {currentWorkspaceOffboardingState.summary.cautionCodes
                         .length ? (
-                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                           <strong>Review cues</strong>
                           <span>
                             {currentWorkspaceOffboardingState.summary.cautionCodes
@@ -4381,7 +4385,7 @@ export function StudioSettingsClient({
                   title="Decommission workspace"
                 >
                   {!settings?.workspace ? (
-                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                       <strong>No workspace selected</strong>
                       <span>
                         Choose a workspace before scheduling a decommission
@@ -4392,7 +4396,7 @@ export function StudioSettingsClient({
                   {settings?.workspace ? (
                     <div className="space-y-4">
                       {!canManageWorkspace ? (
-                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                           <strong>Owner only</strong>
                           <span>
                             Operators can review retention state, but only
@@ -4432,7 +4436,7 @@ export function StudioSettingsClient({
                               notices
                             </Pill>
                           </ActionRow>
-                          <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                          <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                             <strong>Scheduled</strong>
                             <span>
                               Execution opens on{" "}
@@ -4463,7 +4467,7 @@ export function StudioSettingsClient({
                             </div>
                           ) : null}
                           {decommissionWorkflow?.nextDueKind ? (
-                            <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                            <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                               <strong>Notice due</strong>
                               <span>
                                 Record the{" "}
@@ -4587,7 +4591,7 @@ export function StudioSettingsClient({
                       !scheduledDecommission &&
                       settings.workspace.status === "archived" &&
                       offboardingSummary?.readiness !== "ready" ? (
-                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                        <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                           <strong>Resolve offboarding review first</strong>
                           <span>
                             Decommission unlocks only after this workspace
@@ -4726,7 +4730,7 @@ export function StudioSettingsClient({
                   title="Create workspace"
                 >
                   {!canManageWorkspace ? (
-                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-blue-500/35 bg-blue-500/12 text-blue-50">
+                    <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
                       <strong>Owner only</strong>
                       <span>
                         Operators can review the workspace estate, but only
@@ -4831,10 +4835,14 @@ export function StudioSettingsClient({
                           }}
                           value={workspaceCreateState.themePreset}
                         >
-                          <option value="editorial_warm">Editorial warm</option>
-                          <option value="gallery_mono">Gallery mono</option>
+                          <option value="editorial_warm">
+                            Editorial warm light
+                          </option>
+                          <option value="gallery_mono">
+                            Gallery mono light
+                          </option>
                           <option value="midnight_launch">
-                            Midnight launch
+                            Lilac launch light
                           </option>
                         </SelectField>
                       </FieldStack>

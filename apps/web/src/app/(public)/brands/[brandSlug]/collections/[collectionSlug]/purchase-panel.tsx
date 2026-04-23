@@ -121,7 +121,7 @@ export function PurchasePanel(props: PurchasePanelProps) {
       <div className="relative grid gap-4 md:grid-cols-[1.05fr_0.95fr] md:items-stretch">
         <section className="space-y-4">
           <StorefrontSectionHeading
-            eyebrow="Reserve and checkout"
+            eyebrow="Reserve and collect"
             title={
               props.priceLabel
                 ? `Reserve the next available edition for ${props.priceLabel}`
@@ -205,7 +205,7 @@ export function PurchasePanel(props: PurchasePanelProps) {
           <StorefrontSectionHeading
             eyebrow="Reservation state"
             lead="This panel anchors the reserve action with collectible-first visuals and explicit snapshot-backed availability."
-            title="Collector-ready interface"
+            title="Collector confidence panel"
           />
           <p className="text-xs text-[color:var(--storefront-accent)]">
             Price mode: {props.priceLabel ?? "Open-edition pricing"}

@@ -19,10 +19,10 @@ const pageShellVariants = cva("space-y-6", {
   variants: {
     tone: {
       default:
-        "rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] px-5 py-6 text-[color:var(--color-text)] shadow-[var(--shadow-surface)] backdrop-blur-xl md:px-7 md:py-7",
-      ops: "rounded-[2rem] border border-cyan-400/10 bg-[linear-gradient(180deg,rgba(8,14,28,0.98),rgba(7,12,24,0.94))] px-5 py-6 text-[color:var(--color-text)] shadow-[var(--shadow-surface)] backdrop-blur-xl md:px-7 md:py-7",
+        "rounded-[2rem] border border-[color:var(--color-line)] bg-white/86 px-5 py-6 text-[color:var(--color-text)] shadow-[var(--shadow-surface)] backdrop-blur-xl md:px-7 md:py-7",
+      ops: "rounded-[2rem] border border-sky-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(245,250,255,0.96))] px-5 py-6 text-[color:var(--color-text)] shadow-[var(--shadow-surface)] backdrop-blur-xl md:px-7 md:py-7",
       studio:
-        "rounded-[2rem] border border-violet-400/10 bg-[linear-gradient(180deg,rgba(12,18,32,0.94),rgba(8,13,24,0.92))] px-5 py-6 text-[color:var(--color-text)] shadow-[var(--shadow-surface)] backdrop-blur-xl md:px-7 md:py-7"
+        "rounded-[2rem] border border-violet-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(249,246,255,0.98))] px-5 py-6 text-[color:var(--color-text)] shadow-[var(--shadow-surface)] backdrop-blur-xl md:px-7 md:py-7"
     }
   },
   defaultVariants: {
@@ -56,7 +56,7 @@ type SurfaceGridProps = PropsWithChildren<
 >;
 
 const surfaceCardVariants = cva(
-  "rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-4 shadow-[var(--shadow-surface)] backdrop-blur-xl",
+  "rounded-[1.75rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(249,247,255,0.92))] p-4 shadow-[var(--shadow-surface)] backdrop-blur-xl",
   {
     variants: {
       span: {
@@ -100,12 +100,12 @@ const pillVariants = cva(
     variants: {
       tone: {
         accent:
-          "border-transparent bg-[color:var(--color-accent)] text-[color:var(--color-surface-strong)]",
-        danger: "border-transparent bg-red-500/85 text-white",
+          "border-transparent bg-[color:var(--color-accent)]/18 text-[color:var(--color-accent)]",
+        danger: "border-transparent bg-red-100 text-red-700",
         neutral:
           "border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-muted)]",
-        success: "border-transparent bg-emerald-500/85 text-white",
-        warning: "border-transparent bg-amber-500/85 text-black"
+        success: "border-transparent bg-emerald-100 text-emerald-700",
+        warning: "border-transparent bg-amber-100 text-amber-700"
       }
     },
     defaultVariants: {
@@ -119,11 +119,12 @@ const storefrontPanelVariants = cva(
   {
     variants: {
       tone: {
-        default: "p-5 shadow-[0_24px_70px_rgba(2,6,23,0.32)]",
-        soft: "bg-[color:var(--storefront-panel)]/82 p-6 shadow-[0_28px_90px_rgba(2,6,23,0.36)]",
-        strong: "bg-[color:var(--storefront-panel)]/92 p-5 shadow-[0_22px_60px_rgba(2,6,23,0.32)]",
+        default: "p-5 shadow-[0_22px_52px_rgba(188,194,226,0.18)]",
+        soft: "bg-[color:var(--storefront-panel)]/92 p-6 shadow-[0_30px_70px_rgba(194,198,229,0.18)]",
+        strong:
+          "bg-[color:var(--storefront-panel)]/98 p-5 shadow-[0_18px_40px_rgba(191,198,228,0.18)]",
         elevated:
-          "bg-[color:var(--storefront-panel)]/94 p-5 shadow-[0_30px_100px_rgba(2,6,23,0.42)]"
+          "bg-[color:var(--storefront-panel)]/98 p-5 shadow-[0_34px_86px_rgba(187,194,224,0.22)]"
       }
     },
     defaultVariants: {
@@ -138,13 +139,13 @@ const storefrontTileVariants = cva(
     variants: {
       tone: {
         default: "",
-        muted: "bg-[color:var(--storefront-panel)]/30",
+        muted: "bg-[color:var(--storefront-panel)]/72",
         gallery:
-          "bg-[color:var(--storefront-panel)]/36 shadow-[0_22px_55px_rgba(2,6,23,0.32)]"
+          "bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(245,244,255,0.9))] shadow-[0_18px_42px_rgba(188,194,226,0.18)]"
       },
       interactive: {
         false: "",
-        true: "transition duration-250 hover:-translate-y-1 hover:border-[color:var(--storefront-accent)] hover:shadow-[0_18px_50px_rgba(103,232,249,0.08)]"
+        true: "transition duration-250 hover:-translate-y-1 hover:border-[color:var(--storefront-accent)] hover:shadow-[0_20px_45px_rgba(155,140,255,0.16)]"
       }
     },
     defaultVariants: {
@@ -179,9 +180,9 @@ const storefrontActionButtonVariants = cva(
     variants: {
       tone: {
         ghost:
-          "border-[color:var(--storefront-border)] bg-transparent text-[color:var(--storefront-text)] hover:border-[color:var(--storefront-accent)] hover:bg-[color:var(--storefront-panel)]/70",
+          "border-[color:var(--storefront-border)] bg-white/70 text-[color:var(--storefront-text)] hover:border-[color:var(--storefront-accent)] hover:bg-[color:var(--storefront-accent)]/10",
         primary:
-          "border-[color:var(--storefront-accent)] bg-[linear-gradient(135deg,var(--storefront-accent),#67e8f9)] text-slate-950 shadow-[0_16px_40px_rgba(2,6,23,0.28)] hover:brightness-105",
+          "border-[color:var(--storefront-accent)]/30 bg-[linear-gradient(135deg,var(--storefront-accent),#bfe5fb)] text-[color:var(--storefront-text)] shadow-[0_16px_36px_rgba(188,194,226,0.22)] hover:brightness-105",
         secondary:
           "border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] text-[color:var(--storefront-text)] hover:border-[color:var(--storefront-accent)] hover:bg-[color:var(--storefront-panel-strong)]"
       }
@@ -198,9 +199,9 @@ const storefrontActionLinkVariants = cva(
     variants: {
       tone: {
         inline:
-          "border-transparent bg-transparent px-0 py-0 text-[color:var(--storefront-accent)] hover:text-white hover:underline hover:underline-offset-4",
+          "border-transparent bg-transparent px-0 py-0 text-[color:var(--storefront-accent)] hover:text-[color:var(--storefront-text)] hover:underline hover:underline-offset-4",
         primary:
-          "border-[color:var(--storefront-accent)] bg-[color:var(--storefront-accent)]/15 text-[color:var(--storefront-accent)] hover:bg-[linear-gradient(135deg,var(--storefront-accent),#67e8f9)] hover:text-slate-950",
+          "border-[color:var(--storefront-accent)]/35 bg-[color:var(--storefront-accent)]/12 text-[color:var(--storefront-accent)] hover:bg-[linear-gradient(135deg,var(--storefront-accent),#cbeaff)] hover:text-[color:var(--storefront-text)]",
         secondary:
           "border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)] text-[color:var(--storefront-text)] hover:border-[color:var(--storefront-accent)] hover:bg-[color:var(--storefront-panel-strong)]"
       }
@@ -223,15 +224,15 @@ const actionButtonVariants = cva(
     variants: {
       tone: {
         accent:
-          "border-[color:var(--color-accent)] bg-[linear-gradient(135deg,var(--color-accent),#67e8f9)] text-slate-950 shadow-[0_12px_32px_rgba(103,232,249,0.2)] hover:brightness-105",
+          "border-[color:var(--color-accent)]/35 bg-[linear-gradient(135deg,var(--color-accent),#d9f0fd)] text-[color:var(--color-text)] shadow-[0_14px_32px_rgba(188,194,226,0.2)] hover:brightness-105",
         surface:
-          "justify-start rounded-[1.5rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.03))] px-4 py-3 text-left text-white shadow-[0_18px_44px_rgba(2,6,23,0.28)] hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-soft)]",
+          "justify-start rounded-[1.5rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(245,246,255,0.92))] px-4 py-3 text-left text-[color:var(--color-text)] shadow-[0_18px_44px_rgba(188,194,226,0.16)] hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-soft)]",
         ghost:
-          "border-white/10 bg-transparent text-[color:var(--color-text)] hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-soft)]",
+          "border-[color:var(--color-line)] bg-transparent text-[color:var(--color-text)] hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-soft)]",
         secondary:
-          "border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] text-[color:var(--color-text)] hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-soft)]",
+          "border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,248,255,0.94))] text-[color:var(--color-text)] hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-soft)]",
         primary:
-          "border-[color:var(--color-accent)] bg-[linear-gradient(135deg,var(--color-accent),#67e8f9)] text-slate-950 shadow-[0_14px_36px_rgba(103,232,249,0.18)] hover:brightness-105"
+          "border-[color:var(--color-accent)]/35 bg-[linear-gradient(135deg,var(--color-accent),#d9f0fd)] text-[color:var(--color-text)] shadow-[0_14px_36px_rgba(188,194,226,0.18)] hover:brightness-105"
       }
     },
     defaultVariants: {
@@ -246,11 +247,11 @@ const actionLinkVariants = cva(
     variants: {
       tone: {
         action:
-          "border border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)] text-[color:var(--color-text)] hover:bg-[linear-gradient(135deg,var(--color-accent),#67e8f9)] hover:text-slate-950",
+          "border border-[color:var(--color-accent)]/35 bg-[color:var(--color-accent-soft)] text-[color:var(--color-text)] hover:bg-[linear-gradient(135deg,var(--color-accent),#d9f0fd)] hover:text-[color:var(--color-text)]",
         inline:
-          "text-[color:var(--color-accent)] hover:text-white hover:underline hover:underline-offset-4",
+          "text-[color:var(--color-accent)] hover:text-[color:var(--color-text)] hover:underline hover:underline-offset-4",
         muted:
-          "text-[color:var(--color-muted)] hover:text-white"
+          "text-[color:var(--color-muted)] hover:text-[color:var(--color-text)]"
       }
     },
     defaultVariants: {
@@ -260,14 +261,14 @@ const actionLinkVariants = cva(
 );
 
 const statusBannerVariants = cva(
-  "rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-3.5 text-sm text-[color:var(--color-text)] shadow-[0_16px_40px_rgba(2,6,23,0.22)]",
+  "rounded-2xl border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,247,255,0.92))] p-3.5 text-sm text-[color:var(--color-text)] shadow-[0_16px_32px_rgba(188,194,226,0.18)]",
   {
     variants: {
       tone: {
-        error: "border-red-500/45 bg-red-500/12 text-red-50",
-        info: "border-blue-500/35 bg-blue-500/12 text-blue-50",
-        success: "border-emerald-500/45 bg-emerald-500/12 text-emerald-50",
-        warning: "border-amber-400/45 bg-amber-400/12 text-amber-100"
+        error: "border-red-200 bg-red-50 text-red-700",
+        info: "border-sky-200 bg-sky-50 text-sky-700",
+        success: "border-emerald-200 bg-emerald-50 text-emerald-700",
+        warning: "border-amber-200 bg-amber-50 text-amber-700"
       }
     },
     defaultVariants: {
@@ -279,11 +280,14 @@ const statusBannerVariants = cva(
 const opsPanelCardVariants = cva("rounded-2xl border p-4", {
   variants: {
     tone: {
-      critical: "border-rose-400/30 bg-[linear-gradient(180deg,rgba(71,14,28,0.56),rgba(15,7,14,0.92))]",
-      healthy: "border-emerald-400/20 bg-[linear-gradient(180deg,rgba(8,42,34,0.42),rgba(7,17,17,0.92))]",
+      critical:
+        "border-rose-200 bg-[linear-gradient(180deg,rgba(255,244,246,0.98),rgba(255,238,242,0.96))]",
+      healthy:
+        "border-emerald-200 bg-[linear-gradient(180deg,rgba(244,255,250,0.98),rgba(238,252,246,0.96))]",
       neutral:
-        "border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))]",
-      warning: "border-amber-400/30 bg-[linear-gradient(180deg,rgba(82,48,8,0.42),rgba(19,12,7,0.92))]"
+        "border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(247,248,255,0.92))]",
+      warning:
+        "border-amber-200 bg-[linear-gradient(180deg,rgba(255,251,243,0.98),rgba(255,246,228,0.96))]"
     }
   },
   defaultVariants: {
@@ -292,7 +296,7 @@ const opsPanelCardVariants = cva("rounded-2xl border p-4", {
 });
 
 const opsCommandModuleVariants = cva(
-  "space-y-3 rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-4 shadow-[var(--shadow-surface)] backdrop-blur-xl",
+  "space-y-3 rounded-[1.75rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,249,255,0.94))] p-4 shadow-[var(--shadow-surface)] backdrop-blur-xl",
   {
     variants: {
       span: {
@@ -301,9 +305,9 @@ const opsCommandModuleVariants = cva(
         wide: "xl:col-span-2"
       },
       tone: {
-        critical: "ring-1 ring-rose-400/20",
-        warning: "ring-1 ring-amber-400/20",
-        healthy: "ring-1 ring-emerald-400/20",
+        critical: "ring-1 ring-rose-200",
+        warning: "ring-1 ring-amber-200",
+        healthy: "ring-1 ring-emerald-200",
         neutral: "ring-1 ring-transparent"
       }
     },
@@ -327,14 +331,14 @@ const fieldStackVariants = cva("grid gap-1.5", {
 });
 
 const inputFieldVariants = cva(
-  "w-full rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] px-3.5 py-2.5 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/25",
+  "w-full rounded-2xl border border-[color:var(--color-line)] bg-white px-3.5 py-2.5 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/25",
   {
     variants: {
       tone: {
         default: "",
         storefront:
-          "border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)] text-[color:var(--storefront-text)] placeholder:text-[color:var(--storefront-muted)] focus:border-[color:var(--storefront-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--storefront-accent)]/25",
-        file: "file:mr-3 file:cursor-pointer file:rounded-2xl file:border-0 file:bg-white/10 file:px-3.5 file:py-2.5 file:text-sm file:text-[color:var(--color-text)] file:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+          "border-[color:var(--storefront-border)] bg-white text-[color:var(--storefront-text)] placeholder:text-[color:var(--storefront-muted)] focus:border-[color:var(--storefront-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--storefront-accent)]/25",
+        file: "file:mr-3 file:cursor-pointer file:rounded-2xl file:border file:border-[color:var(--color-line)] file:bg-[color:var(--color-surface-strong)] file:px-3.5 file:py-2.5 file:text-sm file:text-[color:var(--color-text)] file:shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
       }
     },
     defaultVariants: {
@@ -344,7 +348,7 @@ const inputFieldVariants = cva(
 );
 
 const selectFieldVariants = cva(
-  "w-full rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] px-3.5 py-2.5 text-sm text-[color:var(--color-text)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/25"
+  "w-full rounded-2xl border border-[color:var(--color-line)] bg-white px-3.5 py-2.5 text-sm text-[color:var(--color-text)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/25"
 );
 
 const textAreaVariants = cva(
@@ -368,9 +372,10 @@ type ActionButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   tone?: "primary" | "accent" | "secondary" | "ghost" | "surface";
 };
 
-type StorefrontActionButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  tone?: "ghost" | "primary" | "secondary";
-};
+type StorefrontActionButtonProps =
+  React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    tone?: "ghost" | "primary" | "secondary";
+  };
 
 type StatusBannerProps = React.HTMLAttributes<HTMLDivElement> & {
   tone?: "error" | "info" | "success" | "warning";
@@ -428,7 +433,9 @@ type RecordShellProps = PropsWithChildren<{
 }>;
 
 type EmptyStateProps = PropsWithChildren<{
-  className?: string;
+  className?: string | undefined;
+  illustration?: ReactNode | undefined;
+  title?: string | undefined;
 }>;
 
 type RailCardProps = PropsWithChildren<{
@@ -580,6 +587,87 @@ type StorefrontMetaItemProps = {
   value: ReactNode;
   valueClassName?: string;
 };
+
+type EditorialSectionProps = PropsWithChildren<{
+  actions?: ReactNode | undefined;
+  className?: string | undefined;
+  eyebrow: string;
+  lead?: string | undefined;
+  title: string;
+}>;
+
+type CollectibleCardProps = PropsWithChildren<{
+  badge?: string | undefined;
+  className?: string | undefined;
+  imageAlt: string;
+  imageUrl?: string | null | undefined;
+  meta?: string | undefined;
+  subtitle?: string | undefined;
+  title: string;
+}>;
+
+type MediaHeroFrameProps = PropsWithChildren<{
+  badge?: string | undefined;
+  className?: string | undefined;
+  imageAlt: string;
+  imageUrl?: string | null | undefined;
+  meta?: string | undefined;
+  title: string;
+}>;
+
+type StatChipProps = {
+  className?: string | undefined;
+  label: string;
+  tone?: "accent" | "default" | "mint" | "sky" | undefined;
+  value: string;
+};
+
+type ProofBadgeProps = PropsWithChildren<{
+  className?: string | undefined;
+  tone?: "accent" | "default" | "success" | "warning" | undefined;
+}>;
+
+type ThumbnailStripItem = {
+  imageAlt: string;
+  imageUrl?: string | null;
+  label: string;
+  meta?: string;
+};
+
+type ThumbnailStripProps = {
+  accentColorVar?: string | undefined;
+  className?: string | undefined;
+  items: ThumbnailStripItem[];
+};
+
+type GalleryRailProps = PropsWithChildren<{
+  className?: string | undefined;
+  eyebrow: string;
+  lead?: string | undefined;
+  title: string;
+}>;
+
+type PremiumCtaCardProps = PropsWithChildren<{
+  className?: string | undefined;
+  detail?: string | undefined;
+  eyebrow: string;
+  title: string;
+}>;
+
+type WalletStatusSurfaceProps = PropsWithChildren<{
+  className?: string | undefined;
+  detail: string;
+  status: string;
+  tone?: "active" | "idle" | "warning" | undefined;
+  title: string;
+}>;
+
+type LightOperatorPanelProps = PropsWithChildren<{
+  className?: string | undefined;
+  detail?: string | undefined;
+  eyebrow: string;
+  title: string;
+}>;
 
 type SurfacePanelProps = PropsWithChildren<{
   className?: string;
@@ -744,10 +832,382 @@ export function StorefrontMetaItem({
       <span className="text-xs text-[color:var(--storefront-muted)]">
         {label}
       </span>
-      <strong className={cn("text-[color:var(--storefront-text)]", valueClassName)}>
+      <strong
+        className={cn("text-[color:var(--storefront-text)]", valueClassName)}
+      >
         {value}
       </strong>
     </div>
+  );
+}
+
+export function EditorialSection({
+  actions,
+  children,
+  className,
+  eyebrow,
+  lead,
+  title
+}: EditorialSectionProps) {
+  return (
+    <section
+      className={cn(
+        "grid gap-5 rounded-[2rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(249,245,255,0.9))] p-6 shadow-[var(--shadow-surface)] backdrop-blur-xl md:p-8",
+        className
+      )}
+    >
+      <div className="space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
+          {eyebrow}
+        </p>
+        <h2 className="font-[var(--font-display)] text-3xl font-semibold tracking-tight text-[color:var(--color-text)]">
+          {title}
+        </h2>
+        {lead ? (
+          <p className="max-w-3xl text-sm leading-7 text-[color:var(--color-muted)]">
+            {lead}
+          </p>
+        ) : null}
+        {actions ? <ActionRow>{actions}</ActionRow> : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+export function CollectibleCard({
+  badge,
+  children,
+  className,
+  imageAlt,
+  imageUrl,
+  meta,
+  subtitle,
+  title
+}: CollectibleCardProps) {
+  return (
+    <article
+      className={cn(
+        "overflow-hidden rounded-[1.85rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,243,255,0.9))] p-3 shadow-[0_22px_48px_rgba(192,198,227,0.18)]",
+        className
+      )}
+    >
+      <div className="relative overflow-hidden rounded-[1.4rem] border border-white/70 bg-[linear-gradient(145deg,#fffaf2,#f0f6ff_58%,#f6efff)]">
+        {imageUrl ? (
+          <img
+            alt={imageAlt}
+            className="aspect-[4/5] w-full object-cover"
+            src={imageUrl}
+          />
+        ) : (
+          <div className="aspect-[4/5] bg-[radial-gradient(circle_at_24%_20%,rgba(255,255,255,0.95),transparent_18%),radial-gradient(circle_at_74%_18%,rgba(165,143,255,0.18),transparent_22%),linear-gradient(155deg,rgba(255,251,240,0.95),rgba(233,244,255,0.96)_52%,rgba(245,236,255,0.92))]" />
+        )}
+        <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,transparent,rgba(255,255,255,0.92)_38%,rgba(255,255,255,0.98))] p-4 pt-12">
+          {badge ? <ProofBadge tone="accent">{badge}</ProofBadge> : null}
+          <p className="mt-3 text-lg font-semibold text-[color:var(--color-text)]">
+            {title}
+          </p>
+          {subtitle ? (
+            <p className="mt-1 text-xs uppercase tracking-[0.18em] text-[color:var(--color-muted)]">
+              {subtitle}
+            </p>
+          ) : null}
+        </div>
+      </div>
+      {meta ? (
+        <div className="mt-3 rounded-[1.2rem] border border-[color:var(--color-line)] bg-white/70 px-3 py-2 text-xs uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+          {meta}
+        </div>
+      ) : null}
+      {children}
+    </article>
+  );
+}
+
+export function MediaHeroFrame({
+  badge,
+  children,
+  className,
+  imageAlt,
+  imageUrl,
+  meta,
+  title
+}: MediaHeroFrameProps) {
+  return (
+    <section
+      className={cn(
+        "relative overflow-hidden rounded-[2rem] border border-[color:var(--color-line)] bg-[linear-gradient(145deg,#fff9f2,#f6fbff_54%,#fbf2ff)] p-5 shadow-[0_28px_78px_rgba(190,197,227,0.2)]",
+        className
+      )}
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_14%_14%,rgba(165,143,255,0.14),transparent_26%),radial-gradient(circle_at_86%_12%,rgba(124,204,247,0.14),transparent_24%),linear-gradient(180deg,rgba(255,255,255,0.18),transparent)]" />
+      <div className="relative grid gap-4 md:grid-cols-[1.05fr_0.95fr] md:items-end">
+        <div className="overflow-hidden rounded-[1.5rem] border border-white/80 bg-white/70">
+          {imageUrl ? (
+            <img
+              alt={imageAlt}
+              className="aspect-[4/5] w-full object-cover"
+              src={imageUrl}
+            />
+          ) : (
+            <div className="aspect-[4/5] bg-[radial-gradient(circle_at_24%_18%,rgba(255,255,255,0.96),transparent_18%),radial-gradient(circle_at_74%_24%,rgba(165,143,255,0.2),transparent_22%),linear-gradient(150deg,rgba(255,248,236,0.95),rgba(235,244,255,0.95)_56%,rgba(244,235,255,0.94))]" />
+          )}
+        </div>
+        <div className="grid gap-3">
+          {badge ? <ProofBadge tone="accent">{badge}</ProofBadge> : null}
+          <h3 className="font-[var(--font-display)] text-2xl font-semibold text-[color:var(--color-text)] md:text-3xl">
+            {title}
+          </h3>
+          {meta ? (
+            <p className="text-sm leading-7 text-[color:var(--color-muted)]">
+              {meta}
+            </p>
+          ) : null}
+          {children}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function StatChip({
+  className,
+  label,
+  tone = "default",
+  value
+}: StatChipProps) {
+  const toneClass = {
+    accent:
+      "border-[color:var(--color-accent)]/25 bg-[color:var(--color-accent)]/10",
+    default: "border-[color:var(--color-line)] bg-white/72",
+    mint: "border-emerald-200 bg-emerald-50/80",
+    sky: "border-sky-200 bg-sky-50/80"
+  }[tone];
+
+  return (
+    <div
+      className={cn(
+        "rounded-[1.35rem] border px-3.5 py-3 shadow-[0_12px_26px_rgba(194,199,225,0.14)]",
+        toneClass,
+        className
+      )}
+    >
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--color-muted)]">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-semibold text-[color:var(--color-text)]">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+export function ProofBadge({
+  children,
+  className,
+  tone = "default"
+}: ProofBadgeProps) {
+  const toneClass = {
+    accent:
+      "border-[color:var(--color-accent)]/35 bg-[color:var(--color-accent)]/12 text-[color:var(--color-accent)]",
+    default:
+      "border-[color:var(--color-line)] bg-white/78 text-[color:var(--color-text)]",
+    success: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    warning: "border-amber-200 bg-amber-50 text-amber-700"
+  }[tone];
+
+  return (
+    <span
+      className={cn(
+        "inline-flex rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em]",
+        toneClass,
+        className
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+export function ThumbnailStrip({
+  accentColorVar = "--color-accent",
+  className,
+  items
+}: ThumbnailStripProps) {
+  return (
+    <div className={cn("grid gap-3 sm:grid-cols-3", className)}>
+      {items.map((item) => (
+        <div
+          className="rounded-[1.45rem] border border-[color:var(--color-line)] bg-white/72 p-2.5 shadow-[0_14px_28px_rgba(193,199,225,0.14)]"
+          key={`${item.label}-${item.meta ?? "thumb"}`}
+        >
+          <div className="overflow-hidden rounded-[1rem] border border-white/80 bg-[linear-gradient(145deg,#fffaf2,#eef6ff_58%,#f8efff)]">
+            {item.imageUrl ? (
+              <img
+                alt={item.imageAlt}
+                className="aspect-[4/5] w-full object-cover"
+                src={item.imageUrl}
+              />
+            ) : (
+              <div
+                className="aspect-[4/5] bg-[radial-gradient(circle_at_24%_20%,rgba(255,255,255,0.96),transparent_16%),linear-gradient(150deg,rgba(255,248,236,0.95),rgba(235,244,255,0.95)_56%,rgba(244,235,255,0.94))]"
+                style={{
+                  boxShadow: `inset 0 0 0 1px color-mix(in srgb, var(${accentColorVar}) 14%, white)`
+                }}
+              />
+            )}
+          </div>
+          <p className="mt-2 text-sm font-semibold text-[color:var(--color-text)]">
+            {item.label}
+          </p>
+          {item.meta ? (
+            <p className="mt-1 text-xs text-[color:var(--color-muted)]">
+              {item.meta}
+            </p>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function GalleryRail({
+  children,
+  className,
+  eyebrow,
+  lead,
+  title
+}: GalleryRailProps) {
+  return (
+    <section
+      className={cn(
+        "rounded-[2rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,245,255,0.9))] p-6 shadow-[var(--shadow-surface)]",
+        className
+      )}
+    >
+      <div className="mb-5 space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
+          {eyebrow}
+        </p>
+        <h3 className="font-[var(--font-display)] text-2xl font-semibold text-[color:var(--color-text)]">
+          {title}
+        </h3>
+        {lead ? (
+          <p className="max-w-3xl text-sm leading-7 text-[color:var(--color-muted)]">
+            {lead}
+          </p>
+        ) : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+export function PremiumCtaCard({
+  children,
+  className,
+  detail,
+  eyebrow,
+  title
+}: PremiumCtaCardProps) {
+  return (
+    <article
+      className={cn(
+        "rounded-[1.85rem] border border-[color:var(--color-line)] bg-[linear-gradient(145deg,#fffaf0,#f5fbff_52%,#fbf2ff)] p-5 shadow-[0_22px_56px_rgba(189,196,227,0.2)]",
+        className
+      )}
+    >
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
+        {eyebrow}
+      </p>
+      <h3 className="mt-2 font-[var(--font-display)] text-2xl font-semibold text-[color:var(--color-text)]">
+        {title}
+      </h3>
+      {detail ? (
+        <p className="mt-2 text-sm leading-7 text-[color:var(--color-muted)]">
+          {detail}
+        </p>
+      ) : null}
+      {children ? <div className="mt-4">{children}</div> : null}
+    </article>
+  );
+}
+
+export function WalletStatusSurface({
+  children,
+  className,
+  detail,
+  status,
+  tone = "idle",
+  title
+}: WalletStatusSurfaceProps) {
+  const toneClass = {
+    active:
+      "border-emerald-200 bg-[linear-gradient(180deg,rgba(244,255,250,0.98),rgba(237,251,245,0.95))]",
+    idle: "border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,248,255,0.94))]",
+    warning:
+      "border-amber-200 bg-[linear-gradient(180deg,rgba(255,252,244,0.98),rgba(255,247,232,0.96))]"
+  }[tone];
+
+  return (
+    <section
+      className={cn(
+        "rounded-[1.75rem] border p-5 shadow-[var(--shadow-surface)]",
+        toneClass,
+        className
+      )}
+    >
+      <ProofBadge
+        tone={
+          tone === "active"
+            ? "success"
+            : tone === "warning"
+              ? "warning"
+              : "default"
+        }
+      >
+        {status}
+      </ProofBadge>
+      <h3 className="mt-3 text-xl font-semibold font-[var(--font-display)] text-[color:var(--color-text)]">
+        {title}
+      </h3>
+      <p className="mt-2 text-sm leading-7 text-[color:var(--color-muted)]">
+        {detail}
+      </p>
+      {children ? <div className="mt-4">{children}</div> : null}
+    </section>
+  );
+}
+
+export function LightOperatorPanel({
+  children,
+  className,
+  detail,
+  eyebrow,
+  title
+}: LightOperatorPanelProps) {
+  return (
+    <section
+      className={cn(
+        "rounded-[1.9rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(245,249,255,0.94))] p-5 shadow-[var(--shadow-surface)]",
+        className
+      )}
+    >
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
+          {eyebrow}
+        </p>
+        <h3 className="text-2xl font-semibold font-[var(--font-display)] text-[color:var(--color-text)]">
+          {title}
+        </h3>
+        {detail ? (
+          <p className="max-w-3xl text-sm leading-7 text-[color:var(--color-muted)]">
+            {detail}
+          </p>
+        ) : null}
+      </div>
+      {children ? <div className="mt-4">{children}</div> : null}
+    </section>
   );
 }
 
@@ -759,7 +1219,7 @@ export function Pill({ children, className, tone }: PillProps) {
 
 export function MetricTile({ label, value }: MetricTileProps) {
   return (
-    <div className="rounded-[1.5rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] px-4 py-3 shadow-[0_16px_40px_rgba(2,6,23,0.18)]">
+    <div className="rounded-[1.5rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,248,255,0.92))] px-4 py-3 shadow-[0_16px_32px_rgba(188,194,226,0.16)]">
       <p className="text-xs font-semibold uppercase tracking-wide text-[color:var(--color-accent)]">
         {label}
       </p>
@@ -814,11 +1274,11 @@ export function SignalCard({
   value
 }: SignalCardProps) {
   const toneClass = {
-    critical: "border-red-400/55 bg-red-500/10 text-red-50",
+    critical: "border-red-200 bg-red-50 text-red-700",
     default:
       "border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-text)]",
-    success: "border-emerald-400/45 bg-emerald-500/10 text-emerald-50",
-    warning: "border-amber-300/45 bg-amber-500/12 text-amber-100"
+    success: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    warning: "border-amber-200 bg-amber-50 text-amber-700"
   }[tone];
 
   return (
@@ -846,7 +1306,7 @@ export function RecordCard({ children, className }: RecordShellProps) {
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 rounded-[1.5rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-4 shadow-[0_18px_44px_rgba(2,6,23,0.2)] md:flex-row md:items-start md:justify-between",
+        "flex flex-col gap-3 rounded-[1.5rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,248,255,0.92))] p-4 shadow-[0_18px_34px_rgba(188,194,226,0.16)] md:flex-row md:items-start md:justify-between",
         className
       )}
     >
@@ -881,15 +1341,28 @@ export function RecordActions({ children, className }: RecordShellProps) {
   );
 }
 
-export function EmptyState({ children, className }: EmptyStateProps) {
+export function EmptyState({
+  children,
+  className,
+  illustration,
+  title
+}: EmptyStateProps) {
   return (
     <div
       className={cn(
-        "rounded-[1.5rem] border border-dashed border-white/10 bg-white/[0.03] p-4 text-sm text-[color:var(--color-muted)]",
+        "rounded-[1.5rem] border border-dashed border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(246,248,255,0.72))] p-4 text-sm text-[color:var(--color-muted)]",
         className
       )}
     >
-      {children}
+      <div className="grid gap-3">
+        {illustration ? <div>{illustration}</div> : null}
+        {title ? (
+          <p className="text-sm font-semibold text-[color:var(--color-text)]">
+            {title}
+          </p>
+        ) : null}
+        {children}
+      </div>
     </div>
   );
 }
@@ -902,7 +1375,7 @@ export function OpsEmptyState({
   return (
     <div
       className={cn(
-        "rounded-[1.5rem] border border-dashed border-white/10 bg-white/[0.02] p-4 text-sm text-[color:var(--color-muted)]",
+        "rounded-[1.5rem] border border-dashed border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(246,248,255,0.72))] p-4 text-sm text-[color:var(--color-muted)]",
         centered ? "text-center" : null,
         className
       )}
@@ -916,7 +1389,7 @@ export function OpsActionButton({ className, ...props }: ActionButtonProps) {
   return (
     <ActionButton
       className={cn(
-        "border-white/10 bg-white/[0.04] text-[color:var(--color-text)] hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]",
+        "border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(245,247,255,0.94))] text-[color:var(--color-text)] hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]",
         className
       )}
       tone="secondary"
@@ -935,7 +1408,7 @@ export function OpsCommandSection({
   return (
     <section
       className={cn(
-        "space-y-3 rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(9,14,28,0.92),rgba(6,10,20,0.92))] p-4 shadow-[var(--shadow-surface)]",
+        "space-y-3 rounded-[1.75rem] border border-sky-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(244,249,255,0.94))] p-4 shadow-[var(--shadow-surface)]",
         className
       )}
     >
@@ -1115,7 +1588,7 @@ export function RailCard({
   return (
     <article
       className={cn(
-        "space-y-4 rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] p-5 shadow-[var(--shadow-surface)] backdrop-blur-xl",
+        "space-y-4 rounded-[1.75rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,248,255,0.92))] p-5 shadow-[var(--shadow-surface)] backdrop-blur-xl",
         className
       )}
     >
@@ -1144,7 +1617,7 @@ export function InsetMetric({
   return (
     <div
       className={cn(
-        "rounded-[1.35rem] border border-white/10 bg-white/[0.04] p-4 shadow-[0_18px_44px_rgba(2,6,23,0.22)]",
+        "rounded-[1.35rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,248,255,0.92))] p-4 shadow-[0_18px_30px_rgba(188,194,226,0.16)]",
         className
       )}
     >
@@ -1210,7 +1683,7 @@ export function FormPanel({ children, className }: FormPanelProps) {
   return (
     <section
       className={cn(
-        "grid gap-4 rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))] p-4 shadow-[var(--shadow-surface)]",
+        "grid gap-4 rounded-[1.75rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,247,255,0.92))] p-4 shadow-[var(--shadow-surface)]",
         className
       )}
     >
@@ -1223,7 +1696,7 @@ export function SurfacePanel({ children, className }: SurfacePanelProps) {
   return (
     <section
       className={cn(
-        "rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[var(--shadow-surface)] backdrop-blur-xl md:p-5",
+        "rounded-[1.75rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,247,255,0.92))] p-4 shadow-[var(--shadow-surface)] backdrop-blur-xl md:p-5",
         className
       )}
     >
@@ -1249,7 +1722,7 @@ export function ProgressTrack({
   return (
     <div
       className={cn(
-        "h-2 overflow-hidden rounded-full bg-black/10 dark:bg-white/10",
+        "h-2 overflow-hidden rounded-full bg-[color:var(--color-accent-soft)]/80",
         className
       )}
       aria-hidden="true"
@@ -1338,7 +1811,10 @@ export function ActionButton({
   ...props
 }: ActionButtonProps) {
   return (
-    <button className={cn(actionButtonVariants({ tone }), className)} {...props} />
+    <button
+      className={cn(actionButtonVariants({ tone }), className)}
+      {...props}
+    />
   );
 }
 

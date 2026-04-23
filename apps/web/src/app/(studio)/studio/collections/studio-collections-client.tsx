@@ -96,9 +96,9 @@ const collectionStickyRailClasses = "grid gap-4 xl:sticky xl:top-24";
 const collectionCardStateToneClasses = {
   default:
     "border-[color:var(--color-line)] bg-[color:var(--color-surface)]/75",
-  success: "border-emerald-500/45 bg-emerald-500/12 text-emerald-50",
-  warning: "border-amber-400/45 bg-amber-400/12 text-amber-100",
-  danger: "border-red-500/45 bg-red-500/12 text-red-50"
+  success: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  warning: "border-amber-200 bg-amber-50 text-amber-700",
+  danger: "border-red-200 bg-red-50 text-red-700"
 } as const;
 
 type NoticeState = {
@@ -3099,7 +3099,7 @@ export function StudioCollectionsClient({
                             storefrontHeadline: event.target.value
                           }));
                         }}
-                        placeholder="A midnight launch built for collectors."
+                        placeholder="A light editorial launch built for collectors."
                         value={publicationMerchandisingState.storefrontHeadline}
                       />
                     </FieldStack>

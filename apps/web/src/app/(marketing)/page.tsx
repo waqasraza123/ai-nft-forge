@@ -1,5 +1,13 @@
 import Link from "next/link";
-import { ActionRow } from "@ai-nft-forge/ui";
+import {
+  ActionLink,
+  ActionRow,
+  CollectibleCard,
+  EditorialSection,
+  PremiumCtaCard,
+  ProofBadge,
+  StatChip
+} from "@ai-nft-forge/ui";
 
 import {
   CollectibleEditorialBand,
@@ -188,35 +196,30 @@ const audienceProfiles: MarketingAudience[] = [
 export default function MarketingPage() {
   return (
     <div className="mx-auto grid w-full max-w-7xl gap-7 px-4 pb-12 pt-6 md:px-6">
-      <section className="relative isolate overflow-hidden rounded-[2rem] border border-white/15 bg-[color:var(--color-surface-strong)]/80 p-6 shadow-[var(--shadow-surface)] backdrop-blur-sm md:p-10">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(50%_60%_at_14%_10%,_rgba(255,255,255,0.45),_transparent),radial-gradient(35%_35%_at_82%_18%,rgba(139,94,52,0.22),transparent),linear-gradient(180deg,rgba(255,255,255,0.12),transparent)]" />
+      <EditorialSection
+        actions={
+          <ActionRow compact>
+            <ActionLink href="/studio" tone="action">
+              Enter Studio
+            </ActionLink>
+            <ActionLink href="/brands/demo-studio" tone="muted">
+              Visit demo storefront
+            </ActionLink>
+          </ActionRow>
+        }
+        className="relative isolate overflow-hidden md:p-10"
+        eyebrow="AI NFT Forge"
+        lead="A self-hosted product platform for teams that need reliable creative pipelines, deterministic storefront publishing, and chain-aware release controls in one place."
+        title="Build launch infrastructure for premium collectible campaigns."
+      >
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(50%_60%_at_14%_10%,_rgba(255,255,255,0.45),_transparent),radial-gradient(35%_35%_at_82%_18%,rgba(139,94,52,0.18),transparent),linear-gradient(180deg,rgba(255,255,255,0.12),transparent)]" />
         <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div className="space-y-6">
-            <p className="inline-flex items-center gap-2 rounded-full border border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-text)]">
-              AI NFT Forge
-            </p>
-            <h1 className="max-w-2xl text-4xl font-semibold font-[var(--font-display)] leading-tight text-[color:var(--color-text)] md:text-5xl">
-              Build launch infrastructure for premium collectible campaigns.
-            </h1>
-            <p className="max-w-2xl text-sm leading-7 text-[color:var(--color-muted)] md:text-base">
-              A self-hosted product platform for teams that need reliable
-              creative pipelines, deterministic storefront publishing, and
-              chain-aware release controls in one place.
-            </p>
-            <ActionRow compact>
-              <Link
-                className="inline-flex items-center rounded-full border border-[color:var(--color-accent)] bg-[color:var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-95"
-                href="/studio"
-              >
-                Enter Studio
-              </Link>
-              <Link
-                className="inline-flex items-center rounded-full border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-5 py-2.5 text-sm font-semibold text-[color:var(--color-text)] transition hover:bg-[color:var(--color-accent-soft)]"
-                href="/brands/demo-studio"
-              >
-                Visit demo storefront
-              </Link>
-            </ActionRow>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <StatChip label="Shell" tone="accent" value="Light-only" />
+              <StatChip label="Commerce" tone="sky" value="Reserve-ready" />
+              <StatChip label="Trust" tone="mint" value="Wallet verified" />
+            </div>
             <p className="text-sm leading-6 text-[color:var(--color-muted)]">
               Designed for teams that scale from campaign experiments to
               enterprise launch operations.
@@ -229,7 +232,7 @@ export default function MarketingPage() {
             title="Launch plane"
           />
         </div>
-      </section>
+      </EditorialSection>
 
       <CollectibleGalleryRail
         accentVar="--color-accent"
@@ -243,15 +246,18 @@ export default function MarketingPage() {
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {proofPoints.map((point) => (
-            <article
-              className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-5"
+            <CollectibleCard
+              badge="Capability"
+              className="bg-[color:var(--color-surface)]"
+              imageAlt={point.title}
               key={point.title}
+              meta="Shared primitive surface"
+              title={point.title}
             >
-              <h3 className="text-lg font-semibold">{point.title}</h3>
               <p className="mt-2 text-sm leading-6 text-[color:var(--color-muted)]">
                 {point.detail}
               </p>
-            </article>
+            </CollectibleCard>
           ))}
         </div>
       </CollectibleGalleryRail>
@@ -264,15 +270,15 @@ export default function MarketingPage() {
         <ol className="grid gap-3 md:grid-cols-2">
           {processSteps.map((step, index) => (
             <li
-              className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] p-4"
+              className="rounded-[1.6rem] border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] p-4 shadow-[0_16px_30px_rgba(191,197,226,0.14)]"
               key={step.action}
             >
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">
                 Step {(index + 1).toString().padStart(2, "0")}
               </p>
-              <p className="mt-2 text-sm font-semibold text-[color:var(--color-text)]">
+              <ProofBadge className="mt-2" tone="default">
                 {step.action}
-              </p>
+              </ProofBadge>
               <h3 className="mt-1 text-xl font-semibold">{step.title}</h3>
               <p className="mt-2 text-sm text-[color:var(--color-muted)]">
                 {step.description}
@@ -291,10 +297,8 @@ export default function MarketingPage() {
       <CollectibleEditorialBand>
         <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr] xl:items-center">
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">
-              Showcase preview
-            </p>
-            <h2 className="max-w-3xl text-2xl font-semibold">
+            <ProofBadge tone="accent">Showcase preview</ProofBadge>
+            <h2 className="mt-3 max-w-3xl text-2xl font-semibold">
               Launch modules that mirror real production drop workflows.
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-[color:var(--color-muted)]">
@@ -326,14 +330,13 @@ export default function MarketingPage() {
       >
         <div className="grid gap-4 md:grid-cols-2">
           {audienceProfiles.map((audience) => (
-            <article
-              className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)] p-5"
+            <PremiumCtaCard
+              className="bg-[linear-gradient(145deg,#fffaf0,#f7fbff_52%,#faf2ff)]"
+              detail={audience.statement}
+              eyebrow="Audience"
               key={audience.role}
+              title={audience.role}
             >
-              <h3 className="text-xl font-semibold">{audience.role}</h3>
-              <p className="mt-2 text-sm text-[color:var(--color-muted)]">
-                {audience.statement}
-              </p>
               <ul className="mt-3 space-y-2 text-sm text-[color:var(--color-muted)]">
                 {audience.outcomes.map((outcome) => (
                   <li className="pl-2" key={outcome}>
@@ -341,7 +344,7 @@ export default function MarketingPage() {
                   </li>
                 ))}
               </ul>
-            </article>
+            </PremiumCtaCard>
           ))}
         </div>
       </CollectibleGalleryRail>
@@ -352,30 +355,20 @@ export default function MarketingPage() {
         summary="Move from mockups to live drops with predictable boundaries and
             production-minded operational posture."
       >
-        <div className="grid gap-5">
-          <h2 className="max-w-3xl text-3xl font-semibold">
-            AI NFT Forge: premium launch infrastructure under operational
-            pressure.
-          </h2>
-          <p className="max-w-4xl text-sm text-[color:var(--color-muted)]">
-            Move from mockups to live drops with predictable boundaries and
-            production-minded operational posture.
-          </p>
+        <PremiumCtaCard
+          detail="Move from mockups to live drops with predictable boundaries and a production-minded operational posture."
+          eyebrow="Product direction"
+          title="AI NFT Forge is built for premium launches under real operational pressure."
+        >
           <ActionRow compact>
-            <Link
-              className="inline-flex items-center rounded-full border border-[color:var(--color-accent)] bg-[color:var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-95"
-              href="/studio"
-            >
+            <ActionLink href="/studio" tone="action">
               Open studio
-            </Link>
-            <Link
-              className="inline-flex items-center rounded-full border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-5 py-2.5 text-sm font-semibold text-[color:var(--color-text)] transition hover:bg-[color:var(--color-accent-soft)]"
-              href="/brands/demo-studio"
-            >
+            </ActionLink>
+            <ActionLink href="/brands/demo-studio" tone="muted">
               Explore public routes
-            </Link>
+            </ActionLink>
           </ActionRow>
-        </div>
+        </PremiumCtaCard>
       </CollectibleGalleryRail>
     </div>
   );

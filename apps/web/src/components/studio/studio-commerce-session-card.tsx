@@ -150,32 +150,30 @@ const toneCardClassMap: Record<
   }
 > = {
   critical: {
-    card: "border-red-400/45 bg-red-500/12 text-red-100"
+    card: "border-red-200 bg-red-50 text-red-700"
   },
   warning: {
-    card: "border-amber-400/35 bg-amber-500/12 text-amber-100"
+    card: "border-amber-200 bg-amber-50 text-amber-700"
   },
   success: {
-    card: "border-emerald-400/35 bg-emerald-500/12 text-emerald-100"
+    card: "border-emerald-200 bg-emerald-50 text-emerald-700"
   },
   neutral: {
     card: "border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-text)]"
   }
 };
 
-function resolveBadgeTone(
-  tone: StudioCommerceSessionEmphasisTone
-) {
+function resolveBadgeTone(tone: StudioCommerceSessionEmphasisTone) {
   if (tone === "critical") {
-    return "border-red-500 text-red-100";
+    return "border-red-200 text-red-700";
   }
 
   if (tone === "warning") {
-    return "border-amber-500 text-amber-100";
+    return "border-amber-200 text-amber-700";
   }
 
   if (tone === "success") {
-    return "border-emerald-500 text-emerald-100";
+    return "border-emerald-200 text-emerald-700";
   }
 
   return "border-[color:var(--color-line)] text-[color:var(--color-muted)]";
@@ -206,7 +204,9 @@ export function StudioCommerceSessionCard({
       checkout.fulfillmentAutomationStatus === "idle");
 
   return (
-    <article className={`rounded-3xl border p-4 md:p-5 xl:p-6 ${toneCardClassMap[emphasisTone].card}`}>
+    <article
+      className={`rounded-3xl border p-4 md:p-5 xl:p-6 ${toneCardClassMap[emphasisTone].card}`}
+    >
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="grid gap-1">
           <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--color-accent)]">
@@ -306,7 +306,8 @@ export function StudioCommerceSessionCard({
             {checkout.fulfillmentAutomationAttemptCount.toString()} attempts
           </p>
           <p className="text-sm text-[color:var(--color-muted)]">
-            Last attempt {formatTimestamp(checkout.fulfillmentAutomationLastAttemptedAt)}
+            Last attempt{" "}
+            {formatTimestamp(checkout.fulfillmentAutomationLastAttemptedAt)}
           </p>
         </div>
         <div className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-bg-strong)] p-3">
@@ -324,7 +325,8 @@ export function StudioCommerceSessionCard({
               : "No external fulfillment reference"}
           </p>
           <p className="text-sm text-[color:var(--color-muted)]">
-            Retry window {formatTimestamp(checkout.fulfillmentAutomationNextRetryAt)}
+            Retry window{" "}
+            {formatTimestamp(checkout.fulfillmentAutomationNextRetryAt)}
           </p>
         </div>
       </div>
@@ -467,7 +469,6 @@ export function StudioCommerceSessionCard({
           </div>
         </form>
       ) : null}
-
     </article>
   );
 }

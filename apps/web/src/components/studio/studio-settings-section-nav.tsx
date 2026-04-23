@@ -20,25 +20,18 @@ type StudioSettingsSectionNavProps = {
 export function StudioSettingsSectionNav({
   items
 }: StudioSettingsSectionNavProps) {
-  const toneMap: Record<
-    StudioSettingsSectionNavItemTone,
-    string
-  > = {
+  const toneMap: Record<StudioSettingsSectionNavItemTone, string> = {
     critical:
-      "border-red-400/55 bg-red-500/10 text-red-100 hover:bg-red-500/25 hover:text-white",
+      "border-red-200 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800",
     default:
       "border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-text)] hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]",
     success:
-      "border-emerald-300/40 bg-emerald-500/8 text-emerald-50 hover:bg-emerald-500/20",
-    warning:
-      "border-amber-300/40 bg-amber-500/12 text-amber-50 hover:bg-amber-500/22"
+      "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
+    warning: "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
   };
 
   return (
-    <nav
-      aria-label="Workspace administration sections"
-      className="space-y-2"
-    >
+    <nav aria-label="Workspace administration sections" className="space-y-2">
       {items.map((item) => (
         <a
           className={`block rounded-xl border px-4 py-3 text-sm font-semibold transition ${toneMap[item.tone ?? "default"]}`}
@@ -46,7 +39,7 @@ export function StudioSettingsSectionNav({
           key={item.href}
         >
           <span className="font-semibold">{item.label}</span>
-          <span className="mt-1 block text-xs font-normal text-white/80">
+          <span className="mt-1 block text-xs font-normal text-current/75">
             {item.meta}
           </span>
         </a>

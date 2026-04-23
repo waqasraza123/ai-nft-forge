@@ -2,7 +2,7 @@
 
 ## Objective
 
-AI NFT Forge uses a Tailwind-first "Cinematic Launch OS" design system. The UI is meant to communicate two things at the same time:
+AI NFT Forge now uses a Tailwind-first "Light Editorial Launch Gallery" design system. The UI is meant to communicate two things at the same time:
 
 - premium public launch presentation for branded collectible releases
 - high-trust operator tooling for studio, commerce, and ops workflows
@@ -20,24 +20,24 @@ The design system is intentionally not a generic NFT marketplace skin and not a 
 
 ## Theme Model
 
-The redesign uses one flagship dark theme across the product family.
+The redesign uses one flagship light-only theme family across the product.
 
-- Public routes use a cinematic shell with stronger violet/cyan presentation accents.
-- Private Studio and Ops routes use a tighter operator-grade shell with a cooler cyan-leaning accent balance.
+- Public routes use a brighter editorial launch shell with lilac, sky, mint, and pearl accents.
+- Private Studio and Ops routes use a calmer product shell with lighter neutrals, soft elevation, and restrained accent color.
 - Both shells are driven from the same variable contract in [site-shell.tsx](/Users/mc/development/blockchain/ethereum/ai-nft-forge/apps/web/src/components/site-shell.tsx).
 - The route shell sets `--color-*` variables through Tailwind arbitrary-property classes instead of CSS files or runtime style maps.
 
-This replaces the older internal sidebar theme-switcher path. There is no longer a multi-theme operator chrome mode to maintain.
+There is no dark-mode operator path and no theme switcher to maintain.
 
 ## Token Layers
 
 The shared Tailwind extension currently defines the main reusable visual tokens:
 
-- `forge.*` colors for the graphite/midnight foundation, ink, muted text, and premium accents
+- `forge.*` colors for warm-white foundations, pearl/mist panels, editorial text, and premium accents
 - `fontFamily.ui` and `fontFamily.display` for body and display typography
 - `maxWidth.cinematic` for wide launch/storefront shells
 - `borderRadius.cinematic` and `borderRadius.launch` for premium panel geometry
-- `boxShadow.glass`, `boxShadow.panel`, `boxShadow.launch`, and `boxShadow.chrome` for layered depth
+- `boxShadow.glass`, `boxShadow.panel`, `boxShadow.launch`, and `boxShadow.chrome` for diffused light elevation
 - `blur.halo` and shared transition durations for restrained motion polish
 
 These tokens are the default vocabulary for new UI work.
@@ -48,10 +48,12 @@ These tokens are the default vocabulary for new UI work.
 
 - shell and surface primitives: `PageShell`, `SurfaceGrid`, `SurfaceCard`, `SurfacePanel`, `FormPanel`, `RailCard`
 - public/storefront primitives: `StorefrontPanel`, `StorefrontTile`, `StorefrontPill`, `StorefrontSectionHeading`, `StorefrontActionLink`, `StorefrontActionButton`, `StorefrontMetaGrid`, `StorefrontMetaItem`
+- editorial/media primitives: `EditorialSection`, `CollectibleCard`, `MediaHeroFrame`, `GalleryRail`, `ThumbnailStrip`, `PremiumCtaCard`, `ProofBadge`, `StatChip`, `WalletStatusSurface`
 - operator primitives: `OpsPanelCard`, `OpsSummaryCard`, `OpsCommandSection`, `OpsCommandModule`, `OpsStatusNotice`, `OpsGrid`, `OpsActionRow`
 - heading and information primitives: `SectionHeading`, `PanelHeading`, `MetricTile`, `SignalCard`, `InsetMetric`
 - record/list primitives: `RecordList`, `RecordCard`, `RecordCopy`, `RecordActions`, `EmptyState`, `OpsEmptyState`
 - input and action primitives: `FieldStack`, `FieldLabel`, `InputField`, `SelectField`, `TextAreaField`, `ActionButton`, `ActionLink`
+- editorial/media primitives should be added to this layer when a pattern is reused across route families
 
 When a route needs a new visual pattern, prefer extending this shared boundary instead of baking a one-off route shell.
 
@@ -79,7 +81,7 @@ These files define the flagship chrome, typography baseline, shell spacing, and 
 
 Public routes should feel:
 
-- cinematic
+- editorial
 - premium
 - media-forward
 - white-label ready
@@ -113,5 +115,5 @@ Do not reintroduce:
 - page-specific CSS files
 - CSS variable token files outside the shell/theme bridge
 - route-local theme switchers
-- light-theme dashboard fragments that break the flagship dark product language
+- dark fallback fragments that break the light-only product language
 - generic Tailwind dashboard styling with no premium art direction

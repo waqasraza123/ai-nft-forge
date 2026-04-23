@@ -16,9 +16,9 @@ export default async function SignInPage() {
 
   return (
     <PageShell
-      eyebrow="Auth"
-      title="Wallet access and Base Account sign-in"
-      lead="Phase 8 turns the wallet-auth placeholder into a real sign-in surface. Base Account now uses a SIWE-capable flow on top of the existing server nonce and session contract, while standard injected wallets still work through the same backend boundary."
+      eyebrow="Authentication"
+      title="Wallet access for the editorial launch workspace"
+      lead="Base Account and injected wallets both terminate at the same server-owned nonce, signature verification, and HTTP-only session boundary. The visual shell is lighter, but the auth contract stays unchanged."
       actions={
         <>
           <ActionLink href="/api/auth/session">Session endpoint</ActionLink>

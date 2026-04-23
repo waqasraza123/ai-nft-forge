@@ -547,7 +547,7 @@ function ActivityItem({
       {activity.failureMessage ? (
         <div
           className={cn(
-            "rounded-xl border border-red-500/45 bg-red-500/12 p-3 text-sm text-red-50",
+            "rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700",
             "leading-tight"
           )}
         >

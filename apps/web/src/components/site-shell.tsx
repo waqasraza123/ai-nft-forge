@@ -22,38 +22,37 @@ function getShellMode(pathname: string | null): SiteShellMode {
 
 function getModeThemeClassName(mode: SiteShellMode) {
   if (mode === "app") {
-    // The private shell uses one operator-grade palette across Studio and Ops.
+    // Private routes stay calm and precise inside the same light product family.
     return [
-      "[--color-bg:#060816]",
-      "[--color-bg-strong:#090d19]",
-      "[--color-surface:rgba(8,14,28,0.82)]",
-      "[--color-surface-strong:rgba(17,24,42,0.96)]",
-      "[--color-background:#080d18]",
-      "[--color-line:rgba(154,168,197,0.16)]",
-      "[--color-text:#f8fbff]",
-      "[--color-muted:#8fa2c4]",
-      "[--color-accent:#67e8f9]",
-      "[--color-accent-soft:rgba(103,232,249,0.14)]",
-      "[--shadow-surface:0_30px_90px_rgba(2,6,23,0.48)]",
-      "[--storefront-accent:#67e8f9]"
+      "[--color-bg:radial-gradient(circle_at_12%_0%,rgba(165,143,255,0.11),transparent_28%),radial-gradient(circle_at_100%_8%,rgba(124,204,247,0.12),transparent_24%),linear-gradient(180deg,#f5f7fc_0%,#fcfcff_46%,#f4f9ff_100%)]",
+      "[--color-bg-strong:#f7f8fc]",
+      "[--color-surface:rgba(255,255,255,0.94)]",
+      "[--color-surface-strong:rgba(250,248,255,0.98)]",
+      "[--color-background:#f7f8fc]",
+      "[--color-line:rgba(196,202,224,0.74)]",
+      "[--color-text:#202745]",
+      "[--color-muted:#6d7590]",
+      "[--color-accent:#7ec8ef]",
+      "[--color-accent-soft:rgba(126,200,239,0.16)]",
+      "[--shadow-surface:0_22px_54px_rgba(186,193,221,0.18)]",
+      "[--storefront-accent:#7ec8ef]"
     ].join(" ");
   }
 
-  // Public marketing and launch surfaces keep a more cinematic accent profile
-  // while still flowing through the same Tailwind-driven variable contract.
+  // Public routes carry the more editorial collectible-launch expression.
   return [
-    "[--color-bg:radial-gradient(circle_at_12%_10%,rgba(139,92,246,0.16),transparent_24%),radial-gradient(circle_at_88%_8%,rgba(34,211,238,0.14),transparent_22%),linear-gradient(180deg,#050713_0%,#0a0f1e_38%,#0d1424_100%)]",
-    "[--color-bg-strong:#0b1020]",
-    "[--color-surface:rgba(10,16,30,0.74)]",
-    "[--color-surface-strong:rgba(17,24,42,0.92)]",
-    "[--color-background:#080c18]",
-    "[--color-line:rgba(160,174,205,0.14)]",
-    "[--color-text:#f8fbff]",
-    "[--color-muted:#a9b6d0]",
-    "[--color-accent:#8b5cf6]",
-    "[--color-accent-soft:rgba(139,92,246,0.16)]",
-    "[--shadow-surface:0_34px_110px_rgba(2,6,23,0.52)]",
-    "[--storefront-accent:#8b5cf6]"
+    "[--color-bg:radial-gradient(circle_at_10%_10%,rgba(165,143,255,0.18),transparent_26%),radial-gradient(circle_at_86%_12%,rgba(124,204,247,0.16),transparent_24%),radial-gradient(circle_at_46%_100%,rgba(143,218,198,0.14),transparent_28%),linear-gradient(180deg,#fffdf9_0%,#fbf6ff_36%,#f6fbff_100%)]",
+    "[--color-bg-strong:#ffffff]",
+    "[--color-surface:rgba(255,255,255,0.92)]",
+    "[--color-surface-strong:rgba(255,251,255,0.97)]",
+    "[--color-background:#fcf8ff]",
+    "[--color-line:rgba(214,219,236,0.78)]",
+    "[--color-text:#1f2540]",
+    "[--color-muted:#737a93]",
+    "[--color-accent:#a58fff]",
+    "[--color-accent-soft:rgba(165,143,255,0.14)]",
+    "[--shadow-surface:0_28px_76px_rgba(194,200,228,0.2)]",
+    "[--storefront-accent:#a58fff]"
   ].join(" ");
 }
 
@@ -72,8 +71,13 @@ export function SiteShell({ children }: SiteShellProps) {
       )}
       data-shell-mode={shellMode}
     >
-      <div className="mx-auto w-full max-w-cinematic space-y-6">{children}</div>
-      <div className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-72 bg-[radial-gradient(circle_at_top,rgba(139,92,246,0.14),transparent_55%)]" />
+      <div className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-72 bg-[radial-gradient(circle_at_top,rgba(165,143,255,0.14),transparent_58%)]" />
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 -z-10 h-64 bg-[radial-gradient(circle_at_bottom,rgba(124,204,247,0.1),transparent_60%)]" />
+      <div className="mx-auto w-full max-w-cinematic space-y-6">
+        <div className="rounded-[2.4rem] border border-white/60 bg-white/36 px-1.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
+          {children}
+        </div>
+      </div>
     </div>
   );
 }

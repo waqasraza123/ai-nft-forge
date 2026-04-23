@@ -16,7 +16,8 @@ import {
   MetricTile,
   Pill,
   ActionRow,
-  SurfaceCard
+  SurfaceCard,
+  WalletStatusSurface
 } from "@ai-nft-forge/ui";
 
 import { CollectibleHeroArtwork } from "../../../components/collectible-visuals";
@@ -110,14 +111,14 @@ function formatNoticeToneClass(tone: NoticeTone | null) {
   }
 
   if (tone === "error") {
-    return "border-red-400/55 bg-red-500/12 text-red-100";
+    return "border-red-200 bg-red-50 text-red-700";
   }
 
   if (tone === "success") {
-    return "border-emerald-400/45 bg-emerald-500/12 text-emerald-100";
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
 
-  return "border-cyan-400/40 bg-cyan-500/15 text-cyan-100";
+  return "border-sky-200 bg-sky-50 text-sky-700";
 }
 
 export function SignInClient({ initialSession }: SignInClientProps) {
@@ -408,23 +409,24 @@ export function SignInClient({ initialSession }: SignInClientProps) {
             <Pill>Owner {shortHex(session.user.walletAddress)}</Pill>
           ) : null}
         </ActionRow>
-        <CollectibleHeroArtwork
-          accentVar="--color-accent"
-          badge={
-            session?.user.walletAddress
-              ? `Owner ${shortHex(session.user.walletAddress)}`
-              : "Sign-in first"
-          }
-          className="mt-2"
-          imageAlt="Wallet authentication artwork"
-          imageUrl={null}
-          meta={
-            session?.user.walletAddress
-              ? "Session-backed auth boundary is active."
-              : "Server-issued nonce then signature, then signed cookie session."
-          }
-          title="Secure access"
-        />
+        <div className="mt-2">
+          <CollectibleHeroArtwork
+            accentVar="--color-accent"
+            badge={
+              session?.user.walletAddress
+                ? `Owner ${shortHex(session.user.walletAddress)}`
+                : "Sign-in first"
+            }
+            imageAlt="Wallet authentication artwork"
+            imageUrl={null}
+            meta={
+              session?.user.walletAddress
+                ? "Session-backed auth boundary is active."
+                : "Server-issued nonce then signature, then signed cookie session."
+            }
+            title="Secure access"
+          />
+        </div>
         {notice ? (
           <div
             className={`mt-3 rounded-xl border p-2.5 text-sm ${formatNoticeToneClass(
@@ -474,24 +476,26 @@ export function SignInClient({ initialSession }: SignInClientProps) {
           <ActionLink href={nextPath}>Continue</ActionLink>
         </ActionRow>
       </SurfaceCard>
-      <SurfaceCard
-        body="The authenticated studio session remains server-owned. Wallet connection state is a client convenience for sign-in and later onchain actions."
-        eyebrow="Current state"
-        span={4}
-        title={session ? "Authenticated session detected" : "No session yet"}
-      >
-        <div className="grid gap-3">
-          <MetricTile label="Authenticated" value={session ? "Yes" : "No"} />
-          <MetricTile
-            label="Session wallet"
-            value={session?.user.walletAddress ?? "Not signed in"}
-          />
-          <MetricTile
-            label="Studio access"
-            value={session ? "Allowed" : "Redirects to sign-in"}
-          />
-        </div>
-      </SurfaceCard>
+      <div className="md:col-span-4">
+        <WalletStatusSurface
+          detail="The authenticated studio session remains server-owned. Wallet connection state is a client convenience for sign-in and later onchain actions."
+          status={session ? "Session active" : "No session"}
+          tone={session ? "active" : "idle"}
+          title={session ? "Authenticated session detected" : "No session yet"}
+        >
+          <div className="grid gap-3">
+            <MetricTile label="Authenticated" value={session ? "Yes" : "No"} />
+            <MetricTile
+              label="Session wallet"
+              value={session?.user.walletAddress ?? "Not signed in"}
+            />
+            <MetricTile
+              label="Studio access"
+              value={session ? "Allowed" : "Redirects to sign-in"}
+            />
+          </div>
+        </WalletStatusSurface>
+      </div>
     </>
   );
 }

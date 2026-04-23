@@ -36,7 +36,7 @@ type RootLayoutProps = {
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" className={`${fontUi.variable} ${fontDisplay.variable}`}>
-      <body className="min-h-screen bg-forge-night font-ui text-forge-ink antialiased selection:bg-forge-accent/30 selection:text-white">
+      <body className="min-h-screen bg-[linear-gradient(180deg,#fffdf8_0%,#fbf8ff_38%,#f6fbff_100%)] font-ui text-forge-ink antialiased selection:bg-forge-accent/20 selection:text-forge-ink">
         <AppProviders>
           <SiteShell>
             <SiteHeader />

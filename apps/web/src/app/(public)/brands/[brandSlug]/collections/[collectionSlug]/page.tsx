@@ -227,10 +227,7 @@ function CollectionHeroSection(input: {
             </StorefrontActionLink>
           ) : null}
           {input.secondaryCtaLabel && input.secondaryCtaHref ? (
-            <StorefrontActionLink
-              href={input.secondaryCtaHref}
-              tone="inline"
-            >
+            <StorefrontActionLink href={input.secondaryCtaHref} tone="inline">
               {input.secondaryCtaLabel}
             </StorefrontActionLink>
           ) : null}
@@ -291,7 +288,7 @@ function CollectionLaunchStory(input: {
       <div className="grid gap-4 md:grid-cols-[1fr_0.8fr] md:items-center">
         <div>
           <StorefrontSectionHeading
-            eyebrow="Launch story"
+            eyebrow="Editorial story"
             lead={input.lead}
             title={input.headline}
           />
@@ -344,7 +341,7 @@ function CollectionProofPanel(input: {
     <StorefrontPanel tone="soft">
       <StorefrontSectionHeading
         eyebrow="Collector proof"
-        title="Drop ledger and launch telemetry"
+        title="Release ledger and launch telemetry"
       />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {proofs.map((proof) => (

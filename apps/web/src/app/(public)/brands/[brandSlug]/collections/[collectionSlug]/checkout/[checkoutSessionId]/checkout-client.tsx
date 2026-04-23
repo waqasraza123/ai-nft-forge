@@ -3,7 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { ActionRow, StorefrontActionButton, StorefrontTile } from "@ai-nft-forge/ui";
+import {
+  ActionRow,
+  StorefrontActionButton,
+  StorefrontTile
+} from "@ai-nft-forge/ui";
 
 type CheckoutClientProps = {
   brandSlug: string;
@@ -58,7 +62,7 @@ export function CheckoutClient(props: CheckoutClientProps) {
   return (
     <ActionRow compact className="mt-4">
       {error ? (
-        <StorefrontTile className="w-full border-red-400/45 bg-red-500/12 p-2.5 text-sm text-red-100">
+        <StorefrontTile className="w-full border-red-200 bg-red-50 p-2.5 text-sm text-red-700">
           {error}
         </StorefrontTile>
       ) : null}
