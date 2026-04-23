@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   ActionLink,
   ActionRow,
@@ -13,7 +12,6 @@ import {
   CollectibleHeroArtwork,
   CollectiblePreviewCard,
   CollectibleGalleryRail,
-  FloatingCollectibleCluster,
   resolveCollectibleArtworkUrl
 } from "../../components/collectible-visuals";
 
@@ -216,6 +214,11 @@ const heroWorkflow = [
   }
 ] as const;
 
+const featuredProofPoints = proofPoints.slice(0, 2);
+const supportingProofPoints = proofPoints.slice(2);
+const leadReleasePreview = releasePreviews[0];
+const supportingReleasePreviews = releasePreviews.slice(1);
+
 export default function MarketingPage() {
   return (
     <div className="mx-auto grid w-full max-w-7xl gap-7 px-4 pb-12 pt-6 md:px-6">
@@ -236,7 +239,7 @@ export default function MarketingPage() {
         title="Build launch infrastructure for premium collectible campaigns."
       >
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(50%_60%_at_14%_10%,_rgba(255,255,255,0.45),_transparent),radial-gradient(35%_35%_at_82%_18%,rgba(139,94,52,0.18),transparent),linear-gradient(180deg,rgba(255,255,255,0.12),transparent)]" />
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)] lg:items-start">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.14fr)_minmax(300px,0.86fr)] lg:items-start">
           <div className="grid gap-5">
             <div className="flex flex-wrap gap-2">
               <ProofBadge tone="default">Shell · Light-only</ProofBadge>
@@ -312,6 +315,7 @@ export default function MarketingPage() {
             ]}
             fallbackIndex={0}
             imageAlt="AI NFT Forge showcase artwork"
+            mediaClassName="mx-auto aspect-[4/5] max-h-[28rem] sm:aspect-[3/4] sm:max-h-[32rem] xl:aspect-[5/6] xl:max-h-[36rem] xl:max-w-[30rem]"
             meta="Generation intake · Snapshot publish · Mint verification"
             note="The hero surface carries one release story instead of surrounding the artwork with competing sidecars."
             title="Launch plane"
@@ -324,27 +328,48 @@ export default function MarketingPage() {
         headline="Capability proof"
         summary="Built for teams that ship collectible launches, not prototypes."
       >
-        <div className="mt-1">
-          <h2 className="max-w-3xl text-2xl font-semibold">
-            Built for teams that ship collectible launches, not prototypes.
-          </h2>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {proofPoints.map((point, index) => (
-            <CollectibleCard
-              badge="Capability"
-              className="bg-[color:var(--color-surface)]"
-              imageAlt={point.title}
-              imageUrl={resolveCollectibleArtworkUrl(index + 2)}
-              key={point.title}
-              meta="Shared primitive surface"
-              title={point.title}
-            >
-              <p className="mt-2 text-sm leading-6 text-[color:var(--color-muted)]">
-                {point.detail}
-              </p>
-            </CollectibleCard>
-          ))}
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.08fr)_minmax(300px,0.92fr)]">
+          <div className="grid gap-4 md:grid-cols-2">
+            {featuredProofPoints.map((point, index) => (
+              <CollectibleCard
+                badge="Capability"
+                className="bg-[color:var(--color-surface)]"
+                imageAlt={point.title}
+                imageUrl={resolveCollectibleArtworkUrl(index + 2)}
+                key={point.title}
+                mediaClassName="aspect-[5/4] md:aspect-[4/3]"
+                meta="Launch-ready module"
+                title={point.title}
+              >
+                <p className="mt-2 text-sm leading-6 text-[color:var(--color-muted)]">
+                  {point.detail}
+                </p>
+              </CollectibleCard>
+            ))}
+          </div>
+          <div className="rounded-[1.85rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,246,255,0.92))] p-5 shadow-[0_18px_42px_rgba(191,197,226,0.14)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
+              Operational proof
+            </p>
+            <h3 className="mt-3 text-xl font-semibold text-[color:var(--color-text)]">
+              Supporting capabilities stay compact and scannable.
+            </h3>
+            <div className="mt-5 grid gap-4 border-t border-[color:var(--color-line)]/80 pt-5">
+              {supportingProofPoints.map((point) => (
+                <div
+                  className="grid gap-2 border-l border-[color:var(--color-line)]/80 pl-4"
+                  key={point.title}
+                >
+                  <p className="text-sm font-semibold text-[color:var(--color-text)]">
+                    {point.title}
+                  </p>
+                  <p className="text-sm leading-6 text-[color:var(--color-muted)]">
+                    {point.detail}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </CollectibleGalleryRail>
 
@@ -374,15 +399,9 @@ export default function MarketingPage() {
         </ol>
       </CollectibleGalleryRail>
 
-      <FloatingCollectibleCluster
-        headline="Showcase rails should feel like premium collectible shelves."
-        items={["Framed editions", "Spotlight drops", "Launch capsules"]}
-        label="Art-directed composition"
-      />
-
       <CollectibleEditorialBand>
-        <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr] xl:items-center">
-          <div>
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.04fr)_minmax(300px,0.96fr)] xl:items-start">
+          <div className="space-y-4">
             <ProofBadge tone="accent">Showcase preview</ProofBadge>
             <h2 className="mt-3 max-w-3xl text-2xl font-semibold">
               Launch modules that mirror real production drop workflows.
@@ -392,19 +411,59 @@ export default function MarketingPage() {
               supporting rhythm of collectible cards and editorial rails that
               keep media presentation in the foreground.
             </p>
+            {leadReleasePreview ? (
+              <div className="rounded-[1.85rem] border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)]/55 p-3 shadow-[0_20px_44px_rgba(191,197,226,0.14)]">
+                <CollectiblePreviewCard
+                  badge={leadReleasePreview.cadence}
+                  className="bg-transparent p-0 shadow-none"
+                  fallbackIndex={1}
+                  imageAlt={`${leadReleasePreview.title} showcase artwork`}
+                  key={leadReleasePreview.title}
+                  mediaClassName="aspect-[3/4] max-h-[20rem] md:max-h-[22rem]"
+                  meta={leadReleasePreview.focus}
+                  subtitle={leadReleasePreview.trust}
+                  title={leadReleasePreview.title}
+                />
+                <ul className="mt-4 grid gap-2 border-t border-[color:var(--color-line)]/80 pt-4 text-sm text-[color:var(--color-muted)] sm:grid-cols-3">
+                  {leadReleasePreview.metrics.map((metric) => (
+                    <li
+                      className="border-l border-[color:var(--color-line)]/80 pl-3"
+                      key={metric}
+                    >
+                      {metric}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
-          <div className="grid gap-4 md:grid-cols-3">
-            {releasePreviews.map((release, index) => (
-              <CollectiblePreviewCard
-                badge={release.cadence}
-                className="bg-[color:var(--color-surface-strong)]/55"
-                fallbackIndex={index + 1}
-                imageAlt={`${release.title} showcase artwork`}
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+            {supportingReleasePreviews.map((release, index) => (
+              <div
+                className="rounded-[1.7rem] border border-[color:var(--color-line)] bg-[color:var(--color-surface-strong)]/48 p-3 shadow-[0_16px_36px_rgba(191,197,226,0.12)]"
                 key={release.title}
-                meta={release.focus}
-                subtitle={release.trust}
-                title={release.title}
-              />
+              >
+                <CollectiblePreviewCard
+                  badge={release.cadence}
+                  className="bg-transparent p-0 shadow-none"
+                  fallbackIndex={index + 2}
+                  imageAlt={`${release.title} showcase artwork`}
+                  mediaClassName="aspect-[4/5] md:aspect-[3/4] max-h-[18rem]"
+                  meta={release.focus}
+                  subtitle={release.trust}
+                  title={release.title}
+                />
+                <ul className="mt-4 space-y-2 border-t border-[color:var(--color-line)]/80 pt-4 text-sm text-[color:var(--color-muted)]">
+                  {release.metrics.map((metric) => (
+                    <li
+                      className="border-l border-[color:var(--color-line)]/80 pl-3"
+                      key={metric}
+                    >
+                      {metric}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
           </div>
         </div>

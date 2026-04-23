@@ -602,6 +602,7 @@ type CollectibleCardProps = PropsWithChildren<{
   imageAlt: string;
   imageUrl?: string | null | undefined;
   meta?: string | undefined;
+  mediaClassName?: string | undefined;
   subtitle?: string | undefined;
   title: string;
 }>;
@@ -612,6 +613,7 @@ type MediaHeroFrameProps = PropsWithChildren<{
   imageAlt: string;
   imageUrl?: string | null | undefined;
   meta?: string | undefined;
+  mediaClassName?: string | undefined;
   title: string;
 }>;
 
@@ -631,6 +633,7 @@ type ThumbnailStripItem = {
   imageAlt: string;
   imageUrl?: string | null;
   label: string;
+  mediaClassName?: string;
   meta?: string;
 };
 
@@ -882,6 +885,7 @@ export function CollectibleCard({
   imageAlt,
   imageUrl,
   meta,
+  mediaClassName,
   subtitle,
   title
 }: CollectibleCardProps) {
@@ -893,15 +897,17 @@ export function CollectibleCard({
       )}
     >
       <div className="relative overflow-hidden rounded-[1.4rem] border border-white/70 bg-[linear-gradient(145deg,#fffaf2,#f0f6ff_58%,#f6efff)]">
-        {imageUrl ? (
-          <img
-            alt={imageAlt}
-            className="aspect-[4/5] w-full object-cover"
-            src={imageUrl}
-          />
-        ) : (
-          <div className="aspect-[4/5] bg-[radial-gradient(circle_at_24%_20%,rgba(255,255,255,0.95),transparent_18%),radial-gradient(circle_at_74%_18%,rgba(165,143,255,0.18),transparent_22%),linear-gradient(155deg,rgba(255,251,240,0.95),rgba(233,244,255,0.96)_52%,rgba(245,236,255,0.92))]" />
-        )}
+        <div className={cn("aspect-[3/4] w-full", mediaClassName)}>
+          {imageUrl ? (
+            <img
+              alt={imageAlt}
+              className="h-full w-full object-cover"
+              src={imageUrl}
+            />
+          ) : (
+            <div className="h-full w-full bg-[radial-gradient(circle_at_24%_20%,rgba(255,255,255,0.95),transparent_18%),radial-gradient(circle_at_74%_18%,rgba(165,143,255,0.18),transparent_22%),linear-gradient(155deg,rgba(255,251,240,0.95),rgba(233,244,255,0.96)_52%,rgba(245,236,255,0.92))]" />
+          )}
+        </div>
         <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,transparent,rgba(255,255,255,0.92)_38%,rgba(255,255,255,0.98))] p-4 pt-12">
           {badge ? <ProofBadge tone="accent">{badge}</ProofBadge> : null}
           <p className="mt-3 text-lg font-semibold text-[color:var(--color-text)]">
@@ -931,6 +937,7 @@ export function MediaHeroFrame({
   imageAlt,
   imageUrl,
   meta,
+  mediaClassName,
   title
 }: MediaHeroFrameProps) {
   return (
@@ -943,15 +950,17 @@ export function MediaHeroFrame({
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_14%_14%,rgba(165,143,255,0.14),transparent_26%),radial-gradient(circle_at_86%_12%,rgba(124,204,247,0.14),transparent_24%),linear-gradient(180deg,rgba(255,255,255,0.18),transparent)]" />
       <div className="relative grid gap-4 md:grid-cols-[1.05fr_0.95fr] md:items-end">
         <div className="overflow-hidden rounded-[1.5rem] border border-white/80 bg-white/70">
-          {imageUrl ? (
-            <img
-              alt={imageAlt}
-              className="aspect-[4/5] w-full object-cover"
-              src={imageUrl}
-            />
-          ) : (
-            <div className="aspect-[4/5] bg-[radial-gradient(circle_at_24%_18%,rgba(255,255,255,0.96),transparent_18%),radial-gradient(circle_at_74%_24%,rgba(165,143,255,0.2),transparent_22%),linear-gradient(150deg,rgba(255,248,236,0.95),rgba(235,244,255,0.95)_56%,rgba(244,235,255,0.94))]" />
-          )}
+          <div className={cn("aspect-[3/4] w-full", mediaClassName)}>
+            {imageUrl ? (
+              <img
+                alt={imageAlt}
+                className="h-full w-full object-cover"
+                src={imageUrl}
+              />
+            ) : (
+              <div className="h-full w-full bg-[radial-gradient(circle_at_24%_18%,rgba(255,255,255,0.96),transparent_18%),radial-gradient(circle_at_74%_24%,rgba(165,143,255,0.2),transparent_22%),linear-gradient(150deg,rgba(255,248,236,0.95),rgba(235,244,255,0.95)_56%,rgba(244,235,255,0.94))]" />
+            )}
+          </div>
         </div>
         <div className="grid gap-3">
           {badge ? <ProofBadge tone="accent">{badge}</ProofBadge> : null}
@@ -1041,16 +1050,21 @@ export function ThumbnailStrip({
           className="rounded-[1.45rem] border border-[color:var(--color-line)] bg-white/72 p-2.5 shadow-[0_14px_28px_rgba(193,199,225,0.14)]"
           key={`${item.label}-${item.meta ?? "thumb"}`}
         >
-          <div className="overflow-hidden rounded-[1rem] border border-white/80 bg-[linear-gradient(145deg,#fffaf2,#eef6ff_58%,#f8efff)]">
+          <div
+            className={cn(
+              "aspect-square w-full max-h-[9rem] overflow-hidden rounded-[1rem] border border-white/80 bg-[linear-gradient(145deg,#fffaf2,#eef6ff_58%,#f8efff)] sm:aspect-[4/3] sm:max-h-[11rem]",
+              item.mediaClassName
+            )}
+          >
             {item.imageUrl ? (
               <img
                 alt={item.imageAlt}
-                className="aspect-[4/5] w-full object-cover"
+                className="h-full w-full object-cover"
                 src={item.imageUrl}
               />
             ) : (
               <div
-                className="aspect-[4/5] bg-[radial-gradient(circle_at_24%_20%,rgba(255,255,255,0.96),transparent_16%),linear-gradient(150deg,rgba(255,248,236,0.95),rgba(235,244,255,0.95)_56%,rgba(244,235,255,0.94))]"
+                className="h-full w-full bg-[radial-gradient(circle_at_24%_20%,rgba(255,255,255,0.96),transparent_16%),linear-gradient(150deg,rgba(255,248,236,0.95),rgba(235,244,255,0.95)_56%,rgba(244,235,255,0.94))]"
                 style={{
                   boxShadow: `inset 0 0 0 1px color-mix(in srgb, var(${accentColorVar}) 14%, white)`
                 }}

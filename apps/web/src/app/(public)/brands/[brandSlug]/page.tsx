@@ -199,6 +199,7 @@ function BrandHeroVisual(input: {
           : "Release spotlight placeholder"
       }
       imageUrl={input.release?.heroImageUrl}
+      mediaClassName="mx-auto aspect-[4/5] max-h-[30rem] md:aspect-[3/4] md:max-h-[34rem] xl:aspect-[5/6] xl:max-w-[30rem]"
       meta="Premium editorial shell"
       title={input.release?.title ?? "Release spotlight"}
     />
@@ -294,6 +295,7 @@ function BrandFeaturedReleaseCard(input: {
           fallbackIndex={input.fallbackIndex}
           imageAlt={`${release.title} featured release`}
           imageUrl={release.heroImageUrl}
+          mediaClassName="aspect-[3/4] max-h-[20rem] md:max-h-[22rem]"
           meta={release.availabilityLabel}
           subtitle={release.priceLabel ?? "Immutable snapshot"}
           title={release.title}
@@ -403,6 +405,7 @@ function BrandReleaseCard(input: {
           fallbackIndex={input.fallbackIndex}
           imageAlt={`${input.release.title} release artwork`}
           imageUrl={input.release.heroImageUrl}
+          mediaClassName="aspect-[3/4] max-h-[18rem] md:max-h-[20rem]"
           meta={input.release.availabilityLabel}
           subtitle={
             input.release.priceLabel ?? formatTimestamp(input.release.launchAt)

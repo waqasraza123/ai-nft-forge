@@ -303,6 +303,7 @@ function CollectionHeroSection(input: {
         fallbackIndex={6}
         imageAlt={`${input.title} hero artwork`}
         imageUrl={input.heroImageUrl}
+        mediaClassName="mx-auto aspect-[4/5] max-h-[30rem] md:aspect-[3/4] md:max-h-[34rem] xl:aspect-[5/6] xl:max-w-[30rem]"
         meta="Hero release"
         title={input.brandThemeWordmark || input.title}
       />
@@ -467,6 +468,7 @@ function CollectionReserveZone(input: {
               fallbackIndex={7}
               imageAlt="Reserve module collectible frame"
               meta={`${formatCount(input.availableEditionCount)} open editions`}
+              mediaClassName="aspect-[3/4] max-h-[18rem] md:max-h-[20rem]"
               subtitle={input.priceLabel ?? "Transparent checkout state"}
               title="Collector checkout module"
             />
@@ -547,6 +549,7 @@ function CollectionGallery(input: {
               className="bg-transparent p-0 shadow-none"
               imageAlt={`${input.title} edition ${item.position}`}
               imageUrl={item.imageUrl}
+              mediaClassName="aspect-[3/4] max-h-[18rem] md:max-h-[20rem]"
               meta={`Variant ${item.variantIndex} · ${item.pipelineKey}`}
               subtitle={item.sourceAssetOriginalFilename}
               title={input.title}

@@ -290,6 +290,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
                 fallbackIndex={5}
                 imageAlt={`${checkout.checkout.title} ${editionIdentity}`}
                 imageUrl={reservedItem?.imageUrl}
+                mediaClassName="aspect-[3/4] max-h-[18rem] md:max-h-[20rem]"
                 meta={`${statusVisual.label} · ${statusProviderCopy.shortTitle}`}
                 subtitle={editionIdentity}
                 title={checkout.checkout.title}

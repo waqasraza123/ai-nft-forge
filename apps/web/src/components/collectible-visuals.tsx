@@ -21,6 +21,7 @@ type CollectibleHeroArtworkProps = {
   fallbackIndex?: number | undefined;
   imageAlt: string;
   imageUrl?: string | null | undefined;
+  mediaClassName?: string | undefined;
   meta?: string | undefined;
   note?: string | undefined;
   title: string;
@@ -41,6 +42,7 @@ type CollectiblePreviewCardProps = {
   fallbackIndex?: number | undefined;
   imageAlt: string;
   imageUrl?: string | null | undefined;
+  mediaClassName?: string | undefined;
   meta?: string | undefined;
   subtitle?: string | undefined;
   title: string;
@@ -129,6 +131,7 @@ export function CollectibleHeroArtwork({
   fallbackIndex,
   imageAlt,
   imageUrl,
+  mediaClassName,
   meta,
   note,
   title
@@ -159,19 +162,21 @@ export function CollectibleHeroArtwork({
         </h3>
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(220px,0.92fr)] xl:items-start">
           <div className="overflow-hidden rounded-[1.7rem] border border-white/80 bg-white/76 shadow-[0_18px_46px_rgba(190,197,227,0.18)]">
-            {imageUrl ? (
-              <img
-                alt={imageAlt}
-                className="aspect-[4/5] w-full object-cover"
-                src={imageUrl}
-              />
-            ) : (
-              <img
-                alt={imageAlt}
-                className="aspect-[4/5] w-full object-cover"
-                src={resolveCollectibleArtworkUrl(fallbackIndex ?? 0)}
-              />
-            )}
+            <div className={cn("aspect-[3/4] w-full", mediaClassName)}>
+              {imageUrl ? (
+                <img
+                  alt={imageAlt}
+                  className="h-full w-full object-cover"
+                  src={imageUrl}
+                />
+              ) : (
+                <img
+                  alt={imageAlt}
+                  className="h-full w-full object-cover"
+                  src={resolveCollectibleArtworkUrl(fallbackIndex ?? 0)}
+                />
+              )}
+            </div>
           </div>
           <div className="rounded-[1.55rem] border border-white/80 bg-white/72 p-4 shadow-[0_18px_40px_rgba(190,197,227,0.14)]">
             {details && details.length > 0 ? (
@@ -250,6 +255,7 @@ export function FloatingCollectibleCluster({
             imageAlt: item,
             imageUrl: resolveCollectibleArtworkUrl(index + 1),
             label: item,
+            mediaClassName: "max-h-[9rem] sm:max-h-[11rem]",
             meta:
               index === 0
                 ? "Feature shelf"
@@ -269,6 +275,7 @@ export function CollectiblePreviewCard({
   fallbackIndex,
   imageAlt,
   imageUrl,
+  mediaClassName,
   meta,
   subtitle,
   title
@@ -281,6 +288,7 @@ export function CollectiblePreviewCard({
       className={className}
       imageAlt={imageAlt}
       imageUrl={imageUrl ?? resolveCollectibleArtworkUrl(resolvedFallbackIndex)}
+      mediaClassName={mediaClassName}
       meta={meta}
       subtitle={subtitle}
       title={title}
