@@ -3,6 +3,27 @@
 ## Date
 2026-04-23
 
+## Latest Checkpoint (Marketing Hero Layout Rebalance)
+- Redesigned the marketing home hero area to remove the large empty left-side gap and arrange the information into a denser editorial composition.
+- Updated:
+  - `apps/web/src/app/(marketing)/page.tsx`
+    - added a four-step hero workflow strip
+    - replaced the loose single-line support copy with a structured release-map card plus two supporting info panels
+    - tightened the left/right hero column balance
+  - `apps/web/src/components/collectible-visuals.tsx`
+    - rebuilt `CollectibleHeroArtwork` from the old split `MediaHeroFrame` layout into a stacked showcase card
+    - moved the main artwork into a clearer primary frame with supporting chips, copy, and secondary media blocks
+- Result:
+  - the hero now reads as one composed launch story instead of headline plus empty space plus a detached side card
+  - supporting proof, workflow, and artwork modules are grouped more intentionally and scan better on large screens
+- Verification:
+  - `pnpm exec prettier --write apps/web/src/app/'(marketing)'/page.tsx apps/web/src/components/collectible-visuals.tsx`
+  - `pnpm --filter @ai-nft-forge/web typecheck`
+  - `pnpm --filter @ai-nft-forge/web build`
+- Notes:
+  - no browser smoke test was run in this checkpoint
+  - `MediaHeroFrame` remains available in `packages/ui` for other routes; this hero now uses a route-specific showcase structure instead
+
 ## Latest Checkpoint (Placeholder NFT Fill Pass)
 - Expanded the shared cartoonic collectible fallback set from four to eight men-only portraits.
 - Added project-bound art assets:

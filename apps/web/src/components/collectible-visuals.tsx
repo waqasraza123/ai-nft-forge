@@ -4,7 +4,6 @@ import {
   cn,
   CollectibleCard,
   GalleryRail,
-  MediaHeroFrame,
   ProofBadge,
   StatChip,
   ThumbnailStrip
@@ -127,46 +126,84 @@ export function CollectibleHeroArtwork({
   title
 }: CollectibleHeroArtworkProps) {
   return (
-    <MediaHeroFrame
-      badge={badge ?? "Featured release"}
-      className={className}
-      imageAlt={imageAlt}
-      imageUrl={imageUrl ?? resolveCollectibleArtworkUrl(fallbackIndex ?? 0)}
-      meta={meta}
-      title={title}
+    <section
+      className={cn(
+        "relative overflow-hidden rounded-[2rem] border border-[color:var(--color-line)] bg-[linear-gradient(145deg,#fff9f2,#f6fbff_54%,#fbf2ff)] p-5 shadow-[0_28px_78px_rgba(190,197,227,0.2)]",
+        className
+      )}
     >
-      <div className="grid gap-3">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <StatChip label="Mood" tone="accent" value="Editorial light" />
-          <StatChip label="Frame" tone="sky" value="Gallery hero" />
-        </div>
-        <div className="rounded-[1.45rem] border border-[color:var(--color-line)] bg-white/76 p-3 shadow-[0_14px_32px_rgba(189,197,226,0.15)]">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">
-            Collectible language
-          </p>
-          <p className="mt-2 text-sm leading-6 text-[color:var(--color-muted)]">
-            Framed media, proof chips, and soft-tinted elevation keep the hero
-            artwork first without falling back to dark glass surfaces.
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_14%_14%,rgba(165,143,255,0.14),transparent_26%),radial-gradient(circle_at_86%_12%,rgba(124,204,247,0.14),transparent_24%),linear-gradient(180deg,rgba(255,255,255,0.18),transparent)]" />
+      <div
+        className="absolute -left-8 top-20 h-32 w-32 rounded-full blur-3xl"
+        style={{ backgroundColor: `var(${accentVar})`, opacity: 0.14 }}
+      />
+      <div className="relative grid gap-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <ProofBadge tone="accent">{badge ?? "Featured release"}</ProofBadge>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--color-muted)]">
+            Premium editorial shell
           </p>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <DecorativeArtwork
-            accentVar={accentVar}
-            artworkIndex={1}
-            className="aspect-[4/5]"
-          />
-          <CollectibleCard
-            badge="Proof card"
-            className="bg-white/72"
-            imageAlt={`${title} supporting artwork`}
-            imageUrl={resolveCollectibleArtworkUrl(2)}
-            meta="Gallery-ready companion artwork"
-            subtitle="Secondary frame"
-            title="Collector preview"
-          />
+        <div className="space-y-2">
+          <h3 className="font-[var(--font-display)] text-2xl font-semibold text-[color:var(--color-text)] md:text-3xl">
+            {title}
+          </h3>
+          {meta ? (
+            <p className="max-w-xl text-sm leading-7 text-[color:var(--color-muted)]">
+              {meta}
+            </p>
+          ) : null}
+        </div>
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(220px,0.92fr)] xl:items-start">
+          <div className="overflow-hidden rounded-[1.7rem] border border-white/80 bg-white/76 shadow-[0_18px_46px_rgba(190,197,227,0.18)]">
+            {imageUrl ? (
+              <img
+                alt={imageAlt}
+                className="aspect-[4/5] w-full object-cover"
+                src={imageUrl}
+              />
+            ) : (
+              <img
+                alt={imageAlt}
+                className="aspect-[4/5] w-full object-cover"
+                src={resolveCollectibleArtworkUrl(fallbackIndex ?? 0)}
+              />
+            )}
+          </div>
+          <div className="grid gap-4">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+              <StatChip label="Mood" tone="accent" value="Editorial light" />
+              <StatChip label="Frame" tone="sky" value="Gallery hero" />
+            </div>
+            <div className="rounded-[1.45rem] border border-[color:var(--color-line)] bg-white/76 p-3 shadow-[0_14px_32px_rgba(189,197,226,0.15)]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">
+                Collectible language
+              </p>
+              <p className="mt-2 text-sm leading-6 text-[color:var(--color-muted)]">
+                Framed media, proof chips, and soft-tinted elevation keep the
+                hero artwork first without falling back to dark glass surfaces.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <DecorativeArtwork
+                accentVar={accentVar}
+                artworkIndex={1}
+                className="aspect-square"
+              />
+              <CollectibleCard
+                badge="Proof card"
+                className="bg-white/72 p-2"
+                imageAlt={`${title} supporting artwork`}
+                imageUrl={resolveCollectibleArtworkUrl(2)}
+                meta="Gallery-ready companion artwork"
+                subtitle="Secondary frame"
+                title="Collector preview"
+              />
+            </div>
+          </div>
         </div>
       </div>
-    </MediaHeroFrame>
+    </section>
   );
 }
 
