@@ -124,7 +124,7 @@ export default async function StudioPage() {
           eyebrow="Workspace scope"
           span={12}
           title="Single surface for a complete launch"
-          className="min-h-60 border-white/20 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))]"
+          className="min-h-60 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(246,249,255,0.92))]"
         >
           <ul className="mt-2 grid gap-2 text-sm text-[color:var(--color-muted)] sm:grid-cols-2">
             <li>
@@ -171,7 +171,7 @@ export default async function StudioPage() {
             key={module.title}
             span={4}
             title={module.title}
-            className="h-full bg-[linear-gradient(180deg,rgba(255,255,255,0.11),rgba(255,255,255,0.03))]"
+            className="h-full bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,246,255,0.9))]"
             footer={
               <ActionLink href={module.href} tone="inline">
                 Open {module.title.toLowerCase()}

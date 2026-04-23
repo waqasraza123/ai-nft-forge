@@ -9,17 +9,24 @@ const config: Config = {
     extend: {
       colors: {
         forge: {
-          night: "#060816",
-          midnight: "#0b1020",
-          panel: "#10182b",
-          panelStrong: "#141f36",
-          line: "#27324d",
-          ink: "#f7f9ff",
-          muted: "#9cabc7",
-          accent: "#8b5cf6",
-          cyan: "#67e8f9",
-          silver: "#dbe7ff",
-          rose: "#f472b6"
+          night: "#fcfafc",
+          midnight: "#ffffff",
+          pearl: "#fffdf8",
+          mist: "#f2f5fb",
+          panel: "#fffefe",
+          panelStrong: "#f7f3ff",
+          line: "#d7deef",
+          ink: "#202745",
+          muted: "#6f7894",
+          accent: "#a58fff",
+          lilac: "#cdbfff",
+          sky: "#7cccf7",
+          cyan: "#91ddfb",
+          silver: "#eef2f8",
+          rose: "#ff9a96",
+          mint: "#8fdac6",
+          coral: "#f4a188",
+          gold: "#e4c57b"
         }
       },
       fontFamily: {
@@ -34,12 +41,12 @@ const config: Config = {
         launch: "1.75rem"
       },
       boxShadow: {
-        glass: "0 28px 90px rgba(6, 10, 24, 0.34)",
-        panel: "0 24px 72px rgba(4, 8, 20, 0.42)",
+        glass: "0 20px 50px rgba(187, 194, 224, 0.16)",
+        panel: "0 20px 52px rgba(184, 191, 221, 0.18)",
         launch:
-          "0 18px 48px rgba(15, 23, 42, 0.36), inset 0 1px 0 rgba(255,255,255,0.08)",
+          "0 28px 72px rgba(184, 191, 224, 0.2), inset 0 1px 0 rgba(255,255,255,0.76)",
         chrome:
-          "0 34px 120px rgba(2, 6, 23, 0.52), inset 0 1px 0 rgba(255,255,255,0.08)"
+          "0 34px 96px rgba(191, 198, 228, 0.24), inset 0 1px 0 rgba(255,255,255,0.84)"
       },
       blur: {
         halo: "72px"

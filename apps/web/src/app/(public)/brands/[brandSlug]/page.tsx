@@ -49,9 +49,9 @@ type BrandSection = {
 };
 
 const brandSectionTitleByTone: Record<BrandSectionTone, string> = {
-  live: "Live drop corridor",
-  upcoming: "Upcoming drop lane",
-  archive: "Archive vault"
+  live: "Live gallery",
+  upcoming: "Upcoming gallery",
+  archive: "Archive gallery"
 };
 
 const brandSectionCopyByTone: Record<BrandSectionTone, string> = {
@@ -168,7 +168,7 @@ function BrandHeroVisual(input: {
       <div className="relative space-y-4">
         <div className="grid gap-2">
           <p className="text-xs uppercase tracking-[0.2em] text-[color:var(--storefront-muted)]">
-            Campaign stage
+            Release stage
           </p>
           <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--storefront-accent)]">
             <span>
@@ -202,7 +202,7 @@ function BrandHeroVisual(input: {
         <div className="mt-2 grid gap-2 text-sm text-[color:var(--storefront-muted)]">
           <StorefrontTile className="px-4 py-3" tone="gallery">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--storefront-accent)]">
-              Featured spotlight
+              Curated spotlight
             </p>
             <p className="mt-1">
               {input.release
@@ -224,15 +224,15 @@ function BrandHeroVisual(input: {
           imageAlt={
             input.release
               ? `${input.release.title} campaign artwork`
-              : "Campaign spotlight placeholder"
+              : "Release spotlight placeholder"
           }
           imageUrl={input.release?.heroImageUrl}
           meta={
             input.release
               ? `${input.release.itemCount} works · ${input.release.availabilityLabel}`
-              : "Visual campaign deck will activate after publication"
+              : "Visual release deck will activate after publication"
           }
-          title={input.release?.title ?? "Campaign spotlight"}
+          title={input.release?.title ?? "Release spotlight"}
         />
       </div>
     </StorefrontPanel>
@@ -273,10 +273,7 @@ function BrandHeroSection(input: {
             </StorefrontActionLink>
           ) : null}
           {input.secondaryCtaHref ? (
-            <StorefrontActionLink
-              href={input.secondaryCtaHref}
-              tone="inline"
-            >
+            <StorefrontActionLink href={input.secondaryCtaHref} tone="inline">
               {input.secondaryCtaLabel}
             </StorefrontActionLink>
           ) : null}
@@ -284,7 +281,7 @@ function BrandHeroSection(input: {
         <StorefrontPanel>
           <StorefrontSectionHeading
             eyebrow={input.heroKicker}
-            title="Campaign telemetry"
+            title="Launch telemetry"
           />
           <ActionRow compact>
             {input.campaignMetrics.map((metric) => (
@@ -315,7 +312,7 @@ function BrandFeaturedReleaseCard(input: {
         tone="default"
         className="text-sm text-[color:var(--storefront-muted)]"
       >
-        Campaign spotlight is waiting on a published release.
+        Release spotlight is waiting on a published launch.
       </StorefrontPanel>
     );
   }
@@ -476,10 +473,7 @@ function BrandReleaseCard(input: {
             <li key={`${input.release.publicPath}-${metric}`}>• {metric}</li>
           ))}
         </ul>
-        <StorefrontActionLink
-          href={input.release.publicPath}
-          tone="inline"
-        >
+        <StorefrontActionLink href={input.release.publicPath} tone="inline">
           Open campaign
         </StorefrontActionLink>
       </div>
@@ -491,10 +485,10 @@ function BrandReleaseSection(input: BrandSection) {
   return (
     <section className="space-y-4" id={input.id}>
       <CollectibleGalleryRail
-      accentVar="--storefront-accent"
-      headline={brandSectionTitleByTone[input.tone]}
-      summary={brandSectionCopyByTone[input.tone]}
-    >
+        accentVar="--storefront-accent"
+        headline={brandSectionTitleByTone[input.tone]}
+        summary={brandSectionCopyByTone[input.tone]}
+      >
         <div className="flex items-center justify-between gap-3">
           <StorefrontSectionHeading
             eyebrow={brandSectionTitleByTone[input.tone]}
@@ -576,12 +570,12 @@ export default async function BrandPage({ params }: BrandPageProps) {
       : brand.upcomingReleases.length > 0
         ? "#upcoming-releases"
         : brand.archiveReleases.length > 0
-          ? "#archive-vault"
+          ? "#archive-gallery"
           : null;
   const secondaryCtaLabel =
     brand.theme.secondaryCtaLabel ??
-    (secondaryCtaHref === "#archive-vault"
-      ? "Open archive vault"
+    (secondaryCtaHref === "#archive-gallery"
+      ? "Open archive gallery"
       : secondaryCtaHref === "#live-releases"
         ? "Open live releases"
         : "Browse release rail");
@@ -653,7 +647,7 @@ export default async function BrandPage({ params }: BrandPageProps) {
           accentVar="--storefront-accent"
           headline="Drop floors need a hero composition before the browsing grid begins."
           items={[
-            brand.featuredRelease ? "Featured spotlight" : "Launch spotlight",
+            brand.featuredRelease ? "Curated spotlight" : "Launch spotlight",
             "Collectible rail",
             "Vault framing"
           ]}
@@ -664,7 +658,7 @@ export default async function BrandPage({ params }: BrandPageProps) {
           <div className="space-y-4">
             <div className="mb-2 flex items-center justify-between gap-3">
               <StorefrontSectionHeading
-                eyebrow="Featured spotlight"
+                eyebrow="Curated spotlight"
                 title="Current launch focus"
               />
               <Link
@@ -701,9 +695,9 @@ export default async function BrandPage({ params }: BrandPageProps) {
         />
         <BrandReleaseSection
           collections={archiveReleases}
-          id="archive-vault"
+          id="archive-gallery"
           tone="archive"
-          title="Archive vault"
+          title="Archive gallery"
         />
       </div>
     </div>

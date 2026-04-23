@@ -65,17 +65,17 @@ type FulfillmentEditorState = Record<string, StudioCommerceSessionEditor>;
 type CommerceSignalTone = "critical" | "warning" | "success" | "neutral";
 
 const commerceMetricTones = {
-  critical: "border-red-500/45 bg-red-500/12 text-red-50",
-  warning: "border-amber-400/45 bg-amber-400/12 text-amber-100",
-  success: "border-emerald-500/45 bg-emerald-500/12 text-emerald-50",
+  critical: "border-red-200 bg-red-50 text-red-700",
+  warning: "border-amber-200 bg-amber-50 text-amber-700",
+  success: "border-emerald-200 bg-emerald-50 text-emerald-700",
   neutral:
     "border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-text)]"
 } as const;
 
 const commerceHeroMetricClasses =
-  "rounded-[1.5rem] border border-white/10 bg-black/25 p-4 text-white shadow-[0_18px_40px_rgba(15,23,42,0.18)] backdrop-blur-xl";
+  "rounded-[1.5rem] border border-[color:var(--color-line)] bg-white/78 p-4 text-[color:var(--color-text)] shadow-[0_18px_40px_rgba(191,197,225,0.18)] backdrop-blur-xl";
 const commerceHeroMetricTextClasses =
-  "text-white/80 [&>span]:text-[11px] [&>span]:font-semibold [&>span]:tracking-[0.2em] [&>span]:text-white/60 [&>strong]:mt-2 [&>strong]:text-lg [&>strong]:font-semibold [&>strong]:text-white [&>p]:mt-2 [&>p]:text-sm [&>p]:leading-6 [&>p]:text-white/72";
+  "text-[color:var(--color-muted)] [&>span]:text-[11px] [&>span]:font-semibold [&>span]:tracking-[0.2em] [&>span]:text-[color:var(--color-muted)] [&>strong]:mt-2 [&>strong]:text-lg [&>strong]:font-semibold [&>strong]:text-[color:var(--color-text)] [&>p]:mt-2 [&>p]:text-sm [&>p]:leading-6 [&>p]:text-[color:var(--color-muted)]";
 
 function createFallbackErrorMessage(response: Response) {
   switch (response.status) {
@@ -820,19 +820,19 @@ export function StudioCommerceClient({
     >
       <div className="space-y-6">
         <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-          <CollectibleEditorialBand className="bg-[linear-gradient(135deg,rgba(15,23,42,0.96),rgba(15,23,42,0.78))] text-white shadow-[0_28px_90px_rgba(15,23,42,0.28)]">
+          <CollectibleEditorialBand className="bg-[linear-gradient(145deg,#fffbf3,#f5fbff_52%,#faf2ff)] shadow-[0_28px_90px_rgba(191,198,225,0.22)]">
             <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr] xl:items-start">
               <div className="space-y-5">
                 <div className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/65">
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[color:var(--color-accent)]">
                     Transaction control room
                   </p>
-                  <h2 className="max-w-4xl text-3xl font-semibold font-[var(--font-display)] leading-tight text-white sm:text-4xl">
+                  <h2 className="max-w-4xl text-3xl font-semibold font-[var(--font-display)] leading-tight text-[color:var(--color-text)] sm:text-4xl">
                     {attentionCheckouts.length > 0
                       ? `${attentionCheckouts.length.toString()} sessions need attention in ${activeScopeLabel}.`
                       : `Checkout and fulfillment are stable in ${activeScopeLabel}.`}
                   </h2>
-                  <p className="max-w-3xl text-sm leading-7 text-white/72">
+                  <p className="max-w-3xl text-sm leading-7 text-[color:var(--color-muted)]">
                     Scope, payment state, fulfillment automation, and release
                     pressure stay visible together so recovery decisions do not
                     drift away from the live buyer ledger.
@@ -886,7 +886,7 @@ export function StudioCommerceClient({
                 </div>
               </div>
               <StudioSceneCard
-                className="border-white/10 bg-white/8"
+                className="bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,246,255,0.92))]"
                 eyebrow="Creator-side oversight"
                 note="Keep live checkout operations premium and legible: active scope, automation state, and release backlog remain visible without turning the route into a dense ops wall."
                 title="Premium commerce shell"
