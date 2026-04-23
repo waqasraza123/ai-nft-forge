@@ -3,6 +3,37 @@
 ## Date
 2026-04-23
 
+## Latest Checkpoint (Placeholder NFT Fill Pass)
+- Expanded the shared cartoonic collectible fallback set from four to eight men-only portraits.
+- Added project-bound art assets:
+  - `apps/web/public/art/web3-collectible-amethyst.png`
+  - `apps/web/public/art/web3-collectible-frost.png`
+  - `apps/web/public/art/web3-collectible-cobalt.png`
+  - `apps/web/public/art/web3-collectible-mint.png`
+- Updated shared fallback wiring in:
+  - `apps/web/src/components/collectible-visuals.tsx`
+    - exported stable fallback resolver
+    - added `fallbackIndex` support to `CollectibleHeroArtwork`
+    - expanded fallback pool and removed remaining “placeholder composition” copy
+- Replaced remaining placeholder-style card states with explicit cartoonic NFT art assignments in:
+  - `apps/web/src/app/(marketing)/page.tsx`
+  - `apps/web/src/app/(marketing)/sign-in/sign-in-client.tsx`
+  - `apps/web/src/app/(public)/brands/[brandSlug]/page.tsx`
+  - `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/page.tsx`
+  - `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/checkout/[checkoutSessionId]/page.tsx`
+  - `apps/web/src/app/(studio)/studio/collections/studio-collections-client.tsx`
+- Result:
+  - marketing capability cards no longer render gradient-only collectible placeholders
+  - public brand/release/checkout cards now use intentional fallback portraits instead of repeated generic null-state art
+  - studio collection shells also use explicit collectible fallbacks when preview media is absent
+- Verification:
+  - `pnpm exec prettier --write apps/web/src/components/collectible-visuals.tsx apps/web/src/app/'(marketing)'/page.tsx apps/web/src/app/'(marketing)'/sign-in/sign-in-client.tsx "apps/web/src/app/(public)/brands/[brandSlug]/page.tsx" "apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/page.tsx" "apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/checkout/[checkoutSessionId]/page.tsx" "apps/web/src/app/(studio)/studio/collections/studio-collections-client.tsx"`
+  - `pnpm --filter @ai-nft-forge/web build`
+  - `pnpm --filter @ai-nft-forge/web typecheck`
+- Notes:
+  - the first parallel `web` typecheck failed transiently because `.next/types` was not ready yet; rerunning after build passed cleanly
+  - reran `pnpm --filter @ai-nft-forge/web build` and `pnpm --filter @ai-nft-forge/web typecheck` on `main` during the publish pass before commit/push
+
 ## Latest Checkpoint (Men-Only Collectible Art Adjustment)
 - Updated the shared collectible fallback art to remove ambiguous/female-presenting portraits from the default website set.
 - Replaced:
