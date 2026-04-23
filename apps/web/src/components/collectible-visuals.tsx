@@ -32,6 +32,7 @@ type CollectiblePreviewCardProps = {
   accentVar?: string;
   badge?: string | undefined;
   className?: string;
+  fallbackIndex?: number | undefined;
   imageAlt: string;
   imageUrl?: string | null | undefined;
   meta?: string | undefined;
@@ -55,11 +56,37 @@ type CollectibleGalleryRailProps = {
   summary?: string;
 };
 
+const fallbackCollectibleArtwork = [
+  "/art/web3-collectible-hero.png",
+  "/art/web3-collectible-builder.png",
+  "/art/web3-collectible-shard.png",
+  "/art/web3-collectible-visor.png"
+] as const;
+
+function resolveFallbackArtworkUrl(index: number) {
+  return (
+    fallbackCollectibleArtwork[
+      ((index % fallbackCollectibleArtwork.length) +
+        fallbackCollectibleArtwork.length) %
+        fallbackCollectibleArtwork.length
+    ] ?? fallbackCollectibleArtwork[0]
+  );
+}
+
+function createTitleArtworkIndex(title: string) {
+  return Array.from(title).reduce(
+    (sum, character) => sum + character.charCodeAt(0),
+    0
+  );
+}
+
 function DecorativeArtwork({
   accentVar = "--color-accent",
+  artworkIndex = 1,
   className
 }: {
   accentVar?: string;
+  artworkIndex?: number | undefined;
   className?: string;
 }) {
   return (
@@ -75,80 +102,11 @@ function DecorativeArtwork({
         className="absolute left-[10%] top-[8%] h-32 w-32 rounded-full blur-3xl"
         style={{ backgroundColor: `var(${accentVar})`, opacity: 0.22 }}
       />
-      <svg
-        className="relative h-full w-full"
-        fill="none"
-        viewBox="0 0 520 520"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <defs>
-          <linearGradient
-            id="forge-light-panel"
-            x1="86"
-            x2="416"
-            y1="62"
-            y2="438"
-          >
-            <stop stopColor="#FFFDF7" />
-            <stop offset="0.54" stopColor="#F3F8FF" />
-            <stop
-              offset="1"
-              stopColor="var(--color-accent)"
-              stopOpacity="0.2"
-            />
-          </linearGradient>
-          <linearGradient
-            id="forge-light-prism"
-            x1="180"
-            x2="370"
-            y1="118"
-            y2="398"
-          >
-            <stop stopColor="var(--color-accent)" stopOpacity="0.9" />
-            <stop offset="1" stopColor="#FFFFFF" stopOpacity="0.94" />
-          </linearGradient>
-        </defs>
-        <rect
-          fill="url(#forge-light-panel)"
-          height="320"
-          rx="38"
-          stroke="rgba(214,219,236,0.88)"
-          width="250"
-          x="138"
-          y="82"
-        />
-        <path
-          d="M260 132L340 202L300 334L180 334L160 226L260 132Z"
-          fill="url(#forge-light-prism)"
-        />
-        <path
-          d="M340 202L388 176L382 304L300 334L340 202Z"
-          fill="var(--color-accent)"
-          opacity="0.32"
-        />
-        <path
-          d="M160 226L118 198L148 356L180 334L160 226Z"
-          fill="#FFFFFF"
-          opacity="0.7"
-        />
-        <circle cx="114" cy="130" fill="#FFFFFF" fillOpacity="0.96" r="20" />
-        <circle
-          cx="404"
-          cy="382"
-          fill="var(--color-accent)"
-          fillOpacity="0.46"
-          r="28"
-        />
-        <rect
-          fill="#FFFFFF"
-          fillOpacity="0.72"
-          height="72"
-          rx="18"
-          width="72"
-          x="372"
-          y="112"
-        />
-      </svg>
+      <img
+        alt=""
+        className="relative h-full w-full object-cover"
+        src={resolveFallbackArtworkUrl(artworkIndex)}
+      />
     </div>
   );
 }
@@ -167,7 +125,7 @@ export function CollectibleHeroArtwork({
       badge={badge ?? "Featured release"}
       className={className}
       imageAlt={imageAlt}
-      imageUrl={imageUrl}
+      imageUrl={imageUrl ?? resolveFallbackArtworkUrl(0)}
       meta={meta}
       title={title}
     >
@@ -186,12 +144,16 @@ export function CollectibleHeroArtwork({
           </p>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <DecorativeArtwork accentVar={accentVar} className="aspect-[4/5]" />
+          <DecorativeArtwork
+            accentVar={accentVar}
+            artworkIndex={1}
+            className="aspect-[4/5]"
+          />
           <CollectibleCard
             badge="Proof card"
             className="bg-white/72"
             imageAlt={`${title} supporting artwork`}
-            imageUrl={null}
+            imageUrl={resolveFallbackArtworkUrl(2)}
             meta="Gallery-ready placeholder composition"
             subtitle="Secondary frame"
             title="Collector preview"
@@ -235,7 +197,7 @@ export function FloatingCollectibleCluster({
           accentColorVar={accentVar}
           items={items.map((item, index) => ({
             imageAlt: item,
-            imageUrl: null,
+            imageUrl: resolveFallbackArtworkUrl(index + 1),
             label: item,
             meta:
               index === 0
@@ -253,18 +215,21 @@ export function FloatingCollectibleCluster({
 export function CollectiblePreviewCard({
   badge,
   className,
+  fallbackIndex,
   imageAlt,
   imageUrl,
   meta,
   subtitle,
   title
 }: CollectiblePreviewCardProps) {
+  const resolvedFallbackIndex = fallbackIndex ?? createTitleArtworkIndex(title);
+
   return (
     <CollectibleCard
       badge={badge}
       className={className}
       imageAlt={imageAlt}
-      imageUrl={imageUrl}
+      imageUrl={imageUrl ?? resolveFallbackArtworkUrl(resolvedFallbackIndex)}
       meta={meta}
       subtitle={subtitle}
       title={title}
@@ -304,7 +269,11 @@ export function StudioSceneCard({
             <StatChip label="Visual density" tone="mint" value="Tighter" />
           </div>
         </div>
-        <DecorativeArtwork accentVar={accentVar} className="aspect-[4/5]" />
+        <DecorativeArtwork
+          accentVar={accentVar}
+          artworkIndex={3}
+          className="aspect-[4/5]"
+        />
       </div>
     </div>
   );

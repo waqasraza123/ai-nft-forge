@@ -308,10 +308,11 @@ export default function MarketingPage() {
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
-            {releasePreviews.map((release) => (
+            {releasePreviews.map((release, index) => (
               <CollectiblePreviewCard
                 badge={release.cadence}
                 className="bg-[color:var(--color-surface-strong)]/55"
+                fallbackIndex={index + 1}
                 imageAlt={`${release.title} showcase artwork`}
                 key={release.title}
                 meta={release.focus}

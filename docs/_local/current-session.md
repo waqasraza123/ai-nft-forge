@@ -1,7 +1,111 @@
 # Current Session
 
 ## Date
-2026-04-20
+2026-04-23
+
+## Latest Checkpoint (Men-Only Collectible Art Adjustment)
+- Updated the shared collectible fallback art to remove ambiguous/female-presenting portraits from the default website set.
+- Replaced:
+  - `apps/web/public/art/web3-collectible-hero.png`
+  - `apps/web/public/art/web3-collectible-visor.png`
+- Kept:
+  - `apps/web/public/art/web3-collectible-builder.png`
+  - `apps/web/public/art/web3-collectible-shard.png`
+- Source:
+  - built-in `image_gen` workflow
+  - final generated files kept under `$HOME/.codex/generated_images/019db9e3-9a69-7871-9de3-2c15d8c12212/`
+- Verification:
+  - `shasum -a 256 apps/web/public/art/web3-collectible-hero.png apps/web/public/art/web3-collectible-visor.png`
+  - confirmed the replaced workspace files match distinct generated outputs
+- Notes:
+  - no code changes were required because the existing components still point at the same fallback filenames
+  - `apps/web/public/art/` currently appears as untracked in git in this workspace
+
+## Latest Checkpoint (Cartoonic Web3 NFT Artwork Pass)
+- Generated a cohesive raster art set with the built-in `image_gen` workflow for the web app:
+  - hero artwork
+  - three supporting collectible portraits
+- Saved project-bound final assets under:
+  - `apps/web/public/art/web3-collectible-hero.png`
+  - `apps/web/public/art/web3-collectible-builder.png`
+  - `apps/web/public/art/web3-collectible-shard.png`
+  - `apps/web/public/art/web3-collectible-visor.png`
+- Integrated the artwork through shared collectible components instead of route-local one-offs:
+  - `apps/web/src/components/collectible-visuals.tsx`
+    - generated art now powers fallback hero artwork
+    - supporting preview cards use shared collectible art fallbacks
+    - thumbnail strips and studio scene art now use the generated art set
+  - `apps/web/src/app/(marketing)/page.tsx`
+    - showcase cards now spread across the generated art set instead of repeating gradient placeholders
+- Verification:
+  - `pnpm --filter @ai-nft-forge/web build`
+  - `pnpm --filter @ai-nft-forge/web typecheck`
+- Notes:
+  - adjusted the fallback set to remove the female-presenting generated portrait and keep the shared website art men-only
+  - first `web` typecheck failed transiently because `.next/types` had not been regenerated yet; reran after build and it passed
+  - public collection and brand routes now automatically inherit the generated artwork whenever publication-provided media is absent
+
+## Latest Checkpoint (Light Editorial Launch Gallery Refactor)
+- Implemented the requested light-only editorial redesign across shared tokens, shared primitives, the root shell, collectible visuals, storefront presets, and the highest-traffic public/auth/product surfaces.
+- Added or expanded reusable primitives in `packages/ui/src/index.tsx` for editorial/media and premium light product work:
+  - `EditorialSection`
+  - `CollectibleCard`
+  - `MediaHeroFrame`
+  - `StatChip`
+  - `ProofBadge`
+  - `ThumbnailStrip`
+  - `GalleryRail`
+  - `PremiumCtaCard`
+  - `WalletStatusSurface`
+  - `LightOperatorPanel`
+  - richer `EmptyState` support
+- Reworked shared shell/theme files:
+  - `apps/web/tailwind.config.ts`
+  - `apps/web/src/app/layout.tsx`
+  - `apps/web/src/components/site-shell.tsx`
+  - `apps/web/src/components/site-header.tsx`
+  - `apps/web/src/components/site-footer.tsx`
+  - `apps/web/src/lib/ui/storefront-theme.ts`
+- Rebuilt reusable collectible visuals in:
+  - `apps/web/src/components/collectible-visuals.tsx`
+- Restyled key route families:
+  - marketing home
+  - sign-in
+  - public brand storefront
+  - public collection detail
+  - reserve/purchase
+  - checkout client/error treatment
+  - studio home
+  - studio commerce
+  - studio collections/settings callout and theme-preset surfaces
+  - shared workspace switcher
+  - shared studio/ops status surfaces
+- Updated durable docs to match the new visual architecture:
+  - `docs/project-state.md`
+  - `docs/architecture/ui-design-system.md`
+- Verification:
+  - `pnpm --filter @ai-nft-forge/ui typecheck`
+  - `pnpm --filter @ai-nft-forge/web typecheck`
+  - `pnpm --filter @ai-nft-forge/web build`
+- Notes:
+  - route/browser smoke tests were not run in this checkpoint
+  - preset enum values remain unchanged (`editorial_warm`, `gallery_mono`, `midnight_launch`) while their visual outputs and studio labels now map to lighter editorial treatments
+
+## Latest Checkpoint (UI State Assessment)
+- Assessed the current UI directly from source to summarize implementation status, stack, and visual direction across marketing, storefront, studio, auth, commerce, and ops surfaces.
+- No code changes made.
+- Primary files reviewed:
+  - `docs/architecture/ui-design-system.md`
+  - `apps/web/src/app/layout.tsx`
+  - `apps/web/src/components/site-shell.tsx`
+  - `apps/web/tailwind.config.ts`
+  - `packages/ui/src/index.tsx`
+  - `apps/web/src/lib/ui/storefront-theme.ts`
+  - representative route files under `apps/web/src/app/(marketing)`, `(public)`, `(studio)`, and `(ops)`
+- Result:
+  - current product UI is a Tailwind-first dark "Cinematic Launch OS" system with one flagship shell family, storefront theme presets for public brand routes, reusable shared primitives in `packages/ui`, premium public art-direction, polished studio surfaces, and intentionally restrained ops surfaces.
+- Verification:
+  - Source inspection only; no browser run in this checkpoint.
 
 ## Latest Checkpoint (Storefront Primitive Completion)
 - Completed the remaining public-side Tailwind normalization pass so brand, collection, reserve, and checkout routes use storefront-native shared primitives instead of mixed app-shell link styling or local heading helpers.
