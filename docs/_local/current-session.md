@@ -3,6 +3,37 @@
 ## Date
 2026-04-23
 
+## Latest Checkpoint (Dedicated Product Favicon Set)
+- Created a dedicated AI NFT Forge product icon and wired it into the web app metadata.
+- Added project-bound favicon/app-icon assets:
+  - `apps/web/public/brand/ai-nft-forge-icon-source.png`
+  - `apps/web/public/favicon-16x16.png`
+  - `apps/web/public/favicon-32x32.png`
+  - `apps/web/public/apple-touch-icon.png`
+  - `apps/web/public/icon-192.png`
+  - `apps/web/public/icon-512.png`
+  - `apps/web/src/app/icon.png`
+  - `apps/web/src/app/apple-icon.png`
+- Updated:
+  - `apps/web/src/app/layout.tsx`
+    - added explicit `icons` metadata entries
+    - added `manifest` metadata entry
+  - `apps/web/public/site.webmanifest`
+    - added standalone app icon manifest entries
+- Result:
+  - the product now has a dedicated browser/app icon instead of falling back to the default Next.js absence state
+  - tabs, touch icons, and manifest-backed install surfaces now use the same product-specific mark
+- Source:
+  - built-in `image_gen` workflow
+  - final generated source kept under `$HOME/.codex/generated_images/019dba5a-2edd-7db1-9468-4def7cdb4a0e/`
+- Verification:
+  - `file apps/web/public/brand/ai-nft-forge-icon-source.png apps/web/public/icon-512.png apps/web/public/icon-192.png apps/web/public/apple-touch-icon.png apps/web/public/favicon-32x32.png apps/web/public/favicon-16x16.png apps/web/src/app/icon.png apps/web/src/app/apple-icon.png`
+  - `pnpm exec prettier --write apps/web/src/app/layout.tsx apps/web/public/site.webmanifest`
+  - `pnpm --filter @ai-nft-forge/web build`
+  - `pnpm --filter @ai-nft-forge/web typecheck`
+- Notes:
+  - the first standalone `web` typecheck failed before build because `.next/types` had not been regenerated yet; rerunning after build passed cleanly
+
 ## Latest Checkpoint (Marketing Hero Layout Rebalance)
 - Redesigned the marketing home hero area to remove the large empty left-side gap and arrange the information into a denser editorial composition.
 - Updated:
