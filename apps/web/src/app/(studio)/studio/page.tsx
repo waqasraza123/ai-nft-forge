@@ -1,15 +1,12 @@
 import {
   ActionLink,
   ActionRow,
+  LightOperatorPanel,
   PageShell,
-  SurfaceCard,
-  SurfaceGrid
+  SurfaceCard
 } from "@ai-nft-forge/ui";
 
-import {
-  CollectibleEditorialBand,
-  StudioSceneCard
-} from "../../../components/collectible-visuals";
+import { StudioSceneCard } from "../../../components/collectible-visuals";
 import { getCurrentStudioAccess } from "../../../server/studio/access";
 
 type StudioNavigationModule = {
@@ -82,104 +79,115 @@ export default async function StudioPage() {
       }
       className="lg:px-1"
     >
-      <SurfaceGrid>
-        <SurfaceCard
-          body={`${workspaceStatus} workspace · ${roleCopy}`}
-          eyebrow="Workspace context"
-          span={6}
+      <div className="flex flex-wrap gap-2">
+        <span className="rounded-full border border-[color:var(--color-line)] bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--color-muted)]">
+          Workspace · {workspaceStatus}
+        </span>
+        <span className="rounded-full border border-[color:var(--color-line)] bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--color-muted)]">
+          Role · {roleCopy}
+        </span>
+        <span className="rounded-full border border-[color:var(--color-line)] bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--color-muted)]">
+          Scope · {workspaceSlug}
+        </span>
+      </div>
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)] xl:items-start">
+        <LightOperatorPanel
+          detail="Keep one selected workspace as the control boundary while source intake, curation, publication, commerce, and audit-safe follow-through stay readable in the same studio rhythm."
+          eyebrow="Studio overview"
           title={workspaceName}
         >
-          <dl className="grid gap-2.5 text-sm text-[color:var(--color-muted)]">
-            <div className="grid gap-0.5">
-              <dt className="text-xs uppercase tracking-[0.15em] text-[color:var(--color-muted)]">
-                Slug
+          <ol className="grid gap-4 border-t border-[color:var(--color-line)]/75 pt-5 sm:grid-cols-2">
+            <li className="border-l border-[color:var(--color-line)]/75 pl-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
+                01 Intake
+              </p>
+              <p className="mt-2 text-sm font-semibold text-[color:var(--color-text)]">
+                Capture and process source material.
+              </p>
+            </li>
+            <li className="border-l border-[color:var(--color-line)]/75 pl-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
+                02 Curate
+              </p>
+              <p className="mt-2 text-sm font-semibold text-[color:var(--color-text)]">
+                Approve outputs into release-ready drafts.
+              </p>
+            </li>
+            <li className="border-l border-[color:var(--color-line)]/75 pl-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
+                03 Publish
+              </p>
+              <p className="mt-2 text-sm font-semibold text-[color:var(--color-text)]">
+                Push immutable targets without leaving the studio shell.
+              </p>
+            </li>
+            <li className="border-l border-[color:var(--color-line)]/75 pl-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
+                04 Operate
+              </p>
+              <p className="mt-2 text-sm font-semibold text-[color:var(--color-text)]">
+                Track checkout, fulfillment, and recovery inside the same scope.
+              </p>
+            </li>
+          </ol>
+          <dl className="mt-5 grid gap-4 border-t border-[color:var(--color-line)]/75 pt-5 sm:grid-cols-2">
+            <div className="grid gap-1">
+              <dt className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--color-muted)]">
+                Workspace slug
               </dt>
-              <dd>{workspaceSlug}</dd>
+              <dd className="text-sm text-[color:var(--color-text)]">
+                {workspaceSlug}
+              </dd>
             </div>
-            <div className="grid gap-0.5">
-              <dt className="text-xs uppercase tracking-[0.15em] text-[color:var(--color-muted)]">
+            <div className="grid gap-1">
+              <dt className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--color-muted)]">
                 Owner
               </dt>
-              <dd>{ownerAddress}</dd>
+              <dd className="text-sm text-[color:var(--color-text)]">
+                {ownerAddress}
+              </dd>
             </div>
           </dl>
-        </SurfaceCard>
+        </LightOperatorPanel>
 
-        <SurfaceCard
-          body="Run through source intake, curation, publication, then monitor checkout and fulfillment from one sequence."
-          eyebrow="Operational rhythm"
-          span={6}
-          title="Creator sequence"
-        >
-          <ol className="mt-2 list-decimal space-y-1 pl-4 text-sm leading-6 text-[color:var(--color-muted)]">
-            <li>Capture and process source material.</li>
-            <li>Approve and curate outputs into release drafts.</li>
-            <li>Publish from review-ready drafts to immutable targets.</li>
-            <li>Monitor checkout, fulfillment, and reconciliation together.</li>
-          </ol>
-        </SurfaceCard>
-
-        <SurfaceCard
-          body="Use this route as a visual index for where you are operating this launch cycle."
-          eyebrow="Workspace scope"
-          span={12}
-          title="Single surface for a complete launch"
-          className="min-h-60 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(246,249,255,0.92))]"
-        >
-          <ul className="mt-2 grid gap-2 text-sm text-[color:var(--color-muted)] sm:grid-cols-2">
-            <li>
-              <span className="mr-2 rounded-full bg-[color:var(--color-accent-soft)] px-2 py-1 text-xs font-semibold text-[color:var(--color-accent)]">
-                A
-              </span>
-              Keep current workspace as your immutable control anchor.
-            </li>
-            <li>
-              <span className="mr-2 rounded-full bg-[color:var(--color-accent-soft)] px-2 py-1 text-xs font-semibold text-[color:var(--color-accent)]">
-                B
-              </span>
-              Route from production assets to commerce with audit-backed state.
-            </li>
-            <li>
-              <span className="mr-2 rounded-full bg-[color:var(--color-accent-soft)] px-2 py-1 text-xs font-semibold text-[color:var(--color-accent)]">
-                C
-              </span>
-              Move quickly between public launch prep and operational controls.
-            </li>
-            <li>
-              <span className="mr-2 rounded-full bg-[color:var(--color-accent-soft)] px-2 py-1 text-xs font-semibold text-[color:var(--color-accent)]">
-                D
-              </span>
-              Maintain auth boundaries and workspace separation at each action.
-            </li>
-          </ul>
-        </SurfaceCard>
-      </SurfaceGrid>
-
-      <CollectibleEditorialBand>
         <StudioSceneCard
           eyebrow="Creator-side depth"
-          note="Studio should stay product-like, but preview cards, framed drop shells, and tasteful scene accents make setup feel premium rather than purely utilitarian."
+          note="Studio should stay premium and product-like, with one visual support surface that reinforces launch preparation instead of breaking the overview into more dashboard cards."
           title="Preview-led launch preparation"
         />
-      </CollectibleEditorialBand>
+      </section>
 
-      <SurfaceGrid>
-        {studioModules.map((module, index) => (
-          <SurfaceCard
-            body={module.description}
-            eyebrow={`0${index + 1}`}
-            key={module.title}
-            span={4}
-            title={module.title}
-            className="h-full bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,246,255,0.9))]"
-            footer={
-              <ActionLink href={module.href} tone="inline">
-                Open {module.title.toLowerCase()}
-              </ActionLink>
-            }
-          />
-        ))}
-      </SurfaceGrid>
+      <SurfaceCard
+        body="Move between the major studio surfaces from one route list instead of scanning another field of equally loud cards."
+        eyebrow="Studio surfaces"
+        title="Where to operate next"
+        className="bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,246,255,0.9))]"
+      >
+        <div className="mt-4 grid gap-4 border-t border-[color:var(--color-line)]/75 pt-5 md:grid-cols-2">
+          {studioModules.map((module, index) => (
+            <div
+              className="grid gap-2 border-l border-[color:var(--color-line)]/75 pl-4"
+              key={module.title}
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
+                0{index + 1}
+              </p>
+              <h3 className="text-lg font-semibold text-[color:var(--color-text)]">
+                {module.title}
+              </h3>
+              <p className="text-sm leading-6 text-[color:var(--color-muted)]">
+                {module.description}
+              </p>
+              <div>
+                <ActionLink href={module.href} tone="inline">
+                  Open {module.title.toLowerCase()}
+                </ActionLink>
+              </div>
+            </div>
+          ))}
+        </div>
+      </SurfaceCard>
     </PageShell>
   );
 }

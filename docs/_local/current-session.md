@@ -3,6 +3,42 @@
 ## Date
 2026-04-23
 
+## Latest Checkpoint (Editorial Hierarchy Cleanup Pass)
+- Fixed the overstuffed light editorial launch composition and swept the same card-heavy hierarchy mistake through selected public, studio, and ops entry surfaces.
+- Updated:
+  - `apps/web/src/app/(marketing)/page.tsx`
+    - rebuilt the launch section into quieter top status pills plus one narrative surface and one integrated hero surface
+    - removed standalone `Launch posture` / `Studio fit` side cards
+    - converted the four-step workflow from mini-cards into a lighter step rail
+  - `apps/web/src/components/collectible-visuals.tsx`
+    - simplified `CollectibleHeroArtwork` to a single hero composition with one integrated metadata rail
+    - removed the extra mood/frame/language side-card stack and decorative mini-art blocks from the shared hero helper
+    - simplified `StudioSceneCard` support facts from mini chips to a quieter inline metadata group
+  - `apps/web/src/app/(public)/brands/[brandSlug]/page.tsx`
+    - collapsed the brand hero telemetry and spotlight framing into cleaner inline support groups
+    - removed the extra `FloatingCollectibleCluster` meta section from the brand route
+    - simplified the brand story metrics from tiles into one parent panel with inline facts
+  - `apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/page.tsx`
+    - simplified the release hero facts, launch story, and proof panel so support details no longer read as competing cards
+    - removed the extra `FloatingCollectibleCluster` meta section from the collection route
+  - `apps/web/src/app/(studio)/studio/page.tsx`
+    - replaced the dashboard-like overview card field with one primary studio overview composition plus one support scene surface
+    - replaced the four equal module cards with one grouped route-list panel
+  - `apps/web/src/app/(ops)/ops/page.tsx`
+    - converted the top summary card field into one quieter command-summary facts rail
+    - merged workspace selection and adjacent-route access into one support card
+- Result:
+  - the launch hero and related entry surfaces now scan in a clearer order: context, primary message, supporting workflow/media, then concise facts
+  - premium/editorial routes keep the light launch language without the previous outlined-card clutter
+  - studio and ops entry pages now read less like generic dashboard grids where a stronger parent composition was more appropriate
+- Verification:
+  - `pnpm exec prettier --write 'apps/web/src/components/collectible-visuals.tsx' 'apps/web/src/app/(marketing)/page.tsx' 'apps/web/src/app/(public)/brands/[brandSlug]/page.tsx' 'apps/web/src/app/(public)/brands/[brandSlug]/collections/[collectionSlug]/page.tsx' 'apps/web/src/app/(studio)/studio/page.tsx' 'apps/web/src/app/(ops)/ops/page.tsx'`
+  - `pnpm --filter @ai-nft-forge/web typecheck`
+  - `pnpm --filter @ai-nft-forge/web build`
+- Notes:
+  - no durable architecture/state changes were introduced, so `docs/project-state.md` was left unchanged
+  - the sweep was limited to route families showing the same composition anti-pattern, not high-density operational detail screens that still legitimately need richer data density
+
 ## Latest Checkpoint (Dedicated Product Favicon Set)
 - Created a dedicated AI NFT Forge product icon and wired it into the web app metadata.
 - Added project-bound favicon/app-icon assets:

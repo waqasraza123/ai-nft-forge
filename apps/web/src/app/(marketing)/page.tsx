@@ -5,8 +5,7 @@ import {
   CollectibleCard,
   EditorialSection,
   PremiumCtaCard,
-  ProofBadge,
-  StatChip
+  ProofBadge
 } from "@ai-nft-forge/ui";
 
 import {
@@ -239,72 +238,82 @@ export default function MarketingPage() {
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(50%_60%_at_14%_10%,_rgba(255,255,255,0.45),_transparent),radial-gradient(35%_35%_at_82%_18%,rgba(139,94,52,0.18),transparent),linear-gradient(180deg,rgba(255,255,255,0.12),transparent)]" />
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)] lg:items-start">
           <div className="grid gap-5">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <StatChip label="Shell" tone="accent" value="Light-only" />
-              <StatChip label="Commerce" tone="sky" value="Reserve-ready" />
-              <StatChip label="Trust" tone="mint" value="Wallet verified" />
+            <div className="flex flex-wrap gap-2">
+              <ProofBadge tone="default">Shell · Light-only</ProofBadge>
+              <ProofBadge tone="default">Commerce · Reserve-ready</ProofBadge>
+              <ProofBadge tone="default">Trust · Wallet verified</ProofBadge>
             </div>
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(240px,0.85fr)]">
-              <div className="rounded-[1.85rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(247,244,255,0.82))] p-5 shadow-[0_20px_48px_rgba(190,197,227,0.14)]">
-                <div className="flex flex-wrap items-center gap-2">
-                  <ProofBadge tone="accent">Release map</ProofBadge>
-                  <ProofBadge tone="default">Control-plane workflow</ProofBadge>
-                </div>
-                <h3 className="mt-3 font-[var(--font-display)] text-2xl font-semibold tracking-tight text-[color:var(--color-text)]">
-                  Arrange launch work into one readable operating rhythm.
-                </h3>
-                <p className="mt-2 max-w-2xl text-sm leading-7 text-[color:var(--color-muted)]">
-                  Intake, curation, publication, and verification live in one
-                  surface so launch teams stop bouncing between disconnected
-                  media, commerce, and chain tooling.
+            <div className="rounded-[1.85rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(247,244,255,0.82))] p-6 shadow-[0_20px_48px_rgba(190,197,227,0.14)]">
+              <div className="flex flex-wrap items-center gap-3">
+                <ProofBadge tone="accent">Release map</ProofBadge>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--color-muted)]">
+                  Control-plane workflow
                 </p>
-                <ol className="mt-5 grid gap-3 sm:grid-cols-2">
-                  {heroWorkflow.map((step) => (
-                    <li
-                      className="rounded-[1.4rem] border border-[color:var(--color-line)] bg-white/80 px-4 py-3 shadow-[0_12px_28px_rgba(191,197,226,0.12)]"
-                      key={step.label}
-                    >
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">
-                        {step.label}
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-[color:var(--color-text)]">
-                        {step.title}
-                      </p>
-                      <p className="mt-1 text-sm text-[color:var(--color-muted)]">
-                        {step.detail}
-                      </p>
-                    </li>
-                  ))}
-                </ol>
               </div>
-              <div className="grid gap-4">
-                <div className="rounded-[1.7rem] border border-[color:var(--color-line)] bg-white/78 p-4 shadow-[0_16px_34px_rgba(190,197,227,0.12)]">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">
+              <h3 className="mt-4 max-w-3xl font-[var(--font-display)] text-2xl font-semibold tracking-tight text-[color:var(--color-text)] sm:text-[2rem]">
+                Arrange launch work into one readable operating rhythm.
+              </h3>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-[color:var(--color-muted)]">
+                Intake, curation, publication, and verification live in one
+                surface so launch teams stop bouncing between disconnected
+                media, commerce, and chain tooling.
+              </p>
+              <ol className="mt-6 grid gap-4 border-t border-[color:var(--color-line)]/80 pt-5 sm:grid-cols-2 xl:grid-cols-4">
+                {heroWorkflow.map((step) => (
+                  <li
+                    className="border-l border-[color:var(--color-line)]/80 pl-4"
+                    key={step.label}
+                  >
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">
+                      {step.label}
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-[color:var(--color-text)]">
+                      {step.title}
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-[color:var(--color-muted)]">
+                      {step.detail}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+              <dl className="mt-6 grid gap-4 border-t border-[color:var(--color-line)]/80 pt-5 sm:grid-cols-2">
+                <div className="grid gap-1">
+                  <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--color-muted)]">
                     Launch posture
-                  </p>
-                  <div className="mt-3 space-y-3 text-sm text-[color:var(--color-muted)]">
-                    <p>Wallet-authenticated operators</p>
-                    <p>Deterministic storefront publish</p>
-                    <p>Reservation and fulfillment coverage</p>
-                  </div>
+                  </dt>
+                  <dd className="text-sm leading-6 text-[color:var(--color-text)]">
+                    Wallet-authenticated operators, deterministic storefront
+                    publish, and reservation coverage stay in the same release
+                    rhythm.
+                  </dd>
                 </div>
-                <div className="rounded-[1.7rem] border border-[color:var(--color-line)] bg-[linear-gradient(180deg,rgba(242,251,255,0.88),rgba(255,255,255,0.76))] p-4 shadow-[0_16px_34px_rgba(190,197,227,0.12)]">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">
+                <div className="grid gap-1">
+                  <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--color-muted)]">
                     Studio fit
-                  </p>
-                  <p className="mt-2 text-sm leading-7 text-[color:var(--color-muted)]">
-                    Designed for teams that scale from campaign experiments to
-                    enterprise launch operations.
-                  </p>
+                  </dt>
+                  <dd className="text-sm leading-6 text-[color:var(--color-text)]">
+                    Built for teams moving from campaign experiments to
+                    enterprise launch operations without changing shells.
+                  </dd>
                 </div>
-              </div>
+              </dl>
             </div>
           </div>
           <CollectibleHeroArtwork
             badge="Hero release"
+            details={[
+              { label: "Mood", value: "Editorial light" },
+              { label: "Frame", value: "Gallery hero" },
+              {
+                label: "Collectible language",
+                value:
+                  "Artwork stays first while proof and launch facts sit in one quiet support rail."
+              }
+            ]}
             fallbackIndex={0}
             imageAlt="AI NFT Forge showcase artwork"
             meta="Generation intake · Snapshot publish · Mint verification"
+            note="The hero surface carries one release story instead of surrounding the artwork with competing sidecars."
             title="Launch plane"
           />
         </div>

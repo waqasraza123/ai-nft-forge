@@ -5,7 +5,6 @@ import {
   CollectibleCard,
   GalleryRail,
   ProofBadge,
-  StatChip,
   ThumbnailStrip
 } from "@ai-nft-forge/ui";
 
@@ -13,10 +12,17 @@ type CollectibleHeroArtworkProps = {
   accentVar?: string;
   badge?: string | undefined;
   className?: string;
+  details?:
+    | Array<{
+        label: string;
+        value: string;
+      }>
+    | undefined;
   fallbackIndex?: number | undefined;
   imageAlt: string;
   imageUrl?: string | null | undefined;
   meta?: string | undefined;
+  note?: string | undefined;
   title: string;
 };
 
@@ -119,10 +125,12 @@ export function CollectibleHeroArtwork({
   accentVar = "--color-accent",
   badge,
   className,
+  details,
   fallbackIndex,
   imageAlt,
   imageUrl,
   meta,
+  note,
   title
 }: CollectibleHeroArtworkProps) {
   return (
@@ -140,20 +148,15 @@ export function CollectibleHeroArtwork({
       <div className="relative grid gap-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <ProofBadge tone="accent">{badge ?? "Featured release"}</ProofBadge>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--color-muted)]">
-            Premium editorial shell
-          </p>
-        </div>
-        <div className="space-y-2">
-          <h3 className="font-[var(--font-display)] text-2xl font-semibold text-[color:var(--color-text)] md:text-3xl">
-            {title}
-          </h3>
           {meta ? (
-            <p className="max-w-xl text-sm leading-7 text-[color:var(--color-muted)]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--color-muted)]">
               {meta}
             </p>
           ) : null}
         </div>
+        <h3 className="font-[var(--font-display)] text-2xl font-semibold text-[color:var(--color-text)] md:text-3xl">
+          {title}
+        </h3>
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(220px,0.92fr)] xl:items-start">
           <div className="overflow-hidden rounded-[1.7rem] border border-white/80 bg-white/76 shadow-[0_18px_46px_rgba(190,197,227,0.18)]">
             {imageUrl ? (
@@ -170,36 +173,41 @@ export function CollectibleHeroArtwork({
               />
             )}
           </div>
-          <div className="grid gap-4">
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-              <StatChip label="Mood" tone="accent" value="Editorial light" />
-              <StatChip label="Frame" tone="sky" value="Gallery hero" />
-            </div>
-            <div className="rounded-[1.45rem] border border-[color:var(--color-line)] bg-white/76 p-3 shadow-[0_14px_32px_rgba(189,197,226,0.15)]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--color-accent)]">
-                Collectible language
+          <div className="rounded-[1.55rem] border border-white/80 bg-white/72 p-4 shadow-[0_18px_40px_rgba(190,197,227,0.14)]">
+            {details && details.length > 0 ? (
+              <dl className="grid gap-4">
+                {details.map((detail, index) => (
+                  <div
+                    className={cn(
+                      "grid gap-1",
+                      index > 0
+                        ? "border-t border-[color:var(--color-line)]/75 pt-4"
+                        : undefined
+                    )}
+                    key={`${detail.label}-${detail.value}`}
+                  >
+                    <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--color-muted)]">
+                      {detail.label}
+                    </dt>
+                    <dd className="text-sm leading-6 text-[color:var(--color-text)]">
+                      {detail.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            ) : null}
+            {note ? (
+              <p
+                className={cn(
+                  "text-sm leading-6 text-[color:var(--color-muted)]",
+                  details && details.length > 0
+                    ? "mt-4 border-t border-[color:var(--color-line)]/75 pt-4"
+                    : undefined
+                )}
+              >
+                {note}
               </p>
-              <p className="mt-2 text-sm leading-6 text-[color:var(--color-muted)]">
-                Framed media, proof chips, and soft-tinted elevation keep the
-                hero artwork first without falling back to dark glass surfaces.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <DecorativeArtwork
-                accentVar={accentVar}
-                artworkIndex={1}
-                className="aspect-square"
-              />
-              <CollectibleCard
-                badge="Proof card"
-                className="bg-white/72 p-2"
-                imageAlt={`${title} supporting artwork`}
-                imageUrl={resolveCollectibleArtworkUrl(2)}
-                meta="Gallery-ready companion artwork"
-                subtitle="Secondary frame"
-                title="Collector preview"
-              />
-            </div>
+            ) : null}
           </div>
         </div>
       </div>
@@ -307,10 +315,24 @@ export function StudioSceneCard({
           <p className="mt-3 text-sm leading-7 text-[color:var(--color-muted)]">
             {note}
           </p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <StatChip label="Workspace mood" tone="default" value="Creative" />
-            <StatChip label="Visual density" tone="mint" value="Tighter" />
-          </div>
+          <dl className="mt-4 grid gap-3 border-t border-[color:var(--color-line)]/75 pt-4 sm:grid-cols-2">
+            <div className="grid gap-1">
+              <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--color-muted)]">
+                Workspace mood
+              </dt>
+              <dd className="text-sm text-[color:var(--color-text)]">
+                Creative
+              </dd>
+            </div>
+            <div className="grid gap-1">
+              <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--color-muted)]">
+                Visual density
+              </dt>
+              <dd className="text-sm text-[color:var(--color-text)]">
+                Focused
+              </dd>
+            </div>
+          </dl>
         </div>
         <DecorativeArtwork
           accentVar={accentVar}

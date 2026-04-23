@@ -19,8 +19,7 @@ import {
   CollectibleEditorialBand,
   CollectibleHeroArtwork,
   CollectiblePreviewCard,
-  CollectibleGalleryRail,
-  FloatingCollectibleCluster
+  CollectibleGalleryRail
 } from "../../../../components/collectible-visuals";
 import { createRuntimePublicCollectionService } from "../../../../server/collections/runtime";
 import {
@@ -162,81 +161,47 @@ function BrandHeroVisual(input: {
   release: CollectionPublicBrandPreview | null;
 }) {
   return (
-    <StorefrontPanel className="relative overflow-hidden" tone="soft">
-      <div className="absolute -left-20 top-8 h-40 w-40 rounded-full bg-[color:var(--storefront-accent)]/15 blur-3xl" />
-      <div className="absolute -right-16 bottom-4 h-44 w-44 rounded-full bg-[color:var(--storefront-accent)]/10 blur-3xl" />
-      <div className="relative space-y-4">
-        <div className="grid gap-2">
-          <p className="text-xs uppercase tracking-[0.2em] text-[color:var(--storefront-muted)]">
-            Release stage
-          </p>
-          <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--storefront-accent)]">
-            <span>
-              {input.release
-                ? formatStatusLabel(input.release.storefrontStatus)
-                : "Campaign"}
-            </span>
-            <span>
-              {input.release
-                ? formatSectionHeadline({
-                    itemCount: input.release.itemCount,
-                    status: input.release.storefrontStatus
-                  })
-                : "Launch world"}
-            </span>
-          </div>
-        </div>
-        <ActionRow compact>
-          <span>
-            {input.release
-              ? `${input.release.itemCount} works`
-              : "No active release"}
-          </span>
-          <span>·</span>
-          <span>
-            {input.release
-              ? input.release.availabilityLabel
-              : "Awaiting campaign"}
-          </span>
-        </ActionRow>
-        <div className="mt-2 grid gap-2 text-sm text-[color:var(--storefront-muted)]">
-          <StorefrontTile className="px-4 py-3" tone="gallery">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--storefront-accent)]">
-              Curated spotlight
-            </p>
-            <p className="mt-1">
-              {input.release
-                ? "Live campaign loaded from immutable publication snapshot."
-                : "The spotlight remains empty until a release is published."}
-            </p>
-          </StorefrontTile>
-        </div>
-      </div>
-      <div className="mt-5">
-        <CollectibleHeroArtwork
-          accentVar="--storefront-accent"
-          badge={
-            input.release
-              ? formatStatusLabel(input.release.storefrontStatus)
-              : "Awaiting release"
-          }
-          className="border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)]"
-          fallbackIndex={0}
-          imageAlt={
-            input.release
-              ? `${input.release.title} campaign artwork`
-              : "Release spotlight placeholder"
-          }
-          imageUrl={input.release?.heroImageUrl}
-          meta={
-            input.release
-              ? `${input.release.itemCount} works · ${input.release.availabilityLabel}`
-              : "Visual release deck will activate after publication"
-          }
-          title={input.release?.title ?? "Release spotlight"}
-        />
-      </div>
-    </StorefrontPanel>
+    <CollectibleHeroArtwork
+      accentVar="--storefront-accent"
+      badge={
+        input.release
+          ? formatStatusLabel(input.release.storefrontStatus)
+          : "Awaiting release"
+      }
+      className="border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)]"
+      details={[
+        {
+          label: "Release stage",
+          value: input.release
+            ? formatSectionHeadline({
+                itemCount: input.release.itemCount,
+                status: input.release.storefrontStatus
+              })
+            : "Launch world"
+        },
+        {
+          label: "Availability",
+          value: input.release
+            ? `${input.release.itemCount} works · ${input.release.availabilityLabel}`
+            : "Awaiting campaign"
+        },
+        {
+          label: "Spotlight",
+          value: input.release
+            ? "Published campaign loaded from the immutable release snapshot."
+            : "The hero composition activates after a release is published."
+        }
+      ]}
+      fallbackIndex={0}
+      imageAlt={
+        input.release
+          ? `${input.release.title} campaign artwork`
+          : "Release spotlight placeholder"
+      }
+      imageUrl={input.release?.heroImageUrl}
+      meta="Premium editorial shell"
+      title={input.release?.title ?? "Release spotlight"}
+    />
   );
 }
 
@@ -279,24 +244,21 @@ function BrandHeroSection(input: {
             </StorefrontActionLink>
           ) : null}
         </ActionRow>
-        <StorefrontPanel>
-          <StorefrontSectionHeading
-            eyebrow={input.heroKicker}
-            title="Launch telemetry"
-          />
-          <ActionRow compact>
-            {input.campaignMetrics.map((metric) => (
-              <StorefrontTile className="p-3" tone="muted" key={metric.label}>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--storefront-accent)]">
-                  {metric.label}
-                </p>
-                <p className="mt-1 text-sm text-[color:var(--storefront-text)]">
-                  {metric.value}
-                </p>
-              </StorefrontTile>
-            ))}
-          </ActionRow>
-        </StorefrontPanel>
+        <div className="grid gap-3 border-t border-[color:var(--storefront-border)]/80 pt-4 sm:grid-cols-2">
+          {input.campaignMetrics.map((metric) => (
+            <div className="grid gap-1" key={metric.label}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-muted)]">
+                {metric.label}
+              </p>
+              <p className="text-sm text-[color:var(--storefront-text)]">
+                {metric.value}
+              </p>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--storefront-muted)]">
+          {input.heroKicker}
+        </p>
       </div>
       <BrandHeroVisual release={input.release} />
     </section>
@@ -393,27 +355,23 @@ function BrandStorySection(input: {
 }) {
   return (
     <StorefrontPanel tone="soft">
-      <div className="grid gap-4 md:grid-cols-[1.1fr_1fr] md:items-start">
-        <div>
-          <StorefrontSectionHeading
-            eyebrow="Brand manifesto"
-            lead={input.body}
-            title={input.headline}
-          />
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {input.metrics.map((metric) => (
-            <StorefrontTile className="p-3" tone="muted" key={metric.label}>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--storefront-accent)]">
-                {metric.label}
-              </p>
-              <p className="mt-1 text-sm text-[color:var(--storefront-text)]">
-                {metric.value}
-              </p>
-            </StorefrontTile>
-          ))}
-        </div>
-      </div>
+      <StorefrontSectionHeading
+        eyebrow="Brand manifesto"
+        lead={input.body}
+        title={input.headline}
+      />
+      <dl className="mt-5 grid gap-4 border-t border-[color:var(--storefront-border)]/80 pt-4 sm:grid-cols-2 xl:grid-cols-4">
+        {input.metrics.map((metric) => (
+          <div className="grid gap-1" key={metric.label}>
+            <dt className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-muted)]">
+              {metric.label}
+            </dt>
+            <dd className="text-sm text-[color:var(--storefront-text)]">
+              {metric.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
     </StorefrontPanel>
   );
 }
@@ -653,17 +611,6 @@ export default async function BrandPage({ params }: BrandPageProps) {
           secondaryCtaLabel={secondaryCtaLabel}
           campaignMetrics={campaignStats}
           release={featuredRelease}
-        />
-
-        <FloatingCollectibleCluster
-          accentVar="--storefront-accent"
-          headline="Drop floors need a hero composition before the browsing grid begins."
-          items={[
-            brand.featuredRelease ? "Curated spotlight" : "Launch spotlight",
-            "Collectible rail",
-            "Vault framing"
-          ]}
-          label="Storefront direction"
         />
 
         <CollectibleEditorialBand accentVar="--storefront-accent">

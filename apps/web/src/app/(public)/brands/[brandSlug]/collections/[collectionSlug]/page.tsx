@@ -20,8 +20,7 @@ import {
   CollectibleEditorialBand,
   CollectibleHeroArtwork,
   CollectiblePreviewCard,
-  CollectibleGalleryRail,
-  FloatingCollectibleCluster
+  CollectibleGalleryRail
 } from "../../../../../../components/collectible-visuals";
 import { createRuntimePublicCollectionService } from "../../../../../../server/collections/runtime";
 import {
@@ -235,29 +234,50 @@ function CollectionHeroSection(input: {
             Back to brand release floor
           </StorefrontActionLink>
         </ActionRow>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <StorefrontPill tone="accent">Launch mode</StorefrontPill>
-          <StorefrontPill>
-            {input.storefrontStatus === "live"
-              ? "Open"
-              : input.storefrontStatus === "upcoming"
-                ? "Queued"
-                : input.storefrontStatus === "ended"
-                  ? "Closed"
-                  : "Sold out"}
-          </StorefrontPill>
+        <dl className="grid gap-3 border-t border-[color:var(--storefront-border)]/80 pt-4 sm:grid-cols-2">
+          <div className="grid gap-1">
+            <dt className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-muted)]">
+              Launch mode
+            </dt>
+            <dd className="text-sm text-[color:var(--storefront-text)]">
+              {input.storefrontStatus === "live"
+                ? "Open"
+                : input.storefrontStatus === "upcoming"
+                  ? "Queued"
+                  : input.storefrontStatus === "ended"
+                    ? "Closed"
+                    : "Sold out"}
+            </dd>
+          </div>
           {input.totalSupply ? (
-            <StorefrontPill>
-              {formatCount(input.totalSupply)} artworks
-            </StorefrontPill>
+            <div className="grid gap-1">
+              <dt className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-muted)]">
+                Supply
+              </dt>
+              <dd className="text-sm text-[color:var(--storefront-text)]">
+                {formatCount(input.totalSupply)} artworks
+              </dd>
+            </div>
           ) : null}
           {input.priceLabel ? (
-            <StorefrontPill>{input.priceLabel}</StorefrontPill>
+            <div className="grid gap-1">
+              <dt className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-muted)]">
+                Price
+              </dt>
+              <dd className="text-sm text-[color:var(--storefront-text)]">
+                {input.priceLabel}
+              </dd>
+            </div>
           ) : null}
-          <StorefrontPill>
-            {formatCount(input.claimedCount)} claimed
-          </StorefrontPill>
-        </div>
+          <div className="grid gap-1">
+            <dt className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-muted)]">
+              Claimed
+            </dt>
+            <dd className="text-sm text-[color:var(--storefront-text)]">
+              {formatCount(input.claimedCount)} claimed
+            </dd>
+          </div>
+        </dl>
       </div>
       <CollectibleHeroArtwork
         accentVar="--storefront-accent"
@@ -267,10 +287,23 @@ function CollectionHeroSection(input: {
             : formatStatusLabel(input.storefrontStatus)
         }
         className="border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]"
+        details={[
+          { label: "Availability", value: input.availabilityLabel },
+          { label: "Launch timing", value: formatTimestamp(input.launchAt) },
+          {
+            label: "Collector posture",
+            value:
+              input.storefrontStatus === "live"
+                ? "Reserve and mint activity are open with snapshot-backed proof."
+                : input.storefrontStatus === "upcoming"
+                  ? "Launch proof is staged before the public window opens."
+                  : "The release remains viewable as a verified public record."
+          }
+        ]}
         fallbackIndex={6}
         imageAlt={`${input.title} hero artwork`}
         imageUrl={input.heroImageUrl}
-        meta={`${input.availabilityLabel} · ${formatTimestamp(input.launchAt)}`}
+        meta="Hero release"
         title={input.brandThemeWordmark || input.title}
       />
     </section>
@@ -286,24 +319,29 @@ function CollectionLaunchStory(input: {
 }) {
   return (
     <StorefrontPanel tone="soft">
-      <div className="grid gap-4 md:grid-cols-[1fr_0.8fr] md:items-center">
-        <div>
-          <StorefrontSectionHeading
-            eyebrow="Editorial story"
-            lead={input.lead}
-            title={input.headline}
-          />
+      <StorefrontSectionHeading
+        eyebrow="Editorial story"
+        lead={input.lead}
+        title={input.headline}
+      />
+      <div className="mt-5 grid gap-3 border-t border-[color:var(--storefront-border)]/80 pt-4 sm:grid-cols-2">
+        <div className="grid gap-1">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-muted)]">
+            Collector proof
+          </p>
+          <p className="text-sm text-[color:var(--storefront-text)]">
+            {formatStatusLabel(input.status)} runway
+          </p>
         </div>
-        <StorefrontTile className="p-4" tone="muted">
-          <StorefrontSectionHeading
-            eyebrow="Collector proof"
-            title={`${formatStatusLabel(input.status)} runway`}
-          />
-          <p className="mt-2 text-sm text-[color:var(--storefront-muted)]">
+        <div className="grid gap-1">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-muted)]">
+            Snapshot state
+          </p>
+          <p className="text-sm text-[color:var(--storefront-text)]">
             {input.availabilityLabel} · {formatCount(input.mintedTokenCount)}{" "}
             minted proofs
           </p>
-        </StorefrontTile>
+        </div>
       </div>
     </StorefrontPanel>
   );
@@ -344,19 +382,19 @@ function CollectionProofPanel(input: {
         eyebrow="Collector proof"
         title="Release ledger and launch telemetry"
       />
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <dl className="mt-5 grid gap-4 border-t border-[color:var(--storefront-border)]/80 pt-4 sm:grid-cols-2 xl:grid-cols-4">
         {proofs.map((proof) => (
-          <StorefrontTile className="p-4" key={proof.label} tone="muted">
-            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-accent)]">
+          <div className="grid gap-1" key={proof.label}>
+            <dt className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--storefront-muted)]">
               {proof.label}
-            </span>
-            <strong className="mt-1 block text-sm text-[color:var(--storefront-text)]">
+            </dt>
+            <dd className="text-sm text-[color:var(--storefront-text)]">
               {proof.value}
-            </strong>
-          </StorefrontTile>
+            </dd>
+          </div>
         ))}
-      </div>
-      <p className="mt-4 text-sm leading-7 text-[color:var(--storefront-muted)]">
+      </dl>
+      <p className="mt-5 text-sm leading-7 text-[color:var(--storefront-muted)]">
         {input.storefrontStatus === "upcoming"
           ? describeSupply(input)
           : `${describeSupply(input)}. ${input.activeDeployment ? `Deployed contract on ${input.activeDeployment.chain.label}.` : "No onchain deployment recorded yet."}`}
@@ -736,13 +774,6 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
           title={heroHeadline}
           totalSupply={collection.totalSupply}
           priceLabel={collection.priceLabel}
-        />
-
-        <FloatingCollectibleCluster
-          accentVar="--storefront-accent"
-          headline="Each release page should feel staged like a premium collectible debut."
-          items={["Hero frame", "Collector proof", "Reserve shell"]}
-          label="Release composition"
         />
 
         <CollectibleEditorialBand accentVar="--storefront-accent">
