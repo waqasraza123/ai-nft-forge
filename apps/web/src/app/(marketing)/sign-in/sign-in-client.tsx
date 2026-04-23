@@ -417,6 +417,7 @@ export function SignInClient({ initialSession }: SignInClientProps) {
                 ? `Owner ${shortHex(session.user.walletAddress)}`
                 : "Sign-in first"
             }
+            fallbackIndex={4}
             imageAlt="Wallet authentication artwork"
             imageUrl={null}
             meta={

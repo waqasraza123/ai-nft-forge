@@ -258,7 +258,9 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
           >
             <ActionRow compact className="mb-3">
               <Pill tone={statusVisual.tone}>{statusVisual.label}</Pill>
-              <StorefrontPill tone="accent">{statusProviderCopy.shortTitle}</StorefrontPill>
+              <StorefrontPill tone="accent">
+                {statusProviderCopy.shortTitle}
+              </StorefrontPill>
               <StorefrontPill>Live storefront</StorefrontPill>
             </ActionRow>
             <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
@@ -285,6 +287,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
               <CollectiblePreviewCard
                 accentVar="--storefront-accent"
                 badge={statusVisual.label}
+                fallbackIndex={5}
                 imageAlt={`${checkout.checkout.title} ${editionIdentity}`}
                 imageUrl={reservedItem?.imageUrl}
                 meta={`${statusVisual.label} · ${statusProviderCopy.shortTitle}`}
@@ -294,7 +297,10 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
             </div>
           </CollectibleEditorialBand>
           <div className="grid gap-4 self-start">
-            <StorefrontPanel as="article" className="bg-[color:var(--storefront-panel)]/70">
+            <StorefrontPanel
+              as="article"
+              className="bg-[color:var(--storefront-panel)]/70"
+            >
               <StorefrontSectionHeading
                 eyebrow="Reservation summary"
                 title="Collector checkpoint"
@@ -340,7 +346,10 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
                 />
               </StorefrontMetaGrid>
             </StorefrontPanel>
-            <StorefrontPanel as="article" className="bg-[color:var(--storefront-panel)]/70">
+            <StorefrontPanel
+              as="article"
+              className="bg-[color:var(--storefront-panel)]/70"
+            >
               <StorefrontSectionHeading
                 eyebrow="Collector action"
                 lead={statusCopy.actionSubtext}
@@ -360,9 +369,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
                   />
                 ) : isStripeOpen ? (
                   <>
-                    <StorefrontActionLink
-                      href={checkout.checkout.checkoutUrl}
-                    >
+                    <StorefrontActionLink href={checkout.checkout.checkoutUrl}>
                       {actionCopy.buttonLabel}
                     </StorefrontActionLink>
                     <StorefrontActionLink
@@ -373,10 +380,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
                     </StorefrontActionLink>
                   </>
                 ) : (
-                  <StorefrontActionLink
-                    tone="secondary"
-                    href={releasePath}
-                  >
+                  <StorefrontActionLink tone="secondary" href={releasePath}>
                     Start a fresh checkout
                   </StorefrontActionLink>
                 )}

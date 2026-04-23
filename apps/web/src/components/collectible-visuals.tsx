@@ -14,6 +14,7 @@ type CollectibleHeroArtworkProps = {
   accentVar?: string;
   badge?: string | undefined;
   className?: string;
+  fallbackIndex?: number | undefined;
   imageAlt: string;
   imageUrl?: string | null | undefined;
   meta?: string | undefined;
@@ -60,10 +61,14 @@ const fallbackCollectibleArtwork = [
   "/art/web3-collectible-hero.png",
   "/art/web3-collectible-builder.png",
   "/art/web3-collectible-shard.png",
-  "/art/web3-collectible-visor.png"
+  "/art/web3-collectible-visor.png",
+  "/art/web3-collectible-amethyst.png",
+  "/art/web3-collectible-frost.png",
+  "/art/web3-collectible-cobalt.png",
+  "/art/web3-collectible-mint.png"
 ] as const;
 
-function resolveFallbackArtworkUrl(index: number) {
+export function resolveCollectibleArtworkUrl(index: number) {
   return (
     fallbackCollectibleArtwork[
       ((index % fallbackCollectibleArtwork.length) +
@@ -105,7 +110,7 @@ function DecorativeArtwork({
       <img
         alt=""
         className="relative h-full w-full object-cover"
-        src={resolveFallbackArtworkUrl(artworkIndex)}
+        src={resolveCollectibleArtworkUrl(artworkIndex)}
       />
     </div>
   );
@@ -115,6 +120,7 @@ export function CollectibleHeroArtwork({
   accentVar = "--color-accent",
   badge,
   className,
+  fallbackIndex,
   imageAlt,
   imageUrl,
   meta,
@@ -125,7 +131,7 @@ export function CollectibleHeroArtwork({
       badge={badge ?? "Featured release"}
       className={className}
       imageAlt={imageAlt}
-      imageUrl={imageUrl ?? resolveFallbackArtworkUrl(0)}
+      imageUrl={imageUrl ?? resolveCollectibleArtworkUrl(fallbackIndex ?? 0)}
       meta={meta}
       title={title}
     >
@@ -153,8 +159,8 @@ export function CollectibleHeroArtwork({
             badge="Proof card"
             className="bg-white/72"
             imageAlt={`${title} supporting artwork`}
-            imageUrl={resolveFallbackArtworkUrl(2)}
-            meta="Gallery-ready placeholder composition"
+            imageUrl={resolveCollectibleArtworkUrl(2)}
+            meta="Gallery-ready companion artwork"
             subtitle="Secondary frame"
             title="Collector preview"
           />
@@ -197,7 +203,7 @@ export function FloatingCollectibleCluster({
           accentColorVar={accentVar}
           items={items.map((item, index) => ({
             imageAlt: item,
-            imageUrl: resolveFallbackArtworkUrl(index + 1),
+            imageUrl: resolveCollectibleArtworkUrl(index + 1),
             label: item,
             meta:
               index === 0
@@ -229,7 +235,7 @@ export function CollectiblePreviewCard({
       badge={badge}
       className={className}
       imageAlt={imageAlt}
-      imageUrl={imageUrl ?? resolveFallbackArtworkUrl(resolvedFallbackIndex)}
+      imageUrl={imageUrl ?? resolveCollectibleArtworkUrl(resolvedFallbackIndex)}
       meta={meta}
       subtitle={subtitle}
       title={title}

@@ -489,6 +489,7 @@ function CollectionDraftBrowserCard({
         <CollectiblePreviewCard
           badge={attentionLabel}
           className="bg-transparent p-0 shadow-none"
+          fallbackIndex={2}
           imageAlt={draft.title}
           imageUrl={previewUrl}
           meta={draft.publication ? "Published route" : "Draft in workspace"}
@@ -560,6 +561,7 @@ function CollectionArtworkCard({
       <CollectiblePreviewCard
         badge={statusLabel}
         className="bg-transparent p-0 shadow-none"
+        fallbackIndex={3}
         imageAlt={title}
         imageUrl={previewUrl}
         meta={subtitle}
@@ -2293,6 +2295,7 @@ export function StudioCollectionsClient({
                             : "Draft shell"
                         }
                         className="bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))]"
+                        fallbackIndex={1}
                         imageAlt={selectedDraft.title}
                         imageUrl={selectedDraftPreviewUrl}
                         meta={`${selectedDraft.itemCount} curated items · ${formatCandidateTimestamp(

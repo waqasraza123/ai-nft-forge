@@ -14,7 +14,8 @@ import {
   CollectibleHeroArtwork,
   CollectiblePreviewCard,
   CollectibleGalleryRail,
-  FloatingCollectibleCluster
+  FloatingCollectibleCluster,
+  resolveCollectibleArtworkUrl
 } from "../../components/collectible-visuals";
 
 type MarketingProofPoint = {
@@ -227,6 +228,7 @@ export default function MarketingPage() {
           </div>
           <CollectibleHeroArtwork
             badge="Hero release"
+            fallbackIndex={0}
             imageAlt="AI NFT Forge showcase artwork"
             meta="Generation intake · Snapshot publish · Mint verification"
             title="Launch plane"
@@ -245,11 +247,12 @@ export default function MarketingPage() {
           </h2>
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {proofPoints.map((point) => (
+          {proofPoints.map((point, index) => (
             <CollectibleCard
               badge="Capability"
               className="bg-[color:var(--color-surface)]"
               imageAlt={point.title}
+              imageUrl={resolveCollectibleArtworkUrl(index + 2)}
               key={point.title}
               meta="Shared primitive surface"
               title={point.title}

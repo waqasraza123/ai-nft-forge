@@ -267,6 +267,7 @@ function CollectionHeroSection(input: {
             : formatStatusLabel(input.storefrontStatus)
         }
         className="border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel)]"
+        fallbackIndex={6}
         imageAlt={`${input.title} hero artwork`}
         imageUrl={input.heroImageUrl}
         meta={`${input.availabilityLabel} · ${formatTimestamp(input.launchAt)}`}
@@ -425,6 +426,7 @@ function CollectionReserveZone(input: {
               accentVar="--storefront-accent"
               badge="Reserve-ready"
               className="bg-transparent p-0 shadow-none"
+              fallbackIndex={7}
               imageAlt="Reserve module collectible frame"
               meta={`${formatCount(input.availableEditionCount)} open editions`}
               subtitle={input.priceLabel ?? "Transparent checkout state"}

@@ -221,6 +221,7 @@ function BrandHeroVisual(input: {
               : "Awaiting release"
           }
           className="border-[color:var(--storefront-border)] bg-[color:var(--storefront-panel-strong)]"
+          fallbackIndex={0}
           imageAlt={
             input.release
               ? `${input.release.title} campaign artwork`
@@ -304,6 +305,7 @@ function BrandHeroSection(input: {
 
 function BrandFeaturedReleaseCard(input: {
   featuredLabel?: string | null;
+  fallbackIndex: number;
   release: CollectionPublicBrandPreview | null;
 }) {
   if (!input.release) {
@@ -327,6 +329,7 @@ function BrandFeaturedReleaseCard(input: {
           accentVar="--storefront-accent"
           badge={input.featuredLabel ?? "Featured release"}
           className="bg-[color:var(--storefront-panel-strong)]/30"
+          fallbackIndex={input.fallbackIndex}
           imageAlt={`${release.title} featured release`}
           imageUrl={release.heroImageUrl}
           meta={release.availabilityLabel}
@@ -416,6 +419,7 @@ function BrandStorySection(input: {
 }
 
 function BrandReleaseCard(input: {
+  fallbackIndex: number;
   release: CollectionPublicBrandPreview;
   tone: BrandSectionTone;
 }) {
@@ -438,6 +442,7 @@ function BrandReleaseCard(input: {
                 : "Live release"
           }
           className="mb-3 bg-[color:var(--storefront-panel-strong)]/20"
+          fallbackIndex={input.fallbackIndex}
           imageAlt={`${input.release.title} release artwork`}
           imageUrl={input.release.heroImageUrl}
           meta={input.release.availabilityLabel}
@@ -511,8 +516,15 @@ function BrandReleaseSection(input: BrandSection) {
           </StorefrontPanel>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {input.collections.map((release) => (
+            {input.collections.map((release, index) => (
               <BrandReleaseCard
+                fallbackIndex={
+                  input.tone === "live"
+                    ? index + 2
+                    : input.tone === "upcoming"
+                      ? index + 4
+                      : index + 6
+                }
                 key={release.publicPath}
                 release={release}
                 tone={input.tone}
@@ -669,6 +681,7 @@ export default async function BrandPage({ params }: BrandPageProps) {
               </Link>
             </div>
             <BrandFeaturedReleaseCard
+              fallbackIndex={1}
               featuredLabel={brand.theme.featuredReleaseLabel}
               release={featuredRelease}
             />
