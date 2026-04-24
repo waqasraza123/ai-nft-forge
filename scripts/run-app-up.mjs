@@ -75,7 +75,7 @@ function parsePort(rawValue, fallbackPort, label) {
 }
 
 async function canBindPort(port, host) {
-  await new Promise((resolvePromise, rejectPromise) => {
+  return await new Promise((resolvePromise, rejectPromise) => {
     const probeServer = createServer();
     const cleanupListeners = () => {
       probeServer.removeAllListeners("error");
@@ -105,14 +105,92 @@ async function canBindPort(port, host) {
       });
     });
 
-    probeServer.listen(port, host);
+    probeServer.listen({
+      exclusive: true,
+      host,
+      port
+    });
   });
+}
+
+function canBindPortInSubprocess(port, host) {
+  const script = `
+const { createServer } = require("node:net");
+const server = createServer();
+
+server.once("error", (error) => {
+  if (error && error.code === "EADDRINUSE") {
+    process.exit(10);
+    return;
+  }
+
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(11);
+});
+
+server.once("listening", () => {
+  server.close((error) => {
+    if (error) {
+      console.error(error instanceof Error ? error.message : String(error));
+      process.exit(12);
+      return;
+    }
+
+    process.exit(0);
+  });
+});
+
+server.listen({
+  exclusive: true,
+  host: ${JSON.stringify(host)},
+  port: ${JSON.stringify(port)}
+});
+`;
+  const result = spawnSync(process.execPath, ["-e", script], {
+    cwd: repoRoot,
+    env: process.env,
+    shell: false,
+    stdio: "pipe"
+  });
+
+  if (result.status === 0) {
+    return true;
+  }
+
+  if (result.status === 10) {
+    return false;
+  }
+
+  const stderr = result.stderr?.toString().trim();
+  throw new Error(
+    stderr.length > 0
+      ? stderr
+      : `Port availability probe failed for ${host}:${port}.`
+  );
 }
 
 async function resolveAvailablePort({ host, label, preferredPort }) {
   for (let port = preferredPort; port <= 65535; port += 1) {
-    // eslint-disable-next-line no-await-in-loop
-    const isAvailable = await canBindPort(port, host);
+    let isAvailable = false;
+
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      isAvailable = await canBindPort(port, host);
+    } catch (error) {
+      if (port === preferredPort) {
+        isAvailable = canBindPortInSubprocess(port, host);
+
+        if (!isAvailable) {
+          continue;
+        }
+      } else {
+        throw error;
+      }
+    }
+
+    if (!isAvailable && port === preferredPort) {
+      isAvailable = canBindPortInSubprocess(port, host);
+    }
 
     if (isAvailable) {
       if (port !== preferredPort) {
@@ -219,11 +297,63 @@ function terminateChildProcess(child) {
     return;
   }
 
+  const descendantProcessIds = collectDescendantProcessIds(child.pid);
+
+  for (const pid of descendantProcessIds.reverse()) {
+    try {
+      process.kill(pid, "SIGTERM");
+    } catch {
+      // Ignore processes that have already exited.
+    }
+  }
+
   try {
     process.kill(-child.pid, "SIGTERM");
   } catch {
     child.kill("SIGTERM");
   }
+}
+
+function collectDescendantProcessIds(rootPid) {
+  const discoveredProcessIds = new Set();
+  const pendingParentIds = [rootPid];
+
+  while (pendingParentIds.length > 0) {
+    const parentPid = pendingParentIds.pop();
+
+    if (typeof parentPid !== "number" || !Number.isInteger(parentPid)) {
+      continue;
+    }
+
+    const result = spawnSync("pgrep", ["-P", String(parentPid)], {
+      cwd: repoRoot,
+      env: process.env,
+      shell: false,
+      stdio: "pipe"
+    });
+
+    if (result.status !== 0) {
+      continue;
+    }
+
+    const childProcessIds = result.stdout
+      .toString()
+      .split(/\s+/u)
+      .map((value) => Number.parseInt(value, 10))
+      .filter(
+        (value) =>
+          Number.isInteger(value) &&
+          value > 0 &&
+          !discoveredProcessIds.has(value)
+      );
+
+    for (const pid of childProcessIds) {
+      discoveredProcessIds.add(pid);
+      pendingParentIds.push(pid);
+    }
+  }
+
+  return Array.from(discoveredProcessIds);
 }
 
 function waitForExit(child) {

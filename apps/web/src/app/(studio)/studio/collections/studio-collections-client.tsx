@@ -61,6 +61,11 @@ import {
   getWalletChainByKey,
   getWalletChainLabel
 } from "../../../../lib/wallet/chains";
+import {
+  canUseWalletConnector,
+  getBrowserEthereumProvider,
+  type BrowserEthereumProvider
+} from "../../../../lib/wallet/provider";
 
 type StudioCollectionsClientProps = {
   initialDrafts: CollectionDraftSummary[];
@@ -107,11 +112,6 @@ type NoticeState = {
 } | null;
 
 type GeneratedAssetPreviewUrlMap = Record<string, string>;
-
-type BrowserEthereumProvider = {
-  request(input: { method: string; params?: unknown[] }): Promise<unknown>;
-  removeListener?(event: string, listener: (...args: unknown[]) => void): void;
-};
 
 type SupportedWalletConnectorId = "baseAccount" | "injected";
 
@@ -652,6 +652,8 @@ export function StudioCollectionsClient({
   const [selectedWalletConnectorId, setSelectedWalletConnectorId] = useState<
     SupportedWalletConnectorId | ""
   >("baseAccount");
+  const [isInjectedWalletAvailable, setIsInjectedWalletAvailable] =
+    useState(false);
   const [pendingDeploymentTxHash, setPendingDeploymentTxHash] = useState<
     string | null
   >(null);
@@ -699,11 +701,14 @@ export function StudioCollectionsClient({
     connectors.find((connector) => connector.id === "baseAccount") ?? null;
   const injectedWalletConnector =
     connectors.find((connector) => connector.id === "injected") ?? null;
+  const availableInjectedWalletConnector = isInjectedWalletAvailable
+    ? injectedWalletConnector
+    : null;
   const connectedWalletAddress = walletConnection.address ?? null;
   const connectedWalletChainId = walletConnection.chainId ?? null;
   const connectedWalletConnector = walletConnection.connector ?? null;
   const walletProviderAvailable =
-    Boolean(baseAccountConnector) || Boolean(injectedWalletConnector);
+    Boolean(baseAccountConnector) || Boolean(availableInjectedWalletConnector);
   const includedGeneratedAssetIds = new Set(
     selectedDraft?.items.map((item) => item.generatedAsset.generatedAssetId) ??
       []
@@ -783,13 +788,33 @@ export function StudioCollectionsClient({
   }, [publicationTargets, selectedDraft, selectedPublicationTargetId]);
 
   useEffect(() => {
+    let isCancelled = false;
+
+    void (async () => {
+      const available = await canUseWalletConnector(injectedWalletConnector);
+
+      if (!isCancelled) {
+        setIsInjectedWalletAvailable(available);
+      }
+    })().catch(() => {
+      if (!isCancelled) {
+        setIsInjectedWalletAvailable(false);
+      }
+    });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [injectedWalletConnector]);
+
+  useEffect(() => {
     const nextConnectorId =
       connectedWalletConnector?.id === "baseAccount" ||
       connectedWalletConnector?.id === "injected"
         ? connectedWalletConnector.id
         : baseAccountConnector
           ? "baseAccount"
-          : injectedWalletConnector
+          : availableInjectedWalletConnector
             ? "injected"
             : "";
 
@@ -797,7 +822,7 @@ export function StudioCollectionsClient({
       if (
         currentValue &&
         ((currentValue === "baseAccount" && baseAccountConnector) ||
-          (currentValue === "injected" && injectedWalletConnector))
+          (currentValue === "injected" && availableInjectedWalletConnector))
       ) {
         return currentValue;
       }
@@ -805,6 +830,7 @@ export function StudioCollectionsClient({
       return nextConnectorId;
     });
   }, [
+    availableInjectedWalletConnector,
     baseAccountConnector,
     connectedWalletConnector?.id,
     injectedWalletConnector
@@ -936,8 +962,11 @@ export function StudioCollectionsClient({
       return baseAccountConnector;
     }
 
-    if (selectedWalletConnectorId === "injected" && injectedWalletConnector) {
-      return injectedWalletConnector;
+    if (
+      selectedWalletConnectorId === "injected" &&
+      availableInjectedWalletConnector
+    ) {
+      return availableInjectedWalletConnector;
     }
 
     if (
@@ -947,7 +976,7 @@ export function StudioCollectionsClient({
       return connectedWalletConnector;
     }
 
-    return baseAccountConnector ?? injectedWalletConnector;
+    return baseAccountConnector ?? availableInjectedWalletConnector;
   }
 
   async function requestOwnerWalletConnection() {
@@ -959,13 +988,17 @@ export function StudioCollectionsClient({
         connectedWalletConnector.id === "injected")
     ) {
       const provider =
-        (await connectedWalletConnector.getProvider()) as BrowserEthereumProvider | null;
-
-      if (!provider) {
-        throw new WalletFlowError(
-          "The connected wallet provider is unavailable in this browser."
-        );
-      }
+        connectedWalletConnector.id === "injected"
+          ? await getBrowserEthereumProvider({
+              connector: connectedWalletConnector,
+              unavailableMessage:
+                "No injected browser wallet was found in this browser."
+            })
+          : await getBrowserEthereumProvider({
+              connector: connectedWalletConnector,
+              unavailableMessage:
+                "The connected wallet provider is unavailable in this browser."
+            });
 
       return {
         provider,
@@ -993,13 +1026,17 @@ export function StudioCollectionsClient({
     }
 
     const provider =
-      (await connector.getProvider()) as BrowserEthereumProvider | null;
-
-    if (!provider) {
-      throw new WalletFlowError(
-        "The connected wallet provider is unavailable in this browser."
-      );
-    }
+      connector.id === "injected"
+        ? await getBrowserEthereumProvider({
+            connector,
+            unavailableMessage:
+              "No injected browser wallet was found in this browser."
+          })
+        : await getBrowserEthereumProvider({
+            connector,
+            unavailableMessage:
+              "The connected wallet provider is unavailable in this browser."
+          });
 
     const normalizedConnectedWalletAddress = getAddress(walletAddress);
 
@@ -3281,9 +3318,9 @@ export function StudioCollectionsClient({
                       {baseAccountConnector ? (
                         <option value="baseAccount">Base Account</option>
                       ) : null}
-                      {injectedWalletConnector ? (
+                      {availableInjectedWalletConnector ? (
                         <option value="injected">
-                          {injectedWalletConnector.name}
+                          {availableInjectedWalletConnector.name}
                         </option>
                       ) : null}
                     </SelectField>

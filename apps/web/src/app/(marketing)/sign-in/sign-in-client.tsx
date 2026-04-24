@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getAddress, toHex } from "viem";
 import { useConnection, useConnect, useDisconnect } from "wagmi";
 
@@ -25,6 +25,10 @@ import {
   defaultWalletAuthChain,
   getWalletChainLabel
 } from "../../../lib/wallet/chains";
+import {
+  canUseWalletConnector,
+  getBrowserEthereumProvider
+} from "../../../lib/wallet/provider";
 
 type SignInClientProps = {
   initialSession: AuthSessionResponse["session"];
@@ -45,10 +49,6 @@ type BaseAccountWalletConnectResponse = {
       };
     };
   }>;
-};
-
-type BrowserEthereumProvider = {
-  request(input: { method: string; params?: unknown[] }): Promise<unknown>;
 };
 
 type SupportedConnectorId = "baseAccount" | "injected";
@@ -132,18 +132,39 @@ export function SignInClient({ initialSession }: SignInClientProps) {
   const walletConnection = useConnection();
   const { connectAsync, connectors } = useConnect();
   const { disconnectAsync } = useDisconnect();
+  const [isBrowserWalletAvailable, setIsBrowserWalletAvailable] =
+    useState(false);
   const nextPath = searchParams.get("next") || "/studio";
   const baseAccountConnector =
     connectors.find((connector) => connector.id === "baseAccount") ?? null;
   const browserWalletConnector =
     connectors.find((connector) => connector.id === "injected") ?? null;
   const availableConnectorCount =
-    Number(Boolean(baseAccountConnector)) +
-    Number(Boolean(browserWalletConnector));
+    Number(Boolean(baseAccountConnector)) + Number(isBrowserWalletAvailable);
   const connectedWalletAddress = walletConnection.address ?? null;
   const connectedWalletChainLabel = getWalletChainLabel(
     walletConnection.chainId ?? null
   );
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    void (async () => {
+      const available = await canUseWalletConnector(browserWalletConnector);
+
+      if (!isCancelled) {
+        setIsBrowserWalletAvailable(available);
+      }
+    })().catch(() => {
+      if (!isCancelled) {
+        setIsBrowserWalletAvailable(false);
+      }
+    });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [browserWalletConnector]);
 
   async function issueNonce(walletAddress: string) {
     const response = await fetch("/api/auth/nonce", {
@@ -196,6 +217,18 @@ export function SignInClient({ initialSession }: SignInClientProps) {
       );
     }
 
+    const provider =
+      connectorId === "injected"
+        ? await getBrowserEthereumProvider({
+            connector,
+            unavailableMessage:
+              "No injected browser wallet was found in this browser."
+          })
+        : await getBrowserEthereumProvider({
+            connector,
+            unavailableMessage: "The connected wallet provider is unavailable."
+          });
+
     const result = await connectAsync({
       connector,
       ...(connectorId === "baseAccount"
@@ -210,13 +243,6 @@ export function SignInClient({ initialSession }: SignInClientProps) {
       throw new Error(
         "The wallet did not return an address for this browser session."
       );
-    }
-
-    const provider =
-      (await connector.getProvider()) as BrowserEthereumProvider | null;
-
-    if (!provider) {
-      throw new Error("The connected wallet provider is unavailable.");
     }
 
     return {
@@ -436,7 +462,7 @@ export function SignInClient({ initialSession }: SignInClientProps) {
                   : "Sign in with Base Account"}
               </ActionButton>
               <ActionButton
-                disabled={!browserWalletConnector || activeAction !== null}
+                disabled={!isBrowserWalletAvailable || activeAction !== null}
                 onClick={() => {
                   void handleBrowserWalletSignIn();
                 }}
