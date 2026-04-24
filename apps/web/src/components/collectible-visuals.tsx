@@ -160,7 +160,7 @@ export function CollectibleHeroArtwork({
         <h3 className="font-[var(--font-display)] text-2xl font-semibold text-[color:var(--color-text)] md:text-3xl">
           {title}
         </h3>
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(220px,0.92fr)] xl:items-start">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.04fr)_minmax(210px,0.86fr)] lg:items-start">
           <div className="overflow-hidden rounded-[1.7rem] border border-white/80 bg-white/76 shadow-[0_18px_46px_rgba(190,197,227,0.18)]">
             <div className={cn("aspect-[3/4] w-full", mediaClassName)}>
               {imageUrl ? (

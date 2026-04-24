@@ -443,7 +443,7 @@ function CollectionReserveZone(input: {
           <StorefrontPill>Reserve-ready</StorefrontPill>
         </ActionRow>
       </div>
-      <div className="grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
+      <div className="grid gap-4 md:grid-cols-[minmax(0,1.18fr)_minmax(250px,0.82fr)] md:items-start">
         <PurchasePanel
           activeReservationCount={input.activeReservationCount}
           availableEditionCount={input.availableEditionCount}
@@ -468,7 +468,7 @@ function CollectionReserveZone(input: {
               fallbackIndex={7}
               imageAlt="Reserve module collectible frame"
               meta={`${formatCount(input.availableEditionCount)} open editions`}
-              mediaClassName="aspect-[3/4] max-h-[18rem] md:max-h-[20rem]"
+              mediaClassName="aspect-[4/5] md:aspect-[3/4] max-h-[16rem] md:max-h-[18rem]"
               subtitle={input.priceLabel ?? "Transparent checkout state"}
               title="Collector checkout module"
             />

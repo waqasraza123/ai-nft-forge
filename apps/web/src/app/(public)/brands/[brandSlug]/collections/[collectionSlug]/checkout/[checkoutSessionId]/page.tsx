@@ -263,7 +263,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
               </StorefrontPill>
               <StorefrontPill>Live storefront</StorefrontPill>
             </ActionRow>
-            <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.22fr)_minmax(240px,0.78fr)] lg:items-start">
               <div className="space-y-4">
                 <StorefrontSectionHeading
                   eyebrow="Hosted checkout session"
@@ -290,7 +290,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
                 fallbackIndex={5}
                 imageAlt={`${checkout.checkout.title} ${editionIdentity}`}
                 imageUrl={reservedItem?.imageUrl}
-                mediaClassName="aspect-[3/4] max-h-[18rem] md:max-h-[20rem]"
+                mediaClassName="aspect-[4/5] md:aspect-[3/4] max-h-[16rem] md:max-h-[18rem]"
                 meta={`${statusVisual.label} · ${statusProviderCopy.shortTitle}`}
                 subtitle={editionIdentity}
                 title={checkout.checkout.title}

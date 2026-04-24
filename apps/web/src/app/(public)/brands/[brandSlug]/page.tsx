@@ -287,7 +287,7 @@ function BrandFeaturedReleaseCard(input: {
 
   return (
     <StorefrontPanel tone="soft">
-      <div className="grid gap-5 md:grid-cols-[1fr_1.1fr] md:items-center">
+      <div className="grid gap-5 md:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] md:items-start">
         <CollectiblePreviewCard
           accentVar="--storefront-accent"
           badge={input.featuredLabel ?? "Featured release"}
@@ -295,7 +295,7 @@ function BrandFeaturedReleaseCard(input: {
           fallbackIndex={input.fallbackIndex}
           imageAlt={`${release.title} featured release`}
           imageUrl={release.heroImageUrl}
-          mediaClassName="aspect-[3/4] max-h-[20rem] md:max-h-[22rem]"
+          mediaClassName="aspect-[4/5] md:aspect-[3/4] max-h-[18rem] md:max-h-[20rem]"
           meta={release.availabilityLabel}
           subtitle={release.priceLabel ?? "Immutable snapshot"}
           title={release.title}

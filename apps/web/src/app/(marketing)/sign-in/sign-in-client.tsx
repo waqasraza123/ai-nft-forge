@@ -383,33 +383,85 @@ export function SignInClient({ initialSession }: SignInClientProps) {
         span={8}
         title="Wallet sign-in"
       >
-        <div className="grid gap-3 md:grid-cols-3">
-          <MetricTile
-            label="Studio session"
-            value={session ? "Authenticated" : "Not signed in"}
-          />
-          <MetricTile
-            label="Connected wallet"
-            value={
-              connectedWalletAddress ? shortHex(connectedWalletAddress) : "None"
-            }
-          />
-          <MetricTile
-            label="Connector"
-            value={walletConnection.connector?.name ?? "Not connected"}
-          />
-        </div>
-        <ActionRow className="mt-3">
-          <Pill>{availableConnectorCount} wallet path(s) ready</Pill>
-          <Pill>Next: {nextPath}</Pill>
-          {connectedWalletChainLabel ? (
-            <Pill>{connectedWalletChainLabel}</Pill>
-          ) : null}
-          {session?.user.walletAddress ? (
-            <Pill>Owner {shortHex(session.user.walletAddress)}</Pill>
-          ) : null}
-        </ActionRow>
-        <div className="mt-2">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(250px,0.92fr)] lg:items-start">
+          <div className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-3">
+              <MetricTile
+                label="Studio session"
+                value={session ? "Authenticated" : "Not signed in"}
+              />
+              <MetricTile
+                label="Connected wallet"
+                value={
+                  connectedWalletAddress
+                    ? shortHex(connectedWalletAddress)
+                    : "None"
+                }
+              />
+              <MetricTile
+                label="Connector"
+                value={walletConnection.connector?.name ?? "Not connected"}
+              />
+            </div>
+            <ActionRow>
+              <Pill>{availableConnectorCount} wallet path(s) ready</Pill>
+              <Pill>Next: {nextPath}</Pill>
+              {connectedWalletChainLabel ? (
+                <Pill>{connectedWalletChainLabel}</Pill>
+              ) : null}
+              {session?.user.walletAddress ? (
+                <Pill>Owner {shortHex(session.user.walletAddress)}</Pill>
+              ) : null}
+            </ActionRow>
+            {notice ? (
+              <div
+                className={`rounded-xl border p-2.5 text-sm ${formatNoticeToneClass(
+                  notice?.tone ?? null
+                )}`}
+              >
+                {notice.message}
+              </div>
+            ) : null}
+            <ActionRow className="pt-1">
+              <ActionButton
+                disabled={!baseAccountConnector || activeAction !== null}
+                onClick={() => {
+                  void handleBaseAccountSignIn();
+                }}
+                tone="accent"
+                type="button"
+              >
+                {activeAction === "base"
+                  ? "Signing in…"
+                  : "Sign in with Base Account"}
+              </ActionButton>
+              <ActionButton
+                disabled={!browserWalletConnector || activeAction !== null}
+                onClick={() => {
+                  void handleBrowserWalletSignIn();
+                }}
+                tone="primary"
+                type="button"
+              >
+                {activeAction === "browser"
+                  ? "Signing in…"
+                  : "Sign in with browser wallet"}
+              </ActionButton>
+              {session ? (
+                <ActionButton
+                  disabled={activeAction !== null}
+                  onClick={() => {
+                    void handleLogout();
+                  }}
+                  tone="secondary"
+                  type="button"
+                >
+                  {activeAction === "logout" ? "Signing out…" : "Sign out"}
+                </ActionButton>
+              ) : null}
+              <ActionLink href={nextPath}>Continue</ActionLink>
+            </ActionRow>
+          </div>
           <CollectibleHeroArtwork
             accentVar="--color-accent"
             badge={
@@ -417,65 +469,20 @@ export function SignInClient({ initialSession }: SignInClientProps) {
                 ? `Owner ${shortHex(session.user.walletAddress)}`
                 : "Sign-in first"
             }
+            className="bg-[linear-gradient(155deg,#fffaf4,#f4f9ff_56%,#fbf3ff)]"
             fallbackIndex={4}
             imageAlt="Wallet authentication artwork"
             imageUrl={null}
+            mediaClassName="mx-auto aspect-[4/5] max-h-[15rem] sm:max-h-[17rem] lg:aspect-[3/4] lg:max-h-[19rem]"
             meta={
               session?.user.walletAddress
                 ? "Session-backed auth boundary is active."
                 : "Server-issued nonce then signature, then signed cookie session."
             }
+            note="Authentication artwork stays supportive here so the wallet controls, session state, and next action remain the primary focus."
             title="Secure access"
           />
         </div>
-        {notice ? (
-          <div
-            className={`mt-3 rounded-xl border p-2.5 text-sm ${formatNoticeToneClass(
-              notice?.tone ?? null
-            )}`}
-          >
-            {notice.message}
-          </div>
-        ) : null}
-        <ActionRow className="mt-4">
-          <ActionButton
-            disabled={!baseAccountConnector || activeAction !== null}
-            onClick={() => {
-              void handleBaseAccountSignIn();
-            }}
-            tone="accent"
-            type="button"
-          >
-            {activeAction === "base"
-              ? "Signing in…"
-              : "Sign in with Base Account"}
-          </ActionButton>
-          <ActionButton
-            disabled={!browserWalletConnector || activeAction !== null}
-            onClick={() => {
-              void handleBrowserWalletSignIn();
-            }}
-            tone="primary"
-            type="button"
-          >
-            {activeAction === "browser"
-              ? "Signing in…"
-              : "Sign in with browser wallet"}
-          </ActionButton>
-          {session ? (
-            <ActionButton
-              disabled={activeAction !== null}
-              onClick={() => {
-                void handleLogout();
-              }}
-              tone="secondary"
-              type="button"
-            >
-              {activeAction === "logout" ? "Signing out…" : "Sign out"}
-            </ActionButton>
-          ) : null}
-          <ActionLink href={nextPath}>Continue</ActionLink>
-        </ActionRow>
       </SurfaceCard>
       <div className="md:col-span-4">
         <WalletStatusSurface
