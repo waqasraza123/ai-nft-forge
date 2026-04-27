@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 import {
   defaultWorkspaceLifecycleAutomationEnabled,
   defaultWorkspaceLifecycleDecommissionAutomationEnabled,
@@ -22,7 +20,6 @@ import {
   studioWorkspaceCreateResponseSchema,
   studioWorkspaceAccessReviewAttestationListResponseSchema,
   studioWorkspaceAccessReviewAttestationResponseSchema,
-  studioWorkspaceAccessReviewResponseSchema,
   studioWorkspaceStatusUpdateRequestSchema,
   studioWorkspaceStatusUpdateResponseSchema,
   studioWorkspaceRoleEscalationActionResponseSchema,
@@ -55,10 +52,7 @@ import {
   type StudioWorkspaceAccessReviewAttestationListResponse,
   type StudioWorkspaceAccessReviewAttestationResponse,
   type StudioWorkspaceAccessReviewResponse,
-  type StudioWorkspaceAccessReviewRow,
-  type StudioWorkspaceAccessReviewSummary,
   type StudioWorkspaceAccessReviewVerification,
-  type StudioWorkspaceSummary,
   type StudioWorkspaceRole,
   type StudioWorkspaceStatus
 } from "@ai-nft-forge/shared";
@@ -81,6 +75,7 @@ import {
   getWorkspaceInvitationReminderReadyAt,
   getWorkspaceInvitationStatus
 } from "../studio/invitation-lifecycle";
+import { createWorkspaceAccessReview } from "../workspace-access-review";
 
 type WorkspaceRecord = WorkspaceLifecyclePolicyWorkspaceRecord & {
   decommissionRetentionDaysDefault: number;
@@ -907,18 +902,6 @@ function serializeWorkspaceAuditEntry(input: AuditLogRecord) {
   });
 }
 
-type WorkspaceAccessReviewEvidencePayload = {
-  rows: StudioWorkspaceAccessReviewRow[];
-  summary: StudioWorkspaceAccessReviewSummary;
-  workspace: StudioWorkspaceSummary;
-};
-
-function createAccessReviewEvidenceHash(
-  input: WorkspaceAccessReviewEvidencePayload
-) {
-  return createHash("sha256").update(JSON.stringify(input)).digest("hex");
-}
-
 function getAuditMetadataString(input: {
   auditLog: AuditLogRecord;
   key: string;
@@ -1026,224 +1009,6 @@ function serializeAccessReviewAttestation(input: {
     );
 
   return parsedAttestation.success ? parsedAttestation.data : null;
-}
-
-function getLatestAccessReviewAttestation(input: {
-  auditLogs: AuditLogRecord[];
-  workspace: WorkspaceRecord;
-}) {
-  for (const auditLog of input.auditLogs) {
-    const serializedAttestation = serializeAccessReviewAttestation({
-      auditLog,
-      workspace: input.workspace
-    });
-
-    if (serializedAttestation) {
-      return serializedAttestation;
-    }
-  }
-
-  return null;
-}
-
-function createAccessReviewSummaryDelta(input: {
-  current: StudioWorkspaceAccessReviewSummary;
-  previous: StudioWorkspaceAccessReviewSummary;
-}) {
-  return {
-    auditEntryCount:
-      input.current.auditEntryCount - input.previous.auditEntryCount,
-    invitationCount:
-      input.current.invitationCount - input.previous.invitationCount,
-    memberCount: input.current.memberCount - input.previous.memberCount,
-    pendingRoleEscalationCount:
-      input.current.pendingRoleEscalationCount -
-      input.previous.pendingRoleEscalationCount,
-    roleEscalationCount:
-      input.current.roleEscalationCount - input.previous.roleEscalationCount
-  };
-}
-
-function createWorkspaceAccessReview(input: {
-  auditLogs: AuditLogRecord[];
-  attestationAuditLogs: AuditLogRecord[];
-  generatedAt: Date;
-  invitations: WorkspaceInvitationRecord[];
-  memberships: Array<{
-    createdAt: Date;
-    id: string;
-    role: StudioWorkspaceRole;
-    user: UserRecord;
-    userId: string;
-  }>;
-  owner: UserRecord;
-  roleEscalationRequests: WorkspaceRoleEscalationRequestRecord[];
-  workspace: WorkspaceRecord;
-}) {
-  const ownerMemberRow = {
-    action: null,
-    createdAt: null,
-    expiresAt: null,
-    invitationId: null,
-    membershipId: null,
-    previousRole: null,
-    recordType: "member" as const,
-    requestId: null,
-    reviewGeneratedAt: null,
-    reviewHash: null,
-    role: "owner" as const,
-    status: "active",
-    targetUserId: null,
-    targetWalletAddress: null,
-    userId: input.owner.id,
-    walletAddress: input.owner.walletAddress
-  };
-  const memberRows = input.memberships.map((membership) => ({
-    action: null,
-    createdAt: membership.createdAt.toISOString(),
-    expiresAt: null,
-    invitationId: null,
-    membershipId: membership.id,
-    previousRole: null,
-    recordType: "member" as const,
-    requestId: null,
-    reviewGeneratedAt: null,
-    reviewHash: null,
-    role: membership.role,
-    status: "active",
-    targetUserId: null,
-    targetWalletAddress: null,
-    userId: membership.userId,
-    walletAddress: membership.user.walletAddress
-  }));
-  const invitationRows = input.invitations.map((invitation) => {
-    const serializedInvitation = serializeWorkspaceInvitation(invitation);
-
-    return {
-      action: null,
-      createdAt: serializedInvitation.createdAt,
-      expiresAt: serializedInvitation.expiresAt,
-      invitationId: serializedInvitation.id,
-      membershipId: null,
-      previousRole: null,
-      recordType: "invitation" as const,
-      requestId: null,
-      reviewGeneratedAt: null,
-      reviewHash: null,
-      role: serializedInvitation.role,
-      status: serializedInvitation.status,
-      targetUserId: null,
-      targetWalletAddress: null,
-      userId: null,
-      walletAddress: serializedInvitation.walletAddress
-    };
-  });
-  const roleEscalationRows = input.roleEscalationRequests.map((request) => {
-    const serializedRequest = serializeWorkspaceRoleEscalationRequest(request);
-
-    return {
-      action: null,
-      createdAt: serializedRequest.createdAt,
-      expiresAt: null,
-      invitationId: null,
-      membershipId: null,
-      previousRole: null,
-      recordType: "role_escalation" as const,
-      requestId: serializedRequest.id,
-      reviewGeneratedAt: null,
-      reviewHash: null,
-      role: serializedRequest.requestedRole,
-      status: serializedRequest.status,
-      targetUserId: serializedRequest.targetUserId,
-      targetWalletAddress: serializedRequest.targetWalletAddress,
-      userId: serializedRequest.requestedByUserId,
-      walletAddress: serializedRequest.requestedByWalletAddress
-    };
-  });
-  const auditRows = input.auditLogs.flatMap((auditLog) => {
-    const serializedAuditEntry = serializeWorkspaceAuditEntry(auditLog);
-
-    if (
-      !serializedAuditEntry ||
-      serializedAuditEntry.action === "workspace_access_review_recorded"
-    ) {
-      return [];
-    }
-
-    return [
-      {
-        action: serializedAuditEntry.action,
-        createdAt: serializedAuditEntry.createdAt,
-        expiresAt: null,
-        invitationId: null,
-        membershipId: serializedAuditEntry.membershipId,
-        previousRole: serializedAuditEntry.previousRole,
-        recordType: "audit" as const,
-        requestId: getAuditMetadataString({
-          auditLog,
-          key: "requestId"
-        }),
-        reviewGeneratedAt: serializedAuditEntry.reviewGeneratedAt,
-        reviewHash: serializedAuditEntry.reviewHash,
-        role: serializedAuditEntry.role,
-        status: null,
-        targetUserId: serializedAuditEntry.targetUserId,
-        targetWalletAddress: serializedAuditEntry.targetWalletAddress,
-        userId: serializedAuditEntry.actorUserId,
-        walletAddress: serializedAuditEntry.actorWalletAddress
-      }
-    ];
-  });
-  const rows = [
-    ownerMemberRow,
-    ...memberRows,
-    ...invitationRows,
-    ...roleEscalationRows,
-    ...auditRows
-  ];
-  const summary = {
-    auditEntryCount: auditRows.length,
-    invitationCount: invitationRows.length,
-    memberCount: memberRows.length + 1,
-    pendingRoleEscalationCount: roleEscalationRows.filter(
-      (row) => row.status === "pending"
-    ).length,
-    roleEscalationCount: roleEscalationRows.length
-  };
-  const workspace = serializeWorkspace(input.workspace);
-  const evidenceHash = createAccessReviewEvidenceHash({
-    rows,
-    summary,
-    workspace
-  });
-  const latestAttestation = getLatestAccessReviewAttestation({
-    auditLogs: input.attestationAuditLogs,
-    workspace: input.workspace
-  });
-  const attestationStatus = latestAttestation
-    ? latestAttestation.reviewHash === evidenceHash
-      ? "current"
-      : "changed"
-    : "never_recorded";
-  const summaryDelta = latestAttestation
-    ? createAccessReviewSummaryDelta({
-        current: summary,
-        previous: latestAttestation.summary
-      })
-    : null;
-
-  return studioWorkspaceAccessReviewResponseSchema.parse({
-    report: {
-      attestationStatus,
-      evidenceHash,
-      generatedAt: input.generatedAt.toISOString(),
-      latestAttestation,
-      rows,
-      summary,
-      summaryDelta,
-      workspace
-    }
-  });
 }
 
 function escapeCsvValue(value: string | number | null) {
