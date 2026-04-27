@@ -66,6 +66,10 @@ function formatDateTime(value: string) {
 }
 
 function formatAuditRoleMetadata(entry: OpsWorkspaceAuditEntry) {
+  if (entry.reviewHash) {
+    return `Access review ${entry.reviewHash.slice(0, 12)}${entry.reviewGeneratedAt ? ` · generated ${formatDateTime(entry.reviewGeneratedAt)}` : ""}`;
+  }
+
   if (entry.previousRole && entry.role) {
     return `Role ${entry.previousRole} -> ${entry.role}`;
   }

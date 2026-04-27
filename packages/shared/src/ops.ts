@@ -256,6 +256,11 @@ export const opsWorkspaceAuditEntrySchema = z.object({
   membershipId: z.string().min(1).nullable(),
   previousRole: studioWorkspaceRoleSchema.nullable(),
   requestId: z.string().min(1).nullable(),
+  reviewGeneratedAt: z.string().datetime().nullable(),
+  reviewHash: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .nullable(),
   role: studioWorkspaceRoleSchema.nullable(),
   targetUserId: z.string().min(1).nullable(),
   targetWalletAddress: z.string().min(1).nullable()

@@ -59,3 +59,5 @@ Owners can export the selected workspace access review from `/studio/settings` o
 - recent workspace audit entries for member, invitation, role, ownership, lifecycle, and decommission actions
 
 The export is selected-workspace scoped and does not traverse the broader estate. Role-change rows preserve previous and new roles where audit metadata exists, so the CSV can be handed to an access review without inspecting raw database records.
+
+Owners can also record an access-review attestation with `POST /api/studio/settings/access-review`. The service generates the same report payload, computes a SHA-256 evidence hash over that payload, and writes `workspace_access_review_recorded` to the workspace audit log with the report timestamp, hash, and summary counts. The attestation stores evidence metadata in the audit stream rather than persisting another copy of the report, so ops audit CSV and the next access-review export can prove that a specific review snapshot was acknowledged.

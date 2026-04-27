@@ -694,6 +694,15 @@ function serializeAuditEntry(input: {
     "previousRole" in metadata && typeof metadata.previousRole === "string"
       ? metadata.previousRole
       : null;
+  const reviewGeneratedAt =
+    "reviewGeneratedAt" in metadata &&
+    typeof metadata.reviewGeneratedAt === "string"
+      ? metadata.reviewGeneratedAt
+      : null;
+  const reviewHash =
+    "reviewHash" in metadata && typeof metadata.reviewHash === "string"
+      ? metadata.reviewHash
+      : null;
   const role =
     "role" in metadata && typeof metadata.role === "string"
       ? metadata.role
@@ -715,6 +724,8 @@ function serializeAuditEntry(input: {
     id: input.id,
     membershipId,
     previousRole,
+    reviewGeneratedAt,
+    reviewHash,
     role,
     targetUserId,
     targetWalletAddress

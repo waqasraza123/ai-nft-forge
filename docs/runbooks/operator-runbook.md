@@ -12,6 +12,7 @@ This runbook covers the authenticated `/ops` surface and the operator responsibi
 - member and invitation role-change audit events show the previous role and the new role in studio history, `/ops/audit`, and CSV export
 - demoting or removing an operator automatically cancels that operator's pending ownership-transfer request, if one exists
 - owners can export the selected workspace access review from `/studio/settings` or `/api/studio/settings/access-review?format=csv`; the export combines members, invitations, role escalations, and recent access audit history
+- owners can record an access-review attestation from `/studio/settings`; it writes `workspace_access_review_recorded` with a SHA-256 evidence hash into the workspace audit stream
 
 ## What `/ops` now shows
 
@@ -31,7 +32,7 @@ This runbook covers the authenticated `/ops` surface and the operator responsibi
 - confirm reconciliation automation is `healthy`
 - review any open critical alerts
 - review any open critical reconciliation issues
-- export the workspace access review before scheduled governance reviews or before offboarding a workspace
+- export the workspace access review before scheduled governance reviews or before offboarding a workspace, then record the review so the evidence hash appears in studio and ops audit history
 
 ## Reconciliation actions
 

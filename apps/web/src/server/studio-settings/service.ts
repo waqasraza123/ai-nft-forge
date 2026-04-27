@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import {
   defaultWorkspaceLifecycleAutomationEnabled,
   defaultWorkspaceLifecycleDecommissionAutomationEnabled,
@@ -18,6 +20,7 @@ import {
   studioBrandThemeSchema,
   studioWorkspaceCreateRequestSchema,
   studioWorkspaceCreateResponseSchema,
+  studioWorkspaceAccessReviewAttestationResponseSchema,
   studioWorkspaceAccessReviewResponseSchema,
   studioWorkspaceStatusUpdateRequestSchema,
   studioWorkspaceStatusUpdateResponseSchema,
@@ -48,6 +51,7 @@ import {
   type WorkspaceLifecycleAutomationRunSummary,
   type WorkspaceLifecycleDeliveryPolicy,
   type WorkspaceLifecycleSlaPolicy,
+  type StudioWorkspaceAccessReviewAttestationResponse,
   type StudioWorkspaceAccessReviewResponse,
   type StudioWorkspaceRole,
   type StudioWorkspaceStatus
@@ -857,6 +861,15 @@ function serializeWorkspaceAuditEntry(input: AuditLogRecord) {
     "previousRole" in metadata && typeof metadata.previousRole === "string"
       ? metadata.previousRole
       : null;
+  const reviewGeneratedAt =
+    "reviewGeneratedAt" in metadata &&
+    typeof metadata.reviewGeneratedAt === "string"
+      ? metadata.reviewGeneratedAt
+      : null;
+  const reviewHash =
+    "reviewHash" in metadata && typeof metadata.reviewHash === "string"
+      ? metadata.reviewHash
+      : null;
   const role =
     "role" in metadata && typeof metadata.role === "string"
       ? metadata.role
@@ -878,10 +891,20 @@ function serializeWorkspaceAuditEntry(input: AuditLogRecord) {
     id: input.id,
     membershipId,
     previousRole,
+    reviewGeneratedAt,
+    reviewHash,
     role,
     targetUserId,
     targetWalletAddress
   });
+}
+
+function createAccessReviewEvidenceHash(
+  input: StudioWorkspaceAccessReviewResponse
+) {
+  return createHash("sha256")
+    .update(JSON.stringify(input.report))
+    .digest("hex");
 }
 
 function getAuditMetadataString(input: {
@@ -923,6 +946,8 @@ function createWorkspaceAccessReview(input: {
     previousRole: null,
     recordType: "member" as const,
     requestId: null,
+    reviewGeneratedAt: null,
+    reviewHash: null,
     role: "owner" as const,
     status: "active",
     targetUserId: null,
@@ -939,6 +964,8 @@ function createWorkspaceAccessReview(input: {
     previousRole: null,
     recordType: "member" as const,
     requestId: null,
+    reviewGeneratedAt: null,
+    reviewHash: null,
     role: membership.role,
     status: "active",
     targetUserId: null,
@@ -958,6 +985,8 @@ function createWorkspaceAccessReview(input: {
       previousRole: null,
       recordType: "invitation" as const,
       requestId: null,
+      reviewGeneratedAt: null,
+      reviewHash: null,
       role: serializedInvitation.role,
       status: serializedInvitation.status,
       targetUserId: null,
@@ -978,6 +1007,8 @@ function createWorkspaceAccessReview(input: {
       previousRole: null,
       recordType: "role_escalation" as const,
       requestId: serializedRequest.id,
+      reviewGeneratedAt: null,
+      reviewHash: null,
       role: serializedRequest.requestedRole,
       status: serializedRequest.status,
       targetUserId: serializedRequest.targetUserId,
@@ -1006,6 +1037,8 @@ function createWorkspaceAccessReview(input: {
           auditLog,
           key: "requestId"
         }),
+        reviewGeneratedAt: serializedAuditEntry.reviewGeneratedAt,
+        reviewHash: serializedAuditEntry.reviewHash,
         role: serializedAuditEntry.role,
         status: null,
         targetUserId: serializedAuditEntry.targetUserId,
@@ -1074,6 +1107,8 @@ export function buildWorkspaceAccessReviewCsv(
     "membership_id",
     "invitation_id",
     "request_id",
+    "review_hash",
+    "review_generated_at",
     "created_at",
     "expires_at"
   ];
@@ -1095,6 +1130,8 @@ export function buildWorkspaceAccessReviewCsv(
       row.membershipId,
       row.invitationId,
       row.requestId,
+      row.reviewHash,
+      row.reviewGeneratedAt,
       row.createdAt,
       row.expiresAt
     ]
@@ -1369,6 +1406,7 @@ function assertOperatorRole(role: StudioWorkspaceRole) {
 
 async function recordWorkspaceAuditLog(input: {
   action:
+    | "workspace_access_review_recorded"
     | "workspace_archived"
     | "workspace_created"
     | "workspace_decommission_notification_recorded"
@@ -1400,12 +1438,17 @@ async function recordWorkspaceAuditLog(input: {
   previousRole?: StudioWorkspaceRole | null;
   requestId?: string | null;
   repositories: Pick<StudioSettingsRepositorySet, "auditLogRepository">;
+  review?: {
+    generatedAt: string;
+    hash: string;
+    summary: StudioWorkspaceAccessReviewResponse["report"]["summary"];
+  };
   role?: StudioWorkspaceRole | null;
   targetUserId?: string | null;
   targetWalletAddress?: string | null;
   workspaceId: string;
 }) {
-  await input.repositories.auditLogRepository.create({
+  return input.repositories.auditLogRepository.create({
     action: input.action,
     actorId: input.actor.id,
     actorType: "user",
@@ -1431,6 +1474,18 @@ async function recordWorkspaceAuditLog(input: {
       ...(input.previousRole
         ? {
             previousRole: input.previousRole
+          }
+        : {}),
+      ...(input.review
+        ? {
+            reviewAuditEntryCount: input.review.summary.auditEntryCount,
+            reviewGeneratedAt: input.review.generatedAt,
+            reviewHash: input.review.hash,
+            reviewInvitationCount: input.review.summary.invitationCount,
+            reviewMemberCount: input.review.summary.memberCount,
+            reviewPendingRoleEscalationCount:
+              input.review.summary.pendingRoleEscalationCount,
+            reviewRoleEscalationCount: input.review.summary.roleEscalationCount
           }
         : {}),
       ...(input.policy
@@ -1617,6 +1672,48 @@ async function cancelPendingRoleEscalationForAccessLoss(input: {
   return request;
 }
 
+async function loadWorkspaceAccessReview(input: {
+  ownerUserId: string;
+  repositories: StudioSettingsRepositorySet;
+  workspaceId?: string | null;
+}) {
+  const { owner, workspace } = await requireOwnerWorkspace({
+    ownerUserId: input.ownerUserId,
+    repositories: input.repositories,
+    workspaceId: input.workspaceId
+  });
+  const [memberships, invitations, roleEscalationRequests, auditLogs] =
+    await Promise.all([
+      input.repositories.workspaceMembershipRepository.listByWorkspaceId(
+        workspace.id
+      ),
+      input.repositories.workspaceInvitationRepository.listByWorkspaceId({
+        workspaceId: workspace.id
+      }),
+      input.repositories.workspaceRoleEscalationRequestRepository.listByWorkspaceId(
+        {
+          limit: 100,
+          workspaceId: workspace.id
+        }
+      ),
+      input.repositories.auditLogRepository.listByEntity({
+        entityId: workspace.id,
+        entityType: "workspace",
+        limit: 100
+      })
+    ]);
+
+  return createWorkspaceAccessReview({
+    auditLogs,
+    generatedAt: new Date(),
+    invitations,
+    memberships,
+    owner,
+    roleEscalationRequests,
+    workspace
+  });
+}
+
 export function createStudioSettingsService(
   dependencies: StudioSettingsServiceDependencies
 ) {
@@ -1644,42 +1741,63 @@ export function createStudioSettingsService(
     }) {
       assertOwnerRole(input.role ?? "owner");
 
-      const { owner, workspace } = await requireOwnerWorkspace({
+      return loadWorkspaceAccessReview({
         ownerUserId: input.ownerUserId,
         repositories: dependencies.repositories,
         workspaceId: input.workspaceId
       });
-      const [memberships, invitations, roleEscalationRequests, auditLogs] =
-        await Promise.all([
-          dependencies.repositories.workspaceMembershipRepository.listByWorkspaceId(
-            workspace.id
-          ),
-          dependencies.repositories.workspaceInvitationRepository.listByWorkspaceId(
-            {
-              workspaceId: workspace.id
-            }
-          ),
-          dependencies.repositories.workspaceRoleEscalationRequestRepository.listByWorkspaceId(
-            {
-              limit: 100,
-              workspaceId: workspace.id
-            }
-          ),
-          dependencies.repositories.auditLogRepository.listByEntity({
-            entityId: workspace.id,
-            entityType: "workspace",
-            limit: 100
-          })
-        ]);
+    },
 
-      return createWorkspaceAccessReview({
-        auditLogs,
-        generatedAt: new Date(),
-        invitations,
-        memberships,
-        owner,
-        roleEscalationRequests,
-        workspace
+    async recordWorkspaceAccessReview(input: {
+      ownerUserId: string;
+      role?: StudioWorkspaceRole;
+      workspaceId?: string | null;
+    }) {
+      assertOwnerRole(input.role ?? "owner");
+
+      return dependencies.runTransaction(async (repositories) => {
+        const accessReview = await loadWorkspaceAccessReview({
+          ownerUserId: input.ownerUserId,
+          repositories,
+          workspaceId: input.workspaceId
+        });
+        const owner = await repositories.userRepository.findById(
+          input.ownerUserId
+        );
+
+        if (!owner) {
+          throw new StudioSettingsServiceError(
+            "WORKSPACE_REQUIRED",
+            "Workspace ownership could not be resolved.",
+            409
+          );
+        }
+
+        const reviewHash = createAccessReviewEvidenceHash(accessReview);
+        const auditLog = await recordWorkspaceAuditLog({
+          action: "workspace_access_review_recorded",
+          actor: owner,
+          repositories,
+          review: {
+            generatedAt: accessReview.report.generatedAt,
+            hash: reviewHash,
+            summary: accessReview.report.summary
+          },
+          workspaceId: accessReview.report.workspace.id
+        });
+
+        return studioWorkspaceAccessReviewAttestationResponseSchema.parse({
+          attestation: {
+            actorUserId: owner.id,
+            actorWalletAddress: owner.walletAddress,
+            auditEntryId: auditLog.id,
+            createdAt: auditLog.createdAt.toISOString(),
+            reviewGeneratedAt: accessReview.report.generatedAt,
+            reviewHash,
+            summary: accessReview.report.summary,
+            workspace: accessReview.report.workspace
+          }
+        } satisfies StudioWorkspaceAccessReviewAttestationResponse);
       });
     },
 

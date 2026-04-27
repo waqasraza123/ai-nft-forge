@@ -26,6 +26,7 @@ import {
   defaultStudioFeaturedReleaseLabel,
   studioBrandResponseSchema,
   studioSettingsResponseSchema,
+  studioWorkspaceAccessReviewAttestationResponseSchema,
   studioWorkspaceCreateResponseSchema,
   studioWorkspaceInvitationDeleteResponseSchema,
   studioWorkspaceInvitationReminderResponseSchema,
@@ -486,6 +487,17 @@ function formatAuditRoleSuffix(input: {
   return roleMetadata ? ` · ${roleMetadata}` : "";
 }
 
+function formatAuditReviewSuffix(input: {
+  reviewGeneratedAt: string | null;
+  reviewHash: string | null;
+}) {
+  if (!input.reviewHash) {
+    return "";
+  }
+
+  return ` · access review ${input.reviewHash.slice(0, 12)}${input.reviewGeneratedAt ? ` · generated ${formatTimestamp(input.reviewGeneratedAt)}` : ""}`;
+}
+
 function formatDecommissionNotificationKind(
   kind: WorkspaceDecommissionNotificationKind
 ) {
@@ -709,6 +721,7 @@ export function StudioSettingsClient({
   const [updatingMembershipId, setUpdatingMembershipId] = useState<
     string | null
   >(null);
+  const [isRecordingAccessReview, setIsRecordingAccessReview] = useState(false);
   const [retryingLifecycleDeliveryId, setRetryingLifecycleDeliveryId] =
     useState<string | null>(null);
 
@@ -1101,6 +1114,50 @@ export function StudioSettingsClient({
       });
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleRecordAccessReview() {
+    if (!canManageMembers) {
+      setNotice({
+        message: "Only workspace owners can record access reviews.",
+        tone: "error"
+      });
+      return;
+    }
+
+    setIsRecordingAccessReview(true);
+    setNotice({
+      message: "Recording workspace access review…",
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch("/api/studio/settings/access-review", {
+        method: "POST"
+      });
+      const result = await parseJsonResponse({
+        response,
+        schema: studioWorkspaceAccessReviewAttestationResponseSchema
+      });
+
+      await refreshSettings({
+        silent: true
+      });
+      setNotice({
+        message: `Access review recorded. Evidence hash ${result.attestation.reviewHash.slice(0, 12)}…`,
+        tone: "success"
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Workspace access review could not be recorded.",
+        tone: "error"
+      });
+    } finally {
+      setIsRecordingAccessReview(false);
     }
   }
 
@@ -5172,6 +5229,17 @@ export function StudioSettingsClient({
                         >
                           Review CSV
                         </ActionLink>
+                        <ActionButton
+                          disabled={isRecordingAccessReview}
+                          onClick={() => {
+                            void handleRecordAccessReview();
+                          }}
+                          type="button"
+                        >
+                          {isRecordingAccessReview
+                            ? "Recording…"
+                            : "Record review"}
+                        </ActionButton>
                       </>
                     ) : null}
                   </ActionRow>
@@ -5192,6 +5260,10 @@ export function StudioSettingsClient({
                               {formatAuditRoleSuffix({
                                 previousRole: entry.previousRole,
                                 role: entry.role
+                              })}
+                              {formatAuditReviewSuffix({
+                                reviewGeneratedAt: entry.reviewGeneratedAt,
+                                reviewHash: entry.reviewHash
                               })}
                             </span>
                           </SettingsRecordCopy>

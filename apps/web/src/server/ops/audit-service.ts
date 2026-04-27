@@ -45,6 +45,7 @@ function parseWorkspaceRole(value: unknown) {
 }
 
 const workspaceAccessAuditActions = [
+  "workspace_access_review_recorded",
   "workspace_created",
   "workspace_invitation_accepted",
   "workspace_invitation_canceled",
@@ -131,6 +132,15 @@ function serializeAuditLogEntry(input: AuditLogRecord) {
       "previousRole" in metadata
         ? parseWorkspaceRole(metadata.previousRole)
         : null,
+    reviewGeneratedAt:
+      "reviewGeneratedAt" in metadata &&
+      typeof metadata.reviewGeneratedAt === "string"
+        ? metadata.reviewGeneratedAt
+        : null,
+    reviewHash:
+      "reviewHash" in metadata && typeof metadata.reviewHash === "string"
+        ? metadata.reviewHash
+        : null,
     role: "role" in metadata ? parseWorkspaceRole(metadata.role) : null,
     targetUserId:
       "targetUserId" in metadata && typeof metadata.targetUserId === "string"
@@ -167,6 +177,8 @@ function buildAuditCsv(input: { entries: SerializedAuditEntry[] }) {
     "target_wallet_address",
     "previous_role",
     "role",
+    "review_hash",
+    "review_generated_at",
     "membership_id",
     "request_id"
   ].join(",");
@@ -182,6 +194,8 @@ function buildAuditCsv(input: { entries: SerializedAuditEntry[] }) {
       entry.targetWalletAddress,
       entry.previousRole,
       entry.role,
+      entry.reviewHash,
+      entry.reviewGeneratedAt,
       entry.membershipId,
       entry.requestId
     ]

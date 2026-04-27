@@ -46,3 +46,21 @@ export async function GET(request: Request) {
     return createStudioSettingsErrorResponse(error);
   }
 }
+
+export async function POST() {
+  try {
+    const session = await requireStudioOwnerApiSession();
+    const result =
+      await createRuntimeStudioSettingsService().recordWorkspaceAccessReview({
+        ownerUserId: session.ownerUserId,
+        role: session.role,
+        workspaceId: session.workspace?.id ?? null
+      });
+
+    return NextResponse.json(result, {
+      status: 201
+    });
+  } catch (error) {
+    return createStudioSettingsErrorResponse(error);
+  }
+}

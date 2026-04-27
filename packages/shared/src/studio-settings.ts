@@ -208,6 +208,7 @@ export const studioWorkspaceRoleEscalationSummarySchema = z.object({
 });
 
 export const studioWorkspaceAuditActionSchema = z.enum([
+  "workspace_access_review_recorded",
   "workspace_archived",
   "workspace_lifecycle_automation_policy_updated",
   "workspace_created",
@@ -243,6 +244,11 @@ export const studioWorkspaceAuditEntrySchema = z.object({
   id: z.string().min(1),
   membershipId: z.string().min(1).nullable(),
   previousRole: studioWorkspaceRoleSchema.nullable(),
+  reviewGeneratedAt: z.string().datetime().nullable(),
+  reviewHash: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .nullable(),
   role: studioWorkspaceRoleSchema.nullable(),
   targetUserId: z.string().min(1).nullable(),
   targetWalletAddress: walletAddressSchema.nullable()
@@ -268,6 +274,11 @@ export const studioWorkspaceAccessReviewRowSchema = z.object({
   previousRole: studioWorkspaceRoleSchema.nullable(),
   recordType: studioWorkspaceAccessReviewRecordTypeSchema,
   requestId: z.string().min(1).nullable(),
+  reviewGeneratedAt: z.string().datetime().nullable(),
+  reviewHash: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .nullable(),
   role: studioWorkspaceRoleSchema.nullable(),
   status: z.string().min(1).nullable(),
   targetUserId: z.string().min(1).nullable(),
@@ -276,17 +287,32 @@ export const studioWorkspaceAccessReviewRowSchema = z.object({
   walletAddress: walletAddressSchema.nullable()
 });
 
+export const studioWorkspaceAccessReviewSummarySchema = z.object({
+  auditEntryCount: z.number().int().min(0),
+  invitationCount: z.number().int().min(0),
+  memberCount: z.number().int().min(0),
+  pendingRoleEscalationCount: z.number().int().min(0),
+  roleEscalationCount: z.number().int().min(0)
+});
+
 export const studioWorkspaceAccessReviewResponseSchema = z.object({
   report: z.object({
     generatedAt: z.string().datetime(),
     rows: z.array(studioWorkspaceAccessReviewRowSchema),
-    summary: z.object({
-      auditEntryCount: z.number().int().min(0),
-      invitationCount: z.number().int().min(0),
-      memberCount: z.number().int().min(0),
-      pendingRoleEscalationCount: z.number().int().min(0),
-      roleEscalationCount: z.number().int().min(0)
-    }),
+    summary: studioWorkspaceAccessReviewSummarySchema,
+    workspace: studioWorkspaceSummarySchema
+  })
+});
+
+export const studioWorkspaceAccessReviewAttestationResponseSchema = z.object({
+  attestation: z.object({
+    actorUserId: z.string().min(1),
+    actorWalletAddress: walletAddressSchema,
+    auditEntryId: z.string().min(1),
+    createdAt: z.string().datetime(),
+    reviewGeneratedAt: z.string().datetime(),
+    reviewHash: z.string().regex(/^[a-f0-9]{64}$/),
+    summary: studioWorkspaceAccessReviewSummarySchema,
     workspace: studioWorkspaceSummarySchema
   })
 });
@@ -571,6 +597,12 @@ export type StudioWorkspaceAccessReviewResponse = z.infer<
 >;
 export type StudioWorkspaceAccessReviewRow = z.infer<
   typeof studioWorkspaceAccessReviewRowSchema
+>;
+export type StudioWorkspaceAccessReviewSummary = z.infer<
+  typeof studioWorkspaceAccessReviewSummarySchema
+>;
+export type StudioWorkspaceAccessReviewAttestationResponse = z.infer<
+  typeof studioWorkspaceAccessReviewAttestationResponseSchema
 >;
 export type StudioSettingsSummary = z.infer<typeof studioSettingsSummarySchema>;
 export type StudioSettingsUpdateRequest = z.infer<
