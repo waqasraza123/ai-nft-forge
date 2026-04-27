@@ -69,6 +69,22 @@ export type WorkspaceAccessReviewWorkspaceRecord = {
   status: "active" | "archived" | "suspended";
 };
 
+const workspaceAccessReviewAuditEvidenceActions = new Set([
+  "workspace_created",
+  "workspace_invitation_accepted",
+  "workspace_invitation_canceled",
+  "workspace_invitation_created",
+  "workspace_invitation_role_updated",
+  "workspace_member_added",
+  "workspace_member_removed",
+  "workspace_member_role_updated",
+  "workspace_owner_transferred",
+  "workspace_role_escalation_approved",
+  "workspace_role_escalation_canceled",
+  "workspace_role_escalation_rejected",
+  "workspace_role_escalation_requested"
+]);
+
 function serializeWorkspace(input: WorkspaceAccessReviewWorkspaceRecord) {
   return {
     id: input.id,
@@ -113,7 +129,10 @@ function serializeWorkspaceAccessReviewAuditEntry(
 ) {
   const parsedAction = studioWorkspaceAuditActionSchema.safeParse(input.action);
 
-  if (!parsedAction.success) {
+  if (
+    !parsedAction.success ||
+    !workspaceAccessReviewAuditEvidenceActions.has(parsedAction.data)
+  ) {
     return null;
   }
 
