@@ -21,10 +21,10 @@ The repository ships as a pnpm monorepo with a Next.js control plane, a BullMQ w
 
 ## Screenshots
 
-![alt text](.github/screenshots/image1.jpg)
-![alt text](.github/screenshots/image4.jpg)
-![alt text](.github/screenshots/image5.jpg)
-![alt text](.github/screenshots/image6.jpg)
+![alt text](.github/screenshots/image10.jpg)
+![alt text](.github/screenshots/image8.jpg)
+![alt text](.github/screenshots/image9.jpg)
+![alt text](.github/screenshots/image7.jpg)
 
 ## Status
 
