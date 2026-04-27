@@ -295,6 +295,14 @@ export const studioWorkspaceAccessReviewSummarySchema = z.object({
   roleEscalationCount: z.number().int().min(0)
 });
 
+export const studioWorkspaceAccessReviewSummaryDeltaSchema = z.object({
+  auditEntryCount: z.number().int(),
+  invitationCount: z.number().int(),
+  memberCount: z.number().int(),
+  pendingRoleEscalationCount: z.number().int(),
+  roleEscalationCount: z.number().int()
+});
+
 export const studioWorkspaceAccessReviewAttestationQuerySchema = z.object({
   format: z.enum(["json", "csv"]).default("json")
 });
@@ -321,7 +329,8 @@ export const studioWorkspaceAccessReviewVerificationSchema = z.object({
   currentEvidenceHash: z.string().regex(/^[a-f0-9]{64}$/),
   generatedAt: z.string().datetime(),
   latestAttestation:
-    studioWorkspaceAccessReviewAttestationSummarySchema.nullable()
+    studioWorkspaceAccessReviewAttestationSummarySchema.nullable(),
+  summaryDelta: studioWorkspaceAccessReviewSummaryDeltaSchema.nullable()
 });
 
 export const studioWorkspaceAccessReviewResponseSchema = z.object({
@@ -333,6 +342,7 @@ export const studioWorkspaceAccessReviewResponseSchema = z.object({
       studioWorkspaceAccessReviewAttestationSummarySchema.nullable(),
     rows: z.array(studioWorkspaceAccessReviewRowSchema),
     summary: studioWorkspaceAccessReviewSummarySchema,
+    summaryDelta: studioWorkspaceAccessReviewSummaryDeltaSchema.nullable(),
     workspace: studioWorkspaceSummarySchema
   })
 });
@@ -633,6 +643,9 @@ export type StudioWorkspaceAccessReviewRow = z.infer<
 >;
 export type StudioWorkspaceAccessReviewSummary = z.infer<
   typeof studioWorkspaceAccessReviewSummarySchema
+>;
+export type StudioWorkspaceAccessReviewSummaryDelta = z.infer<
+  typeof studioWorkspaceAccessReviewSummaryDeltaSchema
 >;
 export type StudioWorkspaceAccessReviewAttestationQuery = z.infer<
   typeof studioWorkspaceAccessReviewAttestationQuerySchema

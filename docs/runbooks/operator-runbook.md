@@ -11,7 +11,7 @@ This runbook covers the authenticated `/ops` surface and the operator responsibi
 - owners can change a non-expired pending invitation between operator and viewer; expired invitation rows are retained as immutable history and should be replaced with a fresh invitation
 - member and invitation role-change audit events show the previous role and the new role in studio history, `/ops/audit`, and CSV export
 - demoting or removing an operator automatically cancels that operator's pending ownership-transfer request, if one exists
-- owners can export the selected workspace access review from `/studio/settings` or `/api/studio/settings/access-review?format=csv`; the export combines members, invitations, role escalations, recent access audit history, and a current/changed freshness signal against the latest recorded attestation
+- owners can export the selected workspace access review from `/studio/settings` or `/api/studio/settings/access-review?format=csv`; the export combines members, invitations, role escalations, recent access audit history, a current/changed freshness signal, and summary deltas against the latest recorded attestation
 - owners can record an access-review attestation from `/studio/settings`; it writes `workspace_access_review_recorded` with a SHA-256 evidence hash into the workspace audit stream, and the hash is deterministic for the access evidence rather than the export timestamp
 - owners can retrieve prior attestations from `/api/studio/settings/access-review/attestations?format=csv` for governance packets that need only recorded review evidence rather than the full current access snapshot
 
@@ -33,7 +33,7 @@ This runbook covers the authenticated `/ops` surface and the operator responsibi
 - confirm reconciliation automation is `healthy`
 - review any open critical alerts
 - review any open critical reconciliation issues
-- export the workspace access review before scheduled governance reviews or before offboarding a workspace, then record the review so the evidence hash appears in studio and ops audit history; if the settings panel marks the review as changed, re-approve the current access state before recording a new review
+- export the workspace access review before scheduled governance reviews or before offboarding a workspace, then record the review so the evidence hash appears in studio and ops audit history; if the settings panel marks the review as changed, review the summary deltas, then re-approve the current access state before recording a new review
 
 ## Reconciliation actions
 

@@ -1046,6 +1046,24 @@ function getLatestAccessReviewAttestation(input: {
   return null;
 }
 
+function createAccessReviewSummaryDelta(input: {
+  current: StudioWorkspaceAccessReviewSummary;
+  previous: StudioWorkspaceAccessReviewSummary;
+}) {
+  return {
+    auditEntryCount:
+      input.current.auditEntryCount - input.previous.auditEntryCount,
+    invitationCount:
+      input.current.invitationCount - input.previous.invitationCount,
+    memberCount: input.current.memberCount - input.previous.memberCount,
+    pendingRoleEscalationCount:
+      input.current.pendingRoleEscalationCount -
+      input.previous.pendingRoleEscalationCount,
+    roleEscalationCount:
+      input.current.roleEscalationCount - input.previous.roleEscalationCount
+  };
+}
+
 function createWorkspaceAccessReview(input: {
   auditLogs: AuditLogRecord[];
   attestationAuditLogs: AuditLogRecord[];
@@ -1207,6 +1225,12 @@ function createWorkspaceAccessReview(input: {
       ? "current"
       : "changed"
     : "never_recorded";
+  const summaryDelta = latestAttestation
+    ? createAccessReviewSummaryDelta({
+        current: summary,
+        previous: latestAttestation.summary
+      })
+    : null;
 
   return studioWorkspaceAccessReviewResponseSchema.parse({
     report: {
@@ -1216,6 +1240,7 @@ function createWorkspaceAccessReview(input: {
       latestAttestation,
       rows,
       summary,
+      summaryDelta,
       workspace
     }
   });
@@ -1247,6 +1272,11 @@ export function buildWorkspaceAccessReviewCsv(
     "attestation_status",
     "latest_attestation_hash",
     "latest_attestation_created_at",
+    "member_count_delta",
+    "invitation_count_delta",
+    "role_escalation_count_delta",
+    "pending_role_escalation_count_delta",
+    "audit_entry_count_delta",
     "record_type",
     "wallet_address",
     "user_id",
@@ -1274,6 +1304,11 @@ export function buildWorkspaceAccessReviewCsv(
       input.report.attestationStatus,
       input.report.latestAttestation?.reviewHash ?? null,
       input.report.latestAttestation?.createdAt ?? null,
+      input.report.summaryDelta?.memberCount ?? null,
+      input.report.summaryDelta?.invitationCount ?? null,
+      input.report.summaryDelta?.roleEscalationCount ?? null,
+      input.report.summaryDelta?.pendingRoleEscalationCount ?? null,
+      input.report.summaryDelta?.auditEntryCount ?? null,
       row.recordType,
       row.walletAddress,
       row.userId,
@@ -1459,7 +1494,8 @@ async function serializeStudioSettings(input: {
             attestationStatus: accessReview.report.attestationStatus,
             currentEvidenceHash: accessReview.report.evidenceHash,
             generatedAt: accessReview.report.generatedAt,
-            latestAttestation: accessReview.report.latestAttestation
+            latestAttestation: accessReview.report.latestAttestation,
+            summaryDelta: accessReview.report.summaryDelta
           } satisfies StudioWorkspaceAccessReviewVerification)
         : null,
       auditEntries,

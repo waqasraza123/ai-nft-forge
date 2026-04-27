@@ -531,6 +531,39 @@ function getAccessReviewAttestationTone(
   return "info";
 }
 
+function formatAccessReviewDeltaValue(value: number) {
+  if (value > 0) {
+    return `+${value}`;
+  }
+
+  return value.toString();
+}
+
+function formatAccessReviewSummaryDelta(
+  delta: NonNullable<StudioSettingsSummary["accessReview"]>["summaryDelta"]
+) {
+  if (!delta) {
+    return "No prior summary is available.";
+  }
+
+  const entries = [
+    ["members", delta.memberCount],
+    ["invitations", delta.invitationCount],
+    ["role escalations", delta.roleEscalationCount],
+    ["pending escalations", delta.pendingRoleEscalationCount],
+    ["audit entries", delta.auditEntryCount]
+  ] as const;
+  const changedEntries = entries.filter(([, value]) => value !== 0);
+
+  if (changedEntries.length === 0) {
+    return "Summary counts match the latest attestation.";
+  }
+
+  return changedEntries
+    .map(([label, value]) => `${label} ${formatAccessReviewDeltaValue(value)}`)
+    .join(", ");
+}
+
 function formatDecommissionNotificationKind(
   kind: WorkspaceDecommissionNotificationKind
 ) {
@@ -5323,7 +5356,7 @@ export function StudioSettingsClient({
                       {accessReviewState.latestAttestation
                         ? accessReviewState.attestationStatus === "current"
                           ? `The latest attestation from ${formatTimestamp(accessReviewState.latestAttestation.createdAt)} still matches the current access evidence hash ${accessReviewState.currentEvidenceHash.slice(0, 12)}.`
-                          : `The current access evidence hash ${accessReviewState.currentEvidenceHash.slice(0, 12)} differs from the latest attestation ${accessReviewState.latestAttestation.reviewHash.slice(0, 12)} recorded ${formatTimestamp(accessReviewState.latestAttestation.createdAt)}. Record a new review after the access changes are approved.`
+                          : `The current access evidence hash ${accessReviewState.currentEvidenceHash.slice(0, 12)} differs from the latest attestation ${accessReviewState.latestAttestation.reviewHash.slice(0, 12)} recorded ${formatTimestamp(accessReviewState.latestAttestation.createdAt)}. Summary delta: ${formatAccessReviewSummaryDelta(accessReviewState.summaryDelta)}. Record a new review after the access changes are approved.`
                         : `No access review has been recorded for this workspace. Current evidence hash ${accessReviewState.currentEvidenceHash.slice(0, 12)} is ready to attest.`}
                     </SettingsStatusMessage>
                   ) : null}
