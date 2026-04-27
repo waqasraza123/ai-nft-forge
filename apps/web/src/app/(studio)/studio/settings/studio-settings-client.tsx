@@ -498,6 +498,39 @@ function formatAuditReviewSuffix(input: {
   return ` · access review ${input.reviewHash.slice(0, 12)}${input.reviewGeneratedAt ? ` · generated ${formatTimestamp(input.reviewGeneratedAt)}` : ""}`;
 }
 
+function formatAccessReviewAttestationStatus(
+  status: NonNullable<
+    StudioSettingsSummary["accessReview"]
+  >["attestationStatus"]
+) {
+  const labels: Record<
+    NonNullable<StudioSettingsSummary["accessReview"]>["attestationStatus"],
+    string
+  > = {
+    changed: "Access changed",
+    current: "Review current",
+    never_recorded: "No review recorded"
+  };
+
+  return labels[status];
+}
+
+function getAccessReviewAttestationTone(
+  status: NonNullable<
+    StudioSettingsSummary["accessReview"]
+  >["attestationStatus"]
+): StatusBannerTone {
+  if (status === "current") {
+    return "success";
+  }
+
+  if (status === "changed") {
+    return "warning";
+  }
+
+  return "info";
+}
+
 function formatDecommissionNotificationKind(
   kind: WorkspaceDecommissionNotificationKind
 ) {
@@ -800,6 +833,10 @@ export function StudioSettingsClient({
     settings?.roleEscalationRequests.filter(
       (request) => request.status === "pending"
     ).length ?? 0;
+  const accessReviewState = settings?.accessReview ?? null;
+  const accessReviewAttestationTone = accessReviewState
+    ? getAccessReviewAttestationTone(accessReviewState.attestationStatus)
+    : "info";
   const accessibleReadyWorkspaceCount = workspaceOffboardingEntriesState.filter(
     (entry) => entry.summary.readiness === "ready"
   ).length;
@@ -925,7 +962,15 @@ export function StudioSettingsClient({
     {
       href: "#audit",
       label: "Audit",
-      meta: `${settings?.auditEntries.length ?? 0} recent events`
+      meta: accessReviewState
+        ? `${formatAccessReviewAttestationStatus(accessReviewState.attestationStatus)} · ${settings?.auditEntries.length ?? 0} recent events`
+        : `${settings?.auditEntries.length ?? 0} recent events`,
+      tone:
+        accessReviewState?.attestationStatus === "changed"
+          ? "warning"
+          : accessReviewState?.attestationStatus === "current"
+            ? "success"
+            : "default"
     }
   ];
 
@@ -5212,6 +5257,19 @@ export function StudioSettingsClient({
                       {settings?.auditEntries.length ?? 0} recent events
                     </Pill>
                     <Pill>workspace audit</Pill>
+                    {accessReviewState ? (
+                      <>
+                        <Pill>
+                          {formatAccessReviewAttestationStatus(
+                            accessReviewState.attestationStatus
+                          )}
+                        </Pill>
+                        <Pill>
+                          evidence{" "}
+                          {accessReviewState.currentEvidenceHash.slice(0, 12)}
+                        </Pill>
+                      </>
+                    ) : null}
                     <ActionLink href="/ops/audit" tone="inline">
                       Open full audit
                     </ActionLink>
@@ -5255,6 +5313,20 @@ export function StudioSettingsClient({
                       </>
                     ) : null}
                   </ActionRow>
+                  {accessReviewState && canManageMembers ? (
+                    <SettingsStatusMessage
+                      title={formatAccessReviewAttestationStatus(
+                        accessReviewState.attestationStatus
+                      )}
+                      tone={accessReviewAttestationTone}
+                    >
+                      {accessReviewState.latestAttestation
+                        ? accessReviewState.attestationStatus === "current"
+                          ? `The latest attestation from ${formatTimestamp(accessReviewState.latestAttestation.createdAt)} still matches the current access evidence hash ${accessReviewState.currentEvidenceHash.slice(0, 12)}.`
+                          : `The current access evidence hash ${accessReviewState.currentEvidenceHash.slice(0, 12)} differs from the latest attestation ${accessReviewState.latestAttestation.reviewHash.slice(0, 12)} recorded ${formatTimestamp(accessReviewState.latestAttestation.createdAt)}. Record a new review after the access changes are approved.`
+                        : `No access review has been recorded for this workspace. Current evidence hash ${accessReviewState.currentEvidenceHash.slice(0, 12)} is ready to attest.`}
+                    </SettingsStatusMessage>
+                  ) : null}
                   {settings?.auditEntries.length ? (
                     <SettingsRecordList>
                       {settings.auditEntries.map((entry) => (

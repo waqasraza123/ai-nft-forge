@@ -310,10 +310,27 @@ export const studioWorkspaceAccessReviewAttestationSummarySchema = z.object({
   workspace: studioWorkspaceSummarySchema
 });
 
+export const studioWorkspaceAccessReviewAttestationStatusSchema = z.enum([
+  "never_recorded",
+  "current",
+  "changed"
+]);
+
+export const studioWorkspaceAccessReviewVerificationSchema = z.object({
+  attestationStatus: studioWorkspaceAccessReviewAttestationStatusSchema,
+  currentEvidenceHash: z.string().regex(/^[a-f0-9]{64}$/),
+  generatedAt: z.string().datetime(),
+  latestAttestation:
+    studioWorkspaceAccessReviewAttestationSummarySchema.nullable()
+});
+
 export const studioWorkspaceAccessReviewResponseSchema = z.object({
   report: z.object({
+    attestationStatus: studioWorkspaceAccessReviewAttestationStatusSchema,
     evidenceHash: z.string().regex(/^[a-f0-9]{64}$/),
     generatedAt: z.string().datetime(),
+    latestAttestation:
+      studioWorkspaceAccessReviewAttestationSummarySchema.nullable(),
     rows: z.array(studioWorkspaceAccessReviewRowSchema),
     summary: studioWorkspaceAccessReviewSummarySchema,
     workspace: studioWorkspaceSummarySchema
@@ -334,6 +351,7 @@ export const studioWorkspaceAccessReviewAttestationListResponseSchema =
 
 export const studioSettingsSummarySchema = z.object({
   access: studioWorkspaceAccessSchema,
+  accessReview: studioWorkspaceAccessReviewVerificationSchema.nullable(),
   auditEntries: z.array(studioWorkspaceAuditEntrySchema),
   brand: studioBrandSummarySchema,
   brands: z.array(studioBrandSummarySchema),
@@ -621,6 +639,12 @@ export type StudioWorkspaceAccessReviewAttestationQuery = z.infer<
 >;
 export type StudioWorkspaceAccessReviewAttestationSummary = z.infer<
   typeof studioWorkspaceAccessReviewAttestationSummarySchema
+>;
+export type StudioWorkspaceAccessReviewAttestationStatus = z.infer<
+  typeof studioWorkspaceAccessReviewAttestationStatusSchema
+>;
+export type StudioWorkspaceAccessReviewVerification = z.infer<
+  typeof studioWorkspaceAccessReviewVerificationSchema
 >;
 export type StudioWorkspaceAccessReviewAttestationResponse = z.infer<
   typeof studioWorkspaceAccessReviewAttestationResponseSchema

@@ -57,6 +57,7 @@ import {
   type StudioWorkspaceAccessReviewResponse,
   type StudioWorkspaceAccessReviewRow,
   type StudioWorkspaceAccessReviewSummary,
+  type StudioWorkspaceAccessReviewVerification,
   type StudioWorkspaceSummary,
   type StudioWorkspaceRole,
   type StudioWorkspaceStatus
@@ -1027,8 +1028,27 @@ function serializeAccessReviewAttestation(input: {
   return parsedAttestation.success ? parsedAttestation.data : null;
 }
 
+function getLatestAccessReviewAttestation(input: {
+  auditLogs: AuditLogRecord[];
+  workspace: WorkspaceRecord;
+}) {
+  for (const auditLog of input.auditLogs) {
+    const serializedAttestation = serializeAccessReviewAttestation({
+      auditLog,
+      workspace: input.workspace
+    });
+
+    if (serializedAttestation) {
+      return serializedAttestation;
+    }
+  }
+
+  return null;
+}
+
 function createWorkspaceAccessReview(input: {
   auditLogs: AuditLogRecord[];
+  attestationAuditLogs: AuditLogRecord[];
   generatedAt: Date;
   invitations: WorkspaceInvitationRecord[];
   memberships: Array<{
@@ -1178,11 +1198,22 @@ function createWorkspaceAccessReview(input: {
     summary,
     workspace
   });
+  const latestAttestation = getLatestAccessReviewAttestation({
+    auditLogs: input.attestationAuditLogs,
+    workspace: input.workspace
+  });
+  const attestationStatus = latestAttestation
+    ? latestAttestation.reviewHash === evidenceHash
+      ? "current"
+      : "changed"
+    : "never_recorded";
 
   return studioWorkspaceAccessReviewResponseSchema.parse({
     report: {
+      attestationStatus,
       evidenceHash,
       generatedAt: input.generatedAt.toISOString(),
+      latestAttestation,
       rows,
       summary,
       workspace
@@ -1213,6 +1244,9 @@ export function buildWorkspaceAccessReviewCsv(
     "workspace_name",
     "generated_at",
     "evidence_hash",
+    "attestation_status",
+    "latest_attestation_hash",
+    "latest_attestation_created_at",
     "record_type",
     "wallet_address",
     "user_id",
@@ -1237,6 +1271,9 @@ export function buildWorkspaceAccessReviewCsv(
       input.report.workspace.name,
       input.report.generatedAt,
       input.report.evidenceHash,
+      input.report.attestationStatus,
+      input.report.latestAttestation?.reviewHash ?? null,
+      input.report.latestAttestation?.createdAt ?? null,
       row.recordType,
       row.walletAddress,
       row.userId,
@@ -1328,7 +1365,9 @@ async function serializeStudioSettings(input: {
     invitations,
     lifecycleDeliveries,
     roleEscalationRequests,
-    auditLogs
+    auditLogs,
+    accessReviewAuditLogs,
+    accessReviewAttestationAuditLogs
   ] = await Promise.all([
     input.repositories.workspaceMembershipRepository.listByWorkspaceId(
       input.workspace.id
@@ -1351,7 +1390,22 @@ async function serializeStudioSettings(input: {
       entityId: input.workspace.id,
       entityType: "workspace",
       limit: 25
-    })
+    }),
+    input.role === "owner"
+      ? input.repositories.auditLogRepository.listByEntity({
+          entityId: input.workspace.id,
+          entityType: "workspace",
+          limit: 100
+        })
+      : Promise.resolve([]),
+    input.role === "owner"
+      ? input.repositories.auditLogRepository.listByEntity({
+          actions: ["workspace_access_review_recorded"],
+          entityId: input.workspace.id,
+          entityType: "workspace",
+          limit: 1
+        })
+      : Promise.resolve([])
   ]);
   const auditEntries = auditLogs.flatMap((auditLog) => {
     const serializedAuditEntry = serializeWorkspaceAuditEntry(auditLog);
@@ -1383,10 +1437,31 @@ async function serializeStudioSettings(input: {
     providers: input.lifecycleDeliveryService?.getTransportProviders() ?? []
   });
   const lifecycleSlaPolicy = currentLifecycleSlaPolicy(input.workspace);
+  const accessReview =
+    input.role === "owner"
+      ? createWorkspaceAccessReview({
+          auditLogs: accessReviewAuditLogs,
+          attestationAuditLogs: accessReviewAttestationAuditLogs,
+          generatedAt: new Date(),
+          invitations,
+          memberships,
+          owner: input.owner,
+          roleEscalationRequests,
+          workspace: input.workspace
+        })
+      : null;
 
   return studioSettingsResponseSchema.parse({
     settings: {
       access: createWorkspaceAccess(input.role),
+      accessReview: accessReview
+        ? ({
+            attestationStatus: accessReview.report.attestationStatus,
+            currentEvidenceHash: accessReview.report.evidenceHash,
+            generatedAt: accessReview.report.generatedAt,
+            latestAttestation: accessReview.report.latestAttestation
+          } satisfies StudioWorkspaceAccessReviewVerification)
+        : null,
       auditEntries,
       brand: serializeBrand(input.brands[0]!),
       brands: input.brands.map((brand) => serializeBrand(brand)),
@@ -1844,29 +1919,41 @@ async function loadWorkspaceAccessReview(input: {
     repositories: input.repositories,
     workspaceId: input.workspaceId
   });
-  const [memberships, invitations, roleEscalationRequests, auditLogs] =
-    await Promise.all([
-      input.repositories.workspaceMembershipRepository.listByWorkspaceId(
-        workspace.id
-      ),
-      input.repositories.workspaceInvitationRepository.listByWorkspaceId({
+  const [
+    memberships,
+    invitations,
+    roleEscalationRequests,
+    auditLogs,
+    attestationAuditLogs
+  ] = await Promise.all([
+    input.repositories.workspaceMembershipRepository.listByWorkspaceId(
+      workspace.id
+    ),
+    input.repositories.workspaceInvitationRepository.listByWorkspaceId({
+      workspaceId: workspace.id
+    }),
+    input.repositories.workspaceRoleEscalationRequestRepository.listByWorkspaceId(
+      {
+        limit: 100,
         workspaceId: workspace.id
-      }),
-      input.repositories.workspaceRoleEscalationRequestRepository.listByWorkspaceId(
-        {
-          limit: 100,
-          workspaceId: workspace.id
-        }
-      ),
-      input.repositories.auditLogRepository.listByEntity({
-        entityId: workspace.id,
-        entityType: "workspace",
-        limit: 100
-      })
-    ]);
+      }
+    ),
+    input.repositories.auditLogRepository.listByEntity({
+      entityId: workspace.id,
+      entityType: "workspace",
+      limit: 100
+    }),
+    input.repositories.auditLogRepository.listByEntity({
+      actions: ["workspace_access_review_recorded"],
+      entityId: workspace.id,
+      entityType: "workspace",
+      limit: 1
+    })
+  ]);
 
   return createWorkspaceAccessReview({
     auditLogs,
+    attestationAuditLogs,
     generatedAt: new Date(),
     invitations,
     memberships,
