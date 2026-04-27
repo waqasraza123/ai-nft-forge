@@ -9,6 +9,7 @@ import {
 import {
   studioBrandSummarySchema,
   studioWorkspaceAuditEntrySchema,
+  studioWorkspaceAccessReviewVerificationSchema,
   studioWorkspaceDirectoryEntrySchema,
   studioWorkspaceInvitationSummarySchema,
   studioWorkspaceLifecycleDeliveryPolicySchema,
@@ -307,6 +308,7 @@ export const workspaceExportReconciliationIssueSchema = z.object({
 export const workspaceExportResponseSchema = z.object({
   export: z.object({
     alerts: z.array(workspaceExportAlertSchema),
+    accessReview: studioWorkspaceAccessReviewVerificationSchema,
     auditEntries: z.array(studioWorkspaceAuditEntrySchema),
     brands: z.array(studioBrandSummarySchema),
     checkouts: z.array(workspaceExportCheckoutSchema),

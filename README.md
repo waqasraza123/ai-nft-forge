@@ -50,6 +50,7 @@ The repository ships as a pnpm monorepo with a Next.js control plane, a BullMQ w
 - Authenticated `/studio/commerce` administration for reservations, checkout recovery, payment confirmation, and fulfillment tracking
 - Multi-workspace provisioning, workspace switching, multi-brand publication targeting, and owner/operator/viewer administration flows
 - Owner-only workspace access review export plus deterministic evidence hashes, current/changed attestation freshness with summary deltas, and audit-backed review attestation history for governance handoff as JSON or CSV
+- Owner-only workspace export and offboarding packets that carry access-review freshness evidence alongside archive-readiness, lifecycle, commerce, and ops state
 - Authenticated ops diagnostics, persisted observability captures, alert delivery policy, and operator retry controls
 - Worker-owned reconciliation with persisted runs and issues, manual run/repair/ignore actions, `/ops` visibility, and onchain drift checks for recorded deployments and mints
 - Tailwind-first premium product chrome with shared public/storefront and private operator primitives

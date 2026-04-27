@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import {
   createAuditLogRepository,
   createBrandRepository,
@@ -32,6 +34,7 @@ import {
   resolveWorkspaceLifecycleWebhookProviders,
   studioBrandThemeSchema,
   studioWorkspaceAuditEntrySchema,
+  studioWorkspaceAccessReviewVerificationSchema,
   workspaceDecommissionSummarySchema,
   workspaceExportResponseSchema,
   workspaceLifecycleAutomationPolicySchema,
@@ -39,6 +42,8 @@ import {
   workspaceOffboardingSummarySchema,
   workspaceRetentionPolicySchema,
   type StudioWorkspaceScopeSummary,
+  type StudioWorkspaceAccessReviewRow,
+  type StudioWorkspaceAccessReviewSummary,
   type StudioWorkspaceRole,
   type WorkspaceDecommissionSummary,
   type WorkspaceExportFormat,
@@ -734,6 +739,408 @@ function serializeAuditEntry(input: {
   return parsed.success ? parsed.data : null;
 }
 
+function getAuditMetadataString(input: {
+  auditLog: {
+    metadataJson: unknown;
+  };
+  key: string;
+}) {
+  const metadata =
+    typeof input.auditLog.metadataJson === "object" &&
+    input.auditLog.metadataJson !== null
+      ? input.auditLog.metadataJson
+      : {};
+  const value =
+    input.key in metadata
+      ? (metadata as Record<string, unknown>)[input.key]
+      : null;
+
+  return typeof value === "string" ? value : null;
+}
+
+function getAuditMetadataNumber(input: {
+  auditLog: {
+    metadataJson: unknown;
+  };
+  key: string;
+}) {
+  const metadata =
+    typeof input.auditLog.metadataJson === "object" &&
+    input.auditLog.metadataJson !== null
+      ? input.auditLog.metadataJson
+      : {};
+  const value =
+    input.key in metadata
+      ? (metadata as Record<string, unknown>)[input.key]
+      : null;
+
+  return typeof value === "number" && Number.isInteger(value) && value >= 0
+    ? value
+    : null;
+}
+
+function createAccessReviewEvidenceHash(input: {
+  rows: StudioWorkspaceAccessReviewRow[];
+  summary: StudioWorkspaceAccessReviewSummary;
+  workspace: {
+    id: string;
+    name: string;
+    slug: string;
+    status: "active" | "archived" | "suspended";
+  };
+}) {
+  return createHash("sha256").update(JSON.stringify(input)).digest("hex");
+}
+
+function createAccessReviewSummaryDelta(input: {
+  current: StudioWorkspaceAccessReviewSummary;
+  previous: StudioWorkspaceAccessReviewSummary;
+}) {
+  return {
+    auditEntryCount:
+      input.current.auditEntryCount - input.previous.auditEntryCount,
+    invitationCount:
+      input.current.invitationCount - input.previous.invitationCount,
+    memberCount: input.current.memberCount - input.previous.memberCount,
+    pendingRoleEscalationCount:
+      input.current.pendingRoleEscalationCount -
+      input.previous.pendingRoleEscalationCount,
+    roleEscalationCount:
+      input.current.roleEscalationCount - input.previous.roleEscalationCount
+  };
+}
+
+function serializeAccessReviewAttestation(input: {
+  auditLog: {
+    action: string;
+    actorId: string;
+    createdAt: Date;
+    id: string;
+    metadataJson: unknown;
+  };
+  workspace: {
+    id: string;
+    name: string;
+    slug: string;
+    status: "active" | "archived" | "suspended";
+  };
+}) {
+  if (input.auditLog.action !== "workspace_access_review_recorded") {
+    return null;
+  }
+
+  const actorWalletAddress = getAuditMetadataString({
+    auditLog: input.auditLog,
+    key: "actorWalletAddress"
+  });
+  const reviewGeneratedAt = getAuditMetadataString({
+    auditLog: input.auditLog,
+    key: "reviewGeneratedAt"
+  });
+  const reviewHash = getAuditMetadataString({
+    auditLog: input.auditLog,
+    key: "reviewHash"
+  });
+  const auditEntryCount = getAuditMetadataNumber({
+    auditLog: input.auditLog,
+    key: "reviewAuditEntryCount"
+  });
+  const invitationCount = getAuditMetadataNumber({
+    auditLog: input.auditLog,
+    key: "reviewInvitationCount"
+  });
+  const memberCount = getAuditMetadataNumber({
+    auditLog: input.auditLog,
+    key: "reviewMemberCount"
+  });
+  const pendingRoleEscalationCount = getAuditMetadataNumber({
+    auditLog: input.auditLog,
+    key: "reviewPendingRoleEscalationCount"
+  });
+  const roleEscalationCount = getAuditMetadataNumber({
+    auditLog: input.auditLog,
+    key: "reviewRoleEscalationCount"
+  });
+
+  if (
+    !actorWalletAddress ||
+    !reviewGeneratedAt ||
+    !reviewHash ||
+    auditEntryCount === null ||
+    invitationCount === null ||
+    memberCount === null ||
+    pendingRoleEscalationCount === null ||
+    roleEscalationCount === null
+  ) {
+    return null;
+  }
+
+  return {
+    actorUserId: input.auditLog.actorId,
+    actorWalletAddress,
+    auditEntryId: input.auditLog.id,
+    createdAt: input.auditLog.createdAt.toISOString(),
+    reviewGeneratedAt,
+    reviewHash,
+    summary: {
+      auditEntryCount,
+      invitationCount,
+      memberCount,
+      pendingRoleEscalationCount,
+      roleEscalationCount
+    },
+    workspace: {
+      id: input.workspace.id,
+      name: input.workspace.name,
+      slug: input.workspace.slug,
+      status: input.workspace.status
+    }
+  };
+}
+
+function getLatestAccessReviewAttestation(input: {
+  auditLogs: Array<{
+    action: string;
+    actorId: string;
+    createdAt: Date;
+    id: string;
+    metadataJson: unknown;
+  }>;
+  workspace: {
+    id: string;
+    name: string;
+    slug: string;
+    status: "active" | "archived" | "suspended";
+  };
+}) {
+  for (const auditLog of input.auditLogs) {
+    const attestation = serializeAccessReviewAttestation({
+      auditLog,
+      workspace: input.workspace
+    });
+
+    if (attestation) {
+      return attestation;
+    }
+  }
+
+  return null;
+}
+
+function createAccessReviewVerification(input: {
+  auditLogs: Array<{
+    action: string;
+    actorId: string;
+    createdAt: Date;
+    id: string;
+    metadataJson: unknown;
+  }>;
+  generatedAt: Date;
+  invitations: Array<{
+    createdAt: Date;
+    expiresAt: Date;
+    id: string;
+    invitedByUser: {
+      walletAddress: string;
+    };
+    invitedByUserId: string;
+    lastRemindedAt: Date | null;
+    reminderCount: number;
+    role: StudioWorkspaceRole;
+    walletAddress: string;
+  }>;
+  memberships: Array<{
+    createdAt: Date;
+    id: string;
+    role: StudioWorkspaceRole;
+    user: {
+      id: string;
+      walletAddress: string;
+    };
+  }>;
+  now: Date;
+  owner: {
+    id: string;
+    walletAddress: string;
+  };
+  roleEscalationRequests: Array<{
+    createdAt: Date;
+    id: string;
+    requestedByUser: {
+      walletAddress: string;
+    };
+    requestedByUserId: string;
+    requestedRole: StudioWorkspaceRole;
+    status: "approved" | "canceled" | "pending" | "rejected";
+    targetUser: {
+      walletAddress: string;
+    };
+    targetUserId: string;
+  }>;
+  workspace: {
+    id: string;
+    name: string;
+    slug: string;
+    status: "active" | "archived" | "suspended";
+  };
+}) {
+  const ownerMemberRow = {
+    action: null,
+    createdAt: null,
+    expiresAt: null,
+    invitationId: null,
+    membershipId: null,
+    previousRole: null,
+    recordType: "member" as const,
+    requestId: null,
+    reviewGeneratedAt: null,
+    reviewHash: null,
+    role: "owner" as const,
+    status: "active",
+    targetUserId: null,
+    targetWalletAddress: null,
+    userId: input.owner.id,
+    walletAddress: input.owner.walletAddress
+  };
+  const memberRows = input.memberships.map((membership) => ({
+    action: null,
+    createdAt: membership.createdAt.toISOString(),
+    expiresAt: null,
+    invitationId: null,
+    membershipId: membership.id,
+    previousRole: null,
+    recordType: "member" as const,
+    requestId: null,
+    reviewGeneratedAt: null,
+    reviewHash: null,
+    role: membership.role,
+    status: "active",
+    targetUserId: null,
+    targetWalletAddress: null,
+    userId: membership.user.id,
+    walletAddress: membership.user.walletAddress
+  }));
+  const invitationRows = input.invitations.map((invitation) => ({
+    action: null,
+    createdAt: invitation.createdAt.toISOString(),
+    expiresAt: invitation.expiresAt.toISOString(),
+    invitationId: invitation.id,
+    membershipId: null,
+    previousRole: null,
+    recordType: "invitation" as const,
+    requestId: null,
+    reviewGeneratedAt: null,
+    reviewHash: null,
+    role: invitation.role,
+    status: getWorkspaceInvitationStatus({
+      expiresAt: invitation.expiresAt,
+      now: input.now
+    }),
+    targetUserId: null,
+    targetWalletAddress: null,
+    userId: null,
+    walletAddress: invitation.walletAddress
+  }));
+  const roleEscalationRows = input.roleEscalationRequests.map((request) => ({
+    action: null,
+    createdAt: request.createdAt.toISOString(),
+    expiresAt: null,
+    invitationId: null,
+    membershipId: null,
+    previousRole: null,
+    recordType: "role_escalation" as const,
+    requestId: request.id,
+    reviewGeneratedAt: null,
+    reviewHash: null,
+    role: request.requestedRole,
+    status: request.status,
+    targetUserId: request.targetUserId,
+    targetWalletAddress: request.targetUser.walletAddress,
+    userId: request.requestedByUserId,
+    walletAddress: request.requestedByUser.walletAddress
+  }));
+  const auditRows = input.auditLogs.flatMap((auditLog) => {
+    const entry = serializeAuditEntry(auditLog);
+
+    if (!entry || entry.action === "workspace_access_review_recorded") {
+      return [];
+    }
+
+    return [
+      {
+        action: entry.action,
+        createdAt: entry.createdAt,
+        expiresAt: null,
+        invitationId: null,
+        membershipId: entry.membershipId,
+        previousRole: entry.previousRole,
+        recordType: "audit" as const,
+        requestId: getAuditMetadataString({
+          auditLog,
+          key: "requestId"
+        }),
+        reviewGeneratedAt: entry.reviewGeneratedAt,
+        reviewHash: entry.reviewHash,
+        role: entry.role,
+        status: null,
+        targetUserId: entry.targetUserId,
+        targetWalletAddress: entry.targetWalletAddress,
+        userId: entry.actorUserId,
+        walletAddress: entry.actorWalletAddress
+      }
+    ];
+  });
+  const rows = [
+    ownerMemberRow,
+    ...memberRows,
+    ...invitationRows,
+    ...roleEscalationRows,
+    ...auditRows
+  ];
+  const summary = {
+    auditEntryCount: auditRows.length,
+    invitationCount: invitationRows.length,
+    memberCount: memberRows.length + 1,
+    pendingRoleEscalationCount: roleEscalationRows.filter(
+      (row) => row.status === "pending"
+    ).length,
+    roleEscalationCount: roleEscalationRows.length
+  };
+  const workspace = {
+    id: input.workspace.id,
+    name: input.workspace.name,
+    slug: input.workspace.slug,
+    status: input.workspace.status
+  };
+  const currentEvidenceHash = createAccessReviewEvidenceHash({
+    rows,
+    summary,
+    workspace
+  });
+  const latestAttestation = getLatestAccessReviewAttestation({
+    auditLogs: input.auditLogs,
+    workspace
+  });
+  const attestationStatus = latestAttestation
+    ? latestAttestation.reviewHash === currentEvidenceHash
+      ? "current"
+      : "changed"
+    : "never_recorded";
+
+  return studioWorkspaceAccessReviewVerificationSchema.parse({
+    attestationStatus,
+    currentEvidenceHash,
+    generatedAt: input.generatedAt.toISOString(),
+    latestAttestation,
+    summaryDelta: latestAttestation
+      ? createAccessReviewSummaryDelta({
+          current: summary,
+          previous: latestAttestation.summary
+        })
+      : null
+  });
+}
+
 function serializeWorkspaceDecommission(input: {
   canceledAt: Date | null;
   canceledByUser: {
@@ -1346,9 +1753,20 @@ export function createWorkspaceOffboardingService(
         serializeWorkspaceLifecycleDeliveryPolicy(workspace);
       const lifecycleSlaPolicy =
         serializeWorkspaceLifecycleSlaPolicy(workspace);
+      const accessReview = createAccessReviewVerification({
+        auditLogs,
+        generatedAt: now,
+        invitations,
+        memberships,
+        now,
+        owner,
+        roleEscalationRequests,
+        workspace
+      });
 
       return workspaceExportResponseSchema.parse({
         export: {
+          accessReview,
           alerts: alerts.map((alert) => ({
             acknowledgedAt: alert.acknowledgedAt?.toISOString() ?? null,
             code: alert.code,
@@ -1481,6 +1899,15 @@ export function createWorkspaceOffboardingService(
         row.workspace.slug,
         row.workspace.status,
         row.ownerWalletAddress,
+        row.accessReview.attestationStatus,
+        row.accessReview.currentEvidenceHash,
+        row.accessReview.latestAttestation?.reviewHash ?? "",
+        row.accessReview.latestAttestation?.createdAt ?? "",
+        row.accessReview.summaryDelta?.memberCount ?? "",
+        row.accessReview.summaryDelta?.invitationCount ?? "",
+        row.accessReview.summaryDelta?.roleEscalationCount ?? "",
+        row.accessReview.summaryDelta?.pendingRoleEscalationCount ?? "",
+        row.accessReview.summaryDelta?.auditEntryCount ?? "",
         row.offboarding.readiness,
         row.offboarding.blockerCodes.join("|"),
         row.offboarding.cautionCodes.join("|"),
@@ -1552,6 +1979,15 @@ export function createWorkspaceOffboardingService(
           "workspace_slug",
           "workspace_status",
           "owner_wallet_address",
+          "access_review_attestation_status",
+          "access_review_current_hash",
+          "access_review_latest_attestation_hash",
+          "access_review_latest_attestation_created_at",
+          "access_review_member_count_delta",
+          "access_review_invitation_count_delta",
+          "access_review_role_escalation_count_delta",
+          "access_review_pending_role_escalation_count_delta",
+          "access_review_audit_entry_count_delta",
           "archive_readiness",
           "blocker_codes",
           "caution_codes",

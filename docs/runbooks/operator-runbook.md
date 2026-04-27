@@ -14,6 +14,7 @@ This runbook covers the authenticated `/ops` surface and the operator responsibi
 - owners can export the selected workspace access review from `/studio/settings` or `/api/studio/settings/access-review?format=csv`; the export combines members, invitations, role escalations, recent access audit history, a current/changed freshness signal, and summary deltas against the latest recorded attestation
 - owners can record an access-review attestation from `/studio/settings`; it writes `workspace_access_review_recorded` with a SHA-256 evidence hash into the workspace audit stream, and the hash is deterministic for the access evidence rather than the export timestamp
 - owners can retrieve prior attestations from `/api/studio/settings/access-review/attestations?format=csv` for governance packets that need only recorded review evidence rather than the full current access snapshot
+- owner-only workspace export includes the same access-review freshness and summary-delta fields, so offboarding packets show whether governance evidence is current without requiring a separate access-review export
 
 ## What `/ops` now shows
 
@@ -34,6 +35,7 @@ This runbook covers the authenticated `/ops` surface and the operator responsibi
 - review any open critical alerts
 - review any open critical reconciliation issues
 - export the workspace access review before scheduled governance reviews or before offboarding a workspace, then record the review so the evidence hash appears in studio and ops audit history; if the settings panel marks the review as changed, review the summary deltas, then re-approve the current access state before recording a new review
+- when exporting a workspace for archive or decommission review, check `access_review_attestation_status` in the CSV; do not treat an offboarding packet as governance-current when it is `changed` or `never_recorded`
 
 ## Reconciliation actions
 
