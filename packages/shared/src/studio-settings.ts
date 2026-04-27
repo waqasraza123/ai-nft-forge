@@ -248,6 +248,49 @@ export const studioWorkspaceAuditEntrySchema = z.object({
   targetWalletAddress: walletAddressSchema.nullable()
 });
 
+export const studioWorkspaceAccessReviewRecordTypeSchema = z.enum([
+  "member",
+  "invitation",
+  "role_escalation",
+  "audit"
+]);
+
+export const studioWorkspaceAccessReviewQuerySchema = z.object({
+  format: z.enum(["json", "csv"]).default("json")
+});
+
+export const studioWorkspaceAccessReviewRowSchema = z.object({
+  action: studioWorkspaceAuditActionSchema.nullable(),
+  createdAt: z.string().datetime().nullable(),
+  expiresAt: z.string().datetime().nullable(),
+  invitationId: z.string().min(1).nullable(),
+  membershipId: z.string().min(1).nullable(),
+  previousRole: studioWorkspaceRoleSchema.nullable(),
+  recordType: studioWorkspaceAccessReviewRecordTypeSchema,
+  requestId: z.string().min(1).nullable(),
+  role: studioWorkspaceRoleSchema.nullable(),
+  status: z.string().min(1).nullable(),
+  targetUserId: z.string().min(1).nullable(),
+  targetWalletAddress: walletAddressSchema.nullable(),
+  userId: z.string().min(1).nullable(),
+  walletAddress: walletAddressSchema.nullable()
+});
+
+export const studioWorkspaceAccessReviewResponseSchema = z.object({
+  report: z.object({
+    generatedAt: z.string().datetime(),
+    rows: z.array(studioWorkspaceAccessReviewRowSchema),
+    summary: z.object({
+      auditEntryCount: z.number().int().min(0),
+      invitationCount: z.number().int().min(0),
+      memberCount: z.number().int().min(0),
+      pendingRoleEscalationCount: z.number().int().min(0),
+      roleEscalationCount: z.number().int().min(0)
+    }),
+    workspace: studioWorkspaceSummarySchema
+  })
+});
+
 export const studioSettingsSummarySchema = z.object({
   access: studioWorkspaceAccessSchema,
   auditEntries: z.array(studioWorkspaceAuditEntrySchema),
@@ -516,6 +559,18 @@ export type StudioWorkspaceDirectoryEntry = z.infer<
 >;
 export type StudioWorkspaceDirectoryResponse = z.infer<
   typeof studioWorkspaceDirectoryResponseSchema
+>;
+export type StudioWorkspaceAccessReviewQuery = z.infer<
+  typeof studioWorkspaceAccessReviewQuerySchema
+>;
+export type StudioWorkspaceAccessReviewRecordType = z.infer<
+  typeof studioWorkspaceAccessReviewRecordTypeSchema
+>;
+export type StudioWorkspaceAccessReviewResponse = z.infer<
+  typeof studioWorkspaceAccessReviewResponseSchema
+>;
+export type StudioWorkspaceAccessReviewRow = z.infer<
+  typeof studioWorkspaceAccessReviewRowSchema
 >;
 export type StudioSettingsSummary = z.infer<typeof studioSettingsSummarySchema>;
 export type StudioSettingsUpdateRequest = z.infer<

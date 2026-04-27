@@ -45,6 +45,7 @@ This document defines durable boundary expectations for the implemented web, wor
 - `/api/studio/collections/[collectionDraftId]/onchain/mints`
 - `/api/studio/collections/[collectionDraftId]/publish`
 - `/api/studio/settings`
+- `/api/studio/settings/access-review`
 - `/api/studio/settings/members/[membershipId]`
 - `/api/studio/settings/invitations/[invitationId]`
 - `/api/studio/generations`
@@ -90,5 +91,6 @@ This document defines durable boundary expectations for the implemented web, wor
 - Once deployment or mint activity is recorded for a published collection, subsequent publication-boundary mutations should remain blocked to preserve immutable onchain release semantics.
 - Additional minting should remain blocked whenever open onchain reconciliation issues exist for that published collection.
 - Workspace viewers may read selected-workspace studio and ops surfaces, but every active mutation helper and fleet mutation route must reject viewer access before calling service-layer mutation code.
+- Workspace access review export is owner-only, selected-workspace scoped, and available as JSON or CSV from `/api/studio/settings/access-review`.
 - Internal APIs should support the web app and workers without exposing operational controls publicly.
 - Route and job design should preserve the B2B white-label model and future multi-tenant concerns.

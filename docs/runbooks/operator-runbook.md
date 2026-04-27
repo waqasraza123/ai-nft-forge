@@ -11,6 +11,7 @@ This runbook covers the authenticated `/ops` surface and the operator responsibi
 - owners can change a non-expired pending invitation between operator and viewer; expired invitation rows are retained as immutable history and should be replaced with a fresh invitation
 - member and invitation role-change audit events show the previous role and the new role in studio history, `/ops/audit`, and CSV export
 - demoting or removing an operator automatically cancels that operator's pending ownership-transfer request, if one exists
+- owners can export the selected workspace access review from `/studio/settings` or `/api/studio/settings/access-review?format=csv`; the export combines members, invitations, role escalations, and recent access audit history
 
 ## What `/ops` now shows
 
@@ -30,6 +31,7 @@ This runbook covers the authenticated `/ops` surface and the operator responsibi
 - confirm reconciliation automation is `healthy`
 - review any open critical alerts
 - review any open critical reconciliation issues
+- export the workspace access review before scheduled governance reviews or before offboarding a workspace
 
 ## Reconciliation actions
 

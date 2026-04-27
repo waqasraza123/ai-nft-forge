@@ -5145,7 +5145,7 @@ export function StudioSettingsClient({
               />
               <SurfaceGrid>
                 <SurfaceCard
-                  body="Member lifecycle and ownership-transfer actions are written to the workspace audit stream so owners can trace invitation creation, cancellation, acceptance, member removal, and role escalation outcomes without inspecting the database."
+                  body="Member lifecycle and ownership-transfer actions are written to the workspace audit stream, and owners can export a workspace access review that combines current members, pending invitations, role escalations, and recent access events."
                   eyebrow="Audit"
                   span={12}
                   title="Member lifecycle history"
@@ -5158,6 +5158,22 @@ export function StudioSettingsClient({
                     <ActionLink href="/ops/audit" tone="inline">
                       Open full audit
                     </ActionLink>
+                    {canManageMembers ? (
+                      <>
+                        <ActionLink
+                          href="/api/studio/settings/access-review"
+                          tone="inline"
+                        >
+                          Review JSON
+                        </ActionLink>
+                        <ActionLink
+                          href="/api/studio/settings/access-review?format=csv"
+                          tone="inline"
+                        >
+                          Review CSV
+                        </ActionLink>
+                      </>
+                    ) : null}
                   </ActionRow>
                   {settings?.auditEntries.length ? (
                     <SettingsRecordList>

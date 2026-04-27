@@ -18,6 +18,7 @@ import {
   studioBrandThemeSchema,
   studioWorkspaceCreateRequestSchema,
   studioWorkspaceCreateResponseSchema,
+  studioWorkspaceAccessReviewResponseSchema,
   studioWorkspaceStatusUpdateRequestSchema,
   studioWorkspaceStatusUpdateResponseSchema,
   studioWorkspaceRoleEscalationActionResponseSchema,
@@ -47,6 +48,7 @@ import {
   type WorkspaceLifecycleAutomationRunSummary,
   type WorkspaceLifecycleDeliveryPolicy,
   type WorkspaceLifecycleSlaPolicy,
+  type StudioWorkspaceAccessReviewResponse,
   type StudioWorkspaceRole,
   type StudioWorkspaceStatus
 } from "@ai-nft-forge/shared";
@@ -882,6 +884,227 @@ function serializeWorkspaceAuditEntry(input: AuditLogRecord) {
   });
 }
 
+function getAuditMetadataString(input: {
+  auditLog: AuditLogRecord;
+  key: string;
+}) {
+  const metadata: Record<string, unknown> =
+    typeof input.auditLog.metadataJson === "object" &&
+    input.auditLog.metadataJson !== null
+      ? (input.auditLog.metadataJson as Record<string, unknown>)
+      : {};
+
+  const value = metadata[input.key];
+
+  return typeof value === "string" ? value : null;
+}
+
+function createWorkspaceAccessReview(input: {
+  auditLogs: AuditLogRecord[];
+  generatedAt: Date;
+  invitations: WorkspaceInvitationRecord[];
+  memberships: Array<{
+    createdAt: Date;
+    id: string;
+    role: StudioWorkspaceRole;
+    user: UserRecord;
+    userId: string;
+  }>;
+  owner: UserRecord;
+  roleEscalationRequests: WorkspaceRoleEscalationRequestRecord[];
+  workspace: WorkspaceRecord;
+}) {
+  const ownerMemberRow = {
+    action: null,
+    createdAt: null,
+    expiresAt: null,
+    invitationId: null,
+    membershipId: null,
+    previousRole: null,
+    recordType: "member" as const,
+    requestId: null,
+    role: "owner" as const,
+    status: "active",
+    targetUserId: null,
+    targetWalletAddress: null,
+    userId: input.owner.id,
+    walletAddress: input.owner.walletAddress
+  };
+  const memberRows = input.memberships.map((membership) => ({
+    action: null,
+    createdAt: membership.createdAt.toISOString(),
+    expiresAt: null,
+    invitationId: null,
+    membershipId: membership.id,
+    previousRole: null,
+    recordType: "member" as const,
+    requestId: null,
+    role: membership.role,
+    status: "active",
+    targetUserId: null,
+    targetWalletAddress: null,
+    userId: membership.userId,
+    walletAddress: membership.user.walletAddress
+  }));
+  const invitationRows = input.invitations.map((invitation) => {
+    const serializedInvitation = serializeWorkspaceInvitation(invitation);
+
+    return {
+      action: null,
+      createdAt: serializedInvitation.createdAt,
+      expiresAt: serializedInvitation.expiresAt,
+      invitationId: serializedInvitation.id,
+      membershipId: null,
+      previousRole: null,
+      recordType: "invitation" as const,
+      requestId: null,
+      role: serializedInvitation.role,
+      status: serializedInvitation.status,
+      targetUserId: null,
+      targetWalletAddress: null,
+      userId: null,
+      walletAddress: serializedInvitation.walletAddress
+    };
+  });
+  const roleEscalationRows = input.roleEscalationRequests.map((request) => {
+    const serializedRequest = serializeWorkspaceRoleEscalationRequest(request);
+
+    return {
+      action: null,
+      createdAt: serializedRequest.createdAt,
+      expiresAt: null,
+      invitationId: null,
+      membershipId: null,
+      previousRole: null,
+      recordType: "role_escalation" as const,
+      requestId: serializedRequest.id,
+      role: serializedRequest.requestedRole,
+      status: serializedRequest.status,
+      targetUserId: serializedRequest.targetUserId,
+      targetWalletAddress: serializedRequest.targetWalletAddress,
+      userId: serializedRequest.requestedByUserId,
+      walletAddress: serializedRequest.requestedByWalletAddress
+    };
+  });
+  const auditRows = input.auditLogs.flatMap((auditLog) => {
+    const serializedAuditEntry = serializeWorkspaceAuditEntry(auditLog);
+
+    if (!serializedAuditEntry) {
+      return [];
+    }
+
+    return [
+      {
+        action: serializedAuditEntry.action,
+        createdAt: serializedAuditEntry.createdAt,
+        expiresAt: null,
+        invitationId: null,
+        membershipId: serializedAuditEntry.membershipId,
+        previousRole: serializedAuditEntry.previousRole,
+        recordType: "audit" as const,
+        requestId: getAuditMetadataString({
+          auditLog,
+          key: "requestId"
+        }),
+        role: serializedAuditEntry.role,
+        status: null,
+        targetUserId: serializedAuditEntry.targetUserId,
+        targetWalletAddress: serializedAuditEntry.targetWalletAddress,
+        userId: serializedAuditEntry.actorUserId,
+        walletAddress: serializedAuditEntry.actorWalletAddress
+      }
+    ];
+  });
+
+  return studioWorkspaceAccessReviewResponseSchema.parse({
+    report: {
+      generatedAt: input.generatedAt.toISOString(),
+      rows: [
+        ownerMemberRow,
+        ...memberRows,
+        ...invitationRows,
+        ...roleEscalationRows,
+        ...auditRows
+      ],
+      summary: {
+        auditEntryCount: auditRows.length,
+        invitationCount: invitationRows.length,
+        memberCount: memberRows.length + 1,
+        pendingRoleEscalationCount: roleEscalationRows.filter(
+          (row) => row.status === "pending"
+        ).length,
+        roleEscalationCount: roleEscalationRows.length
+      },
+      workspace: serializeWorkspace(input.workspace)
+    }
+  });
+}
+
+function escapeCsvValue(value: string | number | null) {
+  if (value === null) {
+    return "";
+  }
+
+  const text = String(value);
+
+  if (/[",\n\r]/.test(text)) {
+    return `"${text.replaceAll('"', '""')}"`;
+  }
+
+  return text;
+}
+
+export function buildWorkspaceAccessReviewCsv(
+  input: StudioWorkspaceAccessReviewResponse
+) {
+  const columns = [
+    "workspace_id",
+    "workspace_slug",
+    "workspace_name",
+    "generated_at",
+    "record_type",
+    "wallet_address",
+    "user_id",
+    "role",
+    "previous_role",
+    "status",
+    "action",
+    "target_wallet_address",
+    "target_user_id",
+    "membership_id",
+    "invitation_id",
+    "request_id",
+    "created_at",
+    "expires_at"
+  ];
+  const rows = input.report.rows.map((row) =>
+    [
+      input.report.workspace.id,
+      input.report.workspace.slug,
+      input.report.workspace.name,
+      input.report.generatedAt,
+      row.recordType,
+      row.walletAddress,
+      row.userId,
+      row.role,
+      row.previousRole,
+      row.status,
+      row.action,
+      row.targetWalletAddress,
+      row.targetUserId,
+      row.membershipId,
+      row.invitationId,
+      row.requestId,
+      row.createdAt,
+      row.expiresAt
+    ]
+      .map(escapeCsvValue)
+      .join(",")
+  );
+
+  return [columns.join(","), ...rows].join("\n");
+}
+
 async function serializeStudioSettings(input: {
   brands: BrandRecord[];
   lifecycleDeliveryService?: StudioSettingsServiceDependencies["lifecycleDeliveryService"];
@@ -1411,6 +1634,52 @@ export function createStudioSettingsService(
         repositories: dependencies.repositories,
         role: input.role ?? "owner",
         workspaceId: input.workspaceId
+      });
+    },
+
+    async getWorkspaceAccessReview(input: {
+      ownerUserId: string;
+      role?: StudioWorkspaceRole;
+      workspaceId?: string | null;
+    }) {
+      assertOwnerRole(input.role ?? "owner");
+
+      const { owner, workspace } = await requireOwnerWorkspace({
+        ownerUserId: input.ownerUserId,
+        repositories: dependencies.repositories,
+        workspaceId: input.workspaceId
+      });
+      const [memberships, invitations, roleEscalationRequests, auditLogs] =
+        await Promise.all([
+          dependencies.repositories.workspaceMembershipRepository.listByWorkspaceId(
+            workspace.id
+          ),
+          dependencies.repositories.workspaceInvitationRepository.listByWorkspaceId(
+            {
+              workspaceId: workspace.id
+            }
+          ),
+          dependencies.repositories.workspaceRoleEscalationRequestRepository.listByWorkspaceId(
+            {
+              limit: 100,
+              workspaceId: workspace.id
+            }
+          ),
+          dependencies.repositories.auditLogRepository.listByEntity({
+            entityId: workspace.id,
+            entityType: "workspace",
+            limit: 100
+          })
+        ]);
+
+      return createWorkspaceAccessReview({
+        auditLogs,
+        generatedAt: new Date(),
+        invitations,
+        memberships,
+        owner,
+        roleEscalationRequests,
+        workspace
       });
     },
 

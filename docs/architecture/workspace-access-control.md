@@ -48,3 +48,14 @@ Owners can change an existing non-owner workspace member between `operator` and 
 ## Role Escalation Invalidation
 
 Only active `operator` members can hold a pending ownership-transfer request. When an owner changes an operator to `viewer` or removes an operator membership, the settings service cancels any pending ownership-transfer request for that target user in the same transaction and records `workspace_role_escalation_canceled`. This keeps stale escalation approvals from surviving after the target no longer has operator access.
+
+## Access Review Export
+
+Owners can export the selected workspace access review from `/studio/settings` or `GET /api/studio/settings/access-review`. The JSON response and CSV mode share the same owner-only service read model and include:
+
+- the owner row plus current non-owner workspace members
+- pending, expiring, and expired wallet-address invitations
+- recent ownership-transfer role escalation requests, including pending requests
+- recent workspace audit entries for member, invitation, role, ownership, lifecycle, and decommission actions
+
+The export is selected-workspace scoped and does not traverse the broader estate. Role-change rows preserve previous and new roles where audit metadata exists, so the CSV can be handed to an access review without inspecting raw database records.
