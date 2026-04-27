@@ -37,6 +37,14 @@ export async function requireStudioActiveApiSession() {
     return new GeneratedAssetServiceError("WORKSPACE_NOT_ACTIVE", message, 409);
   });
 
+  if (session.role === "viewer") {
+    throw new GeneratedAssetServiceError(
+      "FORBIDDEN",
+      "Workspace viewers can inspect generated assets but cannot moderate them.",
+      403
+    );
+  }
+
   return session;
 }
 

@@ -2,6 +2,12 @@
 
 This runbook covers the authenticated `/ops` surface and the operator responsibilities that matter in the released repository.
 
+## Access roles
+
+- owners can manage workspace policy, publication, onchain, lifecycle, member, and invitation controls
+- operators can run day-to-day production actions such as asset intake, generation, moderation, commerce recovery, alert triage, and reconciliation
+- viewers can inspect studio, commerce, ops, audit, retention, and directory state, but mutation controls are disabled in the UI and rejected by the API
+
 ## What `/ops` now shows
 
 - generation backend liveness and readiness
@@ -44,7 +50,7 @@ Non-repairable issues stay visible for investigation:
 
 ## Moderation workflow
 
-- moderation remains owner-scoped in `/studio/assets`
+- moderation is available to owners and operators in `/studio/assets`
 - only approved generated assets should remain curated
 - if a curated asset is later rejected, reconciliation should flag the draft and `/studio/collections` should show the invalidity warning
 

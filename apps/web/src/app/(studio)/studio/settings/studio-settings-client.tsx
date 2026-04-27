@@ -51,6 +51,7 @@ import {
   type StudioWorkspaceLifecycleSlaPolicy,
   type StudioWorkspaceLifecycleSlaSummary,
   type StudioWorkspaceMemberSummary,
+  type StudioWorkspaceRole,
   type StudioWorkspaceRoleEscalationSummary,
   type StudioWorkspaceRetentionPolicy,
   type StudioWorkspaceStatus,
@@ -160,6 +161,7 @@ type WorkspaceCreateState = {
 };
 
 type MemberState = {
+  role: Exclude<StudioWorkspaceRole, "owner">;
   walletAddress: string;
 };
 
@@ -400,6 +402,7 @@ function createInitialWorkspaceCreateState(): WorkspaceCreateState {
 
 function createInitialMemberState(): MemberState {
   return {
+    role: "operator",
     walletAddress: ""
   };
 }
@@ -446,6 +449,16 @@ function formatWorkspaceInvitationStatus(
   status: StudioWorkspaceInvitationSummary["status"]
 ) {
   return status.replaceAll("_", " ");
+}
+
+function formatWorkspaceRole(role: StudioWorkspaceRole) {
+  const labels: Record<StudioWorkspaceRole, string> = {
+    operator: "Operator",
+    owner: "Owner",
+    viewer: "Viewer"
+  };
+
+  return labels[role];
 }
 
 function formatDecommissionNotificationKind(
@@ -669,6 +682,8 @@ export function StudioSettingsClient({
     useState<string | null>(null);
 
   const access = settings?.access ?? {
+    canManageCommerce: true,
+    canManageStudioWorkflows: true,
     canManageMembers: true,
     canManageOnchain: true,
     canManageOpsPolicy: true,
@@ -676,6 +691,7 @@ export function StudioSettingsClient({
     canRequestRoleEscalation: false,
     canManageWorkspace: true,
     canPublishCollections: true,
+    canRunReconciliation: true,
     role: "owner" as const
   };
   const canManageMembers = access.canManageMembers;
@@ -1547,6 +1563,7 @@ export function StudioSettingsClient({
     try {
       const response = await fetch("/api/studio/settings/invitations", {
         body: JSON.stringify({
+          role: memberState.role,
           walletAddress: memberState.walletAddress
         }),
         headers: {
@@ -3336,7 +3353,7 @@ export function StudioSettingsClient({
                             </strong>
                             <span>{member.walletAddress}</span>
                             <span>
-                              {member.role === "owner" ? "Owner" : "Operator"}
+                              {formatWorkspaceRole(member.role)}
                               {member.addedAt
                                 ? ` · added ${formatTimestamp(member.addedAt)}`
                                 : ""}
@@ -3411,8 +3428,10 @@ export function StudioSettingsClient({
                               {formatWorkspaceInvitationStatus(
                                 invitation.status
                               )}{" "}
-                              operator invitation
-                              {invitation.role === "owner" ? " owner" : ""}
+                              {formatWorkspaceRole(
+                                invitation.role
+                              ).toLowerCase()}{" "}
+                              invitation
                             </span>
                             <span>
                               Sent {formatTimestamp(invitation.createdAt)} ·
@@ -3475,18 +3494,41 @@ export function StudioSettingsClient({
                       disabled={!canMutateMembers || isCreatingInvitation}
                     >
                       <FieldStack>
-                        <FieldLabel>Invite operator wallet</FieldLabel>
+                        <FieldLabel>Invite wallet</FieldLabel>
                         <InputField
                           className="w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
                           onChange={(event) => {
-                            setMemberState({
+                            setMemberState((currentState) => ({
+                              ...currentState,
                               walletAddress: event.target.value
-                            });
+                            }));
                           }}
                           placeholder="0x..."
                           required
                           value={memberState.walletAddress}
                         />
+                      </FieldStack>
+                      <FieldStack>
+                        <FieldLabel>Workspace role</FieldLabel>
+                        <SelectField
+                          onChange={(event) => {
+                            setMemberState((currentState) => ({
+                              ...currentState,
+                              role: event.target.value as Exclude<
+                                StudioWorkspaceRole,
+                                "owner"
+                              >
+                            }));
+                          }}
+                          value={memberState.role}
+                        >
+                          <option value="operator">
+                            Operator · can run workspace workflows
+                          </option>
+                          <option value="viewer">
+                            Viewer · read-only workspace visibility
+                          </option>
+                        </SelectField>
                       </FieldStack>
                       <ActionRow padTop>
                         <ActionButton

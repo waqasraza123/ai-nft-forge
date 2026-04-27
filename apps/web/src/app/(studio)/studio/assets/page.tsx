@@ -18,6 +18,7 @@ export default async function StudioAssetsPage() {
     <StudioAssetsClient
       initialAssets={result.assets}
       ownerWalletAddress={access.owner.walletAddress}
+      studioRole={access.role}
     />
   );
 }

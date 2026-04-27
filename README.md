@@ -41,14 +41,14 @@ The repository ships as a pnpm monorepo with a Next.js control plane, a BullMQ w
 - Base Account and injected-wallet studio sign-in on top of the server-issued nonce/session contract
 - Source asset intake with signed private-object uploads
 - Queue-backed generation orchestration with retry and history
-- Generated-asset moderation with owner-scoped approve/reject/reset controls
+- Generated-asset moderation with owner/operator approve/reject/reset controls and viewer read-only review
 - Collection draft curation, review-ready validation, publication, and storefront merchandising
 - Public white-label brand and collection storefront routes backed only by saved brand settings and immutable published snapshots
 - Contract manifest and token-URI publication routes
 - Shared wallet connection UX for owner-signed contract deployment and mint flows with server-verified transaction recording for published collections
 - Public item-level reservations plus hosted checkout for live published collections, with manual and Stripe provider modes
 - Authenticated `/studio/commerce` administration for reservations, checkout recovery, payment confirmation, and fulfillment tracking
-- Multi-workspace provisioning, workspace switching, multi-brand publication targeting, and owner/operator administration flows
+- Multi-workspace provisioning, workspace switching, multi-brand publication targeting, and owner/operator/viewer administration flows
 - Authenticated ops diagnostics, persisted observability captures, alert delivery policy, and operator retry controls
 - Worker-owned reconciliation with persisted runs and issues, manual run/repair/ignore actions, `/ops` visibility, and onchain drift checks for recorded deployments and mints
 - Tailwind-first premium product chrome with shared public/storefront and private operator primitives
@@ -420,6 +420,7 @@ pnpm generation-backend:ready
 - Project state: [docs/project-state.md](/Users/mc/development/blockchain/ethereum/ai-nft-forge/docs/project-state.md)
 - Phase map: [docs/architecture/phases.md](/Users/mc/development/blockchain/ethereum/ai-nft-forge/docs/architecture/phases.md)
 - Routes and jobs: [docs/architecture/routes-and-jobs.md](/Users/mc/development/blockchain/ethereum/ai-nft-forge/docs/architecture/routes-and-jobs.md)
+- Workspace access control: [docs/architecture/workspace-access-control.md](/Users/mc/development/blockchain/ethereum/ai-nft-forge/docs/architecture/workspace-access-control.md)
 - Service overview: [docs/deployment/service-overview.md](/Users/mc/development/blockchain/ethereum/ai-nft-forge/docs/deployment/service-overview.md)
 - Environment reference: [docs/deployment/environment-reference.md](/Users/mc/development/blockchain/ethereum/ai-nft-forge/docs/deployment/environment-reference.md)
 - Self-host deployment: [docs/deployment/self-host-docker-compose.md](/Users/mc/development/blockchain/ethereum/ai-nft-forge/docs/deployment/self-host-docker-compose.md)
@@ -435,8 +436,8 @@ pnpm generation-backend:ready
 - Public routes read only from saved brand settings and immutable published snapshots
 - Onchain deployment and minting stay owner-signed; the repo opens wallet flows and records verified chain receipts, but it does not ship server-held private keys
 - Commerce checkout now supports `manual`, `stripe`, and `disabled` provider modes, with Stripe-hosted checkout and webhook-driven completion when configured
-- Commerce administration now lives on `/studio/commerce`, with owner-scoped manual completion, release/cancel controls, and fulfillment-state tracking
-- Moderation, ops, and reconciliation actions remain authenticated and owner-scoped
+- Commerce administration now lives on `/studio/commerce`, with owner/operator manual completion, release/cancel controls, and fulfillment-state tracking
+- Workspace viewers can inspect studio, commerce, ops, audit, retention, and directory state without mutation rights
 - This repository targets single-node self-hosting with Docker Compose, not Kubernetes or hosted SaaS
 
 ## Community

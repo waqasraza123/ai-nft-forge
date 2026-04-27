@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-import { studioWorkspaceAuditActionSchema } from "./studio-settings.js";
+import {
+  studioWorkspaceAuditActionSchema,
+  studioWorkspaceRoleSchema
+} from "./studio-settings.js";
 
 export const opsAlertSeveritySchema = z.enum(["critical", "warning"]);
 export const opsAlertStateStatusSchema = z.enum(["active", "resolved"]);
@@ -252,7 +255,7 @@ export const opsWorkspaceAuditEntrySchema = z.object({
   id: z.string().min(1),
   membershipId: z.string().min(1).nullable(),
   requestId: z.string().min(1).nullable(),
-  role: z.enum(["owner", "operator"]).nullable(),
+  role: studioWorkspaceRoleSchema.nullable(),
   targetUserId: z.string().min(1).nullable(),
   targetWalletAddress: z.string().min(1).nullable()
 });

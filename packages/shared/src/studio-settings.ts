@@ -110,7 +110,11 @@ export const studioBrandSummarySchema = z.object({
   wordmark: studioBrandWordmarkSchema.nullable()
 });
 
-export const studioWorkspaceRoleSchema = z.enum(["owner", "operator"]);
+export const studioWorkspaceRoleSchema = z.enum([
+  "owner",
+  "operator",
+  "viewer"
+]);
 
 export const studioWorkspaceScopeSummarySchema =
   studioWorkspaceSummarySchema.extend({
@@ -132,6 +136,8 @@ export const studioWorkspaceDirectoryEntrySchema = z.object({
 });
 
 export const studioWorkspaceAccessSchema = z.object({
+  canManageCommerce: z.boolean(),
+  canManageStudioWorkflows: z.boolean(),
   canManageMembers: z.boolean(),
   canManageOnchain: z.boolean(),
   canManageOpsPolicy: z.boolean(),
@@ -139,6 +145,7 @@ export const studioWorkspaceAccessSchema = z.object({
   canRequestRoleEscalation: z.boolean(),
   canManageWorkspace: z.boolean(),
   canPublishCollections: z.boolean(),
+  canRunReconciliation: z.boolean(),
   role: studioWorkspaceRoleSchema
 });
 
@@ -350,6 +357,7 @@ export const studioBrandResponseSchema = z.object({
 });
 
 export const studioWorkspaceMemberCreateRequestSchema = z.object({
+  role: studioWorkspaceRoleSchema.exclude(["owner"]).default("operator"),
   walletAddress: walletAddressSchema
 });
 
@@ -363,6 +371,7 @@ export const studioWorkspaceMemberDeleteResponseSchema = z.object({
 });
 
 export const studioWorkspaceInvitationCreateRequestSchema = z.object({
+  role: studioWorkspaceRoleSchema.exclude(["owner"]).default("operator"),
   walletAddress: walletAddressSchema
 });
 

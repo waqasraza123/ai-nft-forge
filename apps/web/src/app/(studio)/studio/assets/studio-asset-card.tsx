@@ -24,6 +24,7 @@ type GeneratedAssetDownloadUrlMap = Record<string, string>;
 
 type StudioAssetCardProps = {
   asset: StudioSourceAssetSummary;
+  canOperate: boolean;
   downloadGeneratedAsset: (generatedAssetId: string) => Promise<void>;
   downloadingGeneratedAssetId: string | null;
   generatedAssetDownloadUrls?: GeneratedAssetDownloadUrlMap;
@@ -191,6 +192,7 @@ function resolveImageMeta(
 
 export function StudioAssetCard({
   asset,
+  canOperate,
   downloadGeneratedAsset,
   downloadingGeneratedAssetId,
   generatedAssetDownloadUrls,
@@ -254,7 +256,7 @@ export function StudioAssetCard({
               <FieldStack>
                 <FieldLabel>Variant count</FieldLabel>
                 <SelectField
-                  disabled={isDispatchingGeneration}
+                  disabled={!canOperate || isDispatchingGeneration}
                   id={`variant-count-${asset.id}`}
                   onChange={(event) =>
                     setGenerationVariantCount(Number(event.target.value))
@@ -272,7 +274,7 @@ export function StudioAssetCard({
               </FieldStack>
               {canStartGeneration(asset) ? (
                 <ActionButton
-                  disabled={isDispatchingGeneration}
+                  disabled={!canOperate || isDispatchingGeneration}
                   onClick={() =>
                     void startGeneration(asset.id, generationVariantCount)
                   }
@@ -357,7 +359,7 @@ export function StudioAssetCard({
             <FieldStack>
               <FieldLabel>Variant count</FieldLabel>
               <SelectField
-                disabled={isDispatchingGeneration}
+                disabled={!canOperate || isDispatchingGeneration}
                 id={`variant-count-${asset.id}`}
                 onChange={(event) =>
                   setGenerationVariantCount(Number(event.target.value))
@@ -374,7 +376,7 @@ export function StudioAssetCard({
               </SelectField>
             </FieldStack>
             <ActionButton
-              disabled={isDispatchingGeneration}
+              disabled={!canOperate || isDispatchingGeneration}
               onClick={() =>
                 void startGeneration(asset.id, generationVariantCount)
               }
@@ -530,6 +532,7 @@ export function StudioAssetCard({
                     {canRetrySelectedGeneration ? (
                       <ActionButton
                         disabled={
+                          !canOperate ||
                           retryingGenerationRequestId === selectedGeneration.id
                         }
                         onClick={() =>
@@ -611,7 +614,7 @@ export function StudioAssetCard({
                                 )}
                               </Pill>
                               <ActionButton
-                                disabled={isModerating}
+                                disabled={!canOperate || isModerating}
                                 onClick={() =>
                                   void updateGeneratedAssetModeration(
                                     generatedAsset.id,
@@ -627,7 +630,7 @@ export function StudioAssetCard({
                                   : "Approve"}
                               </ActionButton>
                               <ActionButton
-                                disabled={isModerating}
+                                disabled={!canOperate || isModerating}
                                 onClick={() =>
                                   void updateGeneratedAssetModeration(
                                     generatedAsset.id,
@@ -643,7 +646,7 @@ export function StudioAssetCard({
                                   : "Reject"}
                               </ActionButton>
                               <ActionButton
-                                disabled={isModerating}
+                                disabled={!canOperate || isModerating}
                                 onClick={() =>
                                   void updateGeneratedAssetModeration(
                                     generatedAsset.id,

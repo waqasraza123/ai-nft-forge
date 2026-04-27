@@ -3,6 +3,7 @@ import {
   workspaceRetentionBulkAutomationPolicyResponseSchema,
   workspaceRetentionBulkCancelResponseSchema,
   workspaceRetentionFleetReportResponseSchema,
+  type StudioWorkspaceRole,
   type StudioWorkspaceScopeSummary,
   type WorkspaceExportFormat,
   type WorkspaceLifecycleAutomationHealth,
@@ -58,7 +59,7 @@ type WorkspaceRetentionServiceDependencies = {
         enabled: boolean;
       };
       ownerUserId: string;
-      role?: "owner" | "operator";
+      role?: StudioWorkspaceRole;
       workspaceId: string;
     }): Promise<unknown>;
   };

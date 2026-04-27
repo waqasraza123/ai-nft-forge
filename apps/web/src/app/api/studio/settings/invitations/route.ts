@@ -16,6 +16,7 @@ export async function POST(request: Request) {
     );
     const result =
       await createRuntimeStudioSettingsService().createWorkspaceInvitation({
+        invitationRole: body.role,
         ownerUserId: session.ownerUserId,
         role: session.role,
         workspaceId: session.workspace?.id ?? null,

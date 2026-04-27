@@ -2,6 +2,7 @@ import {
   getNextWorkspaceDecommissionNotificationKind,
   resolveWorkspaceLifecycleDeliveryDecision,
   workspaceInvitationReminderCooldownMilliseconds,
+  type StudioWorkspaceRole,
   type WorkspaceLifecycleDecommissionNotificationKind,
   type WorkspaceLifecycleNotificationProviderKey
 } from "@ai-nft-forge/shared";
@@ -31,7 +32,7 @@ type WorkspaceAutomationInvitationRecord = {
   id: string;
   lastRemindedAt: Date | null;
   reminderCount: number;
-  role: "owner" | "operator";
+  role: StudioWorkspaceRole;
   walletAddress: string;
   workspaceId: string;
 };
@@ -326,7 +327,7 @@ async function createQueuedLifecycleDelivery(input: {
 function createWorkspaceAuditMetadata(input: {
   automation: true;
   owner: WorkspaceAutomationOwnerRecord;
-  role?: "owner" | "operator";
+  role?: StudioWorkspaceRole;
   targetWalletAddress?: string;
   workspaceId: string;
 }) {

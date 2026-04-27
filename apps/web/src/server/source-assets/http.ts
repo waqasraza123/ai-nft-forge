@@ -52,6 +52,14 @@ export async function requireStudioActiveApiSession() {
     return new SourceAssetServiceError("WORKSPACE_NOT_ACTIVE", message, 409);
   });
 
+  if (session.role === "viewer") {
+    throw new SourceAssetServiceError(
+      "FORBIDDEN",
+      "Workspace viewers can inspect assets but cannot upload or modify them.",
+      403
+    );
+  }
+
   return session;
 }
 

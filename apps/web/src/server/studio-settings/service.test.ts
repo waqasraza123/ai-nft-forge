@@ -71,7 +71,7 @@ function createStudioSettingsHarness() {
     {
       createdAt: Date;
       id: string;
-      role: "operator";
+      role: "operator" | "viewer";
       userId: string;
       workspaceId: string;
     }
@@ -85,7 +85,7 @@ function createStudioSettingsHarness() {
       invitedByUserId: string;
       lastRemindedAt: Date | null;
       reminderCount: number;
-      role: "operator";
+      role: "operator" | "viewer";
       walletAddress: string;
       workspaceId: string;
     }
@@ -97,7 +97,7 @@ function createStudioSettingsHarness() {
       id: string;
       justification: string | null;
       requestedByUserId: string;
-      requestedRole: "owner" | "operator";
+      requestedRole: "owner" | "operator" | "viewer";
       resolvedAt: Date | null;
       resolvedByUserId: string | null;
       status: "pending" | "approved" | "rejected" | "canceled";
@@ -495,7 +495,7 @@ function createStudioSettingsHarness() {
     },
     workspaceMembershipRepository: {
       async create(input: {
-        role?: "operator" | "owner";
+        role?: "operator" | "owner" | "viewer";
         userId: string;
         workspaceId: string;
       }) {
@@ -505,7 +505,7 @@ function createStudioSettingsHarness() {
             `2026-04-09T00:00:${String(membershipIndex).padStart(2, "0")}.000Z`
           ),
           id: `membership_${membershipIndex}`,
-          role: (input.role ?? "operator") as "operator",
+          role: input.role ?? "operator",
           userId: input.userId,
           workspaceId: input.workspaceId
         };
@@ -626,7 +626,7 @@ function createStudioSettingsHarness() {
       async create(input: {
         expiresAt: Date;
         invitedByUserId: string;
-        role?: "operator" | "owner";
+        role?: "operator" | "owner" | "viewer";
         walletAddress: string;
         workspaceId: string;
       }) {
@@ -640,7 +640,7 @@ function createStudioSettingsHarness() {
           invitedByUserId: input.invitedByUserId,
           lastRemindedAt: null,
           reminderCount: 0,
-          role: (input.role ?? "operator") as "operator",
+          role: input.role ?? "operator",
           walletAddress: input.walletAddress,
           workspaceId: input.workspaceId
         };
@@ -810,7 +810,7 @@ function createStudioSettingsHarness() {
       async create(input: {
         justification?: string | null;
         requestedByUserId: string;
-        requestedRole?: "owner" | "operator";
+        requestedRole?: "owner" | "operator" | "viewer";
         targetUserId: string;
         workspaceId: string;
       }) {
@@ -857,7 +857,7 @@ function createStudioSettingsHarness() {
       },
 
       async findPendingByWorkspaceAndRequestedRole(input: {
-        requestedRole: "owner" | "operator";
+        requestedRole: "owner" | "operator" | "viewer";
         workspaceId: string;
       }) {
         const request =

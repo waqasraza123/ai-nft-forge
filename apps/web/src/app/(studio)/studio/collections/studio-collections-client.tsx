@@ -722,6 +722,7 @@ export function StudioCollectionsClient({
   const connectedWalletChainLabel = getWalletChainLabel(connectedWalletChainId);
   const canManagePublication = studioRole === "owner";
   const canManageOnchain = studioRole === "owner";
+  const canEditDrafts = studioRole === "owner" || studioRole === "operator";
   const previewAssetIds = useMemo(() => {
     const assetIds = new Set<string>();
 
@@ -1340,6 +1341,15 @@ export function StudioCollectionsClient({
   async function handleCreateDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (!canEditDrafts) {
+      setNotice({
+        message:
+          "Workspace viewers can inspect collections but cannot create drafts.",
+        tone: "error"
+      });
+      return;
+    }
+
     setIsCreating(true);
     setNotice({
       message: "Creating collection draft…",
@@ -1385,7 +1395,14 @@ export function StudioCollectionsClient({
   async function handleSaveDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!selectedDraft) {
+    if (!selectedDraft || !canEditDrafts) {
+      if (!canEditDrafts) {
+        setNotice({
+          message:
+            "Workspace viewers can inspect collections but cannot edit drafts.",
+          tone: "error"
+        });
+      }
       return;
     }
 
@@ -1912,7 +1929,14 @@ export function StudioCollectionsClient({
   }
 
   async function addGeneratedAssetToSelectedDraft(generatedAssetId: string) {
-    if (!selectedDraft) {
+    if (!selectedDraft || !canEditDrafts) {
+      if (!canEditDrafts) {
+        setNotice({
+          message:
+            "Workspace viewers can inspect collections but cannot curate drafts.",
+          tone: "error"
+        });
+      }
       return;
     }
 
@@ -1959,7 +1983,14 @@ export function StudioCollectionsClient({
   }
 
   async function removeDraftItem(itemId: string) {
-    if (!selectedDraft) {
+    if (!selectedDraft || !canEditDrafts) {
+      if (!canEditDrafts) {
+        setNotice({
+          message:
+            "Workspace viewers can inspect collections but cannot curate drafts.",
+          tone: "error"
+        });
+      }
       return;
     }
 
@@ -2000,7 +2031,14 @@ export function StudioCollectionsClient({
   }
 
   async function moveDraftItem(itemId: string, direction: -1 | 1) {
-    if (!selectedDraft) {
+    if (!selectedDraft || !canEditDrafts) {
+      if (!canEditDrafts) {
+        setNotice({
+          message:
+            "Workspace viewers can inspect collections but cannot reorder drafts.",
+          tone: "error"
+        });
+      }
       return;
     }
 
@@ -2271,7 +2309,10 @@ export function StudioCollectionsClient({
                   />
                 </FieldStack>
                 <ActionRow compact>
-                  <ActionButton disabled={isCreating} type="submit">
+                  <ActionButton
+                    disabled={!canEditDrafts || isCreating}
+                    type="submit"
+                  >
                     {isCreating ? "Creating…" : "Create release draft"}
                   </ActionButton>
                 </ActionRow>
@@ -2469,7 +2510,9 @@ export function StudioCollectionsClient({
                     </div>
                     <ActionRow compact>
                       <ActionButton
-                        disabled={savingDraftId === selectedDraft.id}
+                        disabled={
+                          !canEditDrafts || savingDraftId === selectedDraft.id
+                        }
                         type="submit"
                       >
                         {savingDraftId === selectedDraft.id
@@ -2499,6 +2542,7 @@ export function StudioCollectionsClient({
                           <>
                             <ActionButton
                               disabled={
+                                !canEditDrafts ||
                                 busyItemKey !== null ||
                                 savingDraftId === selectedDraft.id ||
                                 index === 0
@@ -2512,6 +2556,7 @@ export function StudioCollectionsClient({
                             </ActionButton>
                             <ActionButton
                               disabled={
+                                !canEditDrafts ||
                                 busyItemKey !== null ||
                                 savingDraftId === selectedDraft.id ||
                                 index === selectedDraft.items.length - 1
@@ -2525,6 +2570,7 @@ export function StudioCollectionsClient({
                             </ActionButton>
                             <ActionButton
                               disabled={
+                                !canEditDrafts ||
                                 busyItemKey !== null ||
                                 savingDraftId === selectedDraft.id
                               }
@@ -2599,6 +2645,7 @@ export function StudioCollectionsClient({
                               <Pill>Source {candidate.sourceAssetId}</Pill>
                               <ActionButton
                                 disabled={
+                                  !canEditDrafts ||
                                   !selectedDraft ||
                                   !isApproved ||
                                   isIncluded ||

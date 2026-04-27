@@ -45,7 +45,6 @@ const studioModules: StudioNavigationModule[] = [
 export default async function StudioPage() {
   const access = await getCurrentStudioAccess();
   const workspace = access?.workspace;
-  const isOwner = access?.role === "owner";
   const workspaceName = workspace?.name ?? "No workspace selected";
   const workspaceStatus = workspace?.status ?? "active";
   const workspaceSlug = workspace?.slug ?? "pending";
@@ -56,7 +55,7 @@ export default async function StudioPage() {
   const nextActionLabel = access?.workspace
     ? "Open asset intake"
     : "Select a workspace first";
-  const roleCopy = isOwner ? "owner" : "operator";
+  const roleCopy = access?.role ?? "viewer";
 
   return (
     <PageShell

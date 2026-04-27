@@ -223,6 +223,10 @@ function resolveAlertTone(severity: WorkspaceFleetAlertSummary["severity"]) {
   return severity === "critical" ? "critical" : "warning";
 }
 
+function canOperateFleetWorkspace(workspace: StudioWorkspaceScopeSummary) {
+  return workspace.role === "owner" || workspace.role === "operator";
+}
+
 export function OpsFleetClient({
   currentWorkspaceSlug,
   initialFleet,
@@ -476,6 +480,9 @@ export function OpsFleetClient({
           {attentionWorkspaces.map((workspace, index) => (
             <OpsFleetWorkspaceCard
               busyKey={busyKey}
+              canRunReconciliation={canOperateFleetWorkspace(
+                workspace.workspace
+              )}
               key={workspace.workspace.id}
               onRunReconciliation={(selectedWorkspace) => {
                 void runAction({
@@ -569,6 +576,9 @@ export function OpsFleetClient({
               const acknowledgeBusyKey = `ack:${alert.alertStateId}`;
               const muteBusyKey = `mute:${alert.alertStateId}`;
               const workspaceIsActive = alert.workspace.status === "active";
+              const canOperateWorkspace = canOperateFleetWorkspace(
+                alert.workspace
+              );
 
               return (
                 <OpsPanelCard
@@ -594,7 +604,9 @@ export function OpsFleetClient({
                     <ActionButton
                       tone="secondary"
                       disabled={
-                        !workspaceIsActive || busyKey === acknowledgeBusyKey
+                        !canOperateWorkspace ||
+                        !workspaceIsActive ||
+                        busyKey === acknowledgeBusyKey
                       }
                       onClick={() => {
                         void runAction({
@@ -625,15 +637,21 @@ export function OpsFleetClient({
                       }}
                       type="button"
                     >
-                      {!workspaceIsActive
-                        ? "Workspace inactive"
-                        : busyKey === acknowledgeBusyKey
-                          ? "Acknowledging…"
-                          : "Acknowledge"}
+                      {!canOperateWorkspace
+                        ? "Viewer read-only"
+                        : !workspaceIsActive
+                          ? "Workspace inactive"
+                          : busyKey === acknowledgeBusyKey
+                            ? "Acknowledging…"
+                            : "Acknowledge"}
                     </ActionButton>
                     <ActionButton
                       tone="secondary"
-                      disabled={!workspaceIsActive || busyKey === muteBusyKey}
+                      disabled={
+                        !canOperateWorkspace ||
+                        !workspaceIsActive ||
+                        busyKey === muteBusyKey
+                      }
                       onClick={() => {
                         void runAction({
                           busyKey: muteBusyKey,
@@ -664,11 +682,13 @@ export function OpsFleetClient({
                       }}
                       type="button"
                     >
-                      {!workspaceIsActive
-                        ? "Workspace inactive"
-                        : busyKey === muteBusyKey
-                          ? "Muting…"
-                          : "Mute 4h"}
+                      {!canOperateWorkspace
+                        ? "Viewer read-only"
+                        : !workspaceIsActive
+                          ? "Workspace inactive"
+                          : busyKey === muteBusyKey
+                            ? "Muting…"
+                            : "Mute 4h"}
                     </ActionButton>
                   </ActionRow>
                 </OpsPanelCard>
@@ -733,6 +753,9 @@ export function OpsFleetClient({
             reconciliationWorkspaces.map((workspace, index) => (
               <OpsFleetWorkspaceCard
                 busyKey={busyKey}
+                canRunReconciliation={canOperateFleetWorkspace(
+                  workspace.workspace
+                )}
                 key={workspace.workspace.id}
                 onRunReconciliation={(selectedWorkspace) => {
                   void runAction({
@@ -789,6 +812,9 @@ export function OpsFleetClient({
               const score = getWorkspacePressureScore(workspace);
               const reconciliationBusyKey = `reconcile:${workspace.workspace.id}`;
               const workspaceIsActive = workspace.workspace.status === "active";
+              const canOperateWorkspace = canOperateFleetWorkspace(
+                workspace.workspace
+              );
 
               return (
                 <div
@@ -868,7 +894,9 @@ export function OpsFleetClient({
                   <div className="flex justify-end">
                     <ActionButton
                       disabled={
-                        !workspaceIsActive || busyKey === reconciliationBusyKey
+                        !canOperateWorkspace ||
+                        !workspaceIsActive ||
+                        busyKey === reconciliationBusyKey
                       }
                       onClick={() => {
                         void runAction({
@@ -894,11 +922,13 @@ export function OpsFleetClient({
                       tone="secondary"
                       type="button"
                     >
-                      {!workspaceIsActive
-                        ? "Workspace inactive"
-                        : busyKey === reconciliationBusyKey
-                          ? "Running…"
-                          : "Run"}
+                      {!canOperateWorkspace
+                        ? "Viewer read-only"
+                        : !workspaceIsActive
+                          ? "Workspace inactive"
+                          : busyKey === reconciliationBusyKey
+                            ? "Running…"
+                            : "Run"}
                     </ActionButton>
                   </div>
                 </div>

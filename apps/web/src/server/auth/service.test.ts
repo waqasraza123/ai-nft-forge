@@ -56,7 +56,7 @@ function createInMemoryAuthHarness() {
     string,
     {
       id: string;
-      role: "operator";
+      role: "operator" | "viewer";
       userId: string;
       workspaceId: string;
     }
@@ -67,7 +67,7 @@ function createInMemoryAuthHarness() {
       createdAt: Date;
       expiresAt: Date;
       id: string;
-      role: "operator";
+      role: "operator" | "viewer";
       walletAddress: string;
       workspaceId: string;
     }
@@ -303,13 +303,13 @@ function createInMemoryAuthHarness() {
     },
     workspaceMembershipRepository: {
       async create(input: {
-        role?: "operator" | "owner";
+        role?: "operator" | "owner" | "viewer";
         userId: string;
         workspaceId: string;
       }) {
         const membership = {
           id: randomUUID(),
-          role: (input.role ?? "operator") as "operator",
+          role: input.role ?? "operator",
           userId: input.userId,
           workspaceId: input.workspaceId
         };

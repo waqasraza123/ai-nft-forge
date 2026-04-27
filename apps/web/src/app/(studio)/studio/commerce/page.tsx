@@ -35,6 +35,7 @@ export default async function StudioCommercePage(
     <StudioCommerceClient
       initialDashboard={result.dashboard}
       ownerWalletAddress={access.owner.walletAddress}
+      studioRole={access.role}
     />
   );
 }

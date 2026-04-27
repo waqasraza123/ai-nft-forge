@@ -20,7 +20,8 @@ import {
   type GeneratedAssetModerationStatus,
   sourceAssetUploadIntentResponseSchema,
   type SourceAssetContentType,
-  type StudioSourceAssetSummary
+  type StudioSourceAssetSummary,
+  type StudioWorkspaceRole
 } from "@ai-nft-forge/shared";
 import {
   ActionRow,
@@ -50,6 +51,7 @@ import {
 type StudioAssetsClientProps = {
   initialAssets: StudioSourceAssetSummary[];
   ownerWalletAddress: string;
+  studioRole: StudioWorkspaceRole;
 };
 
 type NoticeTone = "error" | "info" | "success";
@@ -341,7 +343,8 @@ function findGeneratedAssetById(input: {
 
 export function StudioAssetsClient({
   initialAssets,
-  ownerWalletAddress
+  ownerWalletAddress,
+  studioRole
 }: StudioAssetsClientProps) {
   const fileInputId = useId();
   const [assets, setAssets] = useState(initialAssets);
@@ -376,6 +379,7 @@ export function StudioAssetsClient({
   const refreshInFlightRef = useRef(false);
 
   const sortedAssets = sortAssetsForWorkspace(assets);
+  const canOperateAssets = studioRole === "owner" || studioRole === "operator";
   const selectedAsset = selectedAssetId
     ? (sortedAssets.find((asset) => asset.id === selectedAssetId) ??
       sortedAssets[0] ??
@@ -606,6 +610,14 @@ export function StudioAssetsClient({
   const handleUploadSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
+    if (!canOperateAssets) {
+      setNotice({
+        message: "Workspace viewers can inspect assets but cannot upload them.",
+        tone: "error"
+      });
+      return;
+    }
+
     if (selectedFiles.length === 0) {
       setNotice({
         message: "Select at least one supported source image before uploading.",
@@ -759,6 +771,15 @@ export function StudioAssetsClient({
   };
 
   const startGeneration = async (assetId: string, variantCount: number) => {
+    if (!canOperateAssets) {
+      setNotice({
+        message:
+          "Workspace viewers can inspect generation history but cannot start jobs.",
+        tone: "error"
+      });
+      return;
+    }
+
     setDispatchingAssetId(assetId);
     setSelectedAssetId(assetId);
     setNotice({
@@ -808,6 +829,15 @@ export function StudioAssetsClient({
   };
 
   const retryGeneration = async (generationRequestId: string) => {
+    if (!canOperateAssets) {
+      setNotice({
+        message:
+          "Workspace viewers can inspect generation history but cannot retry jobs.",
+        tone: "error"
+      });
+      return;
+    }
+
     setRetryingGenerationRequestId(generationRequestId);
     setNotice({
       message: "Retrying the failed generation request.",
@@ -889,6 +919,15 @@ export function StudioAssetsClient({
     generatedAssetId: string,
     moderationStatus: GeneratedAssetModerationStatus
   ) => {
+    if (!canOperateAssets) {
+      setNotice({
+        message:
+          "Workspace viewers can inspect generated assets but cannot moderate them.",
+        tone: "error"
+      });
+      return;
+    }
+
     setModeratingGeneratedAssetId(generatedAssetId);
     setNotice({
       message: `Setting output moderation to ${
@@ -995,7 +1034,7 @@ export function StudioAssetsClient({
                 <FieldLabel>Source files</FieldLabel>
                 <InputField
                   accept={acceptedSourceAssetInputValue}
-                  disabled={isUploading}
+                  disabled={!canOperateAssets || isUploading}
                   id={fileInputId}
                   multiple
                   onChange={(event) =>
@@ -1010,7 +1049,11 @@ export function StudioAssetsClient({
               </FieldStack>
               <ActionRow>
                 <ActionButton
-                  disabled={isUploading || selectedFiles.length === 0}
+                  disabled={
+                    !canOperateAssets ||
+                    isUploading ||
+                    selectedFiles.length === 0
+                  }
                   tone="accent"
                   type="submit"
                 >
@@ -1112,6 +1155,7 @@ export function StudioAssetsClient({
                   {workspaceAssets.map((asset) => (
                     <StudioAssetCard
                       asset={asset}
+                      canOperate={canOperateAssets}
                       displayMode="lane"
                       downloadGeneratedAsset={downloadGeneratedAsset}
                       downloadingGeneratedAssetId={downloadingGeneratedAssetId}
@@ -1160,6 +1204,7 @@ export function StudioAssetsClient({
               {selectedAsset ? (
                 <StudioAssetCard
                   asset={selectedAsset}
+                  canOperate={canOperateAssets}
                   displayMode="detail"
                   downloadGeneratedAsset={downloadGeneratedAsset}
                   downloadingGeneratedAssetId={downloadingGeneratedAssetId}

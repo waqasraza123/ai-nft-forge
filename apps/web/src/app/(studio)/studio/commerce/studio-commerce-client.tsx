@@ -18,7 +18,8 @@ import {
   type StudioCommerceBrandSummary,
   type StudioCommerceCheckoutSummary,
   type StudioCommerceCollectionSummary,
-  type StudioCommerceDashboardResponse
+  type StudioCommerceDashboardResponse,
+  type StudioWorkspaceRole
 } from "@ai-nft-forge/shared";
 import {
   ActionRow,
@@ -53,6 +54,7 @@ import {
 type StudioCommerceClientProps = {
   initialDashboard: StudioCommerceDashboardResponse["dashboard"];
   ownerWalletAddress: string;
+  studioRole: StudioWorkspaceRole;
 };
 
 type NoticeState = {
@@ -369,11 +371,14 @@ function getSignalTone(input: {
 
 export function StudioCommerceClient({
   initialDashboard,
-  ownerWalletAddress
+  ownerWalletAddress,
+  studioRole
 }: StudioCommerceClientProps) {
   const router = useRouter();
   const [dashboard, setDashboard] = useState(initialDashboard);
   const [notice, setNotice] = useState<NoticeState>(null);
+  const canOperateCommerce =
+    studioRole === "owner" || studioRole === "operator";
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [busyCheckoutAction, setBusyCheckoutAction] = useState<string | null>(
     null
@@ -700,6 +705,15 @@ export function StudioCommerceClient({
   }
 
   async function runCheckoutAction(input: StudioCommerceSessionActionRequest) {
+    if (!canOperateCommerce) {
+      setNotice({
+        message:
+          "Workspace viewers can inspect commerce state but cannot mutate checkout or fulfillment records.",
+        tone: "error"
+      });
+      return;
+    }
+
     setBusyCheckoutAction(input.checkoutSessionId);
     setNotice({
       message: input.message,
@@ -991,6 +1005,7 @@ export function StudioCommerceClient({
 
                     return (
                       <StudioCommerceSessionCard
+                        canOperate={canOperateCommerce}
                         checkout={checkout}
                         editor={
                           fulfillmentEditors[checkout.checkoutSessionId] ?? {
@@ -1034,6 +1049,7 @@ export function StudioCommerceClient({
 
                     return (
                       <StudioCommerceSessionCard
+                        canOperate={canOperateCommerce}
                         checkout={checkout}
                         editor={
                           fulfillmentEditors[checkout.checkoutSessionId] ?? {

@@ -52,6 +52,14 @@ export async function requireStudioActiveApiSession() {
     return new GenerationServiceError("WORKSPACE_NOT_ACTIVE", message, 409);
   });
 
+  if (session.role === "viewer") {
+    throw new GenerationServiceError(
+      "FORBIDDEN",
+      "Workspace viewers can inspect generation history but cannot run or retry generation jobs.",
+      403
+    );
+  }
+
   return session;
 }
 

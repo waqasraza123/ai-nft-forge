@@ -336,6 +336,7 @@ export type OpsRuntimeSnapshot = {
     access: {
       availableWorkspaces: NonNullable<CurrentStudioAccess>["availableWorkspaces"];
       canManageOpsPolicy: boolean;
+      canOperateOps: boolean;
       role: StudioAccessRole;
       workspace: NonNullable<CurrentStudioAccess>["workspace"];
     } | null;
@@ -2136,6 +2137,7 @@ export async function loadOpsRuntime(
         ? {
             availableWorkspaces: access.availableWorkspaces,
             canManageOpsPolicy: access.role === "owner",
+            canOperateOps: access.role !== "viewer",
             role: access.role,
             workspace: access.workspace
           }

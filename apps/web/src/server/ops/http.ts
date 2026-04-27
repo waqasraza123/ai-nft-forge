@@ -37,6 +37,14 @@ export async function requireActiveOpsApiSession() {
     return new OpsServiceError("WORKSPACE_NOT_ACTIVE", message, 409);
   });
 
+  if (session.role === "viewer") {
+    throw new OpsServiceError(
+      "FORBIDDEN",
+      "Workspace viewers can inspect ops state but cannot acknowledge, mute, repair, ignore, or launch reconciliation.",
+      403
+    );
+  }
+
   return session;
 }
 

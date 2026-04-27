@@ -56,6 +56,14 @@ export async function requireStudioActiveApiSession() {
     );
   });
 
+  if (session.role === "viewer") {
+    throw new CollectionDraftServiceError(
+      "FORBIDDEN",
+      "Workspace viewers can inspect collections but cannot edit drafts or publication state.",
+      403
+    );
+  }
+
   return session;
 }
 

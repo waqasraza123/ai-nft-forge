@@ -92,7 +92,7 @@ type AuthRepositorySet = {
     }): Promise<
       Array<{
         id: string;
-        role: "operator" | "owner";
+        role: "operator" | "owner" | "viewer";
         walletAddress: string;
         workspace: {
           id: string;
@@ -104,7 +104,7 @@ type AuthRepositorySet = {
   };
   workspaceMembershipRepository: {
     create(input: {
-      role?: "operator" | "owner";
+      role?: "operator" | "owner" | "viewer";
       userId: string;
       workspaceId: string;
     }): Promise<{

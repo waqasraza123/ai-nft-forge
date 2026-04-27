@@ -15,6 +15,7 @@ enum WorkspaceStatus {
 enum WorkspaceMembershipRole {
   owner
   operator
+  viewer
 }
 
 enum WorkspaceRoleEscalationRequestStatus {

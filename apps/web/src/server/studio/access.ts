@@ -15,7 +15,7 @@ import { resolvePreferredAccessibleWorkspace } from "./workspace-state";
 
 type AuthenticatedSession = NonNullable<AuthSessionResponse["session"]>;
 
-export type StudioAccessRole = "operator" | "owner";
+export type StudioAccessRole = "operator" | "owner" | "viewer";
 export const ACTIVE_WORKSPACE_COOKIE_NAME = "ai_nft_forge_active_workspace";
 
 export type StudioAccessContext = {
@@ -49,9 +49,11 @@ type StudioAccessRepositorySet = {
           slug: string;
           status: "active" | "archived" | "suspended";
         };
+        role: StudioAccessRole;
       }>
     >;
     findFirstByUserId(userId: string): Promise<{
+      role: StudioAccessRole;
       workspace: {
         id: string;
         name: string;
@@ -143,7 +145,7 @@ export function createStudioAccessService(
         name: membership.workspace.name,
         ownerUserId: membership.workspace.ownerUserId,
         ownerWalletAddress: membership.workspace.ownerUser.walletAddress,
-        role: "operator",
+        role: membership.role,
         slug: membership.workspace.slug,
         status: membership.workspace.status
       });

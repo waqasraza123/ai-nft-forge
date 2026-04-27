@@ -736,7 +736,11 @@ function workspaceRetentionPoliciesEqual(input: {
 }
 
 function createWorkspaceAccess(role: StudioWorkspaceRole) {
+  const canOperateWorkspace = role === "owner" || role === "operator";
+
   return {
+    canManageCommerce: canOperateWorkspace,
+    canManageStudioWorkflows: canOperateWorkspace,
     canManageMembers: role === "owner",
     canManageOnchain: role === "owner",
     canManageOpsPolicy: role === "owner",
@@ -744,6 +748,7 @@ function createWorkspaceAccess(role: StudioWorkspaceRole) {
     canRequestRoleEscalation: role === "operator",
     canManageWorkspace: role === "owner",
     canPublishCollections: role === "owner",
+    canRunReconciliation: canOperateWorkspace,
     role
   };
 }
@@ -2218,6 +2223,7 @@ export function createStudioSettingsService(
     },
 
     async addWorkspaceMember(input: {
+      memberRole?: Exclude<StudioWorkspaceRole, "owner">;
       ownerUserId: string;
       role?: StudioWorkspaceRole;
       walletAddress: string;
@@ -2226,6 +2232,7 @@ export function createStudioSettingsService(
       assertOwnerRole(input.role ?? "owner");
 
       const parsedInput = studioWorkspaceMemberCreateRequestSchema.parse({
+        role: input.memberRole,
         walletAddress: input.walletAddress
       });
 
@@ -2311,7 +2318,7 @@ export function createStudioSettingsService(
 
         const createdMembership =
           await repositories.workspaceMembershipRepository.create({
-            role: "operator",
+            role: parsedInput.role,
             userId: member.id,
             workspaceId: workspace.id
           });
@@ -2353,6 +2360,7 @@ export function createStudioSettingsService(
     },
 
     async createWorkspaceInvitation(input: {
+      invitationRole?: Exclude<StudioWorkspaceRole, "owner">;
       ownerUserId: string;
       role?: StudioWorkspaceRole;
       walletAddress: string;
@@ -2361,6 +2369,7 @@ export function createStudioSettingsService(
       assertOwnerRole(input.role ?? "owner");
 
       const parsedInput = studioWorkspaceInvitationCreateRequestSchema.parse({
+        role: input.invitationRole,
         walletAddress: input.walletAddress
       });
 
@@ -2463,7 +2472,7 @@ export function createStudioSettingsService(
           await repositories.workspaceInvitationRepository.create({
             expiresAt,
             invitedByUserId: owner.id,
-            role: "operator",
+            role: parsedInput.role,
             walletAddress: parsedInput.walletAddress,
             workspaceId: workspace.id
           });
@@ -2486,7 +2495,7 @@ export function createStudioSettingsService(
           action: "workspace_invitation_created",
           actor: owner,
           repositories,
-          role: "operator",
+          role: persistedInvitation.role,
           targetWalletAddress: persistedInvitation.walletAddress,
           workspaceId: workspace.id
         });

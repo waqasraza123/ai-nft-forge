@@ -389,6 +389,7 @@ describe("loadOpsRuntime", () => {
           status: "active"
         }
       ],
+      canOperateOps: true,
       canManageOpsPolicy: true,
       role: "owner",
       workspace: {

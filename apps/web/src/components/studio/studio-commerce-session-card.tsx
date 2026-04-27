@@ -37,6 +37,7 @@ export type StudioCommerceSessionActionRequest = {
 };
 
 type StudioCommerceSessionCardProps = {
+  canOperate: boolean;
   checkout: StudioCommerceCheckoutSummary;
   editor: StudioCommerceSessionEditor;
   emphasisLabel: string;
@@ -183,6 +184,7 @@ const selectClass =
   "w-full rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-2 text-sm text-[color:var(--color-text)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30";
 
 export function StudioCommerceSessionCard({
+  canOperate,
   checkout,
   editor,
   emphasisLabel,
@@ -366,7 +368,7 @@ export function StudioCommerceSessionCard({
         <div className="mt-4 flex flex-wrap gap-2">
           {canCompleteManually ? (
             <ActionButton
-              disabled={isBusy}
+              disabled={!canOperate || isBusy}
               onClick={() => {
                 void onRunAction({
                   checkoutSessionId: checkout.checkoutSessionId,
@@ -383,7 +385,7 @@ export function StudioCommerceSessionCard({
           ) : null}
           {canCancel ? (
             <ActionButton
-              disabled={isBusy}
+              disabled={!canOperate || isBusy}
               onClick={() => {
                 void onRunAction({
                   checkoutSessionId: checkout.checkoutSessionId,
@@ -400,7 +402,7 @@ export function StudioCommerceSessionCard({
           ) : null}
           {canRetryAutomation ? (
             <ActionButton
-              disabled={isBusy}
+              disabled={!canOperate || isBusy}
               onClick={() => {
                 void onRunAction({
                   checkoutSessionId: checkout.checkoutSessionId,
@@ -433,6 +435,7 @@ export function StudioCommerceSessionCard({
               <FieldLabel>Fulfillment status</FieldLabel>
               <select
                 className={selectClass}
+                disabled={!canOperate || isBusy}
                 onChange={(event) => {
                   onEditorChange({
                     checkoutSessionId: checkout.checkoutSessionId,
@@ -450,6 +453,7 @@ export function StudioCommerceSessionCard({
               <FieldLabel>Fulfillment notes</FieldLabel>
               <TextAreaField
                 className="w-full min-h-[8rem]"
+                disabled={!canOperate || isBusy}
                 onChange={(event) => {
                   onEditorChange({
                     checkoutSessionId: checkout.checkoutSessionId,
@@ -463,7 +467,11 @@ export function StudioCommerceSessionCard({
             </FieldStack>
           </div>
           <div className="mt-3 flex justify-end">
-            <ActionButton disabled={isBusy} tone="primary" type="submit">
+            <ActionButton
+              disabled={!canOperate || isBusy}
+              tone="primary"
+              type="submit"
+            >
               {isBusy ? "Saving…" : "Save fulfillment"}
             </ActionButton>
           </div>

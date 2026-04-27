@@ -5,6 +5,7 @@ import {
   workspaceLifecycleDeliveryPolicySchema,
   workspaceLifecycleNotificationDeliveryOverviewSchema,
   workspaceLifecycleNotificationDeliverySummarySchema,
+  type StudioWorkspaceRole,
   type WorkspaceLifecycleDeliveryPolicy,
   type WorkspaceLifecycleNotificationDeliverySummary,
   type WorkspaceLifecycleNotificationEventKind,
@@ -35,7 +36,7 @@ type WorkspaceLifecycleInvitationRecord = {
   id: string;
   lastRemindedAt: Date | null;
   reminderCount: number;
-  role: "operator" | "owner";
+  role: StudioWorkspaceRole;
   walletAddress: string;
 };
 

@@ -39,6 +39,7 @@ import {
   workspaceOffboardingSummarySchema,
   workspaceRetentionPolicySchema,
   type StudioWorkspaceScopeSummary,
+  type StudioWorkspaceRole,
   type WorkspaceDecommissionSummary,
   type WorkspaceExportFormat,
   type WorkspaceLifecycleAutomationHealth,
@@ -234,7 +235,7 @@ type WorkspaceOffboardingRepositorySet = {
         invitedByUserId: string;
         lastRemindedAt: Date | null;
         reminderCount: number;
-        role: "operator" | "owner";
+        role: StudioWorkspaceRole;
         walletAddress: string;
       }>
     >;
@@ -306,7 +307,7 @@ type WorkspaceOffboardingRepositorySet = {
       Array<{
         createdAt: Date;
         id: string;
-        role: "operator" | "owner";
+        role: StudioWorkspaceRole;
         user: {
           avatarUrl: string | null;
           displayName: string | null;
@@ -421,7 +422,7 @@ type WorkspaceOffboardingRepositorySet = {
           walletAddress: string;
         };
         requestedByUserId: string;
-        requestedRole: "operator" | "owner";
+        requestedRole: StudioWorkspaceRole;
         resolvedAt: Date | null;
         resolvedByUser: {
           walletAddress: string;
@@ -576,7 +577,7 @@ function serializeBrand(input: {
 function serializeWorkspaceMember(input: {
   addedAt: Date | null;
   membershipId: string | null;
-  role: "operator" | "owner";
+  role: StudioWorkspaceRole;
   user: {
     avatarUrl: string | null;
     displayName: string | null;
@@ -606,7 +607,7 @@ function serializeWorkspaceInvitation(input: {
   invitedByUserId: string;
   lastRemindedAt: Date | null;
   reminderCount: number;
-  role: "operator" | "owner";
+  role: StudioWorkspaceRole;
   walletAddress: string;
 }) {
   const now = new Date();
@@ -636,7 +637,7 @@ function serializeRoleEscalationRequest(input: {
     walletAddress: string;
   };
   requestedByUserId: string;
-  requestedRole: "operator" | "owner";
+  requestedRole: StudioWorkspaceRole;
   resolvedAt: Date | null;
   resolvedByUser: {
     walletAddress: string;

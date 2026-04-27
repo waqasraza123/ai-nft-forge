@@ -51,6 +51,13 @@ export async function POST(
         404
       );
     }
+    if (workspace.role === "viewer") {
+      throw new OpsServiceError(
+        "FORBIDDEN",
+        "Workspace viewers can inspect fleet alerts but cannot mute them.",
+        403
+      );
+    }
     assertWorkspaceIsActive(workspace, (message) => {
       return new OpsServiceError("WORKSPACE_NOT_ACTIVE", message, 409);
     });

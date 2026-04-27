@@ -5,6 +5,7 @@ import { ActionButton, OpsPanelCard, Pill } from "@ai-nft-forge/ui";
 
 type OpsFleetWorkspaceCardProps = {
   busyKey: string | null;
+  canRunReconciliation: boolean;
   onRunReconciliation: (workspace: WorkspaceFleetWorkspaceSummary) => void;
   pressureScore: number;
   rank: number;
@@ -58,6 +59,7 @@ function getScoreTextClass(tone: "critical" | "warning" | "healthy") {
 
 export function OpsFleetWorkspaceCard({
   busyKey,
+  canRunReconciliation,
   onRunReconciliation,
   pressureScore,
   rank,
@@ -114,18 +116,24 @@ export function OpsFleetWorkspaceCard({
             </span>
           </div>
           <ActionButton
-            disabled={!workspaceIsActive || busyKey === reconciliationBusyKey}
+            disabled={
+              !canRunReconciliation ||
+              !workspaceIsActive ||
+              busyKey === reconciliationBusyKey
+            }
             onClick={() => {
               onRunReconciliation(workspace);
             }}
             tone="secondary"
             type="button"
           >
-            {!workspaceIsActive
-              ? "Workspace inactive"
-              : busyKey === reconciliationBusyKey
-                ? "Running…"
-                : "Run reconciliation"}
+            {!canRunReconciliation
+              ? "Viewer read-only"
+              : !workspaceIsActive
+                ? "Workspace inactive"
+                : busyKey === reconciliationBusyKey
+                  ? "Running…"
+                  : "Run reconciliation"}
           </ActionButton>
         </div>
       </div>

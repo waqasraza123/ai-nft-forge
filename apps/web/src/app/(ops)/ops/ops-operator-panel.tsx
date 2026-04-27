@@ -725,6 +725,7 @@ function ActiveAlertItem({
   alert,
   acknowledging,
   clearingMute,
+  canOperate,
   muting,
   onAcknowledge,
   onClearMute,
@@ -732,6 +733,7 @@ function ActiveAlertItem({
 }: {
   alert: OpsAlertStateSummary;
   acknowledging: boolean;
+  canOperate: boolean;
   clearingMute: boolean;
   muting: boolean;
   onAcknowledge: (alertStateId: string) => Promise<void>;
@@ -776,7 +778,7 @@ function ActiveAlertItem({
       <OpsActionRow>
         {!alert.acknowledgedAt ? (
           <OpsActionButton
-            disabled={acknowledging}
+            disabled={!canOperate || acknowledging}
             onClick={() => {
               void onAcknowledge(alert.id);
             }}
@@ -786,7 +788,7 @@ function ActiveAlertItem({
           </OpsActionButton>
         ) : null}
         <OpsActionButton
-          disabled={muting || clearingMute}
+          disabled={!canOperate || muting || clearingMute}
           onClick={() => {
             void onMute(alert.id, 1);
           }}
@@ -795,7 +797,7 @@ function ActiveAlertItem({
           {muting ? "Saving mute…" : "Mute 1h"}
         </OpsActionButton>
         <OpsActionButton
-          disabled={muting || clearingMute}
+          disabled={!canOperate || muting || clearingMute}
           onClick={() => {
             void onMute(alert.id, 24);
           }}
@@ -804,7 +806,7 @@ function ActiveAlertItem({
           {muting ? "Saving mute…" : "Mute 1d"}
         </OpsActionButton>
         <OpsActionButton
-          disabled={muting || clearingMute}
+          disabled={!canOperate || muting || clearingMute}
           onClick={() => {
             void onMute(alert.id, 24 * 7);
           }}
@@ -814,7 +816,7 @@ function ActiveAlertItem({
         </OpsActionButton>
         {alert.mutedUntil ? (
           <OpsActionButton
-            disabled={muting || clearingMute}
+            disabled={!canOperate || muting || clearingMute}
             onClick={() => {
               void onClearMute(alert.id);
             }}
@@ -830,10 +832,12 @@ function ActiveAlertItem({
 
 function ActiveMuteItem({
   mute,
+  canOperate,
   clearing,
   onClear
 }: {
   mute: OpsAlertMuteSummary;
+  canOperate: boolean;
   clearing: boolean;
   onClear: (code: string) => Promise<void>;
 }) {
@@ -848,7 +852,7 @@ function ActiveMuteItem({
       </OpsSplitRow>
       <OpsActionRow>
         <OpsActionButton
-          disabled={clearing}
+          disabled={!canOperate || clearing}
           onClick={() => {
             void onClear(mute.code);
           }}
@@ -907,8 +911,13 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
   const [retryingGenerationRequestId, setRetryingGenerationRequestId] =
     useState<string | null>(null);
   const canManageOpsPolicy = operator.access?.canManageOpsPolicy ?? false;
+  const canOperateOps = operator.access?.canOperateOps ?? false;
   const operatorRoleLabel =
-    operator.access?.role === "owner" ? "Owner" : "Operator";
+    operator.access?.role === "owner"
+      ? "Owner"
+      : operator.access?.role === "viewer"
+        ? "Viewer"
+        : "Operator";
 
   useEffect(() => {
     setAlertEscalationDraft(
@@ -921,6 +930,15 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
   }, [operator.alertSchedule]);
 
   const retryGenerationRequest = async (generationRequestId: string) => {
+    if (!canOperateOps) {
+      setNotice({
+        message:
+          "Workspace viewers can inspect ops state but cannot retry generation jobs.",
+        tone: "error"
+      });
+      return;
+    }
+
     setRetryingGenerationRequestId(generationRequestId);
     setNotice(null);
 
@@ -961,6 +979,15 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
   };
 
   const acknowledgeAlertState = async (alertStateId: string) => {
+    if (!canOperateOps) {
+      setNotice({
+        message:
+          "Workspace viewers can inspect ops state but cannot acknowledge alerts.",
+        tone: "error"
+      });
+      return;
+    }
+
     setAcknowledgingAlertStateId(alertStateId);
     setNotice(null);
 
@@ -1004,6 +1031,15 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
     alertStateId: string,
     durationHours: number
   ) => {
+    if (!canOperateOps) {
+      setNotice({
+        message:
+          "Workspace viewers can inspect ops state but cannot mute alerts.",
+        tone: "error"
+      });
+      return;
+    }
+
     setMutingAlertStateId(alertStateId);
     setNotice(null);
 
@@ -1047,6 +1083,15 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
   };
 
   const clearAlertMuteByAlertStateId = async (alertStateId: string) => {
+    if (!canOperateOps) {
+      setNotice({
+        message:
+          "Workspace viewers can inspect ops state but cannot clear alert mutes.",
+        tone: "error"
+      });
+      return;
+    }
+
     const alert = operator.history?.activeAlerts.find(
       (activeAlert) => activeAlert.id === alertStateId
     );
@@ -1089,6 +1134,15 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
   };
 
   const clearAlertMuteByCode = async (code: string) => {
+    if (!canOperateOps) {
+      setNotice({
+        message:
+          "Workspace viewers can inspect ops state but cannot clear alert mutes.",
+        tone: "error"
+      });
+      return;
+    }
+
     setClearingMuteCode(code);
     setNotice(null);
 
@@ -1213,6 +1267,15 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
   };
 
   const runReconciliation = async () => {
+    if (!canOperateOps) {
+      setNotice({
+        message:
+          "Workspace viewers can inspect reconciliation state but cannot launch runs.",
+        tone: "error"
+      });
+      return;
+    }
+
     setRunningReconciliation(true);
     setNotice(null);
 
@@ -1249,6 +1312,15 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
   };
 
   const repairReconciliationIssue = async (issueId: string) => {
+    if (!canOperateOps) {
+      setNotice({
+        message:
+          "Workspace viewers can inspect reconciliation issues but cannot repair them.",
+        tone: "error"
+      });
+      return;
+    }
+
     setRepairingReconciliationIssueId(issueId);
     setNotice(null);
 
@@ -1288,6 +1360,15 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
   };
 
   const ignoreReconciliationIssue = async (issueId: string) => {
+    if (!canOperateOps) {
+      setNotice({
+        message:
+          "Workspace viewers can inspect reconciliation issues but cannot ignore them.",
+        tone: "error"
+      });
+      return;
+    }
+
     setIgnoringReconciliationIssueId(issueId);
     setNotice(null);
 
@@ -1888,6 +1969,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                   <ActiveAlertItem
                     acknowledging={acknowledgingAlertStateId === alert.id}
                     alert={alert}
+                    canOperate={canOperateOps}
                     clearingMute={clearingMuteCode === alert.code}
                     key={alert.id}
                     muting={mutingAlertStateId === alert.id}
@@ -1906,7 +1988,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
           <OpsCommandModule
             actions={
               <OpsActionButton
-                disabled={runningReconciliation}
+                disabled={!canOperateOps || runningReconciliation}
                 onClick={() => {
                   void runReconciliation();
                 }}
@@ -1999,6 +2081,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                     <OpsActionRow>
                       <OpsActionButton
                         disabled={
+                          !canOperateOps ||
                           !issue.repairable ||
                           repairingReconciliationIssueId === issue.id
                         }
@@ -2012,7 +2095,10 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
                           : "Repair issue"}
                       </OpsActionButton>
                       <OpsActionButton
-                        disabled={ignoringReconciliationIssueId === issue.id}
+                        disabled={
+                          !canOperateOps ||
+                          ignoringReconciliationIssueId === issue.id
+                        }
                         onClick={() => {
                           void ignoreReconciliationIssue(issue.id);
                         }}
@@ -2763,6 +2849,7 @@ export function OpsOperatorPanel({ operator }: OpsOperatorPanelProps) {
               <div className="space-y-2.5">
                 {activeMutes.map((mute) => (
                   <ActiveMuteItem
+                    canOperate={canOperateOps}
                     clearing={clearingMuteCode === mute.code}
                     key={mute.id}
                     mute={mute}

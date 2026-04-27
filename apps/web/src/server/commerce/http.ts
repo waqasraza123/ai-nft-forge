@@ -52,6 +52,14 @@ export async function requireStudioActiveApiSession() {
     return new CommerceServiceError("WORKSPACE_NOT_ACTIVE", message, 409);
   });
 
+  if (session.role === "viewer") {
+    throw new CommerceServiceError(
+      "FORBIDDEN",
+      "Workspace viewers can inspect commerce state but cannot mutate checkout or fulfillment records.",
+      403
+    );
+  }
+
   return session;
 }
 
