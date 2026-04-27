@@ -295,6 +295,21 @@ export const studioWorkspaceAccessReviewSummarySchema = z.object({
   roleEscalationCount: z.number().int().min(0)
 });
 
+export const studioWorkspaceAccessReviewAttestationQuerySchema = z.object({
+  format: z.enum(["json", "csv"]).default("json")
+});
+
+export const studioWorkspaceAccessReviewAttestationSummarySchema = z.object({
+  actorUserId: z.string().min(1),
+  actorWalletAddress: walletAddressSchema,
+  auditEntryId: z.string().min(1),
+  createdAt: z.string().datetime(),
+  reviewGeneratedAt: z.string().datetime(),
+  reviewHash: z.string().regex(/^[a-f0-9]{64}$/),
+  summary: studioWorkspaceAccessReviewSummarySchema,
+  workspace: studioWorkspaceSummarySchema
+});
+
 export const studioWorkspaceAccessReviewResponseSchema = z.object({
   report: z.object({
     generatedAt: z.string().datetime(),
@@ -305,17 +320,16 @@ export const studioWorkspaceAccessReviewResponseSchema = z.object({
 });
 
 export const studioWorkspaceAccessReviewAttestationResponseSchema = z.object({
-  attestation: z.object({
-    actorUserId: z.string().min(1),
-    actorWalletAddress: walletAddressSchema,
-    auditEntryId: z.string().min(1),
-    createdAt: z.string().datetime(),
-    reviewGeneratedAt: z.string().datetime(),
-    reviewHash: z.string().regex(/^[a-f0-9]{64}$/),
-    summary: studioWorkspaceAccessReviewSummarySchema,
-    workspace: studioWorkspaceSummarySchema
-  })
+  attestation: studioWorkspaceAccessReviewAttestationSummarySchema
 });
+
+export const studioWorkspaceAccessReviewAttestationListResponseSchema =
+  z.object({
+    attestations: z.object({
+      items: z.array(studioWorkspaceAccessReviewAttestationSummarySchema),
+      workspace: studioWorkspaceSummarySchema
+    })
+  });
 
 export const studioSettingsSummarySchema = z.object({
   access: studioWorkspaceAccessSchema,
@@ -601,8 +615,17 @@ export type StudioWorkspaceAccessReviewRow = z.infer<
 export type StudioWorkspaceAccessReviewSummary = z.infer<
   typeof studioWorkspaceAccessReviewSummarySchema
 >;
+export type StudioWorkspaceAccessReviewAttestationQuery = z.infer<
+  typeof studioWorkspaceAccessReviewAttestationQuerySchema
+>;
+export type StudioWorkspaceAccessReviewAttestationSummary = z.infer<
+  typeof studioWorkspaceAccessReviewAttestationSummarySchema
+>;
 export type StudioWorkspaceAccessReviewAttestationResponse = z.infer<
   typeof studioWorkspaceAccessReviewAttestationResponseSchema
+>;
+export type StudioWorkspaceAccessReviewAttestationListResponse = z.infer<
+  typeof studioWorkspaceAccessReviewAttestationListResponseSchema
 >;
 export type StudioSettingsSummary = z.infer<typeof studioSettingsSummarySchema>;
 export type StudioSettingsUpdateRequest = z.infer<

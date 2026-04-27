@@ -20,6 +20,7 @@ import {
   studioBrandThemeSchema,
   studioWorkspaceCreateRequestSchema,
   studioWorkspaceCreateResponseSchema,
+  studioWorkspaceAccessReviewAttestationListResponseSchema,
   studioWorkspaceAccessReviewAttestationResponseSchema,
   studioWorkspaceAccessReviewResponseSchema,
   studioWorkspaceStatusUpdateRequestSchema,
@@ -51,6 +52,7 @@ import {
   type WorkspaceLifecycleAutomationRunSummary,
   type WorkspaceLifecycleDeliveryPolicy,
   type WorkspaceLifecycleSlaPolicy,
+  type StudioWorkspaceAccessReviewAttestationListResponse,
   type StudioWorkspaceAccessReviewAttestationResponse,
   type StudioWorkspaceAccessReviewResponse,
   type StudioWorkspaceRole,
@@ -211,6 +213,8 @@ type StudioSettingsRepositorySet = {
       metadataJson: unknown;
     }): Promise<AuditLogRecord>;
     listByEntity(input: {
+      actions?: string[];
+      cursor?: string;
       entityId: string;
       entityType: string;
       limit?: number;
@@ -922,6 +926,100 @@ function getAuditMetadataString(input: {
   return typeof value === "string" ? value : null;
 }
 
+function getAuditMetadataNumber(input: {
+  auditLog: AuditLogRecord;
+  key: string;
+}) {
+  const metadata: Record<string, unknown> =
+    typeof input.auditLog.metadataJson === "object" &&
+    input.auditLog.metadataJson !== null
+      ? (input.auditLog.metadataJson as Record<string, unknown>)
+      : {};
+
+  const value = metadata[input.key];
+
+  return typeof value === "number" && Number.isInteger(value) && value >= 0
+    ? value
+    : null;
+}
+
+function serializeAccessReviewAttestation(input: {
+  auditLog: AuditLogRecord;
+  workspace: WorkspaceRecord;
+}) {
+  if (input.auditLog.action !== "workspace_access_review_recorded") {
+    return null;
+  }
+
+  const actorWalletAddress = getAuditMetadataString({
+    auditLog: input.auditLog,
+    key: "actorWalletAddress"
+  });
+  const reviewGeneratedAt = getAuditMetadataString({
+    auditLog: input.auditLog,
+    key: "reviewGeneratedAt"
+  });
+  const reviewHash = getAuditMetadataString({
+    auditLog: input.auditLog,
+    key: "reviewHash"
+  });
+  const auditEntryCount = getAuditMetadataNumber({
+    auditLog: input.auditLog,
+    key: "reviewAuditEntryCount"
+  });
+  const invitationCount = getAuditMetadataNumber({
+    auditLog: input.auditLog,
+    key: "reviewInvitationCount"
+  });
+  const memberCount = getAuditMetadataNumber({
+    auditLog: input.auditLog,
+    key: "reviewMemberCount"
+  });
+  const pendingRoleEscalationCount = getAuditMetadataNumber({
+    auditLog: input.auditLog,
+    key: "reviewPendingRoleEscalationCount"
+  });
+  const roleEscalationCount = getAuditMetadataNumber({
+    auditLog: input.auditLog,
+    key: "reviewRoleEscalationCount"
+  });
+
+  if (
+    !actorWalletAddress ||
+    !reviewGeneratedAt ||
+    !reviewHash ||
+    auditEntryCount === null ||
+    invitationCount === null ||
+    memberCount === null ||
+    pendingRoleEscalationCount === null ||
+    roleEscalationCount === null
+  ) {
+    return null;
+  }
+
+  const parsedAttestation =
+    studioWorkspaceAccessReviewAttestationResponseSchema.shape.attestation.safeParse(
+      {
+        actorUserId: input.auditLog.actorId,
+        actorWalletAddress,
+        auditEntryId: input.auditLog.id,
+        createdAt: input.auditLog.createdAt.toISOString(),
+        reviewGeneratedAt,
+        reviewHash,
+        summary: {
+          auditEntryCount,
+          invitationCount,
+          memberCount,
+          pendingRoleEscalationCount,
+          roleEscalationCount
+        },
+        workspace: serializeWorkspace(input.workspace)
+      }
+    );
+
+  return parsedAttestation.success ? parsedAttestation.data : null;
+}
+
 function createWorkspaceAccessReview(input: {
   auditLogs: AuditLogRecord[];
   generatedAt: Date;
@@ -1134,6 +1232,49 @@ export function buildWorkspaceAccessReviewCsv(
       row.reviewGeneratedAt,
       row.createdAt,
       row.expiresAt
+    ]
+      .map(escapeCsvValue)
+      .join(",")
+  );
+
+  return [columns.join(","), ...rows].join("\n");
+}
+
+export function buildWorkspaceAccessReviewAttestationsCsv(
+  input: StudioWorkspaceAccessReviewAttestationListResponse
+) {
+  const columns = [
+    "workspace_id",
+    "workspace_slug",
+    "workspace_name",
+    "audit_entry_id",
+    "created_at",
+    "actor_user_id",
+    "actor_wallet_address",
+    "review_generated_at",
+    "review_hash",
+    "member_count",
+    "invitation_count",
+    "role_escalation_count",
+    "pending_role_escalation_count",
+    "audit_entry_count"
+  ];
+  const rows = input.attestations.items.map((attestation) =>
+    [
+      attestation.workspace.id,
+      attestation.workspace.slug,
+      attestation.workspace.name,
+      attestation.auditEntryId,
+      attestation.createdAt,
+      attestation.actorUserId,
+      attestation.actorWalletAddress,
+      attestation.reviewGeneratedAt,
+      attestation.reviewHash,
+      attestation.summary.memberCount,
+      attestation.summary.invitationCount,
+      attestation.summary.roleEscalationCount,
+      attestation.summary.pendingRoleEscalationCount,
+      attestation.summary.auditEntryCount
     ]
       .map(escapeCsvValue)
       .join(",")
@@ -1799,6 +1940,42 @@ export function createStudioSettingsService(
           }
         } satisfies StudioWorkspaceAccessReviewAttestationResponse);
       });
+    },
+
+    async listWorkspaceAccessReviewAttestations(input: {
+      ownerUserId: string;
+      role?: StudioWorkspaceRole;
+      workspaceId?: string | null;
+    }) {
+      assertOwnerRole(input.role ?? "owner");
+
+      const { workspace } = await requireOwnerWorkspace({
+        ownerUserId: input.ownerUserId,
+        repositories: dependencies.repositories,
+        workspaceId: input.workspaceId
+      });
+      const auditLogs =
+        await dependencies.repositories.auditLogRepository.listByEntity({
+          actions: ["workspace_access_review_recorded"],
+          entityId: workspace.id,
+          entityType: "workspace",
+          limit: 100
+        });
+      const attestations = auditLogs.flatMap((auditLog) => {
+        const serializedAttestation = serializeAccessReviewAttestation({
+          auditLog,
+          workspace
+        });
+
+        return serializedAttestation ? [serializedAttestation] : [];
+      });
+
+      return studioWorkspaceAccessReviewAttestationListResponseSchema.parse({
+        attestations: {
+          items: attestations,
+          workspace: serializeWorkspace(workspace)
+        }
+      } satisfies StudioWorkspaceAccessReviewAttestationListResponse);
     },
 
     async createWorkspace(input: {

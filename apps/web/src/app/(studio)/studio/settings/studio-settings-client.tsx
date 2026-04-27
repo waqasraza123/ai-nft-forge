@@ -5229,6 +5229,18 @@ export function StudioSettingsClient({
                         >
                           Review CSV
                         </ActionLink>
+                        <ActionLink
+                          href="/api/studio/settings/access-review/attestations"
+                          tone="inline"
+                        >
+                          Attestations JSON
+                        </ActionLink>
+                        <ActionLink
+                          href="/api/studio/settings/access-review/attestations?format=csv"
+                          tone="inline"
+                        >
+                          Attestations CSV
+                        </ActionLink>
                         <ActionButton
                           disabled={isRecordingAccessReview}
                           onClick={() => {
