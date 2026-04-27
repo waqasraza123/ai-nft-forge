@@ -55,6 +55,14 @@ const auditCategoryOptions: Array<{
   {
     label: "Ownership transfer",
     value: "ownership_transfer"
+  },
+  {
+    label: "Workspace lifecycle",
+    value: "workspace_lifecycle"
+  },
+  {
+    label: "Workspace policy",
+    value: "workspace_policy"
   }
 ];
 
@@ -67,7 +75,12 @@ function formatDateTime(value: string) {
 
 function formatAuditRoleMetadata(entry: OpsWorkspaceAuditEntry) {
   if (entry.reviewHash) {
-    return `Access review ${entry.reviewHash.slice(0, 12)}${entry.reviewGeneratedAt ? ` · generated ${formatDateTime(entry.reviewGeneratedAt)}` : ""}`;
+    const reviewLabel =
+      entry.action === "workspace_access_review_recorded"
+        ? "Access review"
+        : "Access review gate";
+
+    return `${reviewLabel} ${entry.reviewHash.slice(0, 12)}${entry.reviewGeneratedAt ? ` · generated ${formatDateTime(entry.reviewGeneratedAt)}` : ""}`;
   }
 
   if (entry.previousRole && entry.role) {
@@ -341,7 +354,7 @@ export function OpsAuditClient({
           </ActionRow>
         </SurfaceCard>
         <SurfaceCard
-          body="The audit stream now centralizes invitation, membership, and ownership-transfer lifecycle events so operators do not have to pivot between settings screens to reconstruct what happened."
+          body="The audit stream now centralizes access, ownership-transfer, workspace lifecycle, and policy events so operators do not have to pivot between settings screens to reconstruct what happened."
           eyebrow="Timeline"
           span={8}
           title="Workspace activity"

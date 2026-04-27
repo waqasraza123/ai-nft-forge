@@ -67,9 +67,35 @@ const ownershipTransferAuditActionSet = new Set<string>(
   ownershipTransferAuditActions
 );
 
+const workspaceLifecycleAuditActions = [
+  "workspace_archived",
+  "workspace_decommission_canceled",
+  "workspace_decommission_executed",
+  "workspace_decommission_notification_recorded",
+  "workspace_decommission_scheduled",
+  "workspace_invitation_reminder_sent",
+  "workspace_reactivated",
+  "workspace_suspended"
+] as const;
+const workspaceLifecycleAuditActionSet = new Set<string>(
+  workspaceLifecycleAuditActions
+);
+
+const workspacePolicyAuditActions = [
+  "workspace_lifecycle_automation_policy_updated",
+  "workspace_lifecycle_delivery_policy_updated",
+  "workspace_lifecycle_sla_policy_updated",
+  "workspace_retention_policy_updated"
+] as const;
+const workspacePolicyAuditActionSet = new Set<string>(
+  workspacePolicyAuditActions
+);
+
 const allWorkspaceAuditActions = [
   ...workspaceAccessAuditActions,
-  ...ownershipTransferAuditActions
+  ...ownershipTransferAuditActions,
+  ...workspaceLifecycleAuditActions,
+  ...workspacePolicyAuditActions
 ] as const satisfies ReadonlyArray<
   (typeof studioWorkspaceAuditActionSchema.options)[number]
 >;
@@ -83,15 +109,33 @@ function resolveAuditActionsForCategory(category: OpsWorkspaceAuditCategory) {
     return [...ownershipTransferAuditActions];
   }
 
+  if (category === "workspace_lifecycle") {
+    return [...workspaceLifecycleAuditActions];
+  }
+
+  if (category === "workspace_policy") {
+    return [...workspacePolicyAuditActions];
+  }
+
   return [...allWorkspaceAuditActions];
 }
 
 function resolveAuditCategory(
   action: (typeof studioWorkspaceAuditActionSchema.options)[number]
 ): Exclude<OpsWorkspaceAuditCategory, "all"> {
-  return ownershipTransferAuditActionSet.has(action)
-    ? "ownership_transfer"
-    : "workspace_access";
+  if (ownershipTransferAuditActionSet.has(action)) {
+    return "ownership_transfer";
+  }
+
+  if (workspaceLifecycleAuditActionSet.has(action)) {
+    return "workspace_lifecycle";
+  }
+
+  if (workspacePolicyAuditActionSet.has(action)) {
+    return "workspace_policy";
+  }
+
+  return "workspace_access";
 }
 
 function parseAuditMetadata(metadataJson: unknown) {

@@ -39,7 +39,7 @@ export default async function OpsAuditPage() {
     >
       <SurfaceGrid>
         <SurfaceCard
-          body="Audit review now lives on a dedicated ops route with server-side filtering and CSV export for workspace membership, invitation, and ownership-transfer activity."
+          body="Audit review now lives on a dedicated ops route with server-side filtering and CSV export for workspace access, ownership transfer, lifecycle, retention, and automation-policy activity."
           eyebrow="Audit"
           span={8}
           title="Workspace audit trail"

@@ -236,7 +236,9 @@ export const opsErrorResponseSchema = z.object({
 export const opsWorkspaceAuditCategorySchema = z.enum([
   "all",
   "workspace_access",
-  "ownership_transfer"
+  "ownership_transfer",
+  "workspace_lifecycle",
+  "workspace_policy"
 ]);
 
 export const opsWorkspaceAuditQuerySchema = z.object({
