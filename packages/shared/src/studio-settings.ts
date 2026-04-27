@@ -222,6 +222,7 @@ export const studioWorkspaceAuditActionSchema = z.enum([
   "workspace_lifecycle_sla_policy_updated",
   "workspace_member_added",
   "workspace_member_removed",
+  "workspace_member_role_updated",
   "workspace_decommission_notification_recorded",
   "workspace_owner_transferred",
   "workspace_reactivated",
@@ -359,6 +360,10 @@ export const studioBrandResponseSchema = z.object({
 export const studioWorkspaceMemberCreateRequestSchema = z.object({
   role: studioWorkspaceRoleSchema.exclude(["owner"]).default("operator"),
   walletAddress: walletAddressSchema
+});
+
+export const studioWorkspaceMemberUpdateRequestSchema = z.object({
+  role: studioWorkspaceRoleSchema.exclude(["owner"])
 });
 
 export const studioWorkspaceMemberResponseSchema = z.object({
@@ -516,6 +521,9 @@ export type StudioWorkspaceMemberCreateRequest = z.infer<
 >;
 export type StudioWorkspaceMemberDeleteResponse = z.infer<
   typeof studioWorkspaceMemberDeleteResponseSchema
+>;
+export type StudioWorkspaceMemberUpdateRequest = z.infer<
+  typeof studioWorkspaceMemberUpdateRequestSchema
 >;
 export type StudioWorkspaceMemberResponse = z.infer<
   typeof studioWorkspaceMemberResponseSchema

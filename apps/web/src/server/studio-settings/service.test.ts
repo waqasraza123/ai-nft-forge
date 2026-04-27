@@ -589,6 +589,29 @@ function createStudioSettingsHarness() {
         );
       },
 
+      async updateRoleByIdForWorkspace(input: {
+        id: string;
+        role: "operator" | "viewer";
+        workspaceId: string;
+      }) {
+        const membership = memberships.get(input.id);
+
+        if (!membership || membership.workspaceId !== input.workspaceId) {
+          return {
+            count: 0
+          };
+        }
+
+        memberships.set(input.id, {
+          ...membership,
+          role: input.role
+        });
+
+        return {
+          count: 1
+        };
+      },
+
       async findFirstByUserId(userId: string) {
         const membership =
           [...memberships.values()].find(

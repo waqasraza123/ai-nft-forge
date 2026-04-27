@@ -438,6 +438,7 @@ pnpm generation-backend:ready
 - Commerce checkout now supports `manual`, `stripe`, and `disabled` provider modes, with Stripe-hosted checkout and webhook-driven completion when configured
 - Commerce administration now lives on `/studio/commerce`, with owner/operator manual completion, release/cancel controls, and fulfillment-state tracking
 - Workspace viewers can inspect studio, commerce, ops, audit, retention, and directory state without mutation rights
+- Workspace owners can change existing non-owner members between operator and viewer without removing or reinviting them, with role changes captured in the workspace audit log
 - This repository targets single-node self-hosting with Docker Compose, not Kubernetes or hosted SaaS
 
 ## Community

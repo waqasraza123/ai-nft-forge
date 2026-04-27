@@ -34,6 +34,7 @@ import {
   studioWorkspaceMemberCreateRequestSchema,
   studioWorkspaceMemberDeleteResponseSchema,
   studioWorkspaceMemberResponseSchema,
+  studioWorkspaceMemberUpdateRequestSchema,
   studioWorkspaceRoleEscalationCreateRequestSchema,
   studioWorkspaceRoleEscalationResponseSchema,
   workspaceLifecycleDeliveryPolicySchema,
@@ -289,6 +290,11 @@ type StudioSettingsRepositorySet = {
       userId: string;
       workspaceId: string;
     } | null>;
+    updateRoleByIdForWorkspace(input: {
+      id: string;
+      role: Exclude<StudioWorkspaceRole, "owner">;
+      workspaceId: string;
+    }): Promise<{ count: number }>;
     findFirstByUserId(userId: string): Promise<{
       workspace: {
         id: string;
@@ -1136,6 +1142,7 @@ async function recordWorkspaceAuditLog(input: {
     | "workspace_lifecycle_sla_policy_updated"
     | "workspace_member_added"
     | "workspace_member_removed"
+    | "workspace_member_role_updated"
     | "workspace_lifecycle_delivery_policy_updated"
     | "workspace_owner_transferred"
     | "workspace_reactivated"
@@ -3054,6 +3061,109 @@ export function createStudioSettingsService(
         return studioWorkspaceRoleEscalationActionResponseSchema.parse({
           requestId: request.id,
           status: "canceled"
+        });
+      });
+    },
+
+    async updateWorkspaceMemberRole(input: {
+      memberRole: Exclude<StudioWorkspaceRole, "owner">;
+      membershipId: string;
+      ownerUserId: string;
+      role?: StudioWorkspaceRole;
+      workspaceId?: string | null;
+    }) {
+      assertOwnerRole(input.role ?? "owner");
+
+      const parsedInput = studioWorkspaceMemberUpdateRequestSchema.parse({
+        role: input.memberRole
+      });
+
+      return dependencies.runTransaction(async (repositories) => {
+        const { owner, workspace } = await requireOwnerWorkspace({
+          ownerUserId: input.ownerUserId,
+          repositories,
+          workspaceId: input.workspaceId
+        });
+        const membership =
+          await repositories.workspaceMembershipRepository.findByIdWithUserAndWorkspace(
+            {
+              id: input.membershipId
+            }
+          );
+
+        if (
+          !membership ||
+          membership.workspace.id !== workspace.id ||
+          membership.workspace.ownerUserId !== input.ownerUserId
+        ) {
+          throw new StudioSettingsServiceError(
+            "MEMBER_NOT_FOUND",
+            "The requested workspace member was not found.",
+            404
+          );
+        }
+
+        if (membership.role === parsedInput.role) {
+          return studioWorkspaceMemberResponseSchema.parse({
+            member: serializeWorkspaceMember({
+              addedAt: membership.createdAt,
+              membershipId: membership.id,
+              role: membership.role,
+              user: membership.user
+            })
+          });
+        }
+
+        const updated =
+          await repositories.workspaceMembershipRepository.updateRoleByIdForWorkspace(
+            {
+              id: input.membershipId,
+              role: parsedInput.role,
+              workspaceId: workspace.id
+            }
+          );
+
+        if (updated.count === 0) {
+          throw new StudioSettingsServiceError(
+            "MEMBER_NOT_FOUND",
+            "The requested workspace member was not found.",
+            404
+          );
+        }
+
+        const persistedMembership =
+          await repositories.workspaceMembershipRepository.findByIdWithUserAndWorkspace(
+            {
+              id: input.membershipId
+            }
+          );
+
+        if (!persistedMembership) {
+          throw new StudioSettingsServiceError(
+            "INTERNAL_SERVER_ERROR",
+            "Workspace member could not be loaded after role update.",
+            500
+          );
+        }
+
+        await recordWorkspaceAuditLog({
+          action: "workspace_member_role_updated",
+          actor: owner,
+          membershipId: persistedMembership.id,
+          repositories,
+          role: persistedMembership.role,
+          targetUserId: persistedMembership.user.id,
+          targetWalletAddress: persistedMembership.user.walletAddress,
+          workspaceId: workspace.id
+        });
+
+        return studioWorkspaceMemberResponseSchema.parse({
+          member: serializeWorkspaceMember({
+            addedAt: persistedMembership.createdAt,
+            membershipId: persistedMembership.id,
+            role: persistedMembership.role,
+            user: persistedMembership.user
+          })
         });
       });
     },

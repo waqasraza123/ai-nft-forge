@@ -146,6 +146,22 @@ export function createWorkspaceMembershipRepository(
       });
     },
 
+    updateRoleByIdForWorkspace(input: {
+      id: string;
+      role: WorkspaceMembershipRole;
+      workspaceId: string;
+    }): Promise<{ count: number }> {
+      return database.workspaceMembership.updateMany({
+        data: {
+          role: input.role
+        },
+        where: {
+          id: input.id,
+          workspaceId: input.workspaceId
+        }
+      });
+    },
+
     findFirstByUserId(
       userId: string
     ): Promise<WorkspaceMembershipWithWorkspace | null> {

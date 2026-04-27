@@ -34,6 +34,7 @@ import {
   studioWorkspaceLifecycleSlaPolicyResponseSchema,
   workspaceLifecycleNotificationDeliveryRetryResponseSchema,
   studioWorkspaceMemberDeleteResponseSchema,
+  studioWorkspaceMemberResponseSchema,
   studioWorkspaceRoleEscalationActionResponseSchema,
   studioWorkspaceRoleEscalationResponseSchema,
   studioWorkspaceStatusUpdateResponseSchema,
@@ -676,6 +677,9 @@ export function StudioSettingsClient({
     string | null
   >(null);
   const [removingMembershipId, setRemovingMembershipId] = useState<
+    string | null
+  >(null);
+  const [updatingMembershipId, setUpdatingMembershipId] = useState<
     string | null
   >(null);
   const [retryingLifecycleDeliveryId, setRetryingLifecycleDeliveryId] =
@@ -1840,6 +1844,74 @@ export function StudioSettingsClient({
       });
     } finally {
       setRetryingLifecycleDeliveryId(null);
+    }
+  }
+
+  async function handleUpdateMemberRole(
+    member: StudioWorkspaceMemberSummary,
+    role: Exclude<StudioWorkspaceRole, "owner">
+  ) {
+    if (!member.membershipId || !canMutateMembers || member.role === role) {
+      return;
+    }
+
+    setUpdatingMembershipId(member.membershipId);
+    setNotice({
+      message: `Updating ${member.walletAddress} to ${formatWorkspaceRole(role).toLowerCase()}…`,
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch(
+        `/api/studio/settings/members/${member.membershipId}`,
+        {
+          body: JSON.stringify({
+            role
+          }),
+          headers: {
+            "Content-Type": "application/json"
+          },
+          method: "PATCH"
+        }
+      );
+      const payload = await parseJsonResponse({
+        response,
+        schema: studioWorkspaceMemberResponseSchema
+      });
+
+      startTransition(() => {
+        setSettings((currentSettings) => {
+          if (!currentSettings) {
+            return currentSettings;
+          }
+
+          return {
+            ...currentSettings,
+            members: currentSettings.members.map((currentMember) =>
+              currentMember.membershipId === payload.member.membershipId
+                ? payload.member
+                : currentMember
+            )
+          };
+        });
+      });
+      setNotice({
+        message: `${payload.member.walletAddress} is now a ${formatWorkspaceRole(payload.member.role).toLowerCase()}.`,
+        tone: "success"
+      });
+      await refreshSettings({
+        silent: true
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Workspace member role could not be updated.",
+        tone: "error"
+      });
+    } finally {
+      setUpdatingMembershipId(null);
     }
   }
 
@@ -3333,8 +3405,11 @@ export function StudioSettingsClient({
                   </ActionRow>
                   {!canManageMembers ? (
                     <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
-                      <strong>Operator read-only</strong>
-                      <span>Only workspace owners can remove members.</span>
+                      <strong>Member read-only</strong>
+                      <span>
+                        Only workspace owners can change roles or remove
+                        members.
+                      </span>
                     </div>
                   ) : null}
                   {inactiveWorkspaceMessage && settings?.workspace ? (
@@ -3361,10 +3436,34 @@ export function StudioSettingsClient({
                           </SettingsRecordCopy>
                           {member.membershipId ? (
                             <SettingsRecordActions>
+                              <SelectField
+                                aria-label={`Role for ${member.walletAddress}`}
+                                disabled={
+                                  !canMutateMembers ||
+                                  removingMembershipId ===
+                                    member.membershipId ||
+                                  updatingMembershipId === member.membershipId
+                                }
+                                onChange={(event) => {
+                                  void handleUpdateMemberRole(
+                                    member,
+                                    event.target.value as Exclude<
+                                      StudioWorkspaceRole,
+                                      "owner"
+                                    >
+                                  );
+                                }}
+                                value={member.role}
+                              >
+                                <option value="operator">Operator</option>
+                                <option value="viewer">Viewer</option>
+                              </SelectField>
                               <ActionButton
                                 disabled={
                                   !canMutateMembers ||
-                                  removingMembershipId === member.membershipId
+                                  removingMembershipId ===
+                                    member.membershipId ||
+                                  updatingMembershipId === member.membershipId
                                 }
                                 onClick={() => {
                                   void handleRemoveMember(member);
@@ -3405,7 +3504,7 @@ export function StudioSettingsClient({
                   </ActionRow>
                   {!canManageMembers ? (
                     <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-3 text-sm text-[color:var(--color-text)] border-sky-200 bg-sky-50 text-sky-700">
-                      <strong>Operator read-only</strong>
+                      <strong>Member read-only</strong>
                       <span>
                         Only workspace owners can create invitations, log
                         reminders, or cancel invitations.

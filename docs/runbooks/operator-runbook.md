@@ -7,6 +7,7 @@ This runbook covers the authenticated `/ops` surface and the operator responsibi
 - owners can manage workspace policy, publication, onchain, lifecycle, member, and invitation controls
 - operators can run day-to-day production actions such as asset intake, generation, moderation, commerce recovery, alert triage, and reconciliation
 - viewers can inspect studio, commerce, ops, audit, retention, and directory state, but mutation controls are disabled in the UI and rejected by the API
+- owners can change an existing non-owner member between operator and viewer from `/studio/settings`; ownership transfer remains a separate escalation workflow
 
 ## What `/ops` now shows
 

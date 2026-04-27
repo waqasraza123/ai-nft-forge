@@ -40,3 +40,7 @@ Workspace access resolves from the authenticated wallet session to one selected 
 ## Invitation Semantics
 
 Owners choose `operator` or `viewer` when creating direct members or wallet-address invitations. Invitations remain wallet-bound, auto-accept only for users without an existing effective workspace, and persist the invited role into `WorkspaceMembership.role`.
+
+## Member Role Changes
+
+Owners can change an existing non-owner workspace member between `operator` and `viewer` from `/studio/settings` or `PATCH /api/studio/settings/members/[membershipId]`. The route is selected-workspace scoped, rejects non-owners, rejects owner-role assignment, returns the updated member read model, and records `workspace_member_role_updated` in the workspace audit log. No ownership transfer happens through member role updates; owner changes continue to use the role-escalation workflow.
