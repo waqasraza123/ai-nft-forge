@@ -15,7 +15,7 @@ This runbook covers the authenticated `/ops` surface and the operator responsibi
 - owners can record an access-review attestation from `/studio/settings`; it writes `workspace_access_review_recorded` with a SHA-256 evidence hash into the workspace audit stream, and the hash is deterministic for the access-governance evidence rather than the export timestamp or operational offboarding audit rows
 - owners can retrieve prior attestations from `/api/studio/settings/access-review/attestations?format=csv` for governance packets that need only recorded review evidence rather than the full current access snapshot
 - owner-only workspace export includes the same access-review freshness and summary-delta fields, so offboarding packets show whether governance evidence is current without requiring a separate access-review export
-- offboarding and retention overview entries treat `changed` or `never_recorded` access-review evidence as `access_review_not_current`; record a current access review before scheduling final decommission
+- offboarding and retention overview entries treat `changed` or `never_recorded` access-review evidence as `access_review_not_current`; record a current access review before scheduling final decommission, recording retained decommission notices, or executing cleanup
 
 ## What `/ops` now shows
 
@@ -36,7 +36,7 @@ This runbook covers the authenticated `/ops` surface and the operator responsibi
 - review any open critical alerts
 - review any open critical reconciliation issues
 - export the workspace access review before scheduled governance reviews or before offboarding a workspace, then record the review so the evidence hash appears in studio and ops audit history; if the settings panel marks the review as changed, review the summary deltas, then re-approve the current access state before recording a new review
-- when exporting a workspace for archive or decommission review, check `access_review_attestation_status` in the CSV; do not treat an offboarding packet as governance-current when it is `changed` or `never_recorded`, and expect decommission scheduling to reject the workspace until the access review is current
+- when exporting a workspace for archive or decommission review, check `access_review_attestation_status` in the CSV; do not treat an offboarding packet as governance-current when it is `changed` or `never_recorded`, and expect decommission scheduling, notice recording, and final execution to reject the workspace until the access review is current
 
 ## Reconciliation actions
 

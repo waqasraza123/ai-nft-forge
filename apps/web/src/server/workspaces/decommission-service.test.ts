@@ -368,6 +368,39 @@ function createWorkspaceDecommissionHarness(input?: {
                   : [],
               readiness: input?.offboardingReadiness ?? "ready"
             },
+            accessReview: {
+              attestationStatus: "current" as const,
+              currentEvidenceHash:
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              generatedAt: now.toISOString(),
+              latestAttestation: {
+                actorUserId: "user_owner",
+                actorWalletAddress:
+                  "0x1111111111111111111111111111111111111111",
+                auditEntryId: "audit_access_review",
+                createdAt: now.toISOString(),
+                reviewGeneratedAt: now.toISOString(),
+                reviewHash:
+                  "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                summary: {
+                  auditEntryCount: 1,
+                  invitationCount: 0,
+                  memberCount: 1,
+                  pendingRoleEscalationCount: 0,
+                  roleEscalationCount: 0
+                },
+                workspace: {
+                  id: "workspace_1",
+                  name: "Workspace One",
+                  ownerUserId: "user_owner",
+                  ownerWalletAddress:
+                    "0x1111111111111111111111111111111111111111",
+                  slug: "workspace-one",
+                  status: input?.workspaceStatus ?? "archived"
+                }
+              },
+              summaryDelta: null
+            },
             workspace: {
               id: "workspace_1",
               name: "Workspace One",

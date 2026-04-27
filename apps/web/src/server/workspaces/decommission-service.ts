@@ -11,6 +11,7 @@ import {
   workspaceDecommissionExecutionResponseSchema,
   workspaceDecommissionNotificationRecordResponseSchema,
   workspaceDecommissionResponseSchema,
+  type StudioWorkspaceAccessReviewVerification,
   type WorkspaceDecommissionNotificationKind,
   type WorkspaceDecommissionSummary
 } from "@ai-nft-forge/shared";
@@ -259,6 +260,7 @@ type WorkspaceDecommissionOffboardingDependency = {
     workspaceId: string;
   }): Promise<{
     export: {
+      accessReview: StudioWorkspaceAccessReviewVerification;
       offboarding: {
         blockerCodes: string[];
         cautionCodes: string[];
@@ -513,6 +515,7 @@ async function recordWorkspaceDecommissionAuditLog(input: {
     walletAddress: string;
   };
   notificationKind?: WorkspaceDecommissionNotificationKind;
+  accessReview?: StudioWorkspaceAccessReviewVerification;
   executeAfter?: Date;
   exportConfirmedAt?: Date;
   reason?: string | null;
@@ -553,6 +556,17 @@ async function recordWorkspaceDecommissionAuditLog(input: {
       ...(input.notificationKind
         ? {
             notificationKind: input.notificationKind
+          }
+        : {}),
+      ...(input.accessReview
+        ? {
+            accessReviewLatestAttestationRecordedAt:
+              input.accessReview.latestAttestation?.createdAt ?? null,
+            accessReviewLatestHash:
+              input.accessReview.latestAttestation?.reviewHash ?? null,
+            accessReviewStatus: input.accessReview.attestationStatus,
+            reviewGeneratedAt: input.accessReview.generatedAt,
+            reviewHash: input.accessReview.currentEvidenceHash
           }
         : {})
     }
@@ -655,6 +669,7 @@ export function createWorkspaceDecommissionService(
       await recordWorkspaceDecommissionAuditLog({
         action: "workspace_decommission_scheduled",
         actor: owner,
+        accessReview: offboardingExport.export.accessReview,
         executeAfter,
         exportConfirmedAt: now,
         reason,
@@ -749,6 +764,16 @@ export function createWorkspaceDecommissionService(
         );
       }
 
+      const offboardingExport =
+        await dependencies.offboardingService.exportOwnedWorkspace({
+          ownerUserId: input.ownerUserId,
+          workspaceId: workspace.id
+        });
+
+      assertOffboardingReady({
+        offboarding: offboardingExport.export.offboarding
+      });
+
       const existingNotifications =
         await dependencies.repositories.workspaceDecommissionNotificationRepository.listByRequestId(
           {
@@ -787,6 +812,7 @@ export function createWorkspaceDecommissionService(
           await recordWorkspaceDecommissionAuditLog({
             action: "workspace_decommission_notification_recorded",
             actor: owner,
+            accessReview: offboardingExport.export.accessReview,
             notificationKind: input.kind,
             repositories,
             requestId: scheduledRequest.id,
@@ -950,6 +976,7 @@ export function createWorkspaceDecommissionService(
         await recordWorkspaceDecommissionAuditLog({
           action: "workspace_decommission_executed",
           actor: owner,
+          accessReview: offboardingExport.export.accessReview,
           repositories,
           requestId: currentRequest.id,
           workspaceId: workspace.id
