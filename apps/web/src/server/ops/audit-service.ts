@@ -38,6 +38,12 @@ type SerializedAuditEntry = NonNullable<
   ReturnType<typeof serializeAuditLogEntry>
 >;
 
+function parseWorkspaceRole(value: unknown) {
+  return value === "owner" || value === "operator" || value === "viewer"
+    ? value
+    : null;
+}
+
 const workspaceAccessAuditActions = [
   "workspace_created",
   "workspace_invitation_accepted",
@@ -121,13 +127,11 @@ function serializeAuditLogEntry(input: AuditLogRecord) {
       "requestId" in metadata && typeof metadata.requestId === "string"
         ? metadata.requestId
         : null,
-    role:
-      "role" in metadata &&
-      (metadata.role === "owner" ||
-        metadata.role === "operator" ||
-        metadata.role === "viewer")
-        ? metadata.role
+    previousRole:
+      "previousRole" in metadata
+        ? parseWorkspaceRole(metadata.previousRole)
         : null,
+    role: "role" in metadata ? parseWorkspaceRole(metadata.role) : null,
     targetUserId:
       "targetUserId" in metadata && typeof metadata.targetUserId === "string"
         ? metadata.targetUserId
@@ -161,6 +165,7 @@ function buildAuditCsv(input: { entries: SerializedAuditEntry[] }) {
     "actor_wallet_address",
     "target_user_id",
     "target_wallet_address",
+    "previous_role",
     "role",
     "membership_id",
     "request_id"
@@ -175,6 +180,7 @@ function buildAuditCsv(input: { entries: SerializedAuditEntry[] }) {
       entry.actorWalletAddress,
       entry.targetUserId,
       entry.targetWalletAddress,
+      entry.previousRole,
       entry.role,
       entry.membershipId,
       entry.requestId

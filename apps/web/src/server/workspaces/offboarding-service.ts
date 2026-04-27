@@ -690,6 +690,10 @@ function serializeAuditEntry(input: {
     "membershipId" in metadata && typeof metadata.membershipId === "string"
       ? metadata.membershipId
       : null;
+  const previousRole =
+    "previousRole" in metadata && typeof metadata.previousRole === "string"
+      ? metadata.previousRole
+      : null;
   const role =
     "role" in metadata && typeof metadata.role === "string"
       ? metadata.role
@@ -710,6 +714,7 @@ function serializeAuditEntry(input: {
     createdAt: input.createdAt.toISOString(),
     id: input.id,
     membershipId,
+    previousRole,
     role,
     targetUserId,
     targetWalletAddress

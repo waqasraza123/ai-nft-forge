@@ -440,6 +440,7 @@ pnpm generation-backend:ready
 - Workspace viewers can inspect studio, commerce, ops, audit, retention, and directory state without mutation rights
 - Workspace owners can change existing non-owner members between operator and viewer without removing or reinviting them, with role changes captured in the workspace audit log
 - Workspace owners can also correct non-expired pending invitation roles before acceptance, with expired invitations preserved as immutable access history
+- Workspace role-change audit rows include previous and new role metadata in studio history, `/ops/audit`, and CSV export
 - This repository targets single-node self-hosting with Docker Compose, not Kubernetes or hosted SaaS
 
 ## Community

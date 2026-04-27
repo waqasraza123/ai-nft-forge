@@ -847,6 +847,10 @@ function serializeWorkspaceAuditEntry(input: AuditLogRecord) {
     "membershipId" in metadata && typeof metadata.membershipId === "string"
       ? metadata.membershipId
       : null;
+  const previousRole =
+    "previousRole" in metadata && typeof metadata.previousRole === "string"
+      ? metadata.previousRole
+      : null;
   const role =
     "role" in metadata && typeof metadata.role === "string"
       ? metadata.role
@@ -867,6 +871,7 @@ function serializeWorkspaceAuditEntry(input: AuditLogRecord) {
     createdAt: input.createdAt.toISOString(),
     id: input.id,
     membershipId,
+    previousRole,
     role,
     targetUserId,
     targetWalletAddress
@@ -1165,6 +1170,7 @@ async function recordWorkspaceAuditLog(input: {
   lifecycleSlaPolicy?: WorkspaceLifecycleSlaPolicy;
   membershipId?: string | null;
   policy?: ReturnType<typeof serializeWorkspaceRetentionPolicy>;
+  previousRole?: StudioWorkspaceRole | null;
   requestId?: string | null;
   repositories: Pick<StudioSettingsRepositorySet, "auditLogRepository">;
   role?: StudioWorkspaceRole | null;
@@ -1193,6 +1199,11 @@ async function recordWorkspaceAuditLog(input: {
       ...(input.role
         ? {
             role: input.role
+          }
+        : {}),
+      ...(input.previousRole
+        ? {
+            previousRole: input.previousRole
           }
         : {}),
       ...(input.policy
@@ -2678,6 +2689,7 @@ export function createStudioSettingsService(
         await recordWorkspaceAuditLog({
           action: "workspace_invitation_role_updated",
           actor: owner,
+          previousRole: invitation.role,
           repositories,
           role: persistedInvitation.role,
           targetWalletAddress: persistedInvitation.walletAddress,
@@ -3262,6 +3274,7 @@ export function createStudioSettingsService(
           action: "workspace_member_role_updated",
           actor: owner,
           membershipId: persistedMembership.id,
+          previousRole: membership.role,
           repositories,
           role: persistedMembership.role,
           targetUserId: persistedMembership.user.id,

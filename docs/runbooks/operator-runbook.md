@@ -9,6 +9,7 @@ This runbook covers the authenticated `/ops` surface and the operator responsibi
 - viewers can inspect studio, commerce, ops, audit, retention, and directory state, but mutation controls are disabled in the UI and rejected by the API
 - owners can change an existing non-owner member between operator and viewer from `/studio/settings`; ownership transfer remains a separate escalation workflow
 - owners can change a non-expired pending invitation between operator and viewer; expired invitation rows are retained as immutable history and should be replaced with a fresh invitation
+- member and invitation role-change audit events show the previous role and the new role in studio history, `/ops/audit`, and CSV export
 
 ## What `/ops` now shows
 

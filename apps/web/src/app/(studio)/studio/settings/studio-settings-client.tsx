@@ -462,6 +462,30 @@ function formatWorkspaceRole(role: StudioWorkspaceRole) {
   return labels[role];
 }
 
+function formatAuditRoleMetadata(input: {
+  previousRole: StudioWorkspaceRole | null;
+  role: StudioWorkspaceRole | null;
+}) {
+  if (input.previousRole && input.role) {
+    return `role ${input.previousRole} -> ${input.role}`;
+  }
+
+  if (input.role) {
+    return `role ${input.role}`;
+  }
+
+  return "";
+}
+
+function formatAuditRoleSuffix(input: {
+  previousRole: StudioWorkspaceRole | null;
+  role: StudioWorkspaceRole | null;
+}) {
+  const roleMetadata = formatAuditRoleMetadata(input);
+
+  return roleMetadata ? ` · ${roleMetadata}` : "";
+}
+
 function formatDecommissionNotificationKind(
   kind: WorkspaceDecommissionNotificationKind
 ) {
@@ -5146,7 +5170,10 @@ export function StudioSettingsClient({
                             </span>
                             <span>
                               {formatTimestamp(entry.createdAt)}
-                              {entry.role ? ` · role ${entry.role}` : ""}
+                              {formatAuditRoleSuffix({
+                                previousRole: entry.previousRole,
+                                role: entry.role
+                              })}
                             </span>
                           </SettingsRecordCopy>
                         </SettingsRecordCard>

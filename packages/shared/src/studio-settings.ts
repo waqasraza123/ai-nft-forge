@@ -242,6 +242,7 @@ export const studioWorkspaceAuditEntrySchema = z.object({
   createdAt: z.string().datetime(),
   id: z.string().min(1),
   membershipId: z.string().min(1).nullable(),
+  previousRole: studioWorkspaceRoleSchema.nullable(),
   role: studioWorkspaceRoleSchema.nullable(),
   targetUserId: z.string().min(1).nullable(),
   targetWalletAddress: walletAddressSchema.nullable()

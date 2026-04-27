@@ -65,6 +65,18 @@ function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
+function formatAuditRoleMetadata(entry: OpsWorkspaceAuditEntry) {
+  if (entry.previousRole && entry.role) {
+    return `Role ${entry.previousRole} -> ${entry.role}`;
+  }
+
+  if (entry.role) {
+    return `Role ${entry.role}`;
+  }
+
+  return "No role metadata";
+}
+
 function buildAuditUrl(input: {
   action: string;
   category: OpsWorkspaceAuditCategory;
@@ -358,7 +370,7 @@ export function OpsAuditClient({
                         : ""}
                     </span>
                     <span>
-                      {entry.role ? `Role ${entry.role}` : "No role metadata"}
+                      {formatAuditRoleMetadata(entry)}
                       {entry.membershipId
                         ? ` · membership ${entry.membershipId}`
                         : ""}
