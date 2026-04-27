@@ -26,7 +26,7 @@ This runbook covers the authenticated `/ops` surface and the operator responsibi
 - capture automation freshness
 - reconciliation automation freshness
 - latest reconciliation run plus open issues
-- `/ops/audit` category filters for access, ownership transfer, workspace lifecycle, and workspace policy events, with CSV export for the selected filter
+- `/ops/audit` category filters for access, ownership transfer, workspace lifecycle, and workspace policy events, with CSV export for the selected filter and structured columns for decommission timing, access-review gate hashes, retention policy values, lifecycle automation, delivery toggles, and lifecycle SLA thresholds
 
 ## Daily checks
 

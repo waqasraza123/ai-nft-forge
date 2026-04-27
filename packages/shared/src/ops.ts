@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import {
+  studioWorkspaceAccessReviewAttestationStatusSchema,
   studioWorkspaceAuditActionSchema,
   studioWorkspaceRoleSchema
 } from "./studio-settings.js";
@@ -249,15 +250,39 @@ export const opsWorkspaceAuditQuerySchema = z.object({
 });
 
 export const opsWorkspaceAuditEntrySchema = z.object({
+  accessReviewLatestAttestationRecordedAt: z.string().datetime().nullable(),
+  accessReviewLatestHash: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .nullable(),
+  accessReviewStatus:
+    studioWorkspaceAccessReviewAttestationStatusSchema.nullable(),
   action: studioWorkspaceAuditActionSchema,
   actorUserId: z.string().min(1),
   actorWalletAddress: z.string().min(1).nullable(),
+  automateDecommissionNotices: z.boolean().nullable(),
+  automateInvitationReminders: z.boolean().nullable(),
+  automation: z.boolean().nullable(),
   category: opsWorkspaceAuditCategorySchema.exclude(["all"]),
   createdAt: z.string().datetime(),
+  defaultDecommissionRetentionDays: z.number().int().nullable(),
+  deliverDecommissionNotifications: z.boolean().nullable(),
+  deliverInvitationReminders: z.boolean().nullable(),
+  executeAfter: z.string().datetime().nullable(),
+  exportConfirmedAt: z.string().datetime().nullable(),
   id: z.string().min(1),
+  lifecycleAutomationEnabled: z.boolean().nullable(),
+  lifecycleSlaAutomationMaxAgeMinutes: z.number().int().nullable(),
+  lifecycleSlaEnabled: z.boolean().nullable(),
+  lifecycleSlaWebhookFailureThreshold: z.number().int().nullable(),
   membershipId: z.string().min(1).nullable(),
+  minimumDecommissionRetentionDays: z.number().int().nullable(),
+  notificationKind: z.enum(["scheduled", "upcoming", "ready"]).nullable(),
   previousRole: studioWorkspaceRoleSchema.nullable(),
+  reason: z.string().min(1).nullable(),
   requestId: z.string().min(1).nullable(),
+  requireDecommissionReason: z.boolean().nullable(),
+  retentionDays: z.number().int().nullable(),
   reviewGeneratedAt: z.string().datetime().nullable(),
   reviewHash: z
     .string()
@@ -265,7 +290,8 @@ export const opsWorkspaceAuditEntrySchema = z.object({
     .nullable(),
   role: studioWorkspaceRoleSchema.nullable(),
   targetUserId: z.string().min(1).nullable(),
-  targetWalletAddress: z.string().min(1).nullable()
+  targetWalletAddress: z.string().min(1).nullable(),
+  webhookEnabled: z.boolean().nullable()
 });
 
 export const opsWorkspaceAuditResponseSchema = z.object({

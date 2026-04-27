@@ -73,6 +73,14 @@ function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
+function formatBoolean(value: boolean | null) {
+  if (value === null) {
+    return null;
+  }
+
+  return value ? "on" : "off";
+}
+
 function formatAuditRoleMetadata(entry: OpsWorkspaceAuditEntry) {
   if (entry.reviewHash) {
     const reviewLabel =
@@ -91,7 +99,112 @@ function formatAuditRoleMetadata(entry: OpsWorkspaceAuditEntry) {
     return `Role ${entry.role}`;
   }
 
-  return "No role metadata";
+  if (
+    entry.category === "workspace_lifecycle" ||
+    entry.category === "workspace_policy"
+  ) {
+    return "Operational event";
+  }
+
+  return "No access metadata";
+}
+
+function formatAuditOperationalMetadata(entry: OpsWorkspaceAuditEntry) {
+  const parts: string[] = [];
+
+  if (entry.automation) {
+    parts.push("automation");
+  }
+
+  if (entry.notificationKind) {
+    parts.push(`notice ${entry.notificationKind}`);
+  }
+
+  if (entry.retentionDays !== null) {
+    parts.push(`retention ${entry.retentionDays}d`);
+  }
+
+  if (entry.executeAfter) {
+    parts.push(`execute after ${formatDateTime(entry.executeAfter)}`);
+  }
+
+  if (entry.accessReviewStatus) {
+    parts.push(
+      `access review ${entry.accessReviewStatus.replaceAll("_", " ")}`
+    );
+  }
+
+  if (entry.defaultDecommissionRetentionDays !== null) {
+    parts.push(`default ${entry.defaultDecommissionRetentionDays}d`);
+  }
+
+  if (entry.minimumDecommissionRetentionDays !== null) {
+    parts.push(`minimum ${entry.minimumDecommissionRetentionDays}d`);
+  }
+
+  const requireReason = formatBoolean(entry.requireDecommissionReason);
+
+  if (requireReason) {
+    parts.push(`reason required ${requireReason}`);
+  }
+
+  const automationEnabled = formatBoolean(entry.lifecycleAutomationEnabled);
+
+  if (automationEnabled) {
+    parts.push(`automation ${automationEnabled}`);
+  }
+
+  const invitationAutomation = formatBoolean(entry.automateInvitationReminders);
+
+  if (invitationAutomation) {
+    parts.push(`invitation reminders ${invitationAutomation}`);
+  }
+
+  const decommissionAutomation = formatBoolean(
+    entry.automateDecommissionNotices
+  );
+
+  if (decommissionAutomation) {
+    parts.push(`decommission notices ${decommissionAutomation}`);
+  }
+
+  const webhookEnabled = formatBoolean(entry.webhookEnabled);
+
+  if (webhookEnabled) {
+    parts.push(`webhook ${webhookEnabled}`);
+  }
+
+  const invitationDelivery = formatBoolean(entry.deliverInvitationReminders);
+
+  if (invitationDelivery) {
+    parts.push(`deliver invitations ${invitationDelivery}`);
+  }
+
+  const decommissionDelivery = formatBoolean(
+    entry.deliverDecommissionNotifications
+  );
+
+  if (decommissionDelivery) {
+    parts.push(`deliver decommission ${decommissionDelivery}`);
+  }
+
+  const slaEnabled = formatBoolean(entry.lifecycleSlaEnabled);
+
+  if (slaEnabled) {
+    parts.push(`SLA ${slaEnabled}`);
+  }
+
+  if (entry.lifecycleSlaAutomationMaxAgeMinutes !== null) {
+    parts.push(`${entry.lifecycleSlaAutomationMaxAgeMinutes}m max age`);
+  }
+
+  if (entry.lifecycleSlaWebhookFailureThreshold !== null) {
+    parts.push(
+      `${entry.lifecycleSlaWebhookFailureThreshold} failure threshold`
+    );
+  }
+
+  return parts.length > 0 ? parts.join(" · ") : null;
 }
 
 function buildAuditUrl(input: {
@@ -372,30 +485,39 @@ export function OpsAuditClient({
           </OpsPillRow>
           {audit.audit.entries.length ? (
             <div className="mt-3 space-y-3">
-              {audit.audit.entries.map((entry: OpsWorkspaceAuditEntry) => (
-                <OpsPanelCard tone="neutral" key={entry.id}>
-                  <div className="grid gap-1">
-                    <strong>{entry.action.replaceAll("_", " ")}</strong>
-                    <span>
-                      {formatDateTime(entry.createdAt)} ·{" "}
-                      {entry.category.replaceAll("_", " ")}
-                    </span>
-                    <span>
-                      Actor {entry.actorWalletAddress ?? entry.actorUserId}
-                      {entry.targetWalletAddress
-                        ? ` · target ${entry.targetWalletAddress}`
-                        : ""}
-                    </span>
-                    <span>
-                      {formatAuditRoleMetadata(entry)}
-                      {entry.membershipId
-                        ? ` · membership ${entry.membershipId}`
-                        : ""}
-                      {entry.requestId ? ` · request ${entry.requestId}` : ""}
-                    </span>
-                  </div>
-                </OpsPanelCard>
-              ))}
+              {audit.audit.entries.map((entry: OpsWorkspaceAuditEntry) => {
+                const operationalMetadata =
+                  formatAuditOperationalMetadata(entry);
+
+                return (
+                  <OpsPanelCard tone="neutral" key={entry.id}>
+                    <div className="grid gap-1">
+                      <strong>{entry.action.replaceAll("_", " ")}</strong>
+                      <span>
+                        {formatDateTime(entry.createdAt)} ·{" "}
+                        {entry.category.replaceAll("_", " ")}
+                      </span>
+                      <span>
+                        Actor {entry.actorWalletAddress ?? entry.actorUserId}
+                        {entry.targetWalletAddress
+                          ? ` · target ${entry.targetWalletAddress}`
+                          : ""}
+                      </span>
+                      <span>
+                        {formatAuditRoleMetadata(entry)}
+                        {entry.membershipId
+                          ? ` · membership ${entry.membershipId}`
+                          : ""}
+                        {entry.requestId ? ` · request ${entry.requestId}` : ""}
+                      </span>
+                      {operationalMetadata ? (
+                        <span>{operationalMetadata}</span>
+                      ) : null}
+                      {entry.reason ? <span>Reason {entry.reason}</span> : null}
+                    </div>
+                  </OpsPanelCard>
+                );
+              })}
             </div>
           ) : (
             <EmptyState className="mt-3 p-3">

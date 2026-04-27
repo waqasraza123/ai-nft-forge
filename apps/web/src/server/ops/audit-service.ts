@@ -44,6 +44,20 @@ function parseWorkspaceRole(value: unknown) {
     : null;
 }
 
+function parseAccessReviewStatus(value: unknown) {
+  return value === "never_recorded" ||
+    value === "current" ||
+    value === "changed"
+    ? value
+    : null;
+}
+
+function parseDecommissionNotificationKind(value: unknown) {
+  return value === "scheduled" || value === "upcoming" || value === "ready"
+    ? value
+    : null;
+}
+
 const workspaceAccessAuditActions = [
   "workspace_access_review_recorded",
   "workspace_created",
@@ -144,6 +158,30 @@ function parseAuditMetadata(metadataJson: unknown) {
     : {};
 }
 
+function getMetadataBoolean(input: { key: string; metadata: object }) {
+  const metadata = input.metadata as Record<string, unknown>;
+
+  return typeof metadata[input.key] === "boolean"
+    ? (metadata[input.key] as boolean)
+    : null;
+}
+
+function getMetadataNumber(input: { key: string; metadata: object }) {
+  const metadata = input.metadata as Record<string, unknown>;
+
+  return typeof metadata[input.key] === "number"
+    ? (metadata[input.key] as number)
+    : null;
+}
+
+function getMetadataString(input: { key: string; metadata: object }) {
+  const metadata = input.metadata as Record<string, unknown>;
+
+  return typeof metadata[input.key] === "string"
+    ? (metadata[input.key] as string)
+    : null;
+}
+
 function serializeAuditLogEntry(input: AuditLogRecord) {
   const parsedAction = studioWorkspaceAuditActionSchema.safeParse(input.action);
 
@@ -154,6 +192,20 @@ function serializeAuditLogEntry(input: AuditLogRecord) {
   const metadata = parseAuditMetadata(input.metadataJson);
 
   return {
+    accessReviewLatestAttestationRecordedAt: getMetadataString({
+      key: "accessReviewLatestAttestationRecordedAt",
+      metadata
+    }),
+    accessReviewLatestHash: getMetadataString({
+      key: "accessReviewLatestHash",
+      metadata
+    }),
+    accessReviewStatus: parseAccessReviewStatus(
+      getMetadataString({
+        key: "accessReviewStatus",
+        metadata
+      })
+    ),
     action: parsedAction.data,
     actorUserId: input.actorId,
     actorWalletAddress:
@@ -161,13 +213,71 @@ function serializeAuditLogEntry(input: AuditLogRecord) {
       typeof metadata.actorWalletAddress === "string"
         ? metadata.actorWalletAddress
         : null,
+    automateDecommissionNotices: getMetadataBoolean({
+      key: "automateDecommissionNotices",
+      metadata
+    }),
+    automateInvitationReminders: getMetadataBoolean({
+      key: "automateInvitationReminders",
+      metadata
+    }),
+    automation: getMetadataBoolean({
+      key: "automation",
+      metadata
+    }),
     category: resolveAuditCategory(parsedAction.data),
     createdAt: input.createdAt.toISOString(),
+    defaultDecommissionRetentionDays: getMetadataNumber({
+      key: "defaultDecommissionRetentionDays",
+      metadata
+    }),
+    deliverDecommissionNotifications: getMetadataBoolean({
+      key: "deliverDecommissionNotifications",
+      metadata
+    }),
+    deliverInvitationReminders: getMetadataBoolean({
+      key: "deliverInvitationReminders",
+      metadata
+    }),
+    executeAfter: getMetadataString({
+      key: "executeAfter",
+      metadata
+    }),
+    exportConfirmedAt: getMetadataString({
+      key: "exportConfirmedAt",
+      metadata
+    }),
     id: input.id,
+    lifecycleAutomationEnabled: getMetadataBoolean({
+      key: "lifecycleAutomationEnabled",
+      metadata
+    }),
+    lifecycleSlaAutomationMaxAgeMinutes: getMetadataNumber({
+      key: "lifecycleSlaAutomationMaxAgeMinutes",
+      metadata
+    }),
+    lifecycleSlaEnabled: getMetadataBoolean({
+      key: "lifecycleSlaEnabled",
+      metadata
+    }),
+    lifecycleSlaWebhookFailureThreshold: getMetadataNumber({
+      key: "lifecycleSlaWebhookFailureThreshold",
+      metadata
+    }),
     membershipId:
       "membershipId" in metadata && typeof metadata.membershipId === "string"
         ? metadata.membershipId
         : null,
+    minimumDecommissionRetentionDays: getMetadataNumber({
+      key: "minimumDecommissionRetentionDays",
+      metadata
+    }),
+    notificationKind: parseDecommissionNotificationKind(
+      getMetadataString({
+        key: "notificationKind",
+        metadata
+      })
+    ),
     requestId:
       "requestId" in metadata && typeof metadata.requestId === "string"
         ? metadata.requestId
@@ -176,15 +286,26 @@ function serializeAuditLogEntry(input: AuditLogRecord) {
       "previousRole" in metadata
         ? parseWorkspaceRole(metadata.previousRole)
         : null,
-    reviewGeneratedAt:
-      "reviewGeneratedAt" in metadata &&
-      typeof metadata.reviewGeneratedAt === "string"
-        ? metadata.reviewGeneratedAt
-        : null,
-    reviewHash:
-      "reviewHash" in metadata && typeof metadata.reviewHash === "string"
-        ? metadata.reviewHash
-        : null,
+    reason: getMetadataString({
+      key: "reason",
+      metadata
+    }),
+    requireDecommissionReason: getMetadataBoolean({
+      key: "requireDecommissionReason",
+      metadata
+    }),
+    retentionDays: getMetadataNumber({
+      key: "retentionDays",
+      metadata
+    }),
+    reviewGeneratedAt: getMetadataString({
+      key: "reviewGeneratedAt",
+      metadata
+    }),
+    reviewHash: getMetadataString({
+      key: "reviewHash",
+      metadata
+    }),
     role: "role" in metadata ? parseWorkspaceRole(metadata.role) : null,
     targetUserId:
       "targetUserId" in metadata && typeof metadata.targetUserId === "string"
@@ -194,13 +315,21 @@ function serializeAuditLogEntry(input: AuditLogRecord) {
       "targetWalletAddress" in metadata &&
       typeof metadata.targetWalletAddress === "string"
         ? metadata.targetWalletAddress
-        : null
+        : null,
+    webhookEnabled: getMetadataBoolean({
+      key: "webhookEnabled",
+      metadata
+    })
   };
 }
 
-function escapeCsvValue(value: string | null) {
+function escapeCsvValue(value: boolean | number | string | null) {
   if (value === null) {
     return "";
+  }
+
+  if (typeof value !== "string") {
+    return String(value);
   }
 
   if (!/[",\n]/.test(value)) {
@@ -223,6 +352,27 @@ function buildAuditCsv(input: { entries: SerializedAuditEntry[] }) {
     "role",
     "review_hash",
     "review_generated_at",
+    "access_review_status",
+    "access_review_latest_hash",
+    "access_review_latest_attestation_recorded_at",
+    "automation",
+    "notification_kind",
+    "execute_after",
+    "export_confirmed_at",
+    "retention_days",
+    "reason",
+    "retention_default_days",
+    "retention_minimum_days",
+    "retention_reason_required",
+    "lifecycle_automation_enabled",
+    "automate_invitation_reminders",
+    "automate_decommission_notices",
+    "webhook_enabled",
+    "deliver_invitation_reminders",
+    "deliver_decommission_notifications",
+    "lifecycle_sla_enabled",
+    "lifecycle_sla_automation_max_age_minutes",
+    "lifecycle_sla_webhook_failure_threshold",
     "membership_id",
     "request_id"
   ].join(",");
@@ -240,6 +390,27 @@ function buildAuditCsv(input: { entries: SerializedAuditEntry[] }) {
       entry.role,
       entry.reviewHash,
       entry.reviewGeneratedAt,
+      entry.accessReviewStatus,
+      entry.accessReviewLatestHash,
+      entry.accessReviewLatestAttestationRecordedAt,
+      entry.automation,
+      entry.notificationKind,
+      entry.executeAfter,
+      entry.exportConfirmedAt,
+      entry.retentionDays,
+      entry.reason,
+      entry.defaultDecommissionRetentionDays,
+      entry.minimumDecommissionRetentionDays,
+      entry.requireDecommissionReason,
+      entry.lifecycleAutomationEnabled,
+      entry.automateInvitationReminders,
+      entry.automateDecommissionNotices,
+      entry.webhookEnabled,
+      entry.deliverInvitationReminders,
+      entry.deliverDecommissionNotifications,
+      entry.lifecycleSlaEnabled,
+      entry.lifecycleSlaAutomationMaxAgeMinutes,
+      entry.lifecycleSlaWebhookFailureThreshold,
       entry.membershipId,
       entry.requestId
     ]
