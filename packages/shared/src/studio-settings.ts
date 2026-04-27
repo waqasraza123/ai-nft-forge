@@ -218,6 +218,7 @@ export const studioWorkspaceAuditActionSchema = z.enum([
   "workspace_invitation_canceled",
   "workspace_invitation_created",
   "workspace_invitation_reminder_sent",
+  "workspace_invitation_role_updated",
   "workspace_lifecycle_delivery_policy_updated",
   "workspace_lifecycle_sla_policy_updated",
   "workspace_member_added",
@@ -380,6 +381,10 @@ export const studioWorkspaceInvitationCreateRequestSchema = z.object({
   walletAddress: walletAddressSchema
 });
 
+export const studioWorkspaceInvitationUpdateRequestSchema = z.object({
+  role: studioWorkspaceRoleSchema.exclude(["owner"])
+});
+
 export const studioWorkspaceInvitationResponseSchema = z.object({
   invitation: studioWorkspaceInvitationSummarySchema
 });
@@ -536,6 +541,9 @@ export type StudioWorkspaceInvitationCreateRequest = z.infer<
 >;
 export type StudioWorkspaceInvitationDeleteResponse = z.infer<
   typeof studioWorkspaceInvitationDeleteResponseSchema
+>;
+export type StudioWorkspaceInvitationUpdateRequest = z.infer<
+  typeof studioWorkspaceInvitationUpdateRequestSchema
 >;
 export type StudioWorkspaceLifecycleAutomationPolicyResponse = z.infer<
   typeof studioWorkspaceLifecycleAutomationPolicyResponseSchema

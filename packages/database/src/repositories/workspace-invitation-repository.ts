@@ -288,6 +288,22 @@ export function createWorkspaceInvitationRepository(
           id: input.id
         }
       });
+    },
+
+    updateRoleByIdForWorkspace(input: {
+      id: string;
+      role: WorkspaceMembershipRole;
+      workspaceId: string;
+    }): Promise<{ count: number }> {
+      return database.workspaceInvitation.updateMany({
+        data: {
+          role: input.role
+        },
+        where: {
+          id: input.id,
+          workspaceId: input.workspaceId
+        }
+      });
     }
   };
 }

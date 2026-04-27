@@ -39,7 +39,7 @@ Workspace access resolves from the authenticated wallet session to one selected 
 
 ## Invitation Semantics
 
-Owners choose `operator` or `viewer` when creating direct members or wallet-address invitations. Invitations remain wallet-bound, auto-accept only for users without an existing effective workspace, and persist the invited role into `WorkspaceMembership.role`.
+Owners choose `operator` or `viewer` when creating direct members or wallet-address invitations. Owners can also change a non-expired pending invitation between `operator` and `viewer` from `/studio/settings` or `PATCH /api/studio/settings/invitations/[invitationId]`. Invitations remain wallet-bound, auto-accept only for users without an existing effective workspace, and persist the current invited role into `WorkspaceMembership.role`. Expired invitation rows stay immutable history and must be replaced with a new invitation when access is still needed.
 
 ## Member Role Changes
 

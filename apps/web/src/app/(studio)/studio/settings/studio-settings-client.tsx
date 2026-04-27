@@ -676,6 +676,9 @@ export function StudioSettingsClient({
   const [remindingInvitationId, setRemindingInvitationId] = useState<
     string | null
   >(null);
+  const [updatingInvitationId, setUpdatingInvitationId] = useState<
+    string | null
+  >(null);
   const [removingMembershipId, setRemovingMembershipId] = useState<
     string | null
   >(null);
@@ -1731,6 +1734,78 @@ export function StudioSettingsClient({
       });
     } finally {
       setRemindingInvitationId(null);
+    }
+  }
+
+  async function handleUpdateInvitationRole(
+    invitation: StudioWorkspaceInvitationSummary,
+    role: Exclude<StudioWorkspaceRole, "owner">
+  ) {
+    if (
+      !canMutateMembers ||
+      invitation.role === role ||
+      invitation.status === "expired"
+    ) {
+      return;
+    }
+
+    setUpdatingInvitationId(invitation.id);
+    setNotice({
+      message: `Updating invitation for ${invitation.walletAddress} to ${formatWorkspaceRole(role).toLowerCase()}…`,
+      tone: "info"
+    });
+
+    try {
+      const response = await fetch(
+        `/api/studio/settings/invitations/${invitation.id}`,
+        {
+          body: JSON.stringify({
+            role
+          }),
+          headers: {
+            "Content-Type": "application/json"
+          },
+          method: "PATCH"
+        }
+      );
+      const payload = await parseJsonResponse({
+        response,
+        schema: studioWorkspaceInvitationResponseSchema
+      });
+
+      startTransition(() => {
+        setSettings((currentSettings) => {
+          if (!currentSettings) {
+            return currentSettings;
+          }
+
+          return {
+            ...currentSettings,
+            invitations: currentSettings.invitations.map((currentInvitation) =>
+              currentInvitation.id === payload.invitation.id
+                ? payload.invitation
+                : currentInvitation
+            )
+          };
+        });
+      });
+      setNotice({
+        message: `${payload.invitation.walletAddress} invitation is now for a ${formatWorkspaceRole(payload.invitation.role).toLowerCase()}.`,
+        tone: "success"
+      });
+      await refreshSettings({
+        silent: true
+      });
+    } catch (error) {
+      setNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Workspace invitation role could not be updated.",
+        tone: "error"
+      });
+    } finally {
+      setUpdatingInvitationId(null);
     }
   }
 
@@ -3547,12 +3622,36 @@ export function StudioSettingsClient({
                             </span>
                           </SettingsRecordCopy>
                           <SettingsRecordActions>
+                            <SelectField
+                              aria-label={`Invitation role for ${invitation.walletAddress}`}
+                              disabled={
+                                !canMutateMembers ||
+                                invitation.status === "expired" ||
+                                remindingInvitationId === invitation.id ||
+                                updatingInvitationId === invitation.id ||
+                                cancelingInvitationId === invitation.id
+                              }
+                              onChange={(event) => {
+                                void handleUpdateInvitationRole(
+                                  invitation,
+                                  event.target.value as Exclude<
+                                    StudioWorkspaceRole,
+                                    "owner"
+                                  >
+                                );
+                              }}
+                              value={invitation.role}
+                            >
+                              <option value="operator">Operator</option>
+                              <option value="viewer">Viewer</option>
+                            </SelectField>
                             <ActionButton
                               tone="secondary"
                               disabled={
                                 !canMutateMembers ||
                                 invitation.status === "expired" ||
                                 remindingInvitationId === invitation.id ||
+                                updatingInvitationId === invitation.id ||
                                 cancelingInvitationId === invitation.id
                               }
                               onClick={() => {
@@ -3568,6 +3667,7 @@ export function StudioSettingsClient({
                               disabled={
                                 !canMutateMembers ||
                                 remindingInvitationId === invitation.id ||
+                                updatingInvitationId === invitation.id ||
                                 cancelingInvitationId === invitation.id
                               }
                               onClick={() => {

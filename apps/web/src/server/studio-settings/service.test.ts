@@ -817,6 +817,29 @@ function createStudioSettingsHarness() {
         workspaceInvitations.set(updatedInvitation.id, updatedInvitation);
 
         return updatedInvitation;
+      },
+
+      async updateRoleByIdForWorkspace(input: {
+        id: string;
+        role: "operator" | "viewer";
+        workspaceId: string;
+      }) {
+        const invitation = workspaceInvitations.get(input.id);
+
+        if (!invitation || invitation.workspaceId !== input.workspaceId) {
+          return {
+            count: 0
+          };
+        }
+
+        workspaceInvitations.set(input.id, {
+          ...invitation,
+          role: input.role
+        });
+
+        return {
+          count: 1
+        };
       }
     },
     workspaceLifecycleNotificationDeliveryRepository: {

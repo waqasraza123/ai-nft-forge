@@ -1,7 +1,9 @@
+import { studioWorkspaceInvitationUpdateRequestSchema } from "@ai-nft-forge/shared";
 import { NextResponse } from "next/server";
 
 import {
   createStudioSettingsErrorResponse,
+  parseJsonBody,
   requireStudioActiveOwnerApiSession
 } from "../../../../../../server/studio-settings/http";
 import { createRuntimeStudioSettingsService } from "../../../../../../server/studio-settings/runtime";
@@ -37,6 +39,28 @@ export async function DELETE(_request: Request, context: RouteContext) {
     const result =
       await createRuntimeStudioSettingsService().cancelWorkspaceInvitation({
         invitationId,
+        ownerUserId: session.ownerUserId,
+        role: session.role,
+        workspaceId: session.workspace?.id ?? null
+      });
+
+    return NextResponse.json(result);
+  } catch (error) {
+    return createStudioSettingsErrorResponse(error);
+  }
+}
+
+export async function PATCH(request: Request, context: RouteContext) {
+  try {
+    const session = await requireStudioActiveOwnerApiSession();
+    const { invitationId } = await context.params;
+    const body = studioWorkspaceInvitationUpdateRequestSchema.parse(
+      await parseJsonBody(request)
+    );
+    const result =
+      await createRuntimeStudioSettingsService().updateWorkspaceInvitationRole({
+        invitationId,
+        invitationRole: body.role,
         ownerUserId: session.ownerUserId,
         role: session.role,
         workspaceId: session.workspace?.id ?? null

@@ -45,6 +45,8 @@ This document defines durable boundary expectations for the implemented web, wor
 - `/api/studio/collections/[collectionDraftId]/onchain/mints`
 - `/api/studio/collections/[collectionDraftId]/publish`
 - `/api/studio/settings`
+- `/api/studio/settings/members/[membershipId]`
+- `/api/studio/settings/invitations/[invitationId]`
 - `/api/studio/generations`
 - `/api/studio/generations/[generationRequestId]/retry`
 - `/api/studio/generated-assets/[generatedAssetId]/download-intent`

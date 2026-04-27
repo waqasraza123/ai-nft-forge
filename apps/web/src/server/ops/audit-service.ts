@@ -43,6 +43,7 @@ const workspaceAccessAuditActions = [
   "workspace_invitation_accepted",
   "workspace_invitation_canceled",
   "workspace_invitation_created",
+  "workspace_invitation_role_updated",
   "workspace_member_added",
   "workspace_member_removed",
   "workspace_member_role_updated"

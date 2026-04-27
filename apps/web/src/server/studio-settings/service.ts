@@ -27,6 +27,7 @@ import {
   studioWorkspaceInvitationDeleteResponseSchema,
   studioWorkspaceInvitationReminderResponseSchema,
   studioWorkspaceInvitationResponseSchema,
+  studioWorkspaceInvitationUpdateRequestSchema,
   studioWorkspaceLifecycleAutomationPolicyResponseSchema,
   studioWorkspaceLifecycleSlaPolicyResponseSchema,
   studioSettingsResponseSchema,
@@ -352,6 +353,11 @@ type StudioSettingsRepositorySet = {
       lastRemindedAt: Date | null;
       reminderCount: number;
     }>;
+    updateRoleByIdForWorkspace(input: {
+      id: string;
+      role: Exclude<StudioWorkspaceRole, "owner">;
+      workspaceId: string;
+    }): Promise<{ count: number }>;
   };
   workspaceLifecycleNotificationDeliveryRepository: {
     listRecentByWorkspaceId(input: {
@@ -1138,6 +1144,7 @@ async function recordWorkspaceAuditLog(input: {
     | "workspace_invitation_canceled"
     | "workspace_invitation_created"
     | "workspace_invitation_reminder_sent"
+    | "workspace_invitation_role_updated"
     | "workspace_lifecycle_automation_policy_updated"
     | "workspace_lifecycle_sla_policy_updated"
     | "workspace_member_added"
@@ -2574,6 +2581,111 @@ export function createStudioSettingsService(
         return studioWorkspaceInvitationDeleteResponseSchema.parse({
           invitationId: input.invitationId,
           removed: true
+        });
+      });
+    },
+
+    async updateWorkspaceInvitationRole(input: {
+      invitationId: string;
+      invitationRole: Exclude<StudioWorkspaceRole, "owner">;
+      ownerUserId: string;
+      role?: StudioWorkspaceRole;
+      workspaceId?: string | null;
+    }) {
+      assertOwnerRole(input.role ?? "owner");
+
+      const parsedInput = studioWorkspaceInvitationUpdateRequestSchema.parse({
+        role: input.invitationRole
+      });
+
+      return dependencies.runTransaction(async (repositories) => {
+        const now = new Date();
+        const { owner, workspace } = await requireOwnerWorkspace({
+          ownerUserId: input.ownerUserId,
+          repositories,
+          workspaceId: input.workspaceId
+        });
+        const invitation =
+          await repositories.workspaceInvitationRepository.findByIdWithWorkspace(
+            {
+              id: input.invitationId
+            }
+          );
+
+        if (
+          !invitation ||
+          invitation.workspace.id !== workspace.id ||
+          invitation.workspace.ownerUserId !== input.ownerUserId
+        ) {
+          throw new StudioSettingsServiceError(
+            "INVITATION_NOT_FOUND",
+            "The requested workspace invitation was not found.",
+            404
+          );
+        }
+
+        if (
+          getWorkspaceInvitationStatus({
+            expiresAt: invitation.expiresAt,
+            now
+          }) === "expired"
+        ) {
+          throw new StudioSettingsServiceError(
+            "INVITATION_EXPIRED",
+            "Expired workspace invitations cannot be updated.",
+            409
+          );
+        }
+
+        if (invitation.role === parsedInput.role) {
+          return studioWorkspaceInvitationResponseSchema.parse({
+            invitation: serializeWorkspaceInvitation(invitation)
+          });
+        }
+
+        const updated =
+          await repositories.workspaceInvitationRepository.updateRoleByIdForWorkspace(
+            {
+              id: invitation.id,
+              role: parsedInput.role,
+              workspaceId: workspace.id
+            }
+          );
+
+        if (updated.count === 0) {
+          throw new StudioSettingsServiceError(
+            "INVITATION_NOT_FOUND",
+            "The requested workspace invitation was not found.",
+            404
+          );
+        }
+
+        const persistedInvitation =
+          await repositories.workspaceInvitationRepository.findByIdWithWorkspace(
+            {
+              id: invitation.id
+            }
+          );
+
+        if (!persistedInvitation) {
+          throw new StudioSettingsServiceError(
+            "INTERNAL_SERVER_ERROR",
+            "Workspace invitation could not be loaded after role update.",
+            500
+          );
+        }
+
+        await recordWorkspaceAuditLog({
+          action: "workspace_invitation_role_updated",
+          actor: owner,
+          repositories,
+          role: persistedInvitation.role,
+          targetWalletAddress: persistedInvitation.walletAddress,
+          workspaceId: workspace.id
+        });
+
+        return studioWorkspaceInvitationResponseSchema.parse({
+          invitation: serializeWorkspaceInvitation(persistedInvitation)
         });
       });
     },
