@@ -4,6 +4,7 @@ import {
   studioWorkspaceAuditActionSchema,
   type OpsWorkspaceAuditCategory
 } from "@ai-nft-forge/shared";
+import { z } from "zod";
 
 import { OpsServiceError } from "./error";
 
@@ -37,6 +38,11 @@ type OpsAuditServiceDependencies = {
 type SerializedAuditEntry = NonNullable<
   ReturnType<typeof serializeAuditLogEntry>
 >;
+
+const auditMetadataDateTimeSchema = z.string().datetime();
+const auditMetadataIntegerSchema = z.number().int();
+const auditMetadataNonEmptyStringSchema = z.string().min(1);
+const auditMetadataSha256HashSchema = z.string().regex(/^[a-f0-9]{64}$/);
 
 function parseWorkspaceRole(value: unknown) {
   return value === "owner" || value === "operator" || value === "viewer"
@@ -168,18 +174,32 @@ function getMetadataBoolean(input: { key: string; metadata: object }) {
 
 function getMetadataNumber(input: { key: string; metadata: object }) {
   const metadata = input.metadata as Record<string, unknown>;
+  const parsed = auditMetadataIntegerSchema.safeParse(metadata[input.key]);
 
-  return typeof metadata[input.key] === "number"
-    ? (metadata[input.key] as number)
-    : null;
+  return parsed.success ? parsed.data : null;
 }
 
 function getMetadataString(input: { key: string; metadata: object }) {
   const metadata = input.metadata as Record<string, unknown>;
+  const parsed = auditMetadataNonEmptyStringSchema.safeParse(
+    metadata[input.key]
+  );
 
-  return typeof metadata[input.key] === "string"
-    ? (metadata[input.key] as string)
-    : null;
+  return parsed.success ? parsed.data : null;
+}
+
+function getMetadataDateTimeString(input: { key: string; metadata: object }) {
+  const metadata = input.metadata as Record<string, unknown>;
+  const parsed = auditMetadataDateTimeSchema.safeParse(metadata[input.key]);
+
+  return parsed.success ? parsed.data : null;
+}
+
+function getMetadataSha256Hash(input: { key: string; metadata: object }) {
+  const metadata = input.metadata as Record<string, unknown>;
+  const parsed = auditMetadataSha256HashSchema.safeParse(metadata[input.key]);
+
+  return parsed.success ? parsed.data : null;
 }
 
 function serializeAuditLogEntry(input: AuditLogRecord) {
@@ -192,11 +212,11 @@ function serializeAuditLogEntry(input: AuditLogRecord) {
   const metadata = parseAuditMetadata(input.metadataJson);
 
   return {
-    accessReviewLatestAttestationRecordedAt: getMetadataString({
+    accessReviewLatestAttestationRecordedAt: getMetadataDateTimeString({
       key: "accessReviewLatestAttestationRecordedAt",
       metadata
     }),
-    accessReviewLatestHash: getMetadataString({
+    accessReviewLatestHash: getMetadataSha256Hash({
       key: "accessReviewLatestHash",
       metadata
     }),
@@ -239,11 +259,11 @@ function serializeAuditLogEntry(input: AuditLogRecord) {
       key: "deliverInvitationReminders",
       metadata
     }),
-    executeAfter: getMetadataString({
+    executeAfter: getMetadataDateTimeString({
       key: "executeAfter",
       metadata
     }),
-    exportConfirmedAt: getMetadataString({
+    exportConfirmedAt: getMetadataDateTimeString({
       key: "exportConfirmedAt",
       metadata
     }),
@@ -298,11 +318,11 @@ function serializeAuditLogEntry(input: AuditLogRecord) {
       key: "retentionDays",
       metadata
     }),
-    reviewGeneratedAt: getMetadataString({
+    reviewGeneratedAt: getMetadataDateTimeString({
       key: "reviewGeneratedAt",
       metadata
     }),
-    reviewHash: getMetadataString({
+    reviewHash: getMetadataSha256Hash({
       key: "reviewHash",
       metadata
     }),
