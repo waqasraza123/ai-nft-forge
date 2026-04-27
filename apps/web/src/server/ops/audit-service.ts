@@ -298,6 +298,50 @@ function serializeAuditLogEntry(input: AuditLogRecord) {
         metadata
       })
     ),
+    previousAutomateDecommissionNotices: getMetadataBoolean({
+      key: "previousAutomateDecommissionNotices",
+      metadata
+    }),
+    previousAutomateInvitationReminders: getMetadataBoolean({
+      key: "previousAutomateInvitationReminders",
+      metadata
+    }),
+    previousDefaultDecommissionRetentionDays: getMetadataNumber({
+      key: "previousDefaultDecommissionRetentionDays",
+      metadata
+    }),
+    previousDeliverDecommissionNotifications: getMetadataBoolean({
+      key: "previousDeliverDecommissionNotifications",
+      metadata
+    }),
+    previousDeliverInvitationReminders: getMetadataBoolean({
+      key: "previousDeliverInvitationReminders",
+      metadata
+    }),
+    previousLifecycleAutomationEnabled: getMetadataBoolean({
+      key: "previousLifecycleAutomationEnabled",
+      metadata
+    }),
+    previousLifecycleSlaAutomationMaxAgeMinutes: getMetadataNumber({
+      key: "previousLifecycleSlaAutomationMaxAgeMinutes",
+      metadata
+    }),
+    previousLifecycleSlaEnabled: getMetadataBoolean({
+      key: "previousLifecycleSlaEnabled",
+      metadata
+    }),
+    previousLifecycleSlaWebhookFailureThreshold: getMetadataNumber({
+      key: "previousLifecycleSlaWebhookFailureThreshold",
+      metadata
+    }),
+    previousMinimumDecommissionRetentionDays: getMetadataNumber({
+      key: "previousMinimumDecommissionRetentionDays",
+      metadata
+    }),
+    previousRequireDecommissionReason: getMetadataBoolean({
+      key: "previousRequireDecommissionReason",
+      metadata
+    }),
     requestId:
       "requestId" in metadata && typeof metadata.requestId === "string"
         ? metadata.requestId
@@ -306,6 +350,10 @@ function serializeAuditLogEntry(input: AuditLogRecord) {
       "previousRole" in metadata
         ? parseWorkspaceRole(metadata.previousRole)
         : null,
+    previousWebhookEnabled: getMetadataBoolean({
+      key: "previousWebhookEnabled",
+      metadata
+    }),
     reason: getMetadataString({
       key: "reason",
       metadata
@@ -381,17 +429,29 @@ function buildAuditCsv(input: { entries: SerializedAuditEntry[] }) {
     "export_confirmed_at",
     "retention_days",
     "reason",
+    "previous_retention_default_days",
     "retention_default_days",
+    "previous_retention_minimum_days",
     "retention_minimum_days",
+    "previous_retention_reason_required",
     "retention_reason_required",
+    "previous_lifecycle_automation_enabled",
     "lifecycle_automation_enabled",
+    "previous_automate_invitation_reminders",
     "automate_invitation_reminders",
+    "previous_automate_decommission_notices",
     "automate_decommission_notices",
+    "previous_webhook_enabled",
     "webhook_enabled",
+    "previous_deliver_invitation_reminders",
     "deliver_invitation_reminders",
+    "previous_deliver_decommission_notifications",
     "deliver_decommission_notifications",
+    "previous_lifecycle_sla_enabled",
     "lifecycle_sla_enabled",
+    "previous_lifecycle_sla_automation_max_age_minutes",
     "lifecycle_sla_automation_max_age_minutes",
+    "previous_lifecycle_sla_webhook_failure_threshold",
     "lifecycle_sla_webhook_failure_threshold",
     "membership_id",
     "request_id"
@@ -419,17 +479,29 @@ function buildAuditCsv(input: { entries: SerializedAuditEntry[] }) {
       entry.exportConfirmedAt,
       entry.retentionDays,
       entry.reason,
+      entry.previousDefaultDecommissionRetentionDays,
       entry.defaultDecommissionRetentionDays,
+      entry.previousMinimumDecommissionRetentionDays,
       entry.minimumDecommissionRetentionDays,
+      entry.previousRequireDecommissionReason,
       entry.requireDecommissionReason,
+      entry.previousLifecycleAutomationEnabled,
       entry.lifecycleAutomationEnabled,
+      entry.previousAutomateInvitationReminders,
       entry.automateInvitationReminders,
+      entry.previousAutomateDecommissionNotices,
       entry.automateDecommissionNotices,
+      entry.previousWebhookEnabled,
       entry.webhookEnabled,
+      entry.previousDeliverInvitationReminders,
       entry.deliverInvitationReminders,
+      entry.previousDeliverDecommissionNotifications,
       entry.deliverDecommissionNotifications,
+      entry.previousLifecycleSlaEnabled,
       entry.lifecycleSlaEnabled,
+      entry.previousLifecycleSlaAutomationMaxAgeMinutes,
       entry.lifecycleSlaAutomationMaxAgeMinutes,
+      entry.previousLifecycleSlaWebhookFailureThreshold,
       entry.lifecycleSlaWebhookFailureThreshold,
       entry.membershipId,
       entry.requestId

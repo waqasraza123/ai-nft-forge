@@ -81,6 +81,30 @@ function formatBoolean(value: boolean | null) {
   return value ? "on" : "off";
 }
 
+function formatAuditChange(
+  label: string,
+  previousValue: boolean | number | null,
+  nextValue: boolean | number | null,
+  suffix = ""
+) {
+  if (nextValue === null) {
+    return null;
+  }
+
+  const formattedNext =
+    typeof nextValue === "boolean" ? formatBoolean(nextValue) : nextValue;
+  const formattedPrevious =
+    typeof previousValue === "boolean"
+      ? formatBoolean(previousValue)
+      : previousValue;
+
+  if (formattedPrevious === null || formattedPrevious === formattedNext) {
+    return `${label} ${formattedNext}${suffix}`;
+  }
+
+  return `${label} ${formattedPrevious}${suffix} -> ${formattedNext}${suffix}`;
+}
+
 function formatAuditRoleMetadata(entry: OpsWorkspaceAuditEntry) {
   if (entry.reviewHash) {
     const reviewLabel =
@@ -134,74 +158,127 @@ function formatAuditOperationalMetadata(entry: OpsWorkspaceAuditEntry) {
     );
   }
 
-  if (entry.defaultDecommissionRetentionDays !== null) {
-    parts.push(`default ${entry.defaultDecommissionRetentionDays}d`);
+  const defaultRetentionChange = formatAuditChange(
+    "default",
+    entry.previousDefaultDecommissionRetentionDays,
+    entry.defaultDecommissionRetentionDays,
+    "d"
+  );
+
+  if (defaultRetentionChange) {
+    parts.push(defaultRetentionChange);
   }
 
-  if (entry.minimumDecommissionRetentionDays !== null) {
-    parts.push(`minimum ${entry.minimumDecommissionRetentionDays}d`);
+  const minimumRetentionChange = formatAuditChange(
+    "minimum",
+    entry.previousMinimumDecommissionRetentionDays,
+    entry.minimumDecommissionRetentionDays,
+    "d"
+  );
+
+  if (minimumRetentionChange) {
+    parts.push(minimumRetentionChange);
   }
 
-  const requireReason = formatBoolean(entry.requireDecommissionReason);
+  const reasonRequiredChange = formatAuditChange(
+    "reason required",
+    entry.previousRequireDecommissionReason,
+    entry.requireDecommissionReason
+  );
 
-  if (requireReason) {
-    parts.push(`reason required ${requireReason}`);
+  if (reasonRequiredChange) {
+    parts.push(reasonRequiredChange);
   }
 
-  const automationEnabled = formatBoolean(entry.lifecycleAutomationEnabled);
+  const automationEnabledChange = formatAuditChange(
+    "automation",
+    entry.previousLifecycleAutomationEnabled,
+    entry.lifecycleAutomationEnabled
+  );
 
-  if (automationEnabled) {
-    parts.push(`automation ${automationEnabled}`);
+  if (automationEnabledChange) {
+    parts.push(automationEnabledChange);
   }
 
-  const invitationAutomation = formatBoolean(entry.automateInvitationReminders);
+  const invitationAutomationChange = formatAuditChange(
+    "invitation reminders",
+    entry.previousAutomateInvitationReminders,
+    entry.automateInvitationReminders
+  );
 
-  if (invitationAutomation) {
-    parts.push(`invitation reminders ${invitationAutomation}`);
+  if (invitationAutomationChange) {
+    parts.push(invitationAutomationChange);
   }
 
-  const decommissionAutomation = formatBoolean(
+  const decommissionAutomationChange = formatAuditChange(
+    "decommission notices",
+    entry.previousAutomateDecommissionNotices,
     entry.automateDecommissionNotices
   );
 
-  if (decommissionAutomation) {
-    parts.push(`decommission notices ${decommissionAutomation}`);
+  if (decommissionAutomationChange) {
+    parts.push(decommissionAutomationChange);
   }
 
-  const webhookEnabled = formatBoolean(entry.webhookEnabled);
+  const webhookEnabledChange = formatAuditChange(
+    "webhook",
+    entry.previousWebhookEnabled,
+    entry.webhookEnabled
+  );
 
-  if (webhookEnabled) {
-    parts.push(`webhook ${webhookEnabled}`);
+  if (webhookEnabledChange) {
+    parts.push(webhookEnabledChange);
   }
 
-  const invitationDelivery = formatBoolean(entry.deliverInvitationReminders);
+  const invitationDeliveryChange = formatAuditChange(
+    "deliver invitations",
+    entry.previousDeliverInvitationReminders,
+    entry.deliverInvitationReminders
+  );
 
-  if (invitationDelivery) {
-    parts.push(`deliver invitations ${invitationDelivery}`);
+  if (invitationDeliveryChange) {
+    parts.push(invitationDeliveryChange);
   }
 
-  const decommissionDelivery = formatBoolean(
+  const decommissionDeliveryChange = formatAuditChange(
+    "deliver decommission",
+    entry.previousDeliverDecommissionNotifications,
     entry.deliverDecommissionNotifications
   );
 
-  if (decommissionDelivery) {
-    parts.push(`deliver decommission ${decommissionDelivery}`);
+  if (decommissionDeliveryChange) {
+    parts.push(decommissionDeliveryChange);
   }
 
-  const slaEnabled = formatBoolean(entry.lifecycleSlaEnabled);
+  const slaEnabledChange = formatAuditChange(
+    "SLA",
+    entry.previousLifecycleSlaEnabled,
+    entry.lifecycleSlaEnabled
+  );
 
-  if (slaEnabled) {
-    parts.push(`SLA ${slaEnabled}`);
+  if (slaEnabledChange) {
+    parts.push(slaEnabledChange);
   }
 
-  if (entry.lifecycleSlaAutomationMaxAgeMinutes !== null) {
-    parts.push(`${entry.lifecycleSlaAutomationMaxAgeMinutes}m max age`);
+  const slaMaxAgeChange = formatAuditChange(
+    "max age",
+    entry.previousLifecycleSlaAutomationMaxAgeMinutes,
+    entry.lifecycleSlaAutomationMaxAgeMinutes,
+    "m"
+  );
+
+  if (slaMaxAgeChange) {
+    parts.push(slaMaxAgeChange);
   }
 
-  if (entry.lifecycleSlaWebhookFailureThreshold !== null) {
-    parts.push(
-      `${entry.lifecycleSlaWebhookFailureThreshold} failure threshold`
-    );
+  const slaFailureThresholdChange = formatAuditChange(
+    "failure threshold",
+    entry.previousLifecycleSlaWebhookFailureThreshold,
+    entry.lifecycleSlaWebhookFailureThreshold
+  );
+
+  if (slaFailureThresholdChange) {
+    parts.push(slaFailureThresholdChange);
   }
 
   return parts.length > 0 ? parts.join(" · ") : null;

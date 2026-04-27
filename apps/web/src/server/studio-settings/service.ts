@@ -1473,6 +1473,10 @@ async function recordWorkspaceAuditLog(input: {
   lifecycleSlaPolicy?: WorkspaceLifecycleSlaPolicy;
   membershipId?: string | null;
   policy?: ReturnType<typeof serializeWorkspaceRetentionPolicy>;
+  previousAutomationPolicy?: WorkspaceLifecycleAutomationPolicy;
+  previousLifecycleDeliveryPolicy?: WorkspaceLifecycleDeliveryPolicy;
+  previousLifecycleSlaPolicy?: WorkspaceLifecycleSlaPolicy;
+  previousPolicy?: ReturnType<typeof serializeWorkspaceRetentionPolicy>;
   previousRole?: StudioWorkspaceRole | null;
   requestId?: string | null;
   repositories: Pick<StudioSettingsRepositorySet, "auditLogRepository">;
@@ -1535,6 +1539,16 @@ async function recordWorkspaceAuditLog(input: {
             requireDecommissionReason: input.policy.requireDecommissionReason
           }
         : {}),
+      ...(input.previousPolicy
+        ? {
+            previousDefaultDecommissionRetentionDays:
+              input.previousPolicy.defaultDecommissionRetentionDays,
+            previousMinimumDecommissionRetentionDays:
+              input.previousPolicy.minimumDecommissionRetentionDays,
+            previousRequireDecommissionReason:
+              input.previousPolicy.requireDecommissionReason
+          }
+        : {}),
       ...(input.automationPolicy
         ? {
             automateDecommissionNotices:
@@ -1542,6 +1556,16 @@ async function recordWorkspaceAuditLog(input: {
             automateInvitationReminders:
               input.automationPolicy.automateInvitationReminders,
             lifecycleAutomationEnabled: input.automationPolicy.enabled
+          }
+        : {}),
+      ...(input.previousAutomationPolicy
+        ? {
+            previousAutomateDecommissionNotices:
+              input.previousAutomationPolicy.automateDecommissionNotices,
+            previousAutomateInvitationReminders:
+              input.previousAutomationPolicy.automateInvitationReminders,
+            previousLifecycleAutomationEnabled:
+              input.previousAutomationPolicy.enabled
           }
         : {}),
       ...(input.lifecycleDeliveryPolicy
@@ -1553,6 +1577,17 @@ async function recordWorkspaceAuditLog(input: {
             webhookEnabled: input.lifecycleDeliveryPolicy.webhookEnabled
           }
         : {}),
+      ...(input.previousLifecycleDeliveryPolicy
+        ? {
+            previousDeliverDecommissionNotifications:
+              input.previousLifecycleDeliveryPolicy
+                .deliverDecommissionNotifications,
+            previousDeliverInvitationReminders:
+              input.previousLifecycleDeliveryPolicy.deliverInvitationReminders,
+            previousWebhookEnabled:
+              input.previousLifecycleDeliveryPolicy.webhookEnabled
+          }
+        : {}),
       ...(input.lifecycleSlaPolicy
         ? {
             lifecycleSlaAutomationMaxAgeMinutes:
@@ -1560,6 +1595,16 @@ async function recordWorkspaceAuditLog(input: {
             lifecycleSlaEnabled: input.lifecycleSlaPolicy.enabled,
             lifecycleSlaWebhookFailureThreshold:
               input.lifecycleSlaPolicy.webhookFailureThreshold
+          }
+        : {}),
+      ...(input.previousLifecycleSlaPolicy
+        ? {
+            previousLifecycleSlaAutomationMaxAgeMinutes:
+              input.previousLifecycleSlaPolicy.automationMaxAgeMinutes,
+            previousLifecycleSlaEnabled:
+              input.previousLifecycleSlaPolicy.enabled,
+            previousLifecycleSlaWebhookFailureThreshold:
+              input.previousLifecycleSlaPolicy.webhookFailureThreshold
           }
         : {}),
       ...(input.targetUserId
@@ -2461,6 +2506,8 @@ export function createStudioSettingsService(
             action: "workspace_lifecycle_automation_policy_updated",
             actor: owner,
             automationPolicy: nextLifecycleAutomationPolicy,
+            previousAutomationPolicy:
+              serializeWorkspaceLifecycleAutomationPolicy(existingWorkspace),
             repositories,
             workspaceId: existingWorkspace.id
           });
@@ -2490,6 +2537,8 @@ export function createStudioSettingsService(
             action: "workspace_retention_policy_updated",
             actor: owner,
             policy: nextRetentionPolicy,
+            previousPolicy:
+              serializeWorkspaceRetentionPolicy(existingWorkspace),
             repositories,
             workspaceId: existingWorkspace.id
           });
@@ -2519,6 +2568,8 @@ export function createStudioSettingsService(
             action: "workspace_lifecycle_sla_policy_updated",
             actor: owner,
             lifecycleSlaPolicy: nextLifecycleSlaPolicy,
+            previousLifecycleSlaPolicy:
+              currentLifecycleSlaPolicy(existingWorkspace),
             repositories,
             workspaceId: existingWorkspace.id
           });
@@ -2548,6 +2599,8 @@ export function createStudioSettingsService(
             action: "workspace_lifecycle_delivery_policy_updated",
             actor: owner,
             lifecycleDeliveryPolicy: nextLifecycleDeliveryPolicy,
+            previousLifecycleDeliveryPolicy:
+              currentLifecycleDeliveryPolicy(existingWorkspace),
             repositories,
             workspaceId: existingWorkspace.id
           });
@@ -2629,6 +2682,8 @@ export function createStudioSettingsService(
           action: "workspace_lifecycle_automation_policy_updated",
           actor: owner,
           automationPolicy: nextLifecycleAutomationPolicy,
+          previousAutomationPolicy:
+            serializeWorkspaceLifecycleAutomationPolicy(workspace),
           repositories,
           workspaceId: updatedWorkspace.id
         });
@@ -2739,6 +2794,7 @@ export function createStudioSettingsService(
           action: "workspace_lifecycle_sla_policy_updated",
           actor: owner,
           lifecycleSlaPolicy: nextLifecycleSlaPolicy,
+          previousLifecycleSlaPolicy: currentLifecycleSlaPolicy(workspace),
           repositories,
           workspaceId: updatedWorkspace.id
         });
