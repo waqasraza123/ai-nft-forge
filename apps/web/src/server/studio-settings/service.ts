@@ -415,6 +415,10 @@ type StudioSettingsRepositorySet = {
       requestedRole: StudioWorkspaceRole;
       workspaceId: string;
     }): Promise<WorkspaceRoleEscalationRequestRecord | null>;
+    findPendingByWorkspaceAndTargetUserId(input: {
+      targetUserId: string;
+      workspaceId: string;
+    }): Promise<WorkspaceRoleEscalationRequestRecord | null>;
     listByWorkspaceId(input: {
       limit?: number;
       workspaceId: string;
@@ -1342,6 +1346,50 @@ async function requireRoleEscalationRequest(input: {
       404
     );
   }
+
+  return request;
+}
+
+async function cancelPendingRoleEscalationForAccessLoss(input: {
+  actor: UserRecord;
+  repositories: Pick<
+    StudioSettingsRepositorySet,
+    "auditLogRepository" | "workspaceRoleEscalationRequestRepository"
+  >;
+  targetUserId: string;
+  workspaceId: string;
+}) {
+  const request =
+    await input.repositories.workspaceRoleEscalationRequestRepository.findPendingByWorkspaceAndTargetUserId(
+      {
+        targetUserId: input.targetUserId,
+        workspaceId: input.workspaceId
+      }
+    );
+
+  if (!request || request.status !== "pending") {
+    return null;
+  }
+
+  await input.repositories.workspaceRoleEscalationRequestRepository.resolveById(
+    {
+      id: request.id,
+      resolvedAt: new Date(),
+      resolvedByUserId: input.actor.id,
+      status: "canceled"
+    }
+  );
+
+  await recordWorkspaceAuditLog({
+    action: "workspace_role_escalation_canceled",
+    actor: input.actor,
+    repositories: input.repositories,
+    requestId: request.id,
+    role: request.requestedRole,
+    targetUserId: request.targetUserId,
+    targetWalletAddress: request.targetUser.walletAddress,
+    workspaceId: input.workspaceId
+  });
 
   return request;
 }
@@ -3282,6 +3330,18 @@ export function createStudioSettingsService(
           workspaceId: workspace.id
         });
 
+        if (
+          membership.role === "operator" &&
+          persistedMembership.role !== "operator"
+        ) {
+          await cancelPendingRoleEscalationForAccessLoss({
+            actor: owner,
+            repositories,
+            targetUserId: persistedMembership.user.id,
+            workspaceId: workspace.id
+          });
+        }
+
         return studioWorkspaceMemberResponseSchema.parse({
           member: serializeWorkspaceMember({
             addedAt: persistedMembership.createdAt,
@@ -3352,6 +3412,15 @@ export function createStudioSettingsService(
           targetWalletAddress: membership.user.walletAddress,
           workspaceId: workspace.id
         });
+
+        if (membership.role === "operator") {
+          await cancelPendingRoleEscalationForAccessLoss({
+            actor: owner,
+            repositories,
+            targetUserId: membership.user.id,
+            workspaceId: workspace.id
+          });
+        }
 
         return studioWorkspaceMemberDeleteResponseSchema.parse({
           membershipId: input.membershipId,

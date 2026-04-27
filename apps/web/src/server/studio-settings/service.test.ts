@@ -934,6 +934,38 @@ function createStudioSettingsHarness() {
         };
       },
 
+      async findPendingByWorkspaceAndTargetUserId(input: {
+        targetUserId: string;
+        workspaceId: string;
+      }) {
+        const request =
+          [...workspaceRoleEscalationRequests.values()]
+            .filter(
+              (currentRequest) =>
+                currentRequest.workspaceId === input.workspaceId &&
+                currentRequest.targetUserId === input.targetUserId &&
+                currentRequest.status === "pending"
+            )
+            .sort((left, right) => left.id.localeCompare(right.id))[0] ?? null;
+
+        if (!request) {
+          return null;
+        }
+
+        return {
+          ...request,
+          requestedByUser: users.get(request.requestedByUserId)!,
+          resolvedByUser: request.resolvedByUserId
+            ? (users.get(request.resolvedByUserId) ?? null)
+            : null,
+          targetUser: users.get(request.targetUserId)!,
+          workspace: {
+            id: request.workspaceId,
+            ownerUserId: workspaces.get(request.workspaceId)!.ownerUserId
+          }
+        };
+      },
+
       async listByWorkspaceId(input: { limit?: number; workspaceId: string }) {
         return [...workspaceRoleEscalationRequests.values()]
           .filter((request) => request.workspaceId === input.workspaceId)

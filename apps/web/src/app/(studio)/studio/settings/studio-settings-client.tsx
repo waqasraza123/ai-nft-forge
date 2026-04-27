@@ -2056,6 +2056,9 @@ export function StudioSettingsClient({
         message: `Removed ${member.walletAddress} from the workspace.`,
         tone: "success"
       });
+      await refreshSettings({
+        silent: true
+      });
     } catch (error) {
       setNotice({
         message:

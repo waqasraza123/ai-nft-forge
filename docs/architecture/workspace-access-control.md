@@ -44,3 +44,7 @@ Owners choose `operator` or `viewer` when creating direct members or wallet-addr
 ## Member Role Changes
 
 Owners can change an existing non-owner workspace member between `operator` and `viewer` from `/studio/settings` or `PATCH /api/studio/settings/members/[membershipId]`. The route is selected-workspace scoped, rejects non-owners, rejects owner-role assignment, returns the updated member read model, and records `workspace_member_role_updated` in the workspace audit log with both previous and new roles. No ownership transfer happens through member role updates; owner changes continue to use the role-escalation workflow.
+
+## Role Escalation Invalidation
+
+Only active `operator` members can hold a pending ownership-transfer request. When an owner changes an operator to `viewer` or removes an operator membership, the settings service cancels any pending ownership-transfer request for that target user in the same transaction and records `workspace_role_escalation_canceled`. This keeps stale escalation approvals from surviving after the target no longer has operator access.

@@ -136,6 +136,44 @@ export function createWorkspaceRoleEscalationRequestRepository(
       });
     },
 
+    findPendingByWorkspaceAndTargetUserId(input: {
+      targetUserId: string;
+      workspaceId: string;
+    }): Promise<WorkspaceRoleEscalationRequestWithRelations | null> {
+      return database.workspaceRoleEscalationRequest.findFirst({
+        include: {
+          requestedByUser: {
+            select: userSelect
+          },
+          resolvedByUser: {
+            select: userSelect
+          },
+          targetUser: {
+            select: userSelect
+          },
+          workspace: {
+            select: {
+              id: true,
+              ownerUserId: true
+            }
+          }
+        },
+        orderBy: [
+          {
+            createdAt: "asc"
+          },
+          {
+            id: "asc"
+          }
+        ],
+        where: {
+          status: "pending",
+          targetUserId: input.targetUserId,
+          workspaceId: input.workspaceId
+        }
+      });
+    },
+
     listByWorkspaceId(input: {
       limit?: number;
       workspaceId: string;
