@@ -312,6 +312,7 @@ export const studioWorkspaceAccessReviewAttestationSummarySchema = z.object({
 
 export const studioWorkspaceAccessReviewResponseSchema = z.object({
   report: z.object({
+    evidenceHash: z.string().regex(/^[a-f0-9]{64}$/),
     generatedAt: z.string().datetime(),
     rows: z.array(studioWorkspaceAccessReviewRowSchema),
     summary: studioWorkspaceAccessReviewSummarySchema,

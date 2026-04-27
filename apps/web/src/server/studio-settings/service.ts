@@ -55,6 +55,9 @@ import {
   type StudioWorkspaceAccessReviewAttestationListResponse,
   type StudioWorkspaceAccessReviewAttestationResponse,
   type StudioWorkspaceAccessReviewResponse,
+  type StudioWorkspaceAccessReviewRow,
+  type StudioWorkspaceAccessReviewSummary,
+  type StudioWorkspaceSummary,
   type StudioWorkspaceRole,
   type StudioWorkspaceStatus
 } from "@ai-nft-forge/shared";
@@ -903,12 +906,16 @@ function serializeWorkspaceAuditEntry(input: AuditLogRecord) {
   });
 }
 
+type WorkspaceAccessReviewEvidencePayload = {
+  rows: StudioWorkspaceAccessReviewRow[];
+  summary: StudioWorkspaceAccessReviewSummary;
+  workspace: StudioWorkspaceSummary;
+};
+
 function createAccessReviewEvidenceHash(
-  input: StudioWorkspaceAccessReviewResponse
+  input: WorkspaceAccessReviewEvidencePayload
 ) {
-  return createHash("sha256")
-    .update(JSON.stringify(input.report))
-    .digest("hex");
+  return createHash("sha256").update(JSON.stringify(input)).digest("hex");
 }
 
 function getAuditMetadataString(input: {
@@ -1118,7 +1125,10 @@ function createWorkspaceAccessReview(input: {
   const auditRows = input.auditLogs.flatMap((auditLog) => {
     const serializedAuditEntry = serializeWorkspaceAuditEntry(auditLog);
 
-    if (!serializedAuditEntry) {
+    if (
+      !serializedAuditEntry ||
+      serializedAuditEntry.action === "workspace_access_review_recorded"
+    ) {
       return [];
     }
 
@@ -1146,27 +1156,36 @@ function createWorkspaceAccessReview(input: {
       }
     ];
   });
+  const rows = [
+    ownerMemberRow,
+    ...memberRows,
+    ...invitationRows,
+    ...roleEscalationRows,
+    ...auditRows
+  ];
+  const summary = {
+    auditEntryCount: auditRows.length,
+    invitationCount: invitationRows.length,
+    memberCount: memberRows.length + 1,
+    pendingRoleEscalationCount: roleEscalationRows.filter(
+      (row) => row.status === "pending"
+    ).length,
+    roleEscalationCount: roleEscalationRows.length
+  };
+  const workspace = serializeWorkspace(input.workspace);
+  const evidenceHash = createAccessReviewEvidenceHash({
+    rows,
+    summary,
+    workspace
+  });
 
   return studioWorkspaceAccessReviewResponseSchema.parse({
     report: {
+      evidenceHash,
       generatedAt: input.generatedAt.toISOString(),
-      rows: [
-        ownerMemberRow,
-        ...memberRows,
-        ...invitationRows,
-        ...roleEscalationRows,
-        ...auditRows
-      ],
-      summary: {
-        auditEntryCount: auditRows.length,
-        invitationCount: invitationRows.length,
-        memberCount: memberRows.length + 1,
-        pendingRoleEscalationCount: roleEscalationRows.filter(
-          (row) => row.status === "pending"
-        ).length,
-        roleEscalationCount: roleEscalationRows.length
-      },
-      workspace: serializeWorkspace(input.workspace)
+      rows,
+      summary,
+      workspace
     }
   });
 }
@@ -1193,6 +1212,7 @@ export function buildWorkspaceAccessReviewCsv(
     "workspace_slug",
     "workspace_name",
     "generated_at",
+    "evidence_hash",
     "record_type",
     "wallet_address",
     "user_id",
@@ -1216,6 +1236,7 @@ export function buildWorkspaceAccessReviewCsv(
       input.report.workspace.slug,
       input.report.workspace.name,
       input.report.generatedAt,
+      input.report.evidenceHash,
       row.recordType,
       row.walletAddress,
       row.userId,
@@ -1914,7 +1935,7 @@ export function createStudioSettingsService(
           );
         }
 
-        const reviewHash = createAccessReviewEvidenceHash(accessReview);
+        const reviewHash = accessReview.report.evidenceHash;
         const auditLog = await recordWorkspaceAuditLog({
           action: "workspace_access_review_recorded",
           actor: owner,
