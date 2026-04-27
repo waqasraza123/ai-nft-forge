@@ -805,6 +805,7 @@ function serializeWorkspaceLifecycleAutomationPolicy(input: {
 
 function createWorkspaceOffboardingSummary(input: {
   activeAlertCount: number;
+  accessReviewAttestationStatus: "changed" | "current" | "never_recorded";
   livePublicationCount: number;
   openCheckoutCount: number;
   openReconciliationIssueCount: number;
@@ -825,6 +826,10 @@ function createWorkspaceOffboardingSummary(input: {
 
   if (input.openReconciliationIssueCount > 0) {
     blockerCodes.push("open_reconciliation_issues");
+  }
+
+  if (input.accessReviewAttestationStatus !== "current") {
+    cautionCodes.push("access_review_not_current");
   }
 
   if (input.livePublicationCount > 0) {
@@ -884,6 +889,60 @@ function countPendingWorkspaceInvitations(
       })
     )
   ).length;
+}
+
+async function loadWorkspaceAccessReviewVerification(input: {
+  generatedAt: Date;
+  repositories: Pick<
+    WorkspaceOffboardingRepositorySet,
+    | "auditLogRepository"
+    | "workspaceInvitationRepository"
+    | "workspaceMembershipRepository"
+    | "workspaceRoleEscalationRequestRepository"
+  >;
+  workspace: {
+    id: string;
+    name: string;
+    ownerUserId: string;
+    ownerWalletAddress: string;
+    slug: string;
+    status: "active" | "archived" | "suspended";
+  };
+}) {
+  const [memberships, invitations, roleEscalationRequests, auditLogs] =
+    await Promise.all([
+      input.repositories.workspaceMembershipRepository.listByWorkspaceId(
+        input.workspace.id
+      ),
+      input.repositories.workspaceInvitationRepository.listByWorkspaceId({
+        workspaceId: input.workspace.id
+      }),
+      input.repositories.workspaceRoleEscalationRequestRepository.listByWorkspaceId(
+        {
+          limit: 100,
+          workspaceId: input.workspace.id
+        }
+      ),
+      input.repositories.auditLogRepository.listByEntity({
+        entityId: input.workspace.id,
+        entityType: "workspace",
+        limit: 100
+      })
+    ]);
+
+  return createWorkspaceAccessReviewVerification({
+    auditLogs,
+    generatedAt: input.generatedAt,
+    invitations,
+    memberships,
+    now: input.generatedAt,
+    owner: {
+      id: input.workspace.ownerUserId,
+      walletAddress: input.workspace.ownerWalletAddress
+    },
+    roleEscalationRequests,
+    workspace: input.workspace
+  });
 }
 
 export function createWorkspaceOffboardingService(
@@ -1135,9 +1194,15 @@ export function createWorkspaceOffboardingService(
           serializeWorkspaceLifecycleDeliveryPolicy(workspaceRecord);
         const lifecycleSlaPolicy =
           serializeWorkspaceLifecycleSlaPolicy(workspaceRecord);
+        const accessReview = await loadWorkspaceAccessReviewVerification({
+          generatedAt: now,
+          repositories: dependencies.repositories,
+          workspace: directoryEntry.workspace
+        });
         const summary = createWorkspaceOffboardingSummary({
           activeAlertCount:
             activeAlertCountByWorkspaceId.get(directoryEntry.workspace.id) ?? 0,
+          accessReviewAttestationStatus: accessReview.attestationStatus,
           livePublicationCount:
             livePublicationCountByWorkspaceId.get(
               directoryEntry.workspace.id
@@ -1158,6 +1223,7 @@ export function createWorkspaceOffboardingService(
         });
 
         return {
+          accessReview,
           current: directoryEntry.current,
           decommission: scheduledDecommission?.decommission ?? null,
           decommissionWorkflow: scheduledDecommission?.workflow ?? {
@@ -1314,8 +1380,19 @@ export function createWorkspaceOffboardingService(
           )
         : [];
 
+      const accessReview = createWorkspaceAccessReviewVerification({
+        auditLogs,
+        generatedAt: now,
+        invitations,
+        memberships,
+        now,
+        owner,
+        roleEscalationRequests,
+        workspace
+      });
       const offboarding = createWorkspaceOffboardingSummary({
         activeAlertCount: alerts.length,
+        accessReviewAttestationStatus: accessReview.attestationStatus,
         livePublicationCount: publications.filter(
           (publication) => publication.storefrontStatus === "live"
         ).length,
@@ -1347,16 +1424,6 @@ export function createWorkspaceOffboardingService(
         serializeWorkspaceLifecycleDeliveryPolicy(workspace);
       const lifecycleSlaPolicy =
         serializeWorkspaceLifecycleSlaPolicy(workspace);
-      const accessReview = createWorkspaceAccessReviewVerification({
-        auditLogs,
-        generatedAt: now,
-        invitations,
-        memberships,
-        now,
-        owner,
-        roleEscalationRequests,
-        workspace
-      });
 
       return workspaceExportResponseSchema.parse({
         export: {

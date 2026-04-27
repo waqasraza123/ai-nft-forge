@@ -4712,6 +4712,13 @@ export function StudioSettingsClient({
                           )}
                         </Pill>
                         <Pill>
+                          access review{" "}
+                          {formatWorkspaceOffboardingCode(
+                            currentWorkspaceOffboardingState.accessReview
+                              .attestationStatus
+                          )}
+                        </Pill>
+                        <Pill>
                           {
                             currentWorkspaceOffboardingState.summary
                               .pendingInvitationCount

@@ -574,8 +574,8 @@ describe("createWorkspaceOffboardingService", () => {
       blockedWorkspaceCount: 1,
       decommissionNoticeDueWorkspaceCount: 1,
       reasonRequiredWorkspaceCount: 1,
-      readyWorkspaceCount: 1,
-      reviewRequiredWorkspaceCount: 1,
+      readyWorkspaceCount: 0,
+      reviewRequiredWorkspaceCount: 2,
       scheduledDecommissionCount: 1,
       totalWorkspaceCount: 3
     });
@@ -589,6 +589,7 @@ describe("createWorkspaceOffboardingService", () => {
         (workspace) => workspace.workspace.id === "workspace_review"
       )?.summary.cautionCodes
     ).toEqual([
+      "access_review_not_current",
       "live_publications",
       "pending_invitations",
       "pending_role_escalations",
@@ -628,7 +629,8 @@ describe("createWorkspaceOffboardingService", () => {
         status: "healthy"
       },
       summary: {
-        readiness: "ready"
+        cautionCodes: ["access_review_not_current"],
+        readiness: "review_required"
       }
     });
   });
@@ -646,6 +648,10 @@ describe("createWorkspaceOffboardingService", () => {
 
     expect(result.export.workspace.slug).toBe("slug-workspace-review");
     expect(result.export.offboarding.readiness).toBe("review_required");
+    expect(result.export.offboarding.cautionCodes).toContain(
+      "access_review_not_current"
+    );
+    expect(result.export.accessReview.attestationStatus).toBe("never_recorded");
     expect(result.export.brands).toHaveLength(1);
     expect(result.export.members).toHaveLength(2);
     expect(result.export.publications).toHaveLength(1);

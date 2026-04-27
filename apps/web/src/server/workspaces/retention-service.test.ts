@@ -104,6 +104,43 @@ function createWorkspaceRetentionHarness() {
               totalWorkspaceCount: input.workspaces.length
             },
             workspaces: input.workspaces.map((workspace) => ({
+              accessReview: {
+                attestationStatus:
+                  workspace.id === "workspace_ready"
+                    ? ("current" as const)
+                    : ("never_recorded" as const),
+                currentEvidenceHash:
+                  workspace.id === "workspace_ready"
+                    ? "a".repeat(64)
+                    : "b".repeat(64),
+                generatedAt: "2026-04-12T07:00:00.000Z",
+                latestAttestation:
+                  workspace.id === "workspace_ready"
+                    ? {
+                        actorUserId: "user_owner",
+                        actorWalletAddress:
+                          "0x1111111111111111111111111111111111111111",
+                        auditEntryId: "audit_review_ready",
+                        createdAt: "2026-04-12T06:30:00.000Z",
+                        reviewGeneratedAt: "2026-04-12T06:30:00.000Z",
+                        reviewHash: "a".repeat(64),
+                        summary: {
+                          auditEntryCount: 0,
+                          invitationCount: 0,
+                          memberCount: 2,
+                          pendingRoleEscalationCount: 0,
+                          roleEscalationCount: 0
+                        },
+                        workspace: {
+                          id: workspace.id,
+                          name: workspace.name,
+                          slug: workspace.slug,
+                          status: workspace.status
+                        }
+                      }
+                    : null,
+                summaryDelta: null
+              },
               current: workspace.id === input.currentWorkspaceId,
               decommission:
                 workspace.id === "workspace_ready"
@@ -420,6 +457,7 @@ describe("createWorkspaceRetentionService", () => {
       requireDecommissionReason: false
     });
     expect(csv).toContain("decommission_status");
+    expect(csv).toContain("access_review_status");
     expect(csv).toContain("lifecycle_automation_enabled");
     expect(csv).toContain("lifecycle_sla_status");
     expect(csv).toContain("decommission_next_due_kind");

@@ -54,6 +54,7 @@ export const workspaceOffboardingBlockerCodeSchema = z.enum([
 ]);
 
 export const workspaceOffboardingCautionCodeSchema = z.enum([
+  "access_review_not_current",
   "live_publications",
   "pending_invitations",
   "pending_role_escalations",
@@ -112,6 +113,7 @@ export const workspaceDecommissionWorkflowSummarySchema = z.object({
 });
 
 export const workspaceOffboardingEntrySchema = z.object({
+  accessReview: studioWorkspaceAccessReviewVerificationSchema,
   current: z.boolean(),
   decommission: workspaceDecommissionSummarySchema.nullable(),
   decommissionWorkflow: workspaceDecommissionWorkflowSummarySchema,

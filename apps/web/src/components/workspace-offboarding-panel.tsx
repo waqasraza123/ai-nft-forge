@@ -113,6 +113,10 @@ export function WorkspaceOffboardingPanel({
                   {entry.lifecycleDelivery.deliveredCount} lifecycle delivered
                 </Pill>
                 <Pill>
+                  access review{" "}
+                  {formatCode(entry.accessReview.attestationStatus)}
+                </Pill>
+                <Pill>
                   automation{" "}
                   {entry.lifecycleAutomationPolicy.enabled ? "on" : "off"}
                 </Pill>
@@ -202,6 +206,34 @@ export function WorkspaceOffboardingPanel({
                   </p>
                 </OpsStatusNotice>
               ) : null}
+              <OpsStatusNotice
+                title="Access review"
+                tone={
+                  entry.accessReview.attestationStatus === "current"
+                    ? "success"
+                    : "info"
+                }
+                className="mt-0"
+              >
+                <p>
+                  {entry.accessReview.attestationStatus === "current"
+                    ? "The latest access-review attestation matches the current evidence hash."
+                    : entry.accessReview.latestAttestation
+                      ? "Current access-review evidence has changed since the latest attestation."
+                      : "No access review has been recorded for this workspace."}{" "}
+                  Current hash{" "}
+                  {entry.accessReview.currentEvidenceHash.slice(0, 12)}
+                  {entry.accessReview.latestAttestation
+                    ? ` · latest ${entry.accessReview.latestAttestation.reviewHash.slice(
+                        0,
+                        12
+                      )} recorded ${formatDateTime(
+                        entry.accessReview.latestAttestation.createdAt
+                      )}`
+                    : ""}
+                  .
+                </p>
+              </OpsStatusNotice>
               {entry.lifecycleDelivery.latestDelivery ? (
                 <OpsStatusNotice
                   title="Lifecycle delivery"
